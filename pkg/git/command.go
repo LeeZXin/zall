@@ -77,7 +77,7 @@ func (c *Command) RunWithStdinPipe(ctx context.Context, ros ...RunOpts) *ReadWri
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 	go func() {
-		if err := c.run(ctx, append(ros, WithStdin(stdinReader), withStdOut(stdinWriter))...); err != nil {
+		if err := c.run(ctx, append(ros, WithStdin(stdinReader), withStdOut(stdoutWriter))...); err != nil {
 			stdoutWriter.CloseWithError(err)
 			stdinReader.CloseWithError(err)
 		} else {

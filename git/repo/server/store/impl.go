@@ -106,7 +106,6 @@ func (s *storeImpl) DiffRefs(ctx context.Context, req reqvo.DiffRefsReq) (reqvo.
 	if !git.CheckExists(ctx, repoPath, req.Target) {
 		return reqvo.DiffRefsResp{}, util.InvalidArgsError()
 	}
-	// 读取ssh key和gpg key
 	info, err := git.GetDiffRefsInfo(ctx, repoPath, req.Target, req.Head)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

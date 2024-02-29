@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/LeeZXin/zall/pkg/git/gitenv"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf/common"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -159,6 +160,7 @@ func doMerge(ctx context.Context, repoPath string, pr DiffRefsInfo, opts MergeRe
 					gitenv.EnvPrId, strconv.FormatInt(opts.PrId, 10),
 					gitenv.EnvPusherAccount, opts.PusherAccount,
 					gitenv.EnvPusherEmail, opts.PusherEmail,
+					gitenv.EnvHookUrl, fmt.Sprintf("http://127.0.0.1:%d", common.HttpServerPort()),
 				),
 			),
 		); err != nil {
