@@ -1,0 +1,25 @@
+application:
+  name: zgit
+
+ssh:
+  proxy:
+    port: 2222
+
+lfs:
+  enabled: true
+
+app:
+  url: http://127.0.0.1
+  lang: en-US
+  corpId: zexin5
+
+xorm:
+  dataSourceName: root:root@tcp(127.0.0.1:3306)/hhhh?charset=utf8
+
+git:
+  proxy:
+    server:
+      port: 5555
+  repo:
+    server:
+      enabled: true

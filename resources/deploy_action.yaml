@@ -1,0 +1,40 @@
+name: action-runner
+on:
+  push:
+    branches:
+      - master
+      - test
+jobs:
+  Echo:
+    steps:
+      - name: echo fuck
+        script: |
+          sleep 1
+          echo "fff"
+          echo "fffv2"
+  Echo2:
+    steps:
+      - name: echo fuck
+        script: |
+          sleep 1
+          echo "fff  vvvv2"
+  build-deploy:
+    needs: [ Echo ]
+    steps:
+      - name: checkout
+        uses: checkout
+        with:
+          credential: xxxxx
+          GIT_URL: 'http://zxjcli3:123456@127.0.0.1/zexin/wtfff.git'
+      - name: fuck
+        script: |
+          sleep 1
+          echo "nimabi"
+          echo "fucj"
+        with:
+          credet: 123
+      - name: build
+        script: |
+          sleep 1
+          echo "build build build"
+          echo "build done"

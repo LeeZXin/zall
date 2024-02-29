@@ -1,0 +1,21 @@
+actions:
+  host: http://127.0.0.1
+  mixed: true
+  instance:
+    id: V001
+    name: "第一节点"
+
+ssh:
+  server:
+    port: 3333
+    registry:
+      enabled: true
+
+http:
+  port: 80
+  enabled: true
+
+git:
+  repo:
+    server:
+      port: 4444

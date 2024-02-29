@@ -1,0 +1,11 @@
+#!/bin/bash
+sleep 1
+if
+  [ -n "$SECRETS_CREDENTIAL_USERNAME" ] &&
+    [ -n "$SECRETS_CREDENTIAL_PASSWORD" ]
+then
+  git clone ${GIT_URL%://*}://${SECRETS_CREDENTIAL_USERNAME}:${SECRETS_CREDENTIAL_PASSWORD}@${GIT_URL#*://} src
+else
+  git clone "$GIT_URL" src
+fi
+exit $?

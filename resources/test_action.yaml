@@ -1,0 +1,57 @@
+name: action runner
+jobs:
+  job1:
+    steps:
+      - name: job1 step 1
+        uses: print_step
+        with:
+          a: 1
+          b: 2
+      - name: job1 step 2
+        uses: print_step
+        with:
+          c: 3
+          d: 4
+  job2:
+    steps:
+      - name: job2 step 1
+        uses: print_step
+        with:
+          f: 5
+          g: 6
+  job3:
+    needs: [ job1, job2 ]
+    steps:
+      - name: job3e step 1
+        uses: print_step
+        with:
+          f: 5
+          g: 6
+      - name: job3e step 2
+        uses: print_step
+        with:
+          f: 5
+          g: 6
+  job4:
+    steps:
+      - name: job4 step 1
+        uses: print_step
+        with:
+          f: 5
+          g: 6
+  job5:
+    needs: [ job3, job4 ]
+    steps:
+      - name: job5 step 1
+        uses: print_step
+        with:
+          f: 5
+          g: 6
+  job6:
+    needs: [ job3 ]
+    steps:
+      - name: job6 step 1
+        uses: print_step
+        with:
+          f: 5
+          g: 6

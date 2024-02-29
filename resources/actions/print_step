@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "当前时间是: $(date +"%Y-%m-%d %H:%M:%S") step: ${ACTION_STEP_NAME}"
+sleep 1
+exit 0
