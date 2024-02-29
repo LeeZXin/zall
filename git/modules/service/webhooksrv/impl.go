@@ -96,7 +96,7 @@ func (*outerImpl) ListWebhook(ctx context.Context, reqDTO ListWebhookReqDTO) ([]
 	}
 	return listutil.Map(webhookList, func(t webhookmd.WebhookDTO) (WebhookDTO, error) {
 		return WebhookDTO{
-			HookId:      t.Id,
+			Id:          t.Id,
 			RepoId:      t.RepoId,
 			HookUrl:     t.HookUrl,
 			HttpHeaders: t.HttpHeaders,
