@@ -54,8 +54,8 @@ func runZall(*cli.Context) error {
 			reposerver.InitHttpApi()
 			reposerver.InitSshServer()
 		}
-		// action是否在一个单机环境下
 		if static.GetBool("actions.enabled") {
+			logger.Logger.Info("git actions server enabled")
 			actionapi.InitApi()
 			actionsrv.InitSrv()
 		}

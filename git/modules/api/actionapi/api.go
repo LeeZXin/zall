@@ -2,16 +2,12 @@ package actionapi
 
 import (
 	"github.com/LeeZXin/zall/git/modules/service/actionsrv"
+	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
-	"github.com/LeeZXin/zsf/property/static"
 	"github.com/gin-gonic/gin"
 	"net/http"
-)
-
-var (
-	authToken = static.GetString("actions.token")
 )
 
 func InitApi() {
@@ -32,7 +28,13 @@ func gitAction(c *gin.Context) {
 }
 
 func checkToken(c *gin.Context) {
-	if c.GetHeader("Authorization") != authToken {
+	cfg, b := cfgsrv.Inner.GetGitCfg(c)
+	if !b {
+		c.String(http.StatusInternalServerError, "can not get git config")
+		c.Abort()
+		return
+	}
+	if c.GetHeader("Authorization") != cfg.ActionToken {
 		c.String(http.StatusForbidden, "invalid token")
 		c.Abort()
 		return

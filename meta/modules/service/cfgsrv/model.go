@@ -21,6 +21,8 @@ var (
 		LfsEnabled:   true,
 		LfsJwtExpiry: 3600,
 		LfsJwtSecret: idutil.RandomUuid(),
+		ActionToken:  idutil.RandomUuid(),
+		RepoToken:    idutil.RandomUuid(),
 	}
 )
 
@@ -57,6 +59,10 @@ type GitCfg struct {
 	LfsJwtSecret string `json:"lfsJwtSecret"`
 	// lfsJwtSecretBytes lfs 密钥
 	lfsJwtSecretBytes []byte
+	// ActionToken action 执行token
+	ActionToken string `json:"actionToken"`
+	// RepoToken git服务token
+	RepoToken string `json:"repoToken"`
 }
 
 func (c *GitCfg) GetLfsJwtExpiry() time.Duration {

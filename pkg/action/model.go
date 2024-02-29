@@ -7,11 +7,11 @@ import (
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/git/process"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/collections/hashmap"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/executor/completable"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/common"
+	"github.com/LeeZXin/zsf/logger"
 	"io"
 	"os"
 	"os/exec"
@@ -26,14 +26,7 @@ const (
 var (
 	EmptyArgs         = errors.New("empty args")
 	UnsupportedAction = errors.New("unsupported action")
-	WrongJobNeeds     = errors.New("wrong job needs")
 	ThereHasBug       = errors.New("there has bug")
-	// JobDuplicatedName 节点名字不能冲突
-	JobDuplicatedName = errors.New("job has duplicated Name")
-	// JobNeedsPoint2Self 前置节点指向自己
-	JobNeedsPoint2Self = errors.New("job needs point to self")
-	// RoundJob 环形job
-	RoundJob = errors.New("round job")
 	// 脚本存放路径
 	scriptDir = filepath.Join(common.ResourcesDir, "actions")
 	// 允许执行的操作
@@ -49,7 +42,7 @@ type GraphCfg struct {
 }
 
 func (c *GraphCfg) String() string {
-	return fmt.Sprintf("Name: %s, jobs: %v", c.Name, c.Jobs)
+	return fmt.Sprintf("name: %s, jobs: %v", c.Name, c.Jobs)
 }
 
 func (c *GraphCfg) IsValid() error {
@@ -65,42 +58,96 @@ func (c *GraphCfg) IsValid() error {
 			return err
 		}
 	}
-	allJobNamesAndVisited := hashmap.NewHashMap[string, bool]()
+	allJobNames := hashset.NewHashSet[string]()
 	// 检查是否有重复的jobName
 	for k, cfg := range c.Jobs {
 		if err := cfg.IsValid(); err != nil {
 			return err
 		}
 		// 有重复的名字
-		if allJobNamesAndVisited.Contains(k) {
-			return JobDuplicatedName
+		if allJobNames.Contains(k) {
+			return fmt.Errorf("job has duplicated name: %v", k)
 		}
-		allJobNamesAndVisited.Put(k, false)
+		allJobNames.Add(k)
 	}
 	// 检查job needs
 	for k, cfg := range c.Jobs {
 		for _, n := range cfg.Needs {
-			visited, b := allJobNamesAndVisited.Get(n)
+			b := allJobNames.Contains(n)
 			// 检查jobNeeds 是否存在
 			if !b {
-				return WrongJobNeeds
-			}
-			// 如果存在环
-			if visited {
-				return RoundJob
+				return fmt.Errorf("job node does not exist: %v", n)
 			}
 			// 检查jobNeeds是否指向自己
 			if n == k {
-				return JobNeedsPoint2Self
+				return fmt.Errorf("job needs point to itself: %v", n)
 			}
 		}
-		allJobNamesAndVisited.Put(k, true)
+	}
+	// 检查job是否有环
+	return c.checkRoundJob()
+}
+
+type jobTemp struct {
+	Name  string
+	Needs *hashset.HashSet[string]
+	Next  *hashset.HashSet[string]
+}
+
+func newJobTemp(name string) *jobTemp {
+	return &jobTemp{
+		Name:  name,
+		Needs: hashset.NewHashSet[string](),
+		Next:  hashset.NewHashSet[string](),
+	}
+}
+
+func (c *GraphCfg) checkRoundJob() error {
+	tmap := make(map[string]*jobTemp, len(c.Jobs))
+	for k, cfg := range c.Jobs {
+		t := newJobTemp(k)
+		if len(cfg.Needs) > 0 {
+			t.Needs.Add(cfg.Needs...)
+		}
+		tmap[k] = t
+	}
+	for k, cfg := range c.Jobs {
+		for _, need := range cfg.Needs {
+			tmap[need].Next.Add(k)
+		}
+	}
+	// 寻找深度优先遍历开始节点
+	starts := make([]string, 0)
+	for k, temp := range tmap {
+		if temp.Next.Size() == 0 {
+			starts = append(starts, k)
+		}
+	}
+	// 深度优先遍历
+	for _, start := range starts {
+		if err := c.dfs([]string{}, tmap[start], tmap); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *GraphCfg) dfs(path []string, t *jobTemp, all map[string]*jobTemp) error {
+	if util.FindInSlice(path, t.Name) {
+		return fmt.Errorf("round job: %v %v", path, t.Name)
+	}
+	p := append(path[:], t.Name)
+	for _, key := range t.Needs.AllKeys() {
+		if err := c.dfs(p, all[key], all); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (c *GraphCfg) ConvertToGraph() (*Graph, error) {
 	if err := c.IsValid(); err != nil {
+		logger.Logger.Error(err)
 		return nil, err
 	}
 	// 转换jobs

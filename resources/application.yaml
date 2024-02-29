@@ -5,7 +5,7 @@ ssh:
   proxy:
     port: 2222
 
-lfs:
+actions:
   enabled: true
 
 app:

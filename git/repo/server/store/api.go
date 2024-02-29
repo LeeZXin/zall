@@ -2,6 +2,7 @@ package store
 
 import (
 	"github.com/LeeZXin/zall/git/repo/reqvo"
+	"github.com/LeeZXin/zall/git/repo/server/apisession"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
@@ -16,7 +17,7 @@ var (
 
 func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/api/v1/git/store")
+		group := e.Group("/api/v1/git/store", apisession.CheckToken)
 		{
 			group.POST("/initRepo", initRepo)
 			group.POST("/delRepo", delRepo)
@@ -34,7 +35,7 @@ func InitApi() {
 			group.POST("/treeRepo", treeRepo)
 			group.POST("/merge", merge)
 		}
-		group = e.Group("/api/v1/git/smart/:corpId/:repoName", packRepoPath)
+		group = e.Group("/api/v1/git/smart/:corpId/:repoName", apisession.CheckToken, packRepoPath)
 		{
 			group.POST("/git-upload-pack", uploadPack)
 			group.POST("/git-receive-pack", receivePack)

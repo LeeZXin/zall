@@ -90,11 +90,13 @@ func runWithYamlContent(ctx context.Context, reqDTO action.Webhook, yamlContent 
 	// 解析yaml
 	err := yaml.Unmarshal([]byte(yamlContent), &p)
 	if err != nil {
+		logger.Logger.Errorf("can not marshal action yaml: %v", err)
 		return
 	}
 	// 转换为action graph
 	graph, err := p.ConvertToGraph()
 	if err != nil {
+		logger.Logger.Errorf("can not convert action graph: %v", err)
 		return
 	}
 	// 获取是否配置push

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"github.com/LeeZXin/zall/git/gitnode"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
+	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/property/static"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
@@ -18,10 +18,7 @@ import (
 
 var (
 	HttpFailedErr = errors.New("http failed")
-	defaultHeader = map[string]string{
-		"Authorization": static.GetString("git.store.api.token"),
-	}
-	httpClient = httputil.NewRetryableHttpClient()
+	httpClient    = httputil.NewRetryableHttpClient()
 )
 
 // InitRepo 初始化仓库
@@ -419,7 +416,9 @@ func postHttp(ctx context.Context, nodeId string, path string, req, resp any) er
 	err = httputil.Post(ctx,
 		httpClient,
 		httpUrl+path,
-		defaultHeader,
+		map[string]string{
+			"Authorization": getRepoToken(ctx),
+		},
 		req,
 		resp,
 	)
@@ -444,9 +443,7 @@ func proxyHttp(nodeId, path string, ctx *gin.Context, headers map[string]string)
 	for k, v := range headers {
 		proxyReq.Header.Set(k, v)
 	}
-	for k, v := range defaultHeader {
-		proxyReq.Header.Set(k, v)
-	}
+	proxyReq.Header.Set("Authorization", getRepoToken(ctx))
 	proxyResp, err := httpClient.Do(proxyReq)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -467,4 +464,12 @@ func getHttpUrl(ctx context.Context, nodeId string) (string, error) {
 		return "", err
 	}
 	return "http://" + ret, nil
+}
+
+func getRepoToken(ctx context.Context) string {
+	cfg, b := cfgsrv.Inner.GetGitCfg(ctx)
+	if !b {
+		return ""
+	}
+	return cfg.RepoToken
 }
