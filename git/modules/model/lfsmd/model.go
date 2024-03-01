@@ -3,8 +3,8 @@ package lfsmd
 import "time"
 
 const (
-	MetaObjectTableName = "lfs_meta"
-	LfsLockTableName    = "lfs_lock"
+	MetaObjectTableName = "zgit_lfs_meta"
+	LfsLockTableName    = "zgit_lfs_lock"
 )
 
 type MetaObject struct {

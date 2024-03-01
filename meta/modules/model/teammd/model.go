@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	TeamTableName          = "team"
-	TeamUserTableName      = "team_user"
-	TeamUserGroupTableName = "team_user_group"
+	TeamTableName          = "zall_team"
+	TeamUserTableName      = "zall_team_user"
+	TeamUserGroupTableName = "zall_team_user_group"
 )
 
 type Team struct {

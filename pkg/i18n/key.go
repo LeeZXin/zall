@@ -25,6 +25,10 @@ var (
 		Id:         "system.unimplemented",
 		DefaultRet: "未实现",
 	}
+	SystemOperationFailed = KeyItem{
+		Id:         "system.operationFailed",
+		DefaultRet: "操作失败",
+	}
 )
 
 var (
@@ -277,5 +281,44 @@ var (
 	ActionInstanceNotFound = KeyItem{
 		Id:         "action.instanceNotFound",
 		DefaultRet: "无可用执行节点",
+	}
+)
+
+var (
+	TimerTaskPendingStatus = KeyItem{
+		Id:         "timerTask.pending",
+		DefaultRet: "等待执行",
+	}
+	TimerTaskRunningStatus = KeyItem{
+		Id:         "timerTask.running",
+		DefaultRet: "正在执行",
+	}
+	TimerTaskSuccessfulStatus = KeyItem{
+		Id:         "timerTask.successful",
+		DefaultRet: "执行成功",
+	}
+	TimerTaskFailedStatus = KeyItem{
+		Id:         "timerTask.failed",
+		DefaultRet: "执行失败",
+	}
+	TimerTaskClosedStatus = KeyItem{
+		Id:         "timerTask.pending",
+		DefaultRet: "已关闭",
+	}
+	TimerTaskUnknownStatus = KeyItem{
+		Id:         "timerTask.pending",
+		DefaultRet: "未知",
+	}
+	TimerTaskAutoTriggerType = KeyItem{
+		Id:         "timerTask.autoTriggerType",
+		DefaultRet: "自动触发",
+	}
+	TimerTaskManualTriggerType = KeyItem{
+		Id:         "timerTask.manualTriggerType",
+		DefaultRet: "手动触发",
+	}
+	TimerTaskUnknownTriggerType = KeyItem{
+		Id:         "timerTask.unknownTriggerType",
+		DefaultRet: "未知",
 	}
 )

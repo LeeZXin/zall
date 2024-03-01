@@ -17,6 +17,8 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/pkg/git"
+	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
+	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/starter"
@@ -58,6 +60,14 @@ func runZall(*cli.Context) error {
 			logger.Logger.Info("git actions server enabled")
 			actionapi.InitApi()
 			actionsrv.InitSrv()
+		}
+	}
+	// for timer
+	{
+		taskapi.InitApi()
+		if static.GetBool("timer.enabled") {
+			logger.Logger.Info("timer executor enabled")
+			tasksrv.InitTask()
 		}
 	}
 	logger.Logger.Info("start zall server successfully")

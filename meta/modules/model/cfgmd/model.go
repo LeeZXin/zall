@@ -3,7 +3,7 @@ package cfgmd
 import "time"
 
 const (
-	SysCfgTableName = "sys_cfg"
+	SysCfgTableName = "zall_sys_cfg"
 )
 
 type SysCfg struct {

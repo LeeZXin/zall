@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	SshKeyTableName = "ssh_key"
+	SshKeyTableName = "zgit_ssh_key"
 )
 
 type KeyInfo struct {

@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	PullRequestTableName = "pull_request"
-	ReviewTableName      = "pull_request_review"
+	PullRequestTableName = "zgit_pull_request"
+	ReviewTableName      = "zgit_pull_request_review"
 )
 
 type PrStatus int

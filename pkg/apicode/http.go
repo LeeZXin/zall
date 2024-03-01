@@ -24,6 +24,7 @@ const (
 	ActionInstanceNotFoundCode
 	ThereHasBugErrCode
 	EmptyGitNodesErrCode
+	OperationFailedErrCode
 )
 
 func (c Code) Int() int {

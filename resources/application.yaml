@@ -23,3 +23,6 @@ git:
   repo:
     server:
       enabled: true
+
+timer:
+  enabled: true

@@ -207,10 +207,30 @@ var (
 		},
 	}
 
-	CorpSrvKeysVO = CorpSrvKeys{
-		InsertCorp: KeyItem{
-			Id:         "corpSrv.InsertCorp",
-			DefaultRet: "创建企业",
+	TimerTaskSrvKeysVO = TimerTaskSrvKeys{
+		InsertTask: KeyItem{
+			Id:         "timerTaskSrv.InsertTask",
+			DefaultRet: "新增定时任务",
+		},
+		UpdateTask: KeyItem{
+			Id:         "timerTaskSrv.UpdateTask",
+			DefaultRet: "更新定时任务",
+		},
+		EnableTask: KeyItem{
+			Id:         "timerTaskSrv.EnableTask",
+			DefaultRet: "启动定时任务",
+		},
+		DisableTask: KeyItem{
+			Id:         "timerTaskSrv.DisableTask",
+			DefaultRet: "关闭定时任务",
+		},
+		DeleteTask: KeyItem{
+			Id:         "timerTaskSrv.DeleteTask",
+			DefaultRet: "删除定时任务",
+		},
+		TriggerTask: KeyItem{
+			Id:         "timerTaskSrv.TriggerTask",
+			DefaultRet: "手动执行任务",
 		},
 	}
 
@@ -306,11 +326,16 @@ type WebhookSrvKeys struct {
 	DeleteWebhook KeyItem
 }
 
-type CorpSrvKeys struct {
-	InsertCorp KeyItem
-}
-
 type GpgSrvKeys struct {
 	InsertGpgKey KeyItem
 	DeleteGpgKey KeyItem
+}
+
+type TimerTaskSrvKeys struct {
+	InsertTask  KeyItem
+	UpdateTask  KeyItem
+	EnableTask  KeyItem
+	DisableTask KeyItem
+	DeleteTask  KeyItem
+	TriggerTask KeyItem
 }

@@ -25,6 +25,10 @@ func UnauthorizedError() error {
 	return NewBizErr(apicode.UnauthorizedCode, i18n.SystemUnauthorized)
 }
 
+func OperationFailedError() error {
+	return NewBizErr(apicode.OperationFailedErrCode, i18n.SystemOperationFailed)
+}
+
 func AlreadyExistsError() error {
 	return NewBizErr(apicode.DataAlreadyExistsCode, i18n.SystemAlreadyExists)
 }

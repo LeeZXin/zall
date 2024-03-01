@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	UserTableName = "user"
+	UserTableName = "zall_user"
 )
 
 type User struct {

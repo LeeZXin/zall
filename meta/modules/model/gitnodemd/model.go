@@ -3,7 +3,7 @@ package gitnodemd
 import "time"
 
 const (
-	GitNodeTableName = "git_node"
+	GitNodeTableName = "zall_git_node"
 )
 
 type GitNode struct {

@@ -39,9 +39,9 @@ const (
 )
 
 const (
-	TaskTableName     = "action_task"
-	StepTableName     = "action_step"
-	InstanceTableName = "action_instance"
+	TaskTableName     = "zgit_action_task"
+	StepTableName     = "zgit_action_step"
+	InstanceTableName = "zgit_action_instance"
 )
 
 type Task struct {

@@ -3,7 +3,7 @@ package gpgkeymd
 import "time"
 
 const (
-	GpgKeyTableName = "gpg_key"
+	GpgKeyTableName = "zgit_gpg_key"
 )
 
 type GpgKey struct {

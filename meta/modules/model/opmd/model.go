@@ -3,7 +3,7 @@ package opmd
 import "time"
 
 const (
-	OpTableName = "op_log"
+	OpTableName = "zall_op_log"
 )
 
 type OpLog struct {

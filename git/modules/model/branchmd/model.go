@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	ProtectedBranchTableName = "protected_branch"
+	ProtectedBranchTableName = "zgit_protected_branch"
 )
 
 type ProtectedBranch struct {

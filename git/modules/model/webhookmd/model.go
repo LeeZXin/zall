@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	WebhookTableName = "webhook"
+	WebhookTableName = "zgit_webhook"
 )
 
 type HookType int

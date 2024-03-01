@@ -2,8 +2,9 @@ package perm
 
 var (
 	DefaultTeamPerm = TeamPerm{
-		CanInitRepo:   true,
-		CanDeleteRepo: true,
+		CanInitRepo:    true,
+		CanDeleteRepo:  true,
+		CanHandleTimer: true,
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:            true,
@@ -88,4 +89,6 @@ type TeamPerm struct {
 	CanInitRepo bool `json:"canInitRepo"`
 	// 是否可删除仓库
 	CanDeleteRepo bool `json:"canDeleteRepo"`
+	// 是否可处理定时任务
+	CanHandleTimer bool `json:"canHandleTimer"`
 }

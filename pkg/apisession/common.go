@@ -56,8 +56,7 @@ func CheckLogin(c *gin.Context) {
 }
 
 func MustGetLoginUser(c *gin.Context) UserInfo {
-	v := c.MustGet(LoginUser)
-	return v.(UserInfo)
+	return c.MustGet(LoginUser).(UserInfo)
 }
 
 func GetSessionId(c *gin.Context) string {

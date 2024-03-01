@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	RepoTableName        = "repo"
-	AccessTokenTableName = "repo_access_token"
-	ActionTableName      = "repo_actions"
+	RepoTableName        = "zgit_repo"
+	AccessTokenTableName = "zgit_repo_access_token"
+	ActionTableName      = "zgit_repo_actions"
 )
 
 type Repo struct {
