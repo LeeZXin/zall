@@ -67,7 +67,8 @@ func login(c *gin.Context) {
 
 func refresh(c *gin.Context) {
 	sessionId, expireAt, err := usersrv.Outer.Refresh(c, usersrv.RefreshReqDTO{
-		Operator: apisession.MustGetLoginUser(c),
+		SessionId: apisession.GetSessionId(c),
+		Operator:  apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)

@@ -148,7 +148,7 @@ func (s *outerImpl) Refresh(ctx context.Context, reqDTO RefreshReqDTO) (string, 
 		return "", 0, util.InternalError(err)
 	}
 	// 删除原有的session
-	err = sessionStore.DeleteByAccount(reqDTO.Operator.Account)
+	err = sessionStore.DeleteBySessionId(reqDTO.SessionId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}

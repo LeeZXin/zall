@@ -82,10 +82,14 @@ func (r *LoginReqDTO) IsValid() error {
 }
 
 type RefreshReqDTO struct {
-	Operator apisession.UserInfo `json:"operator"`
+	SessionId string              `json:"sessionId"`
+	Operator  apisession.UserInfo `json:"operator"`
 }
 
 func (r *RefreshReqDTO) IsValid() error {
+	if r.SessionId == "" {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
