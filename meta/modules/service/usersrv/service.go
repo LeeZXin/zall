@@ -19,7 +19,8 @@ type InnerService interface {
 }
 
 type OuterService interface {
-	Login(context.Context, LoginReqDTO) (string, error)
+	Login(context.Context, LoginReqDTO) (string, int64, error)
+	Refresh(context.Context, RefreshReqDTO) (string, int64, error)
 	LoginOut(context.Context, LoginOutReqDTO) error
 	RegisterUser(context.Context, RegisterUserReqDTO) error
 	InsertUser(context.Context, InsertUserReqDTO) error

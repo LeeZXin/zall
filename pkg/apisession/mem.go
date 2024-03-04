@@ -1,8 +1,8 @@
 package apisession
 
 import (
+	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -21,15 +21,13 @@ func newMemStore() Store {
 		session:     make(map[string]Session, 8),
 		userSession: make(map[string]Session, 8),
 	}
-	m.cleanTask, _ = taskutil.NewPeriodicalTask(10*time.Minute, m.cleanUp)
+	m.cleanTask, _ = taskutil.NewPeriodicalTask(10*time.Minute, m.ClearExpired)
 	m.cleanTask.Start()
-	runtime.SetFinalizer(m, func(m *memStore) {
-		m.cleanTask.Stop()
-	})
+	quit.AddShutdownHook(m.cleanTask.Stop)
 	return m
 }
 
-func (s *memStore) cleanUp() {
+func (s *memStore) ClearExpired() {
 	s.Lock()
 	defer s.Unlock()
 	now := time.Now().UnixMilli()

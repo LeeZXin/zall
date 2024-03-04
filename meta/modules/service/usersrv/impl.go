@@ -67,7 +67,7 @@ func (s *innerImpl) CheckAccountAndPassword(ctx context.Context, reqDTO CheckAcc
 
 type outerImpl struct{}
 
-func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (sessionId string, err error) {
+func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (sessionId string, expireAt int64, err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -110,6 +110,7 @@ func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (sessionId st
 	}
 	// 生成sessionId
 	sessionId = apisession.GenSessionId()
+	expireAt = time.Now().Add(LoginSessionExpiry).UnixMilli()
 	err = sessionStore.PutSession(apisession.Session{
 		SessionId: sessionId,
 		UserInfo: apisession.UserInfo{
@@ -120,13 +121,38 @@ func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (sessionId st
 			AvatarUrl:    user.AvatarUrl,
 			IsAdmin:      user.IsAdmin,
 		},
-		ExpireAt: time.Now().Add(LoginSessionExpiry).UnixMilli(),
+		ExpireAt: expireAt,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 	}
 	return
+}
+
+func (s *outerImpl) Refresh(ctx context.Context, reqDTO RefreshReqDTO) (string, int64, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return "", 0, err
+	}
+	sessionStore := apisession.GetStore()
+	// 生成sessionId
+	sessionId := apisession.GenSessionId()
+	expireAt := time.Now().Add(LoginSessionExpiry).UnixMilli()
+	err := sessionStore.PutSession(apisession.Session{
+		SessionId: sessionId,
+		UserInfo:  reqDTO.Operator,
+		ExpireAt:  expireAt,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", 0, util.InternalError(err)
+	}
+	// 删除原有的session
+	err = sessionStore.DeleteByAccount(reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+	}
+	return sessionId, expireAt, nil
 }
 
 func (*outerImpl) LoginOut(ctx context.Context, reqDTO LoginOutReqDTO) error {

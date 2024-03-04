@@ -37,7 +37,6 @@ func CheckLogin(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	now := time.Now()
 	// session不存在
 	if !b {
 		c.JSON(http.StatusUnauthorized, ginutil.BaseResp{
@@ -47,6 +46,7 @@ func CheckLogin(c *gin.Context) {
 		c.Abort()
 		return
 	}
+	now := time.Now()
 	// 刷新token
 	if session.ExpireAt < now.Add(RefreshSessionInterval).UnixMilli() {
 		sessionStore.RefreshExpiry(sessionId, now.Add(SessionExpiry).UnixMilli())

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/LeeZXin/zsf-utils/idutil"
+	"github.com/LeeZXin/zsf/property/static"
 	"strconv"
 	"time"
 )
@@ -11,11 +12,25 @@ import (
 const (
 	SessionExpiry          = 2 * time.Hour
 	RefreshSessionInterval = 10 * time.Minute
+
+	MemStoreType   = "mem"
+	MysqlStoreType = "mysql"
 )
 
 var (
-	storeImpl = newMemStore()
+	storeImpl Store
 )
+
+func init() {
+	switch static.GetString("apisession.store.type") {
+	case MemStoreType:
+		storeImpl = newMemStore()
+	case MysqlStoreType:
+		storeImpl = newMysqlStore()
+	default:
+		storeImpl = newMysqlStore()
+	}
+}
 
 type Session struct {
 	SessionId string   `json:"sessionId"`
@@ -30,6 +45,7 @@ type Store interface {
 	DeleteByAccount(string) error
 	DeleteBySessionId(string) error
 	RefreshExpiry(string, int64) error
+	ClearExpired()
 }
 
 func GetStore() Store {

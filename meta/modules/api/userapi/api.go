@@ -20,6 +20,8 @@ func InitApi() {
 			group.POST("/login", login)
 			// 注册用户
 			group.POST("/register", register)
+			// 刷新token
+			group.Any("/refresh", apisession.CheckLogin, refresh)
 			// 退出登录
 			group.Any("/loginOut", apisession.CheckLogin, loginOut)
 		}
@@ -46,7 +48,7 @@ func InitApi() {
 func login(c *gin.Context) {
 	var req LoginReqVO
 	if util.ShouldBindJSON(&req, c) {
-		sessionId, err := usersrv.Outer.Login(c, usersrv.LoginReqDTO{
+		sessionId, expireAt, err := usersrv.Outer.Login(c, usersrv.LoginReqDTO{
 			Account:  req.Account,
 			Password: req.Password,
 		})
@@ -58,8 +60,25 @@ func login(c *gin.Context) {
 		c.JSON(http.StatusOK, LoginRespVO{
 			BaseResp:  ginutil.DefaultSuccessResp,
 			SessionId: sessionId,
+			ExpireAt:  expireAt,
 		})
 	}
+}
+
+func refresh(c *gin.Context) {
+	sessionId, expireAt, err := usersrv.Outer.Refresh(c, usersrv.RefreshReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.SetCookie(apisession.LoginCookie, sessionId, int(usersrv.LoginSessionExpiry.Seconds()), "/", "", false, true)
+	c.JSON(http.StatusOK, RefreshRespVO{
+		BaseResp:  ginutil.DefaultSuccessResp,
+		SessionId: sessionId,
+		ExpireAt:  expireAt,
+	})
 }
 
 func loginOut(c *gin.Context) {

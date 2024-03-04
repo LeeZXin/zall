@@ -12,6 +12,13 @@ type LoginReqVO struct {
 type LoginRespVO struct {
 	ginutil.BaseResp
 	SessionId string `json:"sessionId"`
+	ExpireAt  int64  `json:"expireAt"`
+}
+
+type RefreshRespVO struct {
+	ginutil.BaseResp
+	SessionId string `json:"sessionId"`
+	ExpireAt  int64  `json:"expireAt"`
 }
 
 type InsertUserReqVO struct {

@@ -81,6 +81,17 @@ func (r *LoginReqDTO) IsValid() error {
 	return nil
 }
 
+type RefreshReqDTO struct {
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *RefreshReqDTO) IsValid() error {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type LoginOutReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
