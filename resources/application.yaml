@@ -29,3 +29,6 @@ timer:
 
 idserver:
   enabled: true
+
+httptask:
+  token: 123
