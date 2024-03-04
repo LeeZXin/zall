@@ -21,6 +21,10 @@ var (
 		Id:         "system.dataAlreadyExists",
 		DefaultRet: "数据已存在",
 	}
+	SystemNotExists = KeyItem{
+		Id:         "system.dataNotExists",
+		DefaultRet: "数据不存在",
+	}
 	SystemUnimplemented = KeyItem{
 		Id:         "system.unimplemented",
 		DefaultRet: "未实现",

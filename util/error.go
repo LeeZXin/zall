@@ -33,6 +33,10 @@ func AlreadyExistsError() error {
 	return NewBizErr(apicode.DataAlreadyExistsCode, i18n.SystemAlreadyExists)
 }
 
+func NotExistsError() error {
+	return NewBizErr(apicode.DataNotExistsCode, i18n.SystemNotExists)
+}
+
 func MethodUnimplementedErr() error {
 	return NewBizErr(apicode.MethodUnImplementedCode, i18n.SystemUnimplemented)
 }
