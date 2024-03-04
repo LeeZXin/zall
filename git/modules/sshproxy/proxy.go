@@ -31,7 +31,7 @@ var (
 	hiWords     = "Hi there! You've successfully authenticated with the deploy key named %v, but zgit does not provide shell access."
 )
 
-func InitProxy() {
+func InitProxy() zsf.LifeCycle {
 	hostKey := filepath.Join(git.DataDir(), "ssh", "proxy.rsa")
 	server, err := zssh.NewServer(&zssh.ServerOpts{
 		Port:    static.GetInt("git.proxy.server.port"),
@@ -63,7 +63,7 @@ func InitProxy() {
 	if err != nil {
 		logger.Logger.Fatalf("new ssh proxy dialer: %v", err)
 	}
-	zsf.RegisterApplicationLifeCycle(server)
+	return server
 }
 
 func handleGitCommand(ctx context.Context, session ssh.Session) error {

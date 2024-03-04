@@ -26,3 +26,6 @@ git:
 
 timer:
   enabled: true
+
+idserver:
+  enabled: true

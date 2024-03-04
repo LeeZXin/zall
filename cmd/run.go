@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/LeeZXin/zall/genid/modules/api/idapi"
 	"github.com/LeeZXin/zall/git/modules/api/actionapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
@@ -19,9 +20,11 @@ import (
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
 	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
+	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/starter"
+	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
 
@@ -33,6 +36,7 @@ var Run = &cli.Command{
 }
 
 func runZall(*cli.Context) error {
+	lifeCycles := make([]zsf.LifeCycle, 0)
 	// for meta
 	{
 		userapi.InitApi()
@@ -50,11 +54,11 @@ func runZall(*cli.Context) error {
 		sshkeyapi.InitApi()
 		gpgkeyapi.InitApi()
 		webhookapi.InitApi()
-		sshproxy.InitProxy()
+		lifeCycles = append(lifeCycles, sshproxy.InitProxy())
 		if static.GetBool("git.repo.server.enabled") {
 			logger.Logger.Info("git repo server enabled")
 			reposerver.InitHttpApi()
-			reposerver.InitSshServer()
+			lifeCycles = append(lifeCycles, reposerver.InitSshServer())
 		}
 		if static.GetBool("actions.enabled") {
 			logger.Logger.Info("git actions server enabled")
@@ -70,7 +74,16 @@ func runZall(*cli.Context) error {
 			tasksrv.InitTask()
 		}
 	}
-	logger.Logger.Info("start zall server successfully")
-	starter.Run()
+	// for idserver
+	{
+		if static.GetBool("idserver.enabled") {
+			logger.Logger.Info("id server enabled")
+			idapi.InitApi()
+		}
+	}
+	lifeCycles = append(lifeCycles, httpserver.NewServer())
+	starter.Run(
+		zsf.WithLifeCycles(lifeCycles...),
+	)
 	return nil
 }

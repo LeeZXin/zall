@@ -7,6 +7,8 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf/services/discovery"
+	"github.com/LeeZXin/zsf/services/lb"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -26,6 +28,7 @@ type HttpTask struct {
 	Headers  map[string]string `json:"headers"`
 	Method   string            `json:"method"`
 	PostJson string            `json:"postJson"`
+	Zones    []string          `json:"zones"`
 }
 
 func (t *HttpTask) IsValid() bool {
@@ -54,13 +57,45 @@ func handleHttpTask(content string, sb *util.SimpleLogger) bool {
 	}
 	b := strings.HasSuffix(parsedUrl.Host, "-http")
 	if b {
-		host, err := discovery.PickOneHost(context.Background(), parsedUrl.Host)
-		if err != nil {
-			sb.WriteString(fmt.Sprintf("can not find service: %s err: %v", parsedUrl.Host, task.Url))
-			return false
+		// 跨数据中心请求
+		if len(task.Zones) > 0 {
+			zoneRet := true
+			for _, zone := range task.Zones {
+				servers, err := discovery.DiscoverWithZone(context.Background(), zone, parsedUrl.Host)
+				if err != nil {
+					zoneRet = false
+					sb.WriteString(fmt.Sprintf("can not find service: %s with zone: %s err: %v", parsedUrl.Host, zone, err))
+					continue
+				}
+				if len(servers) == 0 {
+					zoneRet = false
+					sb.WriteString(fmt.Sprintf("can not find service: %s with zone: %s err: %v", parsedUrl.Host, zone, lb.ServerNotFound))
+					continue
+				}
+				server := servers[rand.Int()%len(servers)]
+				rawUrl = parsedUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parsedUrl.RequestURI()
+				zoneRet = zoneRet && doHttpRequest(sb, rawUrl, &task)
+				sb.WriteString("--------- end zone: " + zone)
+			}
+			return zoneRet
+		} else {
+			servers, err := discovery.Discover(context.Background(), parsedUrl.Host)
+			if err != nil {
+				sb.WriteString(fmt.Sprintf("can not find service: %s err: %v", parsedUrl.Host, err))
+				return false
+			}
+			if len(servers) == 0 {
+				sb.WriteString(fmt.Sprintf("can not find service: %s err: %v", parsedUrl.Host, lb.ServerNotFound))
+				return false
+			}
+			server := servers[rand.Int()%len(servers)]
+			rawUrl = parsedUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parsedUrl.RequestURI()
 		}
-		rawUrl = parsedUrl.Scheme + "://" + host + parsedUrl.RequestURI()
 	}
+	return doHttpRequest(sb, rawUrl, &task)
+}
+
+func doHttpRequest(sb *util.SimpleLogger, rawUrl string, task *HttpTask) bool {
 	sb.WriteString(fmt.Sprintf("do http task url: %s method: %s", rawUrl, task.Method))
 	switch task.Method {
 	case "GET":

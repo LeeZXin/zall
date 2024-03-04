@@ -12,6 +12,7 @@ var (
 		GitHook,
 		Actions,
 		Timer,
+		IdServer,
 	}
 )
 

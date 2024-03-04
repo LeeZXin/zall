@@ -50,7 +50,7 @@ var (
 	}
 )
 
-func InitSshServer() {
+func InitSshServer() zsf.LifeCycle {
 	ret, err := zssh.NewServer(&zssh.ServerOpts{
 		Port:    static.GetInt("git.repo.server.port"),
 		HostKey: filepath.Join(git.DataDir(), "ssh", "gitRepoServer.rsa"),
@@ -82,7 +82,7 @@ func InitSshServer() {
 	if err != nil {
 		logger.Logger.Fatalf("new ssh server: %v", err)
 	}
-	zsf.RegisterApplicationLifeCycle(ret)
+	return ret
 }
 
 func handleGitCommand(ctx context.Context, user *usermd.UserInfo, session ssh.Session) error {
