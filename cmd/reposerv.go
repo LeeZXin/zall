@@ -3,7 +3,8 @@ package cmd
 import (
 	"github.com/LeeZXin/zall/git/repo/server"
 	"github.com/LeeZXin/zall/pkg/git"
-	"github.com/LeeZXin/zsf/starter"
+	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
 
@@ -18,8 +19,12 @@ func runRepoServer(*cli.Context) error {
 	{
 		git.Init()
 		server.InitHttpApi()
-		server.InitSshServer()
 	}
-	starter.Run()
+	zsf.Run(
+		zsf.WithLifeCycles(
+			server.InitSshServer(),
+			httpserver.NewServer(),
+		),
+	)
 	return nil
 }

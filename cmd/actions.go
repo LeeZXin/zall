@@ -3,7 +3,8 @@ package cmd
 import (
 	"github.com/LeeZXin/zall/git/modules/api/actionapi"
 	"github.com/LeeZXin/zall/git/modules/service/actionsrv"
-	"github.com/LeeZXin/zsf/starter"
+	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
 
@@ -18,6 +19,9 @@ func runActions(*cli.Context) error {
 	// action
 	actionapi.InitApi()
 	actionsrv.InitSrv()
-	starter.Run()
+	zsf.Run(
+		zsf.WithLifeCycles(
+			httpserver.NewServer(),
+		))
 	return nil
 }

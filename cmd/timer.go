@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
-	"github.com/LeeZXin/zsf/starter"
+	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
 
@@ -17,6 +17,6 @@ func runTimer(*cli.Context) error {
 	{
 		tasksrv.InitTask()
 	}
-	starter.Run()
+	zsf.Run()
 	return nil
 }

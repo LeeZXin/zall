@@ -23,7 +23,6 @@ import (
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
-	"github.com/LeeZXin/zsf/starter"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
@@ -82,7 +81,7 @@ func runZall(*cli.Context) error {
 		}
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer())
-	starter.Run(
+	zsf.Run(
 		zsf.WithLifeCycles(lifeCycles...),
 	)
 	return nil

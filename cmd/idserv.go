@@ -4,7 +4,6 @@ import (
 	"github.com/LeeZXin/zall/genid/modules/api/idapi"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/services/registry"
-	"github.com/LeeZXin/zsf/starter"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
@@ -20,7 +19,7 @@ func runIdServer(*cli.Context) error {
 	{
 		idapi.InitApi()
 	}
-	starter.Run(
+	zsf.Run(
 		zsf.WithLifeCycles(
 			httpserver.NewServer(
 				httpserver.WithRegistryAction(
