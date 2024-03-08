@@ -44,4 +44,5 @@ type OuterService interface {
 	ListAction(context.Context, ListActionReqDTO) ([]repomd.Action, error)
 	RefreshAllGitHooks(context.Context, RefreshAllGitHooksReqDTO) error
 	TriggerAction(context.Context, TriggerActionReqDTO) error
+	TransferTeam(context.Context, TransferTeamReqDTO) error
 }

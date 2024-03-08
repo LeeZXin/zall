@@ -50,7 +50,7 @@ func (r *ReceivePackReqDTO) IsValid() error {
 }
 
 func validateRepo(info repomd.RepoInfo) bool {
-	return info.RepoId != 0
+	return info.Id > 0
 }
 
 type InfoRefsReqDTO struct {

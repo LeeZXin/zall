@@ -10,9 +10,6 @@ import (
 )
 
 const (
-	SessionExpiry          = 2 * time.Hour
-	RefreshSessionInterval = 10 * time.Minute
-
 	MemStoreType   = "mem"
 	MysqlStoreType = "mysql"
 )

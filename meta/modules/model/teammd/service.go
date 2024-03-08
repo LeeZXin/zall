@@ -178,10 +178,10 @@ func ExistTeamUser(ctx context.Context, teamId, groupId int64) (bool, error) {
 		Exist(new(TeamUser))
 }
 
-func ListTeamUserGroup(ctx context.Context, id int64) ([]TeamUserGroup, error) {
+func ListTeamUserGroup(ctx context.Context, teamId int64) ([]TeamUserGroup, error) {
 	ret := make([]TeamUserGroup, 0)
 	err := xormutil.MustGetXormSession(ctx).
-		Where("team_id = ?", id).
+		Where("team_id = ?", teamId).
 		Find(&ret)
 	return ret, err
 }

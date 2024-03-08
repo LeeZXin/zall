@@ -88,7 +88,7 @@ func packRepoPath(c *gin.Context) {
 		if !b {
 			// 常规账号密码不存在的话就检查访问令牌
 			b = reposrv.Inner.CheckAccessToken(ctx, reposrv.CheckAccessTokenReqDTO{
-				RepoId:  repo.RepoId,
+				Id:      repo.Id,
 				Account: account,
 				Token:   password,
 			})

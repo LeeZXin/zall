@@ -230,5 +230,5 @@ type ErrObjDTO struct {
 }
 
 func validateRepo(repo repomd.RepoInfo) bool {
-	return repo.RepoId > 0
+	return repo.Id > 0
 }

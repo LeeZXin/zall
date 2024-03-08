@@ -30,5 +30,8 @@ timer:
 idserver:
   enabled: true
 
+propserver:
+  enabled: true
+
 httptask:
   token: 123

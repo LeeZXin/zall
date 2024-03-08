@@ -135,6 +135,10 @@ var (
 			Id:         "repoSrv.RefreshAllGitHooks",
 			DefaultRet: "刷新所有git hook",
 		},
+		TransferTeam: KeyItem{
+			Id:         "repoSrv.TransferTeam",
+			DefaultRet: "迁移team",
+		},
 	}
 
 	PullRequestSrvKeysVO = PullRequestSrvKeys{
@@ -244,6 +248,60 @@ var (
 			DefaultRet: "删除gpg公钥",
 		},
 	}
+
+	PropSrvKeysVO = PropSrvKeys{
+		GrantAuth: KeyItem{
+			Id:         "propSrv.GrantAuth",
+			DefaultRet: "编辑app etcd权限",
+		},
+		InsertEtcdNode: KeyItem{
+			Id:         "propSrv.InsertEtcdNode",
+			DefaultRet: "新增prop etcd节点",
+		},
+		DeleteEtcdNode: KeyItem{
+			Id:         "propSrv.DeleteEtcdNode",
+			DefaultRet: "删除prop etcd节点",
+		},
+		UpdateEtcdNode: KeyItem{
+			Id:         "propSrv.UpdateEtcdNode",
+			DefaultRet: "编辑prop etcd节点",
+		},
+		InsertPropContent: KeyItem{
+			Id:         "propSrv.InsertPropContent",
+			DefaultRet: "新增配置",
+		},
+		UpdatePropContent: KeyItem{
+			Id:         "propSrv.UpdatePropContent",
+			DefaultRet: "编辑配置",
+		},
+		DeletePropContent: KeyItem{
+			Id:         "propSrv.DeletePropContent",
+			DefaultRet: "删除配置",
+		},
+		DeployPropContent: KeyItem{
+			Id:         "propSrv.DeployPropContent",
+			DefaultRet: "发布配置",
+		},
+	}
+
+	AppSrvKeysVO = AppSrvKeys{
+		InsertApp: KeyItem{
+			Id:         "appSrv.InsertApp",
+			DefaultRet: "新增app",
+		},
+		DeleteApp: KeyItem{
+			Id:         "appSrv.DeleteApp",
+			DefaultRet: "删除app",
+		},
+		TransferTeam: KeyItem{
+			Id:         "appSrv.TransferTeam",
+			DefaultRet: "迁移项目组",
+		},
+		UpdateApp: KeyItem{
+			Id:         "appSrv.UpdateApp",
+			DefaultRet: "编辑app",
+		},
+	}
 )
 
 type KeyItem struct {
@@ -293,6 +351,7 @@ type RepoSrvKeys struct {
 	UpdateAction       KeyItem
 	TriggerAction      KeyItem
 	RefreshAllGitHooks KeyItem
+	TransferTeam       KeyItem
 }
 
 type PullRequestSrvKeys struct {
@@ -338,4 +397,22 @@ type TimerTaskSrvKeys struct {
 	DisableTask KeyItem
 	DeleteTask  KeyItem
 	TriggerTask KeyItem
+}
+
+type PropSrvKeys struct {
+	GrantAuth         KeyItem
+	InsertEtcdNode    KeyItem
+	DeleteEtcdNode    KeyItem
+	UpdateEtcdNode    KeyItem
+	InsertPropContent KeyItem
+	UpdatePropContent KeyItem
+	DeletePropContent KeyItem
+	DeployPropContent KeyItem
+}
+
+type AppSrvKeys struct {
+	InsertApp    KeyItem
+	DeleteApp    KeyItem
+	UpdateApp    KeyItem
+	TransferTeam KeyItem
 }

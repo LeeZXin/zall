@@ -340,10 +340,10 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 	}
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	env = append(env, util.JoinFields(
-		gitenv.EnvRepoId, req.C.GetHeader("Repo-Id"),
+		gitenv.EnvRepoId, req.C.GetHeader("Repo-RepoId"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
-		gitenv.EnvAppUrl, req.C.GetHeader("App-Url"),
+		gitenv.EnvAppUrl, req.C.GetHeader("AppId-Url"),
 		gitenv.EnvHookToken, git.HookToken(),
 	)...)
 	err = git.UploadPack(req.C, repoPath, reqBody, req.C.Writer, env)
@@ -384,10 +384,10 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	env = append(env, util.JoinFields(
 		gitenv.EnvHookUrl, fmt.Sprintf("http://127.0.0.1:%d", common.HttpServerPort()),
-		gitenv.EnvRepoId, req.C.GetHeader("Repo-Id"),
+		gitenv.EnvRepoId, req.C.GetHeader("Repo-RepoId"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
-		gitenv.EnvAppUrl, req.C.GetHeader("App-Url"),
+		gitenv.EnvAppUrl, req.C.GetHeader("AppId-Url"),
 		gitenv.EnvHookToken, git.HookToken(),
 		"--stateless-rpc", repoPath,
 	)...)

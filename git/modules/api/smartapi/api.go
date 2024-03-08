@@ -92,7 +92,7 @@ func auth(c *gin.Context) {
 		repo := getRepo(c)
 		// 常规账号密码不存在就检查访问令牌
 		b = reposrv.Inner.CheckAccessToken(c.Request.Context(), reposrv.CheckAccessTokenReqDTO{
-			RepoId:  repo.RepoId,
+			Id:      repo.Id,
 			Account: account,
 			Token:   password,
 		})

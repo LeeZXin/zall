@@ -31,11 +31,11 @@ func (*outerImpl) Lock(ctx context.Context, reqDTO LockReqDTO) (LockRespDTO, err
 	if err != nil {
 		return LockRespDTO{}, err
 	}
-	if !p.GetRepoPerm(reqDTO.Repo.RepoId).CanUpdateRepo {
+	if !p.GetRepoPerm(reqDTO.Repo.Id).CanUpdateRepo {
 		return LockRespDTO{}, util.UnauthorizedError()
 	}
 	lock, err := lfsmd.InsertLock(ctx, lfsmd.InsertLockReqDTO{
-		RepoId:  reqDTO.Repo.RepoId,
+		RepoId:  reqDTO.Repo.Id,
 		Owner:   reqDTO.Operator.Account,
 		Path:    reqDTO.Path,
 		RefName: reqDTO.RefName,
@@ -54,7 +54,7 @@ func (*outerImpl) Lock(ctx context.Context, reqDTO LockReqDTO) (LockRespDTO, err
 func convertDTO(lock lfsmd.LfsLock) LfsLockDTO {
 	return LfsLockDTO{
 		LockId:  lock.Id,
-		RepoId:  lock.RepoId,
+		RepoId:  lock.Id,
 		Owner:   lock.Owner,
 		Path:    lock.Path,
 		RefName: lock.RefName,
@@ -74,7 +74,7 @@ func (*outerImpl) ListLock(ctx context.Context, reqDTO ListLockReqDTO) (ListLock
 		if err != nil {
 			return ListLockRespDTO{}, err
 		}
-		if !p.GetRepoPerm(reqDTO.Repo.RepoId).CanAccessRepo {
+		if !p.GetRepoPerm(reqDTO.Repo.Id).CanAccessRepo {
 			return ListLockRespDTO{}, util.UnauthorizedError()
 		}
 	}
@@ -82,7 +82,7 @@ func (*outerImpl) ListLock(ctx context.Context, reqDTO ListLockReqDTO) (ListLock
 		reqDTO.Limit = 1000
 	}
 	locks, err := lfsmd.ListLfsLock(ctx, lfsmd.ListLockReqDTO{
-		RepoId:  reqDTO.Repo.RepoId,
+		RepoId:  reqDTO.Repo.Id,
 		Path:    reqDTO.Path,
 		Cursor:  reqDTO.Cursor,
 		Limit:   reqDTO.Limit,
@@ -114,7 +114,7 @@ func (*outerImpl) Unlock(ctx context.Context, reqDTO UnlockReqDTO) (LfsLockDTO, 
 	if err != nil {
 		return LfsLockDTO{}, err
 	}
-	if !p.GetRepoPerm(reqDTO.Repo.RepoId).CanUpdateRepo {
+	if !p.GetRepoPerm(reqDTO.Repo.Id).CanUpdateRepo {
 		return LfsLockDTO{}, util.UnauthorizedError()
 	}
 	// 查找lock是否存在
@@ -150,7 +150,7 @@ func (s *outerImpl) Verify(ctx context.Context, reqDTO VerifyReqDTO) (bool, bool
 		if err != nil {
 			return false, false, err
 		}
-		if !p.GetRepoPerm(reqDTO.Repo.RepoId).CanAccessRepo {
+		if !p.GetRepoPerm(reqDTO.Repo.Id).CanAccessRepo {
 			return false, false, util.UnauthorizedError()
 		}
 	}
@@ -192,7 +192,7 @@ func (s *outerImpl) Download(ctx context.Context, reqDTO DownloadReqDTO) (err er
 		if err != nil {
 			return
 		}
-		if !p.GetRepoPerm(reqDTO.Repo.RepoId).CanAccessRepo {
+		if !p.GetRepoPerm(reqDTO.Repo.Id).CanAccessRepo {
 			err = util.UnauthorizedError()
 			return
 		}
@@ -230,12 +230,12 @@ func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error)
 	if err != nil {
 		return
 	}
-	if !p.GetRepoPerm(reqDTO.Repo.RepoId).CanUpdateRepo {
+	if !p.GetRepoPerm(reqDTO.Repo.Id).CanUpdateRepo {
 		err = util.UnauthorizedError()
 		return
 	}
 	// 检查oid是否落库
-	_, b, err := lfsmd.GetMetaObjectByOid(ctx, reqDTO.Oid, reqDTO.Repo.RepoId)
+	_, b, err := lfsmd.GetMetaObjectByOid(ctx, reqDTO.Oid, reqDTO.Repo.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -243,7 +243,7 @@ func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error)
 	}
 	if !b {
 		_, err = lfsmd.InsertMetaObject(ctx, lfsmd.InsertMetaObjectReqDTO{
-			RepoId: reqDTO.Repo.RepoId,
+			RepoId: reqDTO.Repo.Id,
 			Oid:    reqDTO.Oid,
 			Size:   reqDTO.Size,
 		})
@@ -264,9 +264,9 @@ func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error)
 		return
 	}
 	// 忽略lfs size计算异常
-	lfsSize, err := lfsmd.SumRepoLfsSize(ctx, reqDTO.Repo.RepoId)
+	lfsSize, err := lfsmd.SumRepoLfsSize(ctx, reqDTO.Repo.Id)
 	if err == nil {
-		err = repomd.UpdateLfsSize(ctx, reqDTO.Repo.RepoId, lfsSize)
+		err = repomd.UpdateLfsSize(ctx, reqDTO.Repo.Id, lfsSize)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			err = util.InternalError(err)
@@ -288,7 +288,7 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 	oidList, _ := listutil.Map(reqDTO.Objects, func(t PointerDTO) (string, error) {
 		return t.Oid, nil
 	})
-	objList, err := lfsmd.BatchMetaObjectByOidList(ctx, oidList, reqDTO.Repo.RepoId)
+	objList, err := lfsmd.BatchMetaObjectByOidList(ctx, oidList, reqDTO.Repo.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return BatchRespDTO{}, util.InternalError(err)
@@ -334,7 +334,7 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 			}
 			if exists && !b {
 				shouldInsert = append(shouldInsert, lfsmd.InsertMetaObjectReqDTO{
-					RepoId: reqDTO.Repo.RepoId,
+					RepoId: reqDTO.Repo.Id,
 					Oid:    object.Oid,
 					Size:   object.Size,
 				})

@@ -20,17 +20,17 @@ type InitRepoReqVO struct {
 }
 
 type DeleteRepoReqVO struct {
-	RepoId int64 `json:"repoId"`
+	Id int64 `json:"id"`
 }
 
 type TreeRepoReqVO struct {
-	RepoId int64  `json:"repoId"`
-	Ref    string `json:"ref"`
-	Dir    string `json:"dir"`
+	Id  int64  `json:"id"`
+	Ref string `json:"ref"`
+	Dir string `json:"dir"`
 }
 
 type EntriesRepoReqVO struct {
-	RepoId int64  `json:"repoId"`
+	Id     int64  `json:"id"`
 	Ref    string `json:"ref"`
 	Dir    string `json:"dir"`
 	Offset int    `json:"offset"`
@@ -79,26 +79,24 @@ type TreeVO struct {
 
 type TreeRepoRespVO struct {
 	ginutil.BaseResp
-	IsEmpty      bool     `json:"isEmpty"`
 	ReadmeText   string   `json:"readmeText"`
 	LatestCommit CommitVO `json:"latestCommit"`
 	Tree         TreeVO   `json:"tree"`
 }
 
 type RepoVO struct {
-	RepoId  int64  `json:"repoId"`
+	Id      int64  `json:"id"`
 	Name    string `json:"name"`
 	Path    string `json:"path"`
 	Author  string `json:"author"`
 	TeamId  int64  `json:"teamId"`
-	IsEmpty bool   `json:"isEmpty"`
 	GitSize int64  `json:"gitSize"`
 	LfsSize int64  `json:"lfsSize"`
 	Created string `json:"created"`
 }
 
 type CatFileReqVO struct {
-	RepoId   int64  `json:"repoId"`
+	Id       int64  `json:"id"`
 	Ref      string `json:"ref"`
 	Dir      string `json:"dir"`
 	FileName string `json:"fileName"`
@@ -121,7 +119,7 @@ type AllTypeListRespVO struct {
 }
 
 type AllBranchesReqVO struct {
-	RepoId int64 `json:"repoId"`
+	Id int64 `json:"id"`
 }
 
 type AllBranchesRespVO struct {
@@ -130,7 +128,7 @@ type AllBranchesRespVO struct {
 }
 
 type AllTagsReqVO struct {
-	RepoId int64 `json:"repoId"`
+	Id int64 `json:"id"`
 }
 
 type AllTagsRespVO struct {
@@ -139,17 +137,17 @@ type AllTagsRespVO struct {
 }
 
 type GcReqVO struct {
-	RepoId int64 `json:"repoId"`
+	Id int64 `json:"id"`
 }
 
 type PrepareMergeReqVO struct {
-	RepoId int64  `json:"repoId"`
+	Id     int64  `json:"id"`
 	Target string `json:"target"`
 	Head   string `json:"head"`
 }
 
 type DiffFileReqVO struct {
-	RepoId   int64  `json:"repoId"`
+	Id       int64  `json:"id"`
 	Target   string `json:"target"`
 	Head     string `json:"head"`
 	FileName string `json:"fileName"`
@@ -206,7 +204,7 @@ type DiffLineVO struct {
 }
 
 type ShowDiffTextContentReqVO struct {
-	RepoId    int64  `json:"repoId"`
+	Id        int64  `json:"id"`
 	CommitId  string `json:"commitId"`
 	FileName  string `json:"fileName"`
 	Offset    int    `json:"offset"`
@@ -220,7 +218,7 @@ type ShowDiffTextContentRespVO struct {
 }
 
 type HistoryCommitsReqVO struct {
-	RepoId int64  `json:"repoId"`
+	Id     int64  `json:"id"`
 	Ref    string `json:"ref"`
 	Cursor int    `json:"cursor"`
 }
@@ -232,22 +230,22 @@ type HistoryCommitsRespVO struct {
 }
 
 type AccessTokenVO struct {
-	Tid     int64  `json:"tid"`
+	Id      int64  `json:"id"`
 	Account string `json:"account"`
 	Token   string `json:"token"`
 	Created string `json:"created"`
 }
 
 type CreateAccessTokenReqVO struct {
-	RepoId int64 `json:"repoId"`
+	Id int64 `json:"id"`
 }
 
 type DeleteAccessTokenReqVO struct {
-	Tid int64 `json:"tid"`
+	Id int64 `json:"id"`
 }
 
 type ListAccessTokenReqVO struct {
-	RepoId int64 `json:"repoId"`
+	Id int64 `json:"id"`
 }
 
 type ListAccessTokenRespVO struct {
@@ -256,17 +254,17 @@ type ListAccessTokenRespVO struct {
 }
 
 type InsertActionReqVO struct {
-	RepoId         int64  `json:"repoId"`
+	Id             int64  `json:"id"`
 	AssignInstance string `json:"assignInstance"`
 	ActionContent  string `json:"actionContent"`
 }
 
 type DeleteActionReqVO struct {
-	ActionId int64 `json:"actionId"`
+	Id int64 `json:"id"`
 }
 
 type ListActionReqVO struct {
-	RepoId int64 `json:"repoId"`
+	Id int64 `json:"id"`
 }
 
 type ListActionRespVO struct {
@@ -275,18 +273,23 @@ type ListActionRespVO struct {
 }
 
 type UpdateActionReqVO struct {
-	ActionId       int64  `json:"actionId"`
+	Id             int64  `json:"id"`
 	AssignInstance string `json:"assignInstance"`
 	ActionContent  string `json:"actionContent"`
 }
 
 type ActionVO struct {
-	ActionId      int64  `json:"actionId"`
+	Id            int64  `json:"id"`
 	ActionContent string `json:"actionContent"`
 	Created       string `json:"created"`
 }
 
 type TriggerActionReqVO struct {
-	ActionId int64  `json:"actionId"`
-	Ref      string `json:"ref"`
+	Id  int64  `json:"id"`
+	Ref string `json:"ref"`
+}
+
+type TransferTeam struct {
+	Id     int64 `json:"id"`
+	TeamId int64 `json:"teamId"`
 }

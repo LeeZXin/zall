@@ -305,10 +305,10 @@ func UploadPack(req reqvo.UploadPackReq, nodeId string, repoId int64, pusherAcco
 		"/api/v1/git/smart/"+req.RepoPath+"/git-upload-pack",
 		req.C,
 		map[string]string{
-			"Repo-Id":        strconv.FormatInt(repoId, 10),
+			"Repo-RepoId":    strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
-			"App-Url":        appUrl,
+			"AppId-Url":      appUrl,
 		},
 	)
 }
@@ -319,10 +319,10 @@ func ReceivePack(req reqvo.ReceivePackReq, nodeId string, repoId int64, pusherAc
 		"/api/v1/git/smart/"+req.RepoPath+"/git-receive-pack",
 		req.C,
 		map[string]string{
-			"Repo-Id":        strconv.FormatInt(repoId, 10),
+			"Repo-RepoId":    strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
-			"App-Url":        appUrl,
+			"AppId-Url":      appUrl,
 		},
 	)
 }

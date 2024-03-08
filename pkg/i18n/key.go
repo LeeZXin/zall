@@ -131,6 +131,10 @@ var (
 		Id:         "repo.remainCountGreaterThanZero",
 		DefaultRet: "仓库数量仍大于0",
 	}
+	RepoPermsContainsTargetRepoId = KeyItem{
+		Id:         "repo.permsContainsTargetRepoId",
+		DefaultRet: "该项目组仍包含该仓库的特殊权限配置",
+	}
 )
 
 var (
@@ -324,5 +328,16 @@ var (
 	TimerTaskUnknownTriggerType = KeyItem{
 		Id:         "timerTask.unknownTriggerType",
 		DefaultRet: "未知",
+	}
+)
+
+var (
+	AppPermsContainerTargetAppId = KeyItem{
+		Id:         "app.permsContainerTargetAppId",
+		DefaultRet: "该项目组仍包含该app的特殊权限配置",
+	}
+	AppRemainCountGreaterThanZero = KeyItem{
+		Id:         "app.remainCountGreaterThanZero",
+		DefaultRet: "app数量仍大于0",
 	}
 )

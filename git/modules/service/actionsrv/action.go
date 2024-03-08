@@ -7,7 +7,6 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/actiontaskmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/pkg/action"
-	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/quit"
@@ -18,7 +17,6 @@ import (
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"gopkg.in/yaml.v3"
 	"io"
-	"strings"
 	"time"
 )
 
@@ -74,10 +72,6 @@ func InitSrv() {
 }
 
 func TriggerGitAction(ctx context.Context, reqDTO action.Webhook) {
-	// 检查参数 暂时只支持分支push
-	if !strings.HasPrefix(reqDTO.Ref, git.BranchPrefix) {
-		return
-	}
 	if reqDTO.YamlContent != "" {
 		runWithYamlContent(ctx, reqDTO, reqDTO.YamlContent, 0)
 	} else {
@@ -100,11 +94,11 @@ func runWithYamlContent(ctx context.Context, reqDTO action.Webhook, yamlContent 
 		return
 	}
 	// 获取是否配置push
-	refs, b := graph.GetSupportedRefs(action.PushAction)
+	refs, b := graph.GetSupportedRefs(reqDTO.Action)
 	if !b {
 		return
 	}
-	// 配置里包含push 分支
+	// 配置里包含分支
 	if util.WildcardMatchBranches(refs.Branches, util.BaseRefName(reqDTO.Ref)) {
 		execGraph(ctx, graph, reqDTO, taskId)
 	}

@@ -47,7 +47,7 @@ func (*outerImpl) InsertProtectedBranch(ctx context.Context, reqDTO InsertProtec
 		}
 		// 检查评审者是否有访问代码的权限
 		detail, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, repo.TeamId, account)
-		if !b || !detail.PermDetail.GetRepoPerm(repo.RepoId).CanAccessRepo {
+		if !b || !detail.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo {
 			err = util.NewBizErr(apicode.InvalidArgsCode, i18n.UserAccountUnauthorizedReviewCodeWarnFormat, account)
 			return
 		}

@@ -65,17 +65,6 @@ func ListRepoByIdList(ctx context.Context, repoIdList []int64) ([]Repo, error) {
 	return ret, err
 }
 
-func UpdateIsEmpty(ctx context.Context, repoId string, isEmpty bool) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", repoId).
-		Cols("is_empty").
-		Limit(1).
-		Update(&Repo{
-			IsEmpty: isEmpty,
-		})
-	return err
-}
-
 func InsertRepo(ctx context.Context, reqDTO InsertRepoReqDTO) (Repo, error) {
 	r := Repo{
 		Name:          reqDTO.Name,
@@ -84,7 +73,6 @@ func InsertRepo(ctx context.Context, reqDTO InsertRepoReqDTO) (Repo, error) {
 		TeamId:        reqDTO.TeamId,
 		RepoDesc:      reqDTO.RepoDesc,
 		DefaultBranch: reqDTO.DefaultBranch,
-		IsEmpty:       reqDTO.IsEmpty,
 		GitSize:       reqDTO.GitSize,
 		LfsSize:       reqDTO.LfsSize,
 		NodeId:        reqDTO.NodeId,
@@ -161,7 +149,7 @@ func InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) error {
 
 func UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", reqDTO.ActionId).
+		Where("id = ?", reqDTO.Id).
 		Cols("content", "assign_instance").
 		Update(&Action{
 			Content:        reqDTO.Content,
@@ -203,4 +191,15 @@ func IterateRepo(ctx context.Context, fn func(*Repo) error) error {
 			func(_ int, bean any) error {
 				return fn(bean.(*Repo))
 			})
+}
+
+func TransferTeam(ctx context.Context, repoId, teamId int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", repoId).
+		Cols("team_id").
+		Limit(1).
+		Update(&Repo{
+			TeamId: teamId,
+		})
+	return rows == 1, err
 }

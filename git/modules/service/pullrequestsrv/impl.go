@@ -164,7 +164,7 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 		return
 	}
 	// 检查是否是保护分支
-	cfg, isProtectedBranch, err := branchmd.IsProtectedBranch(ctx, pr.RepoId, pr.Head)
+	cfg, isProtectedBranch, err := branchmd.IsProtectedBranch(ctx, pr.Id, pr.Head)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -237,7 +237,7 @@ func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullReques
 				Message       string `json:"message"`
 				AppUrl        string `json:"appUrl"`
 			}{
-				RepoId:        repo.RepoId,
+				RepoId:        repo.Id,
 				PrId:          pr.Id,
 				PusherAccount: operator.Account,
 				PusherEmail:   operator.Email,
@@ -292,7 +292,7 @@ func (*outerImpl) ReviewPullRequest(ctx context.Context, reqDTO ReviewPullReques
 		err = util.InvalidArgsError()
 		return
 	}
-	repo, b, err := repomd.GetByRepoId(ctx, pr.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, pr.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -307,12 +307,12 @@ func (*outerImpl) ReviewPullRequest(ctx context.Context, reqDTO ReviewPullReques
 		err = util.UnauthorizedError()
 		return
 	}
-	if !p.PermDetail.GetRepoPerm(pr.RepoId).CanAccessRepo {
+	if !p.PermDetail.GetRepoPerm(pr.Id).CanAccessRepo {
 		err = util.UnauthorizedError()
 		return
 	}
 	// 检查是否是保护分支
-	cfg, isProtectedBranch, err := branchmd.IsProtectedBranch(ctx, repo.RepoId, pr.Head)
+	cfg, isProtectedBranch, err := branchmd.IsProtectedBranch(ctx, repo.Id, pr.Head)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -356,7 +356,7 @@ func checkPerm(ctx context.Context, prId int64, operator apisession.UserInfo) (p
 	if !b {
 		return pullrequestmd.PullRequest{}, repomd.RepoInfo{}, util.InvalidArgsError()
 	}
-	repo, err := checkPermByRepoId(ctx, pr.RepoId, operator)
+	repo, err := checkPermByRepoId(ctx, pr.Id, operator)
 	return pr, repo, err
 }
 
@@ -381,11 +381,11 @@ func triggerWebhook(repo repomd.RepoInfo, operator apisession.UserInfo, pr pullr
 		ctx, closer := mysqlstore.Context(context.Background())
 		defer closer.Close()
 		// 触发webhook
-		hookList, err := webhookmd.ListWebhook(ctx, repo.RepoId, webhookmd.PullRequestHook)
+		hookList, err := webhookmd.ListWebhook(ctx, repo.Id, webhookmd.PullRequestHook)
 		if err == nil {
 			req := webhook.PullRequestActionHook{
 				PrId:       pr.Id,
-				RepoId:     repo.RepoId,
+				RepoId:     repo.Id,
 				RepoName:   repo.Name,
 				TargetRef:  pr.Target,
 				HeadRef:    pr.Head,

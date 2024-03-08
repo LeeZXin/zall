@@ -47,7 +47,7 @@ func (s *innerImpl) GetByRepoPath(ctx context.Context, path string) (repomd.Repo
 	v, b := s.pathCache.Get(path)
 	if b {
 		r := v.(repomd.RepoInfo)
-		return r, r.RepoId != 0
+		return r, r.Id != 0
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
@@ -63,13 +63,13 @@ func (s *innerImpl) GetByRepoPath(ctx context.Context, path string) (repomd.Repo
 	return r, b
 }
 
-// GetByRepoId 通过id获取仓库信息
+// GetById 通过id获取仓库信息
 func (s *innerImpl) GetByRepoId(ctx context.Context, id int64) (repomd.RepoInfo, bool) {
 	key := strconv.FormatInt(id, 10)
 	v, b := s.idCache.Get(key)
 	if b {
 		r := v.(repomd.RepoInfo)
-		return r, r.RepoId != 0
+		return r, r.Id != 0
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
@@ -92,7 +92,7 @@ func (*innerImpl) CheckAccessToken(ctx context.Context, reqDTO CheckAccessTokenR
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	token, b, err := repomd.GetAccessToken(ctx, repomd.GetAccessTokenReqDTO{
-		RepoId:  reqDTO.RepoId,
+		RepoId:  reqDTO.Id,
 		Account: reqDTO.Account,
 	})
 	if err != nil || !b {
@@ -113,16 +113,12 @@ func (s *outerImpl) EntriesRepo(ctx context.Context, reqDTO EntriesRepoReqDTO) (
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return TreeDTO{}, err
 	}
-	if p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return TreeDTO{}, util.UnauthorizedError()
-	}
-	// 空仓库 需要推代码
-	if repo.IsEmpty {
-		return TreeDTO{}, nil
 	}
 	resp, err := client.EntriesRepo(ctx, reqvo.EntriesRepoReq{
 		RepoPath: repo.Path,
@@ -153,7 +149,7 @@ func (*outerImpl) ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]repomd
 		return nil, util.UnauthorizedError()
 	}
 	// 项目管理员可看到所有仓库或者应用所有仓库权限配置
-	if p.IsAdmin || p.PermDetail.ApplyDefaultRepoPerm {
+	if p.IsAdmin || len(p.PermDetail.RepoPermList) == 0 {
 		repoList, err := repomd.ListAllRepo(ctx, reqDTO.TeamId)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -163,10 +159,10 @@ func (*outerImpl) ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]repomd
 	}
 	// 通过可访问仓库id查询
 	permList := p.PermDetail.RepoPermList
-	repoIdList, _ := listutil.Map(permList, func(t perm.RepoPermWithId) (int64, error) {
+	IdList, _ := listutil.Map(permList, func(t perm.RepoPermWithId) (int64, error) {
 		return t.RepoId, nil
 	})
-	repoList, err := repomd.ListRepoByIdList(ctx, repoIdList)
+	repoList, err := repomd.ListRepoByIdList(ctx, IdList)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -181,11 +177,11 @@ func (s *outerImpl) CatFile(ctx context.Context, reqDTO CatFileReqDTO) (CatFileR
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return CatFileRespDTO{}, err
 	}
-	if !p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if !p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return CatFileRespDTO{}, util.UnauthorizedError()
 	}
 	resp, err := client.CatFile(ctx, reqvo.CatFileReq{
@@ -212,16 +208,12 @@ func (s *outerImpl) TreeRepo(ctx context.Context, reqDTO TreeRepoReqDTO) (TreeRe
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return TreeRepoRespDTO{}, err
 	}
-	if !p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if !p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return TreeRepoRespDTO{}, util.UnauthorizedError()
-	}
-	// 空仓库 需要推代码
-	if repo.IsEmpty {
-		return TreeRepoRespDTO{IsEmpty: true}, nil
 	}
 	resp, err := client.TreeRepo(ctx, reqvo.TreeRepoReq{
 		RepoPath: repo.Path,
@@ -319,7 +311,6 @@ func (s *outerImpl) InitRepo(ctx context.Context, reqDTO InitRepoReqDTO) (err er
 		TeamId:        reqDTO.TeamId,
 		RepoDesc:      reqDTO.Desc,
 		DefaultBranch: reqDTO.DefaultBranch,
-		IsEmpty:       !reqDTO.CreateReadme && reqDTO.GitIgnoreName == "",
 		NodeId:        nodes[nodeIndex].NodeId,
 	}
 	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
@@ -374,7 +365,7 @@ func (s *outerImpl) DeleteRepo(ctx context.Context, reqDTO DeleteRepoReqDTO) (er
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return
 	}
@@ -382,6 +373,23 @@ func (s *outerImpl) DeleteRepo(ctx context.Context, reqDTO DeleteRepoReqDTO) (er
 	if !p.TeamPerm.CanDeleteRepo {
 		err = util.UnauthorizedError()
 		return
+	}
+	// 检查特殊配置
+	// 查询team角色是否包含该Id
+	groups, err := teammd.ListTeamUserGroup(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	// 项目组仍有该仓库的特殊配置
+	for _, group := range groups {
+		for _, repoPerm := range group.GetPermDetail().RepoPermList {
+			if repoPerm.RepoId == reqDTO.Id {
+				err = util.NewBizErr(apicode.OperationFailedErrCode, i18n.RepoPermsContainsTargetRepoId)
+				return
+			}
+		}
 	}
 	err = client.DeleteRepo(ctx, reqvo.DeleteRepoReq{
 		RepoPath: repo.Path,
@@ -402,12 +410,12 @@ func (s *outerImpl) AllBranches(ctx context.Context, reqDTO AllBranchesReqDTO) (
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
 	// 是否可访问
-	if !p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if !p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return nil, util.UnauthorizedError()
 	}
 	branches, err := client.GetAllBranches(ctx, reqvo.GetAllBranchesReq{
@@ -428,12 +436,12 @@ func (s *outerImpl) AllTags(ctx context.Context, reqDTO AllTagsReqDTO) ([]string
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
 	// 是否可访问
-	if !p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if !p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return nil, util.UnauthorizedError()
 	}
 	tags, err := client.GetAllTags(ctx, reqvo.GetAllTagsReq{
@@ -454,12 +462,12 @@ func (s *outerImpl) Gc(ctx context.Context, reqDTO GcReqDTO) error {
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
 	// 是否可访问
-	if !p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if !p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return util.UnauthorizedError()
 	}
 	err = client.Gc(ctx, reqvo.GcReq{
@@ -482,11 +490,11 @@ func (s *outerImpl) DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return DiffCommitsRespDTO{}, err
 	}
-	if !p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if !p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return DiffCommitsRespDTO{}, util.UnauthorizedError()
 	}
 	refs, err := client.DiffRefs(ctx, reqvo.DiffRefsReq{
@@ -537,11 +545,11 @@ func (s *outerImpl) DiffFile(ctx context.Context, reqDTO DiffFileReqDTO) (DiffFi
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return DiffFileRespDTO{}, err
 	}
-	if !p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if !p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return DiffFileRespDTO{}, util.UnauthorizedError()
 	}
 	resp, err := client.DiffFile(ctx, reqvo.DiffFileReq{
@@ -606,11 +614,11 @@ func (s *outerImpl) ShowDiffTextContent(ctx context.Context, reqDTO ShowDiffText
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
-	if !p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if !p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return nil, util.UnauthorizedError()
 	}
 	var startLine int
@@ -658,11 +666,11 @@ func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReq
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	repo, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return HistoryCommitsRespDTO{}, err
 	}
-	if !p.GetRepoPerm(repo.RepoId).CanAccessRepo {
+	if !p.GetRepoPerm(repo.Id).CanAccessRepo {
 		return HistoryCommitsRespDTO{}, util.UnauthorizedError()
 	}
 	resp, err := client.HistoryCommits(ctx, reqvo.HistoryCommitsReq{
@@ -742,18 +750,18 @@ func (*outerImpl) InsertAccessToken(ctx context.Context, reqDTO InsertAccessToke
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return
 	}
 	// 是否可编辑token
-	if !p.GetRepoPerm(reqDTO.RepoId).CanUpdateToken {
+	if !p.GetRepoPerm(reqDTO.Id).CanUpdateToken {
 		err = util.UnauthorizedError()
 		return
 	}
 	for i := 0; i < 10; i++ {
 		_, err = repomd.InsertAccessToken(ctx, repomd.InsertAccessTokenReqDTO{
-			RepoId:  reqDTO.RepoId,
+			RepoId:  reqDTO.Id,
 			Account: strutil.RandomStr(16),
 			Token:   strutil.RandomStr(16),
 		})
@@ -785,7 +793,7 @@ func (*outerImpl) DeleteAccessToken(ctx context.Context, reqDTO DeleteAccessToke
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	accessToken, b, err := repomd.GetByTid(ctx, reqDTO.Tid)
+	accessToken, b, err := repomd.GetByTid(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -796,16 +804,16 @@ func (*outerImpl) DeleteAccessToken(ctx context.Context, reqDTO DeleteAccessToke
 		return
 	}
 	// 校验权限
-	_, p, err := getPerm(ctx, accessToken.RepoId, reqDTO.Operator)
+	_, p, err := getPerm(ctx, accessToken.Id, reqDTO.Operator)
 	if err != nil {
 		return
 	}
 	// 是否可编辑token
-	if !p.GetRepoPerm(accessToken.RepoId).CanUpdateToken {
+	if !p.GetRepoPerm(accessToken.Id).CanUpdateToken {
 		err = util.UnauthorizedError()
 		return
 	}
-	_, err = repomd.DeleteAccessToken(ctx, reqDTO.Tid)
+	_, err = repomd.DeleteAccessToken(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -821,22 +829,22 @@ func (*outerImpl) ListAccessToken(ctx context.Context, reqDTO ListAccessTokenReq
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
 	// 是否可访问token
-	if !p.GetRepoPerm(reqDTO.RepoId).CanAccessToken {
+	if !p.GetRepoPerm(reqDTO.Id).CanAccessToken {
 		return nil, util.UnauthorizedError()
 	}
-	tokens, err := repomd.ListAccessToken(ctx, reqDTO.RepoId)
+	tokens, err := repomd.ListAccessToken(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
 	return listutil.Map(tokens, func(t repomd.AccessToken) (AccessTokenDTO, error) {
 		return AccessTokenDTO{
-			Tid:     t.Id,
+			Id:      t.Id,
 			Account: t.Account,
 			Token:   t.Token,
 			Created: t.Created,
@@ -844,8 +852,8 @@ func (*outerImpl) ListAccessToken(ctx context.Context, reqDTO ListAccessTokenReq
 	})
 }
 
-func getPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.RepoInfo, perm.Detail, error) {
-	repo, b := Inner.GetByRepoId(ctx, repoId)
+func getPerm(ctx context.Context, Id int64, operator apisession.UserInfo) (repomd.RepoInfo, perm.Detail, error) {
+	repo, b := Inner.GetByRepoId(ctx, Id)
 	if !b {
 		return repomd.RepoInfo{}, perm.Detail{}, util.InvalidArgsError()
 	}
@@ -872,12 +880,12 @@ func (*outerImpl) InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) (
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return
 	}
 	// 是否可编辑action
-	if !p.GetRepoPerm(reqDTO.RepoId).CanUpdateAction {
+	if !p.GetRepoPerm(reqDTO.Id).CanUpdateAction {
 		err = util.UnauthorizedError()
 		return
 	}
@@ -889,7 +897,7 @@ func (*outerImpl) InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) (
 	}
 	yamlOut, _ := yaml.Marshal(graph)
 	err = repomd.InsertAction(ctx, repomd.InsertActionReqDTO{
-		RepoId:         reqDTO.RepoId,
+		RepoId:         reqDTO.Id,
 		AssignInstance: reqDTO.AssignInstance,
 		Content:        string(yamlOut),
 	})
@@ -916,7 +924,7 @@ func (*outerImpl) DeleteAction(ctx context.Context, reqDTO DeleteActionReqDTO) (
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	repoAction, b, err := repomd.GetByActionId(ctx, reqDTO.ActionId)
+	repoAction, b, err := repomd.GetByActionId(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -927,16 +935,16 @@ func (*outerImpl) DeleteAction(ctx context.Context, reqDTO DeleteActionReqDTO) (
 		return
 	}
 	// 校验权限
-	_, p, err := getPerm(ctx, repoAction.RepoId, reqDTO.Operator)
+	_, p, err := getPerm(ctx, repoAction.Id, reqDTO.Operator)
 	if err != nil {
 		return
 	}
 	// 是否可编辑action
-	if !p.GetRepoPerm(repoAction.RepoId).CanUpdateAction {
+	if !p.GetRepoPerm(repoAction.Id).CanUpdateAction {
 		err = util.UnauthorizedError()
 		return
 	}
-	_, err = repomd.DeleteAction(ctx, reqDTO.ActionId)
+	_, err = repomd.DeleteAction(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -952,15 +960,15 @@ func (*outerImpl) ListAction(ctx context.Context, reqDTO ListActionReqDTO) ([]re
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, p, err := getPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
 	// 是否可访问action
-	if !p.GetRepoPerm(reqDTO.RepoId).CanAccessAction {
+	if !p.GetRepoPerm(reqDTO.Id).CanAccessAction {
 		return nil, util.UnauthorizedError()
 	}
-	ret, err := repomd.ListAction(ctx, reqDTO.RepoId)
+	ret, err := repomd.ListAction(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -983,7 +991,7 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	repoAction, b, err := repomd.GetByActionId(ctx, reqDTO.ActionId)
+	repoAction, b, err := repomd.GetByActionId(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -994,12 +1002,12 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 		return
 	}
 	// 校验权限
-	_, p, err := getPerm(ctx, repoAction.RepoId, reqDTO.Operator)
+	_, p, err := getPerm(ctx, repoAction.Id, reqDTO.Operator)
 	if err != nil {
 		return
 	}
 	// 是否可编辑action
-	if !p.GetRepoPerm(repoAction.RepoId).CanUpdateAction {
+	if !p.GetRepoPerm(repoAction.Id).CanUpdateAction {
 		err = util.UnauthorizedError()
 		return
 	}
@@ -1011,7 +1019,7 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 	}
 	yamlOut, _ := yaml.Marshal(graph)
 	_, err = repomd.UpdateAction(ctx, repomd.UpdateActionReqDTO{
-		ActionId:       reqDTO.ActionId,
+		Id:             reqDTO.Id,
 		Content:        string(yamlOut),
 		AssignInstance: reqDTO.AssignInstance,
 	})
@@ -1041,16 +1049,12 @@ func (s *outerImpl) RefreshAllGitHooks(ctx context.Context, reqDTO RefreshAllGit
 		return util.UnauthorizedError()
 	}
 	go func() {
-		ctx, closer := mysqlstore.Context(ctx)
+		ctx, closer := mysqlstore.Context(context.Background())
 		defer closer.Close()
 		err := repomd.IterateRepo(ctx, func(repo *repomd.Repo) error {
-			err := client.InitRepoHook(ctx, reqvo.InitRepoHookReq{
+			return client.InitRepoHook(context.Background(), reqvo.InitRepoHookReq{
 				RepoPath: repo.Path,
 			}, repo.NodeId)
-			if err != nil {
-				logger.Logger.Error(err)
-			}
-			return err
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -1065,7 +1069,7 @@ func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO)
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	repoAction, b, err := repomd.GetByActionId(ctx, reqDTO.ActionId)
+	repoAction, b, err := repomd.GetByActionId(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -1074,16 +1078,16 @@ func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO)
 		return util.InvalidArgsError()
 	}
 	// 校验权限
-	repo, p, err := getPerm(ctx, repoAction.RepoId, reqDTO.Operator)
+	repo, p, err := getPerm(ctx, repoAction.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
 	// 是否可编辑action
-	if !p.GetRepoPerm(repoAction.RepoId).CanTriggerAction {
+	if !p.GetRepoPerm(repoAction.Id).CanTriggerAction {
 		return util.UnauthorizedError()
 	}
 	req := action.Webhook{
-		RepoId:    repo.RepoId,
+		RepoId:    repo.Id,
 		RepoName:  repo.Name,
 		Ref:       reqDTO.Ref,
 		EventTime: time.Now().UnixMilli(),
@@ -1106,4 +1110,57 @@ func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO)
 	}
 	action.TriggerActionHook(req, instance.InstanceHost)
 	return nil
+}
+
+func (*outerImpl) TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.TransferTeam),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	// 只有系统管理员才有权限
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
+	}
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.Id)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
+	// 查询team角色是否包含该Id
+	groups, err := teammd.ListTeamUserGroup(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	// 项目组仍有该仓库的特殊配置
+	for _, group := range groups {
+		for _, repoPerm := range group.GetPermDetail().RepoPermList {
+			if repoPerm.RepoId == reqDTO.Id {
+				err = util.NewBizErr(apicode.OperationFailedErrCode, i18n.RepoPermsContainsTargetRepoId)
+				return
+			}
+		}
+	}
+	_, err = repomd.TransferTeam(ctx, reqDTO.Id, reqDTO.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
 }

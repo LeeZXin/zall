@@ -51,7 +51,7 @@ func (r *InitRepoReqDTO) IsValid() error {
 }
 
 type DeleteRepoReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -63,7 +63,7 @@ func (r *DeleteRepoReqDTO) IsValid() error {
 }
 
 type TreeRepoReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Ref      string              `json:"ref"`
 	Dir      string              `json:"dir"`
 	Operator apisession.UserInfo `json:"operator"`
@@ -83,7 +83,7 @@ func (r *TreeRepoReqDTO) IsValid() error {
 }
 
 type CatFileReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Ref      string              `json:"ref"`
 	Dir      string              `json:"dir"`
 	FileName string              `json:"fileName"`
@@ -116,7 +116,7 @@ type CatFileRespDTO struct {
 }
 
 type EntriesRepoReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Ref      string              `json:"ref"`
 	Dir      string              `json:"dir"`
 	Offset   int                 `json:"offset"`
@@ -182,7 +182,6 @@ type TreeDTO struct {
 }
 
 type TreeRepoRespDTO struct {
-	IsEmpty      bool      `json:"isEmpty"`
 	ReadmeText   string    `json:"readmeText"`
 	HasReadme    bool      `json:"hasReadme"`
 	LatestCommit CommitDTO `json:"latestCommit"`
@@ -195,7 +194,7 @@ type RepoTypeDTO struct {
 }
 
 type AllBranchesReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -207,7 +206,7 @@ func (r *AllBranchesReqDTO) IsValid() error {
 }
 
 type AllTagsReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -219,7 +218,7 @@ func (r *AllTagsReqDTO) IsValid() error {
 }
 
 type GcReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -259,7 +258,7 @@ var gitignoreSet = hashset.NewHashSet(
 )
 
 type DiffCommitsReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Target   string              `json:"target"`
 	Head     string              `json:"head"`
 	Operator apisession.UserInfo `json:"operator"`
@@ -328,7 +327,7 @@ type DiffLineDTO struct {
 }
 
 type ShowDiffTextContentReqDTO struct {
-	RepoId    int64               `json:"repoId"`
+	Id        int64               `json:"id"`
 	CommitId  string              `json:"commitId"`
 	FileName  string              `json:"fileName"`
 	Offset    int                 `json:"offset"`
@@ -360,7 +359,7 @@ func (r *ShowDiffTextContentReqDTO) IsValid() error {
 }
 
 type DiffFileReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Target   string              `json:"target"`
 	Head     string              `json:"head"`
 	FileName string              `json:"fileName"`
@@ -384,7 +383,7 @@ func (r *DiffFileReqDTO) IsValid() error {
 }
 
 type HistoryCommitsReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Ref      string              `json:"ref"`
 	Cursor   int                 `json:"cursor"`
 	Operator apisession.UserInfo `json:"operator"`
@@ -413,7 +412,7 @@ func validateFileName(name string) bool {
 }
 
 type InsertAccessTokenReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -425,7 +424,7 @@ func (r *InsertAccessTokenReqDTO) IsValid() error {
 }
 
 type DeleteAccessTokenReqDTO struct {
-	Tid      int64               `json:"tid"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -437,7 +436,7 @@ func (r *DeleteAccessTokenReqDTO) IsValid() error {
 }
 
 type ListAccessTokenReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -449,14 +448,14 @@ func (r *ListAccessTokenReqDTO) IsValid() error {
 }
 
 type AccessTokenDTO struct {
-	Tid     int64
-	Account string
-	Token   string
-	Created time.Time
+	Id      int64     `json:"id"`
+	Account string    `json:"account"`
+	Token   string    `json:"token"`
+	Created time.Time `json:"created"`
 }
 
 type CheckAccessTokenReqDTO struct {
-	RepoId  int64  `json:"repoId"`
+	Id      int64  `json:"id"`
 	Account string `json:"account"`
 	Token   string `json:"token"`
 }
@@ -472,7 +471,7 @@ func (r *CheckAccessTokenReqDTO) IsValid() error {
 }
 
 type InsertActionReqDTO struct {
-	RepoId         int64               `json:"repoId"`
+	Id             int64               `json:"id"`
 	ActionContent  string              `json:"actionContent"`
 	AssignInstance string              `json:"assignInstance"`
 	Operator       apisession.UserInfo `json:"operator"`
@@ -492,7 +491,7 @@ func (r *InsertActionReqDTO) IsValid() error {
 }
 
 type DeleteActionReqDTO struct {
-	ActionId int64               `json:"actionId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -504,7 +503,7 @@ func (r *DeleteActionReqDTO) IsValid() error {
 }
 
 type ListActionReqDTO struct {
-	RepoId   int64               `json:"repoId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -516,7 +515,7 @@ func (r *ListActionReqDTO) IsValid() error {
 }
 
 type UpdateActionReqDTO struct {
-	ActionId       int64               `json:"repoId"`
+	Id             int64               `json:"id"`
 	ActionContent  string              `json:"actionContent"`
 	AssignInstance string              `json:"assignInstance"`
 	Operator       apisession.UserInfo `json:"operator"`
@@ -547,13 +546,29 @@ func (r *RefreshAllGitHooksReqDTO) IsValid() error {
 }
 
 type TriggerActionReqDTO struct {
-	ActionId int64               `json:"actionId"`
+	Id       int64               `json:"id"`
 	Ref      string              `json:"ref"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *TriggerActionReqDTO) IsValid() error {
 	if len(r.Ref) > 255 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type TransferTeamReqDTO struct {
+	Id       int64               `json:"id"`
+	TeamId   int64               `json:"teamId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *TransferTeamReqDTO) IsValid() error {
+	if r.Id <= 0 || r.TeamId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

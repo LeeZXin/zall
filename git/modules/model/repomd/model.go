@@ -20,7 +20,6 @@ type Repo struct {
 	RepoDesc      string    `json:"repoDesc"`
 	DefaultBranch string    `json:"defaultBranch"`
 	RepoStatus    int       `json:"repoStatus"`
-	IsEmpty       bool      `json:"isEmpty"`
 	GitSize       int64     `json:"gitSize"`
 	LfsSize       int64     `json:"lfsSize"`
 	Cfg           string    `json:"cfg"`
@@ -53,12 +52,11 @@ func (r *Repo) GetCfg() RepoCfg {
 
 func (r *Repo) ToRepoInfo() RepoInfo {
 	return RepoInfo{
-		RepoId:  r.Id,
+		Id:      r.Id,
 		Name:    r.Name,
 		Path:    r.Path,
 		Author:  r.Author,
 		TeamId:  r.TeamId,
-		IsEmpty: r.IsEmpty,
 		GitSize: r.GitSize,
 		LfsSize: r.LfsSize,
 		CfgStr:  r.Cfg,

@@ -36,7 +36,8 @@ func DeleteNode(ctx context.Context, nodeId string) (bool, error) {
 
 func GetAll(ctx context.Context) ([]GitNodeDTO, error) {
 	ret := make([]GitNode, 0)
-	err := xormutil.MustGetXormSession(ctx).OrderBy("id asc").Find(&ret)
+	session := xormutil.MustGetXormSession(ctx)
+	err := session.OrderBy("id asc").Find(&ret)
 	if err != nil {
 		return nil, err
 	}

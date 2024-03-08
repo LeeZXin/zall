@@ -189,7 +189,7 @@ type StepCfg struct {
 }
 
 func (c *StepCfg) String() string {
-	return fmt.Sprintf("Name: %s uses: %s with: %v", c.Name, c.Uses, c.With)
+	return fmt.Sprintf("NodeId: %s uses: %s with: %v", c.Name, c.Uses, c.With)
 }
 
 func (c *StepCfg) convertToStep() *Step {

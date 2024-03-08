@@ -22,6 +22,7 @@ func runActions(*cli.Context) error {
 	zsf.Run(
 		zsf.WithLifeCycles(
 			httpserver.NewServer(),
-		))
+		),
+	)
 	return nil
 }

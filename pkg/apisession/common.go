@@ -7,7 +7,6 @@ import (
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"time"
 )
 
 const (
@@ -45,11 +44,6 @@ func CheckLogin(c *gin.Context) {
 		})
 		c.Abort()
 		return
-	}
-	now := time.Now()
-	// 刷新token
-	if session.ExpireAt < now.Add(RefreshSessionInterval).UnixMilli() {
-		sessionStore.RefreshExpiry(sessionId, now.Add(SessionExpiry).UnixMilli())
 	}
 	c.Set(LoginUser, session.UserInfo)
 	c.Next()

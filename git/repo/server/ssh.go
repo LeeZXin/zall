@@ -188,7 +188,7 @@ func handleGitCommand(ctx context.Context, user *usermd.UserInfo, session ssh.Se
 	gitCmd.Env = append(gitCmd.Env,
 		util.JoinFields(
 			gitenv.EnvHookUrl, fmt.Sprintf("http://127.0.0.1:%d", common.HttpServerPort()),
-			gitenv.EnvRepoId, strconv.FormatInt(repo.RepoId, 10),
+			gitenv.EnvRepoId, strconv.FormatInt(repo.Id, 10),
 			gitenv.EnvPusherAccount, user.Account,
 			gitenv.EnvPusherEmail, user.Email,
 			gitenv.EnvAppUrl, gitCfg.AppUrl,
@@ -211,12 +211,12 @@ func checkAccessMode(ctx context.Context, account, repoPath string, accessMode p
 	}
 	if accessMode == perm.AccessModeWrite {
 		// 检查权限
-		if !p.PermDetail.GetRepoPerm(repo.RepoId).CanUpdateRepo {
+		if !p.PermDetail.GetRepoPerm(repo.Id).CanUpdateRepo {
 			return repomd.RepoInfo{}, util.UnauthorizedError()
 		}
 	} else if accessMode == perm.AccessModeRead {
 		// 检查权限
-		if !p.PermDetail.GetRepoPerm(repo.RepoId).CanAccessRepo {
+		if !p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo {
 			return repomd.RepoInfo{}, util.UnauthorizedError()
 		}
 	} else {

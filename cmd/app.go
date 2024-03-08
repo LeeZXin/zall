@@ -13,6 +13,7 @@ var (
 		Actions,
 		Timer,
 		IdServer,
+		PropServer,
 	}
 )
 

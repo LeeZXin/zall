@@ -72,5 +72,5 @@ func pickHost(ctx context.Context, nodeId string, index int) (string, error) {
 	if err != nil {
 		return "", NodeNotFoundErr
 	}
-	return node.Data, err
+	return node.Data, nil
 }

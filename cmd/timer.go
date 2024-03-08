@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
+	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
@@ -17,6 +18,10 @@ func runTimer(*cli.Context) error {
 	{
 		tasksrv.InitTask()
 	}
-	zsf.Run()
+	zsf.Run(
+		zsf.WithLifeCycles(
+			httpserver.NewServer(),
+		),
+	)
 	return nil
 }

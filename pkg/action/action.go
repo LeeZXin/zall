@@ -41,6 +41,7 @@ func getActionToken() string {
 }
 
 type Webhook struct {
+	Action    string   `json:"action"`
 	RepoId    int64    `json:"repoId"`
 	RepoName  string   `json:"repoName"`
 	Ref       string   `json:"ref"`

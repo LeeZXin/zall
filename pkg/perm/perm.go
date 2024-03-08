@@ -20,26 +20,35 @@ var (
 		CanAccessToken:           true,
 		CanUpdateToken:           true,
 	}
+	DefaultAppPerm = AppPerm{
+		CanHandleProp: true,
+	}
 	DefaultPermDetail = Detail{
-		TeamPerm:             DefaultTeamPerm,
-		ApplyDefaultRepoPerm: true,
-		DefaultRepoPerm:      DefaultRepoPerm,
+		TeamPerm:        DefaultTeamPerm,
+		DefaultRepoPerm: DefaultRepoPerm,
+		DefaultAppPerm:  DefaultAppPerm,
 	}
 )
 
 type Detail struct {
 	// 项目权限
 	TeamPerm TeamPerm `json:"teamPerm"`
-	// 使用仓库全局默认权限
-	ApplyDefaultRepoPerm bool `json:"applyDefaultRepoPerm"`
 	// 默认仓库权限
 	DefaultRepoPerm RepoPerm `json:"defaultRepoPerm"`
 	// 可访问仓库权限列表
 	RepoPermList []RepoPermWithId `json:"repoPermList,omitempty"`
+	// app权限
+	DefaultAppPerm AppPerm `json:"defaultAppPerm"`
+	// 可访问app
+	AppPermList []AppPermWithAppId `json:"appPermList"`
+}
+
+func (d *Detail) IsValid() bool {
+	return len(d.RepoPermList) <= 1000 && len(d.AppPermList) <= 1000
 }
 
 func (d *Detail) GetRepoPerm(repoId int64) RepoPerm {
-	if d.ApplyDefaultRepoPerm {
+	if len(d.RepoPermList) == 0 {
 		return d.DefaultRepoPerm
 	}
 	for _, perm := range d.RepoPermList {
@@ -48,6 +57,18 @@ func (d *Detail) GetRepoPerm(repoId int64) RepoPerm {
 		}
 	}
 	return RepoPerm{}
+}
+
+func (d *Detail) GetAppPerm(appId string) AppPerm {
+	if len(d.AppPermList) == 0 {
+		return d.DefaultAppPerm
+	}
+	for _, perm := range d.AppPermList {
+		if perm.AppId == appId {
+			return perm.AppPerm
+		}
+	}
+	return AppPerm{}
 }
 
 type RepoPermWithId struct {
@@ -91,4 +112,13 @@ type TeamPerm struct {
 	CanDeleteRepo bool `json:"canDeleteRepo"`
 	// 是否可处理定时任务
 	CanHandleTimer bool `json:"canHandleTimer"`
+}
+
+type AppPermWithAppId struct {
+	AppId string `json:"appId"`
+	AppPerm
+}
+
+type AppPerm struct {
+	CanHandleProp bool `json:"canHandleProp"`
 }

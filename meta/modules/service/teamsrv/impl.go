@@ -3,6 +3,7 @@ package teamsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
+	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
@@ -290,10 +291,6 @@ func (*outerImpl) UpsertTeamUser(ctx context.Context, reqDTO UpsertTeamUserReqDT
 }
 
 func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo) error {
-	// 如果是企业管理员
-	if operator.IsAdmin {
-		return nil
-	}
 	_, b, err := teammd.GetByTeamId(ctx, teamId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -301,6 +298,10 @@ func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo) 
 	}
 	if !b {
 		return util.InvalidArgsError()
+	}
+	// 如果是企业管理员
+	if operator.IsAdmin {
+		return nil
 	}
 	// 判断权限
 	pu, b, err := teammd.GetTeamUserPermDetail(ctx, teamId, operator.Account)
@@ -424,6 +425,49 @@ func (*outerImpl) UpdateTeamUserGroupPerm(ctx context.Context, reqDTO UpdateTeam
 		err = util.NewBizErr(apicode.CannotUpdateTeamUserAdminGroupCode, i18n.TeamUserGroupUpdateAdminNotAllow)
 		return
 	}
+	// 检查仓库Id配置
+	if len(reqDTO.Perm.RepoPermList) > 0 {
+		idList, _ := listutil.Map(reqDTO.Perm.RepoPermList, func(t perm.RepoPermWithId) (int64, error) {
+			return t.RepoId, nil
+		})
+		var repos []repomd.Repo
+		repos, err = repomd.ListRepoByIdList(ctx, idList)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			err = util.InternalError(err)
+			return
+		}
+		for _, repo := range repos {
+			// 仓库不属于项目组里面的
+			if repo.TeamId != group.TeamId {
+				return util.InvalidArgsError()
+			}
+		}
+	}
+	// 检查app配置
+	if len(reqDTO.Perm.AppPermList) > 0 {
+		var appIdList []string
+		appIdList, err = listutil.Map(reqDTO.Perm.AppPermList, func(t perm.AppPermWithAppId) (string, error) {
+			return t.AppId, nil
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			err = util.InternalError(err)
+			return
+		}
+		var apps []appmd.App
+		apps, err = appmd.GetByAppIdList(ctx, appIdList)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			err = util.InternalError(err)
+			return
+		}
+		for _, app := range apps {
+			if app.TeamId != group.TeamId {
+				return util.InvalidArgsError()
+			}
+		}
+	}
 	if _, err = teammd.UpdateTeamUserGroupPerm(ctx, reqDTO.GroupId, reqDTO.Perm); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -541,7 +585,7 @@ func (*outerImpl) DeleteTeam(ctx context.Context, reqDTO DeleteTeamReqDTO) (err 
 	if err = checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
 		return err
 	}
-	// 检查是否还有挂在该项目的仓库
+	// 检查是否还有挂在该项目组的仓库
 	repoCount, err := repomd.CountByTeamId(ctx, reqDTO.TeamId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -551,6 +595,18 @@ func (*outerImpl) DeleteTeam(ctx context.Context, reqDTO DeleteTeamReqDTO) (err 
 	// 存在 不允许删除
 	if repoCount > 0 {
 		err = util.NewBizErr(apicode.DataAlreadyExistsCode, i18n.RepoRemainCountGreaterThanZero)
+		return
+	}
+	// 检查是否有挂在该项目组的app
+	appCount, err := appmd.CountByTeamId(ctx, reqDTO.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	// 存在 不允许删除
+	if appCount > 0 {
+		err = util.NewBizErr(apicode.DataAlreadyExistsCode, i18n.AppRemainCountGreaterThanZero)
 		return
 	}
 	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {

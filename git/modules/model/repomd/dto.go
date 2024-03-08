@@ -9,7 +9,6 @@ type InsertRepoReqDTO struct {
 	TeamId        int64
 	RepoDesc      string
 	DefaultBranch string
-	IsEmpty       bool
 	GitSize       int64
 	LfsSize       int64
 	Cfg           RepoCfg
@@ -17,12 +16,11 @@ type InsertRepoReqDTO struct {
 }
 
 type RepoInfo struct {
-	RepoId  int64   `json:"repoId"`
+	Id      int64   `json:"id"`
 	Name    string  `json:"name"`
 	Path    string  `json:"path"`
 	Author  string  `json:"author"`
 	TeamId  int64   `json:"teamId"`
-	IsEmpty bool    `json:"isEmpty"`
 	GitSize int64   `json:"gitSize"`
 	LfsSize int64   `json:"lfsSize"`
 	CfgStr  string  `json:"-"`
@@ -73,7 +71,7 @@ type InsertActionReqDTO struct {
 }
 
 type UpdateActionReqDTO struct {
-	ActionId       int64
+	Id             int64
 	Content        string
 	AssignInstance string
 }

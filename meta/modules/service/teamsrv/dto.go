@@ -149,6 +149,9 @@ type UpdateTeamUserGroupPermReqDTO struct {
 }
 
 func (r *UpdateTeamUserGroupPermReqDTO) IsValid() error {
+	if !r.Perm.IsValid() {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}

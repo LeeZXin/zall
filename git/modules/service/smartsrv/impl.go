@@ -52,7 +52,7 @@ func (s *outerImpl) UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) (er
 	err = client.UploadPack(reqvo.UploadPackReq{
 		RepoPath: reqDTO.Repo.Path,
 		C:        reqDTO.C,
-	}, reqDTO.Repo.NodeId, reqDTO.Repo.RepoId, reqDTO.Operator.Account, reqDTO.Operator.Email, cfg.AppUrl)
+	}, reqDTO.Repo.NodeId, reqDTO.Repo.Id, reqDTO.Operator.Account, reqDTO.Operator.Email, cfg.AppUrl)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -91,7 +91,7 @@ func (s *outerImpl) ReceivePack(ctx context.Context, reqDTO ReceivePackReqDTO) (
 	err = client.ReceivePack(reqvo.ReceivePackReq{
 		RepoPath: reqDTO.Repo.Path,
 		C:        reqDTO.C,
-	}, reqDTO.Repo.NodeId, reqDTO.Repo.RepoId, reqDTO.Operator.Account, reqDTO.Operator.Email, cfg.AppUrl)
+	}, reqDTO.Repo.NodeId, reqDTO.Repo.Id, reqDTO.Operator.Account, reqDTO.Operator.Email, cfg.AppUrl)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -135,5 +135,5 @@ func getPerm(ctx context.Context, repo repomd.RepoInfo, operator usermd.UserInfo
 	if !b {
 		return perm.RepoPerm{}, util.UnauthorizedError()
 	}
-	return p.PermDetail.GetRepoPerm(repo.RepoId), nil
+	return p.PermDetail.GetRepoPerm(repo.Id), nil
 }

@@ -134,7 +134,7 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 		// 分支push
 		if strings.HasPrefix(revInfo.RefName, git.BranchPrefix) {
 			if pushHookList == nil {
-				pushHookList, err = webhookmd.ListWebhook(ctx, repo.RepoId, webhookmd.PushHook)
+				pushHookList, err = webhookmd.ListWebhook(ctx, repo.Id, webhookmd.PushHook)
 				if err != nil {
 					logger.Logger.WithContext(ctx).Error(err)
 					return
@@ -145,7 +145,7 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 		} else if strings.HasPrefix(revInfo.RefName, git.TagPrefix) {
 			// tag commit
 			if tagHookList == nil {
-				tagHookList, err = webhookmd.ListWebhook(ctx, repo.RepoId, webhookmd.TagHook)
+				tagHookList, err = webhookmd.ListWebhook(ctx, repo.Id, webhookmd.TagHook)
 				if err != nil {
 					logger.Logger.WithContext(ctx).Error(err)
 					return
@@ -156,7 +156,7 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 		}
 	}
 	// 处理action
-	actions, err := repomd.ListAction(ctx, repo.RepoId)
+	actions, err := repomd.ListAction(ctx, repo.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return
@@ -196,7 +196,7 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 
 func triggerHook(hookList []webhookmd.WebhookDTO, repo repomd.RepoInfo, revInfo githook.RevInfo, operator usermd.UserInfo, isTag bool) {
 	req := webhook.GitReceiveHook{
-		RepoId:    repo.RepoId,
+		RepoId:    repo.Id,
 		RepoName:  repo.Name,
 		IsCreated: revInfo.OldCommitId == git.ZeroCommitId,
 		IsDeleted: revInfo.NewCommitId == git.ZeroCommitId,
@@ -215,7 +215,8 @@ func triggerHook(hookList []webhookmd.WebhookDTO, repo repomd.RepoInfo, revInfo 
 
 func triggerActions(repo repomd.RepoInfo, revInfo githook.RevInfo, operator usermd.UserInfo, instanceId, yamlContent string) {
 	req := action.Webhook{
-		RepoId:    repo.RepoId,
+		Action:    action.PushAction,
+		RepoId:    repo.Id,
 		RepoName:  repo.Name,
 		Ref:       revInfo.RefName,
 		EventTime: time.Now().UnixMilli(),

@@ -14,10 +14,12 @@ import (
 	"github.com/LeeZXin/zall/git/modules/service/actionsrv"
 	"github.com/LeeZXin/zall/git/modules/sshproxy"
 	reposerver "github.com/LeeZXin/zall/git/repo/server"
+	"github.com/LeeZXin/zall/meta/modules/api/appapi"
 	"github.com/LeeZXin/zall/meta/modules/api/cfgapi"
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/pkg/git"
+	"github.com/LeeZXin/zall/prop/modules/api/propapi"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
 	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
 	"github.com/LeeZXin/zsf/http/httpserver"
@@ -41,6 +43,7 @@ func runZall(*cli.Context) error {
 		userapi.InitApi()
 		teamapi.InitApi()
 		cfgapi.InitApi()
+		appapi.InitApi()
 	}
 	// for git
 	{
@@ -78,6 +81,13 @@ func runZall(*cli.Context) error {
 		if static.GetBool("idserver.enabled") {
 			logger.Logger.Info("id server enabled")
 			idapi.InitApi()
+		}
+	}
+	// for prop
+	{
+		if static.GetBool("propserver.enabled") {
+			logger.Logger.Info("prop server enabled")
+			propapi.InitApi()
 		}
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer())
