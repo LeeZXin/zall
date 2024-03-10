@@ -60,15 +60,18 @@ func (*PropHistory) TableName() string {
 }
 
 type PropDeploy struct {
-	Id        int64     `xorm:"pk autoincr"`
-	ContentId int64     `json:"contentId"`
-	Content   string    `json:"content"`
-	Version   string    `json:"version"`
-	NodeId    string    `json:"nodeId"`
-	Endpoints string    `json:"endpoints"`
-	Username  string    `json:"username"`
-	Password  string    `json:"password"`
-	Created   time.Time `json:"created" xorm:"created"`
+	Id           int64     `xorm:"pk autoincr"`
+	ContentId    int64     `json:"contentId"`
+	Content      string    `json:"content"`
+	Version      string    `json:"version"`
+	NodeId       string    `json:"nodeId"`
+	ContentAppId string    `json:"contentAppId"`
+	ContentName  string    `json:"contentName"`
+	Endpoints    string    `json:"endpoints"`
+	Username     string    `json:"username"`
+	Password     string    `json:"password"`
+	Deleted      bool      `json:"delete"`
+	Created      time.Time `json:"created" xorm:"created"`
 }
 
 func (*PropDeploy) TableName() string {

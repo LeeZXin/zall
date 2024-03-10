@@ -98,6 +98,20 @@ func GetPropContentByAppIdAndName(ctx context.Context, appId, name string) (Prop
 	return ret, b, err
 }
 
+func IteratePropContent(ctx context.Context, fn func(content *PropContent) error) error {
+	return xormutil.MustGetXormSession(ctx).Iterate(new(PropContent), func(_ int, bean interface{}) error {
+		return fn(bean.(*PropContent))
+	})
+}
+
+func IterateDeletedDeployByNodeId(ctx context.Context, nodeId string, fn func(deploy *PropDeploy) error) error {
+	return xormutil.MustGetXormSession(ctx).Where("deleted = 1").
+		And("node_id = ?", nodeId).
+		Iterate(new(PropDeploy), func(_ int, bean interface{}) error {
+			return fn(bean.(*PropDeploy))
+		})
+}
+
 func InsertHistory(ctx context.Context, reqDTO InsertHistoryReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&PropHistory{
 		ContentId: reqDTO.ContentId,
@@ -109,6 +123,17 @@ func InsertHistory(ctx context.Context, reqDTO InsertHistoryReqDTO) error {
 
 func DeleteHistory(ctx context.Context, contentId int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).Where("content_id = ?", contentId).Delete(new(PropHistory))
+	return err
+}
+
+func DeleteDeploy(ctx context.Context, contentId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("content_id = ?", contentId).
+		And("deleted = 0").
+		Cols("deleted").
+		Update(&PropDeploy{
+			Deleted: true,
+		})
 	return err
 }
 
@@ -126,13 +151,16 @@ func BatchGetEtcdNodes(ctx context.Context, nodeIdList []string) ([]EtcdNode, er
 
 func InsertDeploy(ctx context.Context, reqDTO InsertDeployReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&PropDeploy{
-		ContentId: reqDTO.ContentId,
-		Content:   reqDTO.Content,
-		Version:   reqDTO.Version,
-		NodeId:    reqDTO.NodeId,
-		Endpoints: reqDTO.Endpoints,
-		Username:  reqDTO.Username,
-		Password:  reqDTO.Password,
+		ContentId:    reqDTO.ContentId,
+		Content:      reqDTO.Content,
+		Version:      reqDTO.Version,
+		NodeId:       reqDTO.NodeId,
+		ContentAppId: reqDTO.ContentAppId,
+		ContentName:  reqDTO.ContentName,
+		Endpoints:    reqDTO.Endpoints,
+		Username:     reqDTO.Username,
+		Password:     reqDTO.Password,
+		Deleted:      false,
 	})
 	return err
 }
@@ -161,7 +189,9 @@ func ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]PropHistory, 
 
 func ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]PropDeploy, error) {
 	ret := make([]PropDeploy, 0)
-	session := xormutil.MustGetXormSession(ctx).Where("content_id = ?", reqDTO.ContentId)
+	session := xormutil.MustGetXormSession(ctx).
+		Where("content_id = ?", reqDTO.ContentId).
+		And("deleted = 0")
 	if reqDTO.Version != "" {
 		session.And("version like ?", reqDTO.Version+"%")
 	}
@@ -190,5 +220,16 @@ func InsertAuth(ctx context.Context, reqDTO InsertAuthReqDTO) error {
 func GetAuthByAppId(ctx context.Context, appId string) (EtcdAuth, bool, error) {
 	var ret EtcdAuth
 	b, err := xormutil.MustGetXormSession(ctx).Where("app_id = ?", appId).Get(&ret)
+	return ret, b, err
+}
+
+func GetLatestDeployByNodeId(ctx context.Context, contentId int64, nodeId string) (PropDeploy, bool, error) {
+	ret := PropDeploy{}
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("content_id = ?", contentId).
+		And("node_id = ?", nodeId).
+		And("deleted = 0").
+		OrderBy("id desc").
+		Get(&ret)
 	return ret, b, err
 }

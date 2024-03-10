@@ -26,13 +26,15 @@ type InsertHistoryReqDTO struct {
 }
 
 type InsertDeployReqDTO struct {
-	ContentId int64
-	Content   string
-	Version   string
-	NodeId    string
-	Endpoints string
-	Username  string
-	Password  string
+	ContentId    int64
+	Content      string
+	Version      string
+	NodeId       string
+	ContentAppId string
+	ContentName  string
+	Endpoints    string
+	Username     string
+	Password     string
 }
 
 type ListHistoryReqDTO struct {

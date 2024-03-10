@@ -10,6 +10,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/perm"
+	"github.com/LeeZXin/zall/prop/modules/service/propsrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
@@ -57,6 +58,7 @@ func (*outerImpl) InsertApp(ctx context.Context, reqDTO InsertAppReqDTO) (err er
 		err = util.InternalError(err)
 		return
 	}
+	propsrv.Inner.GrantAuth(ctx, reqDTO.AppId)
 	return
 }
 

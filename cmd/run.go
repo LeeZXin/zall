@@ -85,10 +85,7 @@ func runZall(*cli.Context) error {
 	}
 	// for prop
 	{
-		if static.GetBool("propserver.enabled") {
-			logger.Logger.Info("prop server enabled")
-			propapi.InitApi()
-		}
+		propapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer())
 	zsf.Run(

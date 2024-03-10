@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/42wim/sshsig v0.0.0-20211121163825-841cf5bbc121
 	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
-	github.com/LeeZXin/zsf v1.1.34
+	github.com/LeeZXin/zsf v1.1.38
 	github.com/LeeZXin/zsf-utils v1.0.39
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/gin-gonic/gin v1.9.1
@@ -16,6 +16,9 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/urfave/cli/v2 v2.25.7
+	go.etcd.io/etcd/api/v3 v3.5.12
+	go.etcd.io/etcd/client/v3 v3.5.12
+	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.14.0
 	golang.org/x/sys v0.13.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -99,12 +102,9 @@ require (
 	github.com/willf/bitset v1.1.10 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.etcd.io/bbolt v1.3.5 // indirect
-	go.etcd.io/etcd/api/v3 v3.5.12 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.12 // indirect
-	go.etcd.io/etcd/client/v3 v3.5.12 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/text v0.13.0 // indirect

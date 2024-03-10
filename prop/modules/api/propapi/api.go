@@ -21,10 +21,11 @@ func InitApi() {
 			group.GET("/listSimple", listSimpleEtcdNode)
 			group.POST("/update", updateEtcdNode)
 			group.POST("/delete", deleteEtcdNode)
+			group.POST("/getAuth", getAuth)
+			group.POST("/grantAuth", grantAuth)
 		}
 		group = e.Group("/api/prop/content", apisession.CheckLogin)
 		{
-			group.Any("/grantAuth", grantAuth)
 			group.POST("/insert", insertContent)
 			group.POST("/list", listContent)
 			group.POST("/update", updateContent)
@@ -253,6 +254,25 @@ func grantAuth(c *gin.Context) {
 			return
 		}
 		util.DefaultOkResponse(c)
+	}
+}
+
+func getAuth(c *gin.Context) {
+	var req GetAuthReqVO
+	if util.ShouldBindJSON(&req, c) {
+		username, password, err := propsrv.Outer.GetAuth(c, propsrv.GetAuthReqDTO{
+			AppId:    req.AppId,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, GetAuthRespVO{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Username: username,
+			Password: password,
+		})
 	}
 }
 

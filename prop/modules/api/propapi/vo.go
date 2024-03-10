@@ -120,3 +120,13 @@ type ListDeployRespVO struct {
 type GrantAuthReqVO struct {
 	AppId string `json:"appId"`
 }
+
+type GetAuthReqVO struct {
+	AppId string `json:"appId"`
+}
+
+type GetAuthRespVO struct {
+	ginutil.BaseResp
+	Username string `json:"username"`
+	Password string `json:"password"`
+}

@@ -43,7 +43,7 @@ type mysqlStore struct{}
 
 func newMysqlStore() *mysqlStore {
 	ret := new(mysqlStore)
-	httptask.AppendHttpTask("clearExpiredLoginSession", func(_ context.Context, _ map[string]any, _ url.Values) {
+	httptask.AppendHttpTask("clearExpiredLoginSession", func(_ []byte, _ url.Values) {
 		ret.ClearExpired()
 	})
 	return ret

@@ -98,6 +98,21 @@ func (r *GrantAuthReqDTO) IsValid() error {
 	return nil
 }
 
+type GetAuthReqDTO struct {
+	AppId    string              `json:"appId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetAuthReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type InsertPropContentReqDTO struct {
 	AppId    string              `json:"appId"`
 	Name     string              `json:"name"`

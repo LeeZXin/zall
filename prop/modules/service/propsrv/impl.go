@@ -2,6 +2,7 @@ package propsrv
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
@@ -11,9 +12,13 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/strutil"
+	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/mysqlstore"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
+	"go.etcd.io/etcd/api/v3/authpb"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -181,39 +186,34 @@ func (*outerImpl) GrantAuth(ctx context.Context, reqDTO GrantAuthReqDTO) (err er
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	if err = checkPropContentPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return
 	}
-	var (
-		auth propmd.EtcdAuth
-		b    bool
-	)
-	auth, b, err = propmd.GetAuthByAppId(ctx, reqDTO.AppId)
-	if err != nil {
+	if err = grantAuth(ctx, reqDTO.AppId); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
-		return
+	}
+	return
+}
+
+func (*outerImpl) GetAuth(ctx context.Context, reqDTO GetAuthReqDTO) (string, string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return "", "", err
+	}
+	ctx, closer := mysqlstore.Context(ctx)
+	defer closer.Close()
+	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+		return "", "", err
+	}
+	auth, b, err := propmd.GetAuthByAppId(ctx, reqDTO.AppId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", "", util.InternalError(err)
 	}
 	if !b {
-		insertReq := propmd.InsertAuthReqDTO{
-			AppId:    reqDTO.AppId,
-			Username: reqDTO.AppId,
-			Password: strutil.RandomStr(16),
-		}
-		err = propmd.InsertAuth(ctx, insertReq)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-		auth = propmd.EtcdAuth{
-			AppId:    insertReq.AppId,
-			Username: insertReq.Username,
-			Password: insertReq.Password,
-		}
+		return "", "", util.InvalidArgsError()
 	}
-	go grantAuthToEtcd(auth)
-	return
+	return auth.Username, auth.Password, nil
 }
 
 func (*outerImpl) InsertPropContent(ctx context.Context, reqDTO InsertPropContentReqDTO) (err error) {
@@ -231,7 +231,7 @@ func (*outerImpl) InsertPropContent(ctx context.Context, reqDTO InsertPropConten
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	if err = checkPropContentPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return
 	}
 	var b bool
@@ -282,7 +282,7 @@ func (*outerImpl) UpdatePropContent(ctx context.Context, reqDTO UpdatePropConten
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	if _, err = checkPropContentPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
+	if _, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
 		return
 	}
 	err = propmd.InsertHistory(ctx, propmd.InsertHistoryReqDTO{
@@ -314,15 +314,22 @@ func (*outerImpl) DeletePropContent(ctx context.Context, reqDTO DeletePropConten
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
 	var content propmd.PropContent
-	if content, err = checkPropContentPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
+	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
 		return
 	}
 	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+		// 删除配置文件
 		_, err := propmd.DeletePropContent(ctx, reqDTO.Id)
 		if err != nil {
 			return err
 		}
-		return propmd.DeleteHistory(ctx, reqDTO.Id)
+		// 删除配置历史
+		err = propmd.DeleteHistory(ctx, reqDTO.Id)
+		if err != nil {
+			return err
+		}
+		// 删除部署记录
+		return propmd.DeleteDeploy(ctx, reqDTO.Id)
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -339,7 +346,7 @@ func (*outerImpl) ListPropContent(ctx context.Context, reqDTO ListPropContentReq
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	if err := checkPropContentPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return nil, err
 	}
 	contents, err := propmd.ListPropContent(ctx, reqDTO.AppId)
@@ -371,7 +378,8 @@ func (*outerImpl) DeployPropContent(ctx context.Context, reqDTO DeployPropConten
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	if _, err = checkPropContentPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
+	var content propmd.PropContent
+	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
 		return
 	}
 	nodes, err := propmd.BatchGetEtcdNodes(ctx, reqDTO.EtcdNodeList)
@@ -400,7 +408,7 @@ func (*outerImpl) DeployPropContent(ctx context.Context, reqDTO DeployPropConten
 	}
 	go func() {
 		for _, node := range nodes {
-			deployToEtcd(reqDTO.Id, history.Content, history.Version, node)
+			deployToEtcd(reqDTO.Id, content.AppId, content.Name, history.Content, history.Version, node)
 		}
 	}()
 	return nil
@@ -412,7 +420,7 @@ func (*outerImpl) ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	if _, err := checkPropContentPerm(ctx, reqDTO.Operator, reqDTO.ContentId); err != nil {
+	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId); err != nil {
 		return nil, 0, err
 	}
 	histories, err := propmd.ListHistory(ctx, propmd.ListHistoryReqDTO{
@@ -446,7 +454,7 @@ func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]De
 	}
 	ctx, closer := mysqlstore.Context(ctx)
 	defer closer.Close()
-	if _, err := checkPropContentPerm(ctx, reqDTO.Operator, reqDTO.ContentId); err != nil {
+	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId); err != nil {
 		return nil, 0, err
 	}
 	deploys, err := propmd.ListDeploy(ctx, propmd.ListDeployReqDTO{
@@ -479,40 +487,148 @@ func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]De
 func deleteFromEtcd(content propmd.PropContent) {
 	ctx, closer := mysqlstore.Context(context.Background())
 	defer closer.Close()
-	_, err := propmd.ListEtcdNode(ctx)
+	nodes, err := propmd.ListEtcdNode(ctx)
 	if err != nil {
 		logger.Logger.Error(err)
 		return
 	}
-	// todo 操作etcd
+	for _, node := range nodes {
+		etcdClient, err := newEtcdClient(node)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			continue
+		}
+		kv := clientv3.NewKV(etcdClient)
+		_, err = kv.Delete(context.Background(), common.PropertyPrefix+content.AppId+"/"+content.Name)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+		}
+		etcdClient.Close()
+	}
 }
 
 func grantAuthToEtcd(auth propmd.EtcdAuth) {
-	//todo 操作etcd
+	ctx := context.Background()
+	ctx, closer := mysqlstore.Context(ctx)
+	defer closer.Close()
+	nodes, err := propmd.ListEtcdNode(ctx)
+	if err != nil {
+		logger.Logger.Error(err)
+		return
+	}
+	for _, node := range nodes {
+		etcdClient, err := newEtcdClient(node)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			continue
+		}
+		authClient := clientv3.NewAuth(etcdClient)
+		_, err = authClient.UserAdd(
+			ctx,
+			auth.Username,
+			auth.Password,
+		)
+		if err != nil && !strings.Contains(err.Error(), "user name already exists") {
+			logger.Logger.WithContext(ctx).Error(err)
+		} else {
+			roleName := "prop_" + auth.AppId + "_read"
+			roleGet, err := authClient.RoleGet(ctx, roleName)
+			if err != nil {
+				if strings.Contains(err.Error(), "role name not found") {
+					_, err = authClient.RoleAdd(ctx, roleName)
+					if err != nil {
+						logger.Logger.WithContext(ctx).Error(err)
+						continue
+					}
+				} else {
+					logger.Logger.WithContext(ctx).Error(err)
+					continue
+				}
+			}
+			key := common.PropertyPrefix + auth.AppId + "/"
+			rangeEnd := common.PropertyPrefix + auth.AppId + "0"
+			if roleGet == nil || !permHasTargetKey(roleGet.Perm, key, rangeEnd) {
+				if _, err = authClient.RoleGrantPermission(
+					ctx,
+					roleName,
+					key,
+					rangeEnd,
+					clientv3.PermissionType(clientv3.PermRead),
+				); err != nil {
+					logger.Logger.WithContext(ctx).Error(err)
+					continue
+				}
+			}
+			if _, err = authClient.UserGrantRole(ctx, auth.Username, roleName); err != nil {
+				logger.Logger.WithContext(ctx).Error(err)
+			}
+		}
+		etcdClient.Close()
+	}
 }
 
-func deployToEtcd(id int64, content, version string, node propmd.EtcdNode) {
+func permHasTargetKey(perms []*authpb.Permission, key, rangeEnd string) bool {
+	for _, perm := range perms {
+		if string(perm.Key) == key && string(perm.RangeEnd) == rangeEnd {
+			return true
+		}
+	}
+	return false
+}
+
+type contentVal struct {
+	Version string `json:"version"`
+	Content string `json:"content"`
+}
+
+func deployToEtcd(id int64, appId, name, content, version string, node propmd.EtcdNode) {
 	ctx, closer := mysqlstore.Context(context.Background())
 	defer closer.Close()
-	err := mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	etcdClient, err := newEtcdClient(node)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return
+	}
+	defer etcdClient.Close()
+	kv := clientv3.NewKV(etcdClient)
+	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
 		err := propmd.InsertDeploy(ctx, propmd.InsertDeployReqDTO{
-			ContentId: id,
-			Content:   content,
-			Version:   version,
-			NodeId:    node.NodeId,
-			Endpoints: node.Endpoints,
-			Username:  node.Username,
-			Password:  node.Password,
+			ContentId:    id,
+			Content:      content,
+			Version:      version,
+			NodeId:       node.NodeId,
+			ContentAppId: appId,
+			ContentName:  name,
+			Endpoints:    node.Endpoints,
+			Username:     node.Username,
+			Password:     node.Password,
 		})
 		if err != nil {
 			return err
 		}
-		// todo 操作etcd
-		return nil
+		jsonBytes, _ := json.Marshal(contentVal{
+			Version: version,
+			Content: content,
+		})
+		_, err = kv.Put(ctx,
+			common.PropertyPrefix+appId+"/"+name,
+			string(jsonBytes),
+		)
+		return err
 	})
 	if err != nil {
 		logger.Logger.Error(err)
 	}
+}
+
+func newEtcdClient(node propmd.EtcdNode) (*clientv3.Client, error) {
+	return clientv3.New(clientv3.Config{
+		Endpoints:   strings.Split(node.Endpoints, ";"),
+		DialTimeout: 5 * time.Second,
+		Username:    node.Username,
+		Password:    node.Password,
+		Logger:      zap.NewNop(),
+	})
 }
 
 func genVersion() string {
@@ -527,7 +643,7 @@ func genVersion() string {
 	return now.Format("20060102150405") + rint
 }
 
-func checkPropContentPerm(ctx context.Context, operator apisession.UserInfo, id int64) (propmd.PropContent, error) {
+func checkPerm(ctx context.Context, operator apisession.UserInfo, id int64) (propmd.PropContent, error) {
 	content, b, err := propmd.GetPropContentById(ctx, id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -536,10 +652,10 @@ func checkPropContentPerm(ctx context.Context, operator apisession.UserInfo, id 
 	if !b {
 		return propmd.PropContent{}, util.InvalidArgsError()
 	}
-	return content, checkPropContentPermByAppId(ctx, operator, content.AppId)
+	return content, checkPermByAppId(ctx, operator, content.AppId)
 }
 
-func checkPropContentPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
+func checkPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -555,5 +671,165 @@ func checkPropContentPermByAppId(ctx context.Context, operator apisession.UserIn
 	if !p.IsAdmin && !p.PermDetail.GetAppPerm(appId).CanHandleProp {
 		return util.UnauthorizedError()
 	}
+	return nil
+}
+
+type innerImpl struct{}
+
+func (*innerImpl) GrantAuth(ctx context.Context, appId string) {
+	ctx, closer := mysqlstore.Context(ctx)
+	defer closer.Close()
+	err := grantAuth(ctx, appId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+	}
+}
+
+func (*innerImpl) CheckConsistent() {
+	ctx, closer := mysqlstore.Context(context.Background())
+	defer closer.Close()
+	// 检查数据库->etcd
+	nodes, err := propmd.ListEtcdNode(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return
+	}
+	clientMap := make(map[string]*clientv3.Client, 8)
+	defer func() {
+		for _, client := range clientMap {
+			client.Close()
+		}
+	}()
+	if err = propmd.IteratePropContent(ctx, func(content *propmd.PropContent) error {
+		return checkDb2EtcdConsistent(content, nodes, clientMap)
+	}); err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+	}
+	if err = checkEtcd2DbConsistent(nodes, clientMap); err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+	}
+}
+
+// checkEtcd2DbConsistent etcd -> db数据一致性
+func checkEtcd2DbConsistent(nodes []propmd.EtcdNode, clientMap map[string]*clientv3.Client) error {
+	ctx, closer := mysqlstore.Context(context.Background())
+	defer closer.Close()
+	for _, node := range nodes {
+		if err := propmd.IterateDeletedDeployByNodeId(ctx, node.NodeId, func(deploy *propmd.PropDeploy) error {
+			client := clientMap[node.NodeId]
+			var err error
+			if client == nil {
+				client, err = newEtcdClient(node)
+				if err != nil {
+					return err
+				}
+				clientMap[node.NodeId] = client
+			}
+			kv := clientv3.NewKV(client)
+			key := common.PropertyPrefix + deploy.ContentAppId + "/" + deploy.ContentName
+			response, err := kv.Get(
+				ctx,
+				key,
+			)
+			if err != nil {
+				logger.Logger.Error(err)
+			} else {
+				// 如果版本号相同 则删除
+				if response.Count > 0 && checkConsistentVersion(response.Kvs[0].Value, deploy.ContentAppId, deploy.ContentName, deploy.Version) {
+					logger.Logger.Infof("find db not exists but etcd exists, delete key: %s", key)
+					_, err = kv.Delete(ctx, key)
+					if err != nil {
+						logger.Logger.Error(err)
+					}
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkDb2EtcdConsistent db -> etcd数据一致性
+func checkDb2EtcdConsistent(content *propmd.PropContent, nodes []propmd.EtcdNode, clientMap map[string]*clientv3.Client) error {
+	ctx, closer := mysqlstore.Context(context.Background())
+	defer closer.Close()
+	for _, node := range nodes {
+		deploy, b, err := propmd.GetLatestDeployByNodeId(ctx, content.Id, node.NodeId)
+		if err != nil {
+			return err
+		}
+		// 10秒内的部署忽略
+		if time.Since(deploy.Created) < 10*time.Second {
+			continue
+		}
+		if b {
+			client := clientMap[node.NodeId]
+			if client == nil {
+				client, err = newEtcdClient(node)
+				if err != nil {
+					return err
+				}
+				clientMap[node.NodeId] = client
+			}
+			kv := clientv3.NewKV(client)
+			key := common.PropertyPrefix + content.AppId + "/" + content.Name
+			response, err := kv.Get(
+				ctx,
+				key,
+			)
+			if err != nil {
+				logger.Logger.Error(err)
+			} else {
+				if response.Count == 0 || !checkConsistentVersion(response.Kvs[0].Value, content.AppId, content.Name, deploy.Version) {
+					logger.Logger.Infof("find db exists but etcd not exists: %s version: %s", key, deploy.Version)
+					jsonBytes, _ := json.Marshal(contentVal{
+						Version: deploy.Version,
+						Content: deploy.Content,
+					})
+					_, err = kv.Put(ctx, key, string(jsonBytes))
+					if err != nil {
+						logger.Logger.Error(err)
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func checkConsistentVersion(val []byte, appId, name, version string) bool {
+	var ret contentVal
+	err := json.Unmarshal(val, &ret)
+	if err != nil {
+		logger.Logger.Errorf("read value from etcd is not json format: %s %s", appId, name)
+		return false
+	}
+	return ret.Version == version
+}
+
+func grantAuth(ctx context.Context, appId string) error {
+	auth, b, err := propmd.GetAuthByAppId(ctx, appId)
+	if err != nil {
+		return err
+	}
+	if !b {
+		insertReq := propmd.InsertAuthReqDTO{
+			AppId:    appId,
+			Username: "prop_" + appId,
+			Password: strutil.RandomStr(16),
+		}
+		err = propmd.InsertAuth(ctx, insertReq)
+		if err != nil {
+			return err
+		}
+		auth = propmd.EtcdAuth{
+			AppId:    insertReq.AppId,
+			Username: insertReq.Username,
+			Password: insertReq.Password,
+		}
+	}
+	go grantAuthToEtcd(auth)
 	return nil
 }
