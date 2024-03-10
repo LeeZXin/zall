@@ -35,3 +35,6 @@ propserver:
 
 httptask:
   token: 123
+
+tcpDetect:
+  enabled: true

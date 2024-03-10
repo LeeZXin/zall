@@ -20,6 +20,8 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/prop/modules/api/propapi"
+	"github.com/LeeZXin/zall/tcpdetect/modules/api/detectapi"
+	"github.com/LeeZXin/zall/tcpdetect/modules/service/detectsrv"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
 	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
 	"github.com/LeeZXin/zsf/http/httpserver"
@@ -86,6 +88,14 @@ func runZall(*cli.Context) error {
 	// for prop
 	{
 		propapi.InitApi()
+	}
+	// for tcp detect
+	{
+		detectapi.InitApi()
+		if static.GetBool("tcpDetect.enabled") {
+			logger.Logger.Info("tcp detect enabled")
+			detectsrv.InitDetect()
+		}
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer())
 	zsf.Run(

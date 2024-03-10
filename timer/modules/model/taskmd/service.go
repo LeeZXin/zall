@@ -119,17 +119,6 @@ func ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) ([]TaskLog, erro
 	return ret, err
 }
 
-func UpdateLogContentAndStatus(ctx context.Context, reqDTO UpdateLogContentAndStatusReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", reqDTO.Id).
-		Cols("log_content", "task_status").
-		Update(&TaskLog{
-			LogContent: reqDTO.Content,
-			TaskStatus: reqDTO.Status,
-		})
-	return err
-}
-
 func InsertInstance(ctx context.Context, instanceId string) error {
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&Instance{
 		InstanceId:    instanceId,

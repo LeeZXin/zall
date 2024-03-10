@@ -302,6 +302,29 @@ var (
 			DefaultRet: "编辑app",
 		},
 	}
+
+	TcpDetectSrvKeysVO = TcpDetectSrvKeys{
+		InsertDetect: KeyItem{
+			Id:         "tcpDetectSrv.InsertDetect",
+			DefaultRet: "新增tcp探测",
+		},
+		DeleteDetect: KeyItem{
+			Id:         "tcpDetectSrv.DeleteDetect",
+			DefaultRet: "删除tcp探测",
+		},
+		UpdateDetect: KeyItem{
+			Id:         "tcpDetectSrv.UpdateDetect",
+			DefaultRet: "编辑tcp探测",
+		},
+		EnableDetect: KeyItem{
+			Id:         "tcpDetectSrv.EnableDetect",
+			DefaultRet: "启动tcp探测",
+		},
+		DisableDetect: KeyItem{
+			Id:         "tcpDetectSrv.DisableDetect",
+			DefaultRet: "关闭tcp探测",
+		},
+	}
 )
 
 type KeyItem struct {
@@ -415,4 +438,12 @@ type AppSrvKeys struct {
 	DeleteApp    KeyItem
 	UpdateApp    KeyItem
 	TransferTeam KeyItem
+}
+
+type TcpDetectSrvKeys struct {
+	InsertDetect  KeyItem
+	DeleteDetect  KeyItem
+	UpdateDetect  KeyItem
+	EnableDetect  KeyItem
+	DisableDetect KeyItem
 }
