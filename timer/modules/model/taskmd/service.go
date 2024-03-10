@@ -159,10 +159,17 @@ func DeleteInstance(ctx context.Context, instanceId string) error {
 func GetValidInstances(ctx context.Context, after int64) ([]Instance, error) {
 	ret := make([]Instance, 0)
 	err := xormutil.MustGetXormSession(ctx).
-		Where("heartbeat_time <= ?", after).
+		Where("heartbeat_time>= ?", after).
 		OrderBy("id asc").
 		Find(&ret)
 	return ret, err
+}
+
+func DeleteInValidInstances(ctx context.Context, before int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("heartbeat_time < ?", before).
+		Delete(new(Instance))
+	return err
 }
 
 func GetTaskById(ctx context.Context, id int64) (Task, bool, error) {

@@ -10,8 +10,10 @@ import (
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/common"
+	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"net/url"
 	"time"
 )
 
@@ -45,10 +47,18 @@ func InitTask() {
 	compensateTask, _ = taskutil.NewPeriodicalTask(5*time.Minute, doCompensateTask)
 	compensateTask.Start()
 	quit.AddShutdownHook(compensateTask.Stop, true)
+	httptask.AppendHttpTask("clearTimerInvalidInstances", func(_ []byte, _ url.Values) {
+		ctx, closer := mysqlstore.Context(context.Background())
+		defer closer.Close()
+		err := taskmd.DeleteInValidInstances(ctx, time.Now().Add(-30*time.Second).UnixMilli())
+		if err != nil {
+			logger.Logger.Error(err)
+		}
+	})
 }
 
 func getInstanceIndex(ctx context.Context) (int64, int64) {
-	instances, err := taskmd.GetValidInstances(ctx, time.Now().Add(10*time.Second).UnixMilli())
+	instances, err := taskmd.GetValidInstances(ctx, time.Now().Add(-10*time.Second).UnixMilli())
 	if err != nil {
 		logger.Logger.Error(err)
 		return int64(len(instances)), -1
@@ -86,7 +96,7 @@ func doExecuteTask() {
 	ctx, closer := mysqlstore.Context(context.Background())
 	defer closer.Close()
 	total, index := getInstanceIndex(ctx)
-	if index >= 0 {
+	if total > 0 && index >= 0 {
 		err := taskmd.IterateTask(ctx, time.Now().UnixMilli(), taskmd.Pending, func(task *taskmd.Task) error {
 			if task.Id%total == index {
 				handleTask(task)
