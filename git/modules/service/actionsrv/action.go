@@ -13,7 +13,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"gopkg.in/yaml.v3"
 	"io"
@@ -105,7 +105,7 @@ func runWithYamlContent(ctx context.Context, reqDTO action.Webhook, yamlContent 
 }
 
 func runWithoutYamlContent(ctx context.Context, reqDTO action.Webhook, taskId int64) {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	actions, err := repomd.ListAction(ctx, reqDTO.RepoId)
 	if err != nil {
@@ -119,14 +119,14 @@ func runWithoutYamlContent(ctx context.Context, reqDTO action.Webhook, taskId in
 
 // SelectAndIncrJobCountInstances 选择job-count最小的节点 并自增 for update加锁
 func SelectAndIncrJobCountInstances(ctx context.Context, instanceId string) (actiontaskmd.Instance, bool, error) {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	least := time.Now().Add(-validHeartbeatInterval).UnixMilli()
 	var (
 		instance      actiontaskmd.Instance
 		isNotFoundErr bool
 	)
-	err := mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	err := xormstore.WithTx(ctx, func(ctx context.Context) error {
 		var (
 			err error
 			b   bool
@@ -161,7 +161,7 @@ func execGraph(ctx context.Context, graph *action.Graph, reqDTO action.Webhook, 
 			err    error
 			closer xormutil.Closer
 		)
-		ctx, closer = mysqlstore.Context(ctx)
+		ctx, closer = xormstore.Context(ctx)
 		defer closer.Close()
 		// 先插入记录
 		taskId, err = insertTaskRecord(ctx, graph, reqDTO)
@@ -219,7 +219,7 @@ func runGraph(graph *action.Graph, taskId int64, reqDTO action.Webhook) {
 				logger.Logger.Error(err)
 				return
 			}
-			ctx, closer := mysqlstore.Context(context.Background())
+			ctx, closer := xormstore.Context(context.Background())
 			defer closer.Close()
 			_, err = actiontaskmd.UpdateStepLogContent(ctx, taskId, stat.JobName, stat.Index, string(logContent))
 			if err != nil {
@@ -266,7 +266,7 @@ func runGraph(graph *action.Graph, taskId int64, reqDTO action.Webhook) {
 }
 
 func updateTaskStatusWithOldStatus(taskId int64, oldStatus, newStatus actiontaskmd.TaskStatus) (bool, error) {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	b, err := actiontaskmd.UpdateTaskStatus(
 		ctx,
@@ -281,7 +281,7 @@ func updateTaskStatusWithOldStatus(taskId int64, oldStatus, newStatus actiontask
 }
 
 func updateStepStatusWithOldStatus(taskId int64, jobName string, index int, oldStatus, newStatus actiontaskmd.StepStatus) (bool, error) {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	b, err := actiontaskmd.UpdateStepStatus(
 		ctx,
@@ -300,7 +300,7 @@ func updateStepStatusWithOldStatus(taskId int64, jobName string, index int, oldS
 func insertTaskRecord(ctx context.Context, graph *action.Graph, reqDTO action.Webhook) (int64, error) {
 	var taskId int64
 	infos := graph.ListJobInfo()
-	err := mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	err := xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 插入一条任务记录
 		task, err := actiontaskmd.InsertTask(ctx, actiontaskmd.InsertTaskReqDTO{
 			RepoId:      reqDTO.RepoId,
@@ -339,7 +339,7 @@ func insertTaskRecord(ctx context.Context, graph *action.Graph, reqDTO action.We
 
 // doHeartbeat 执行心跳
 func doHeartbeat() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	updated, err := actiontaskmd.UpdateInstanceHeartbeat(ctx, instanceId)
 	if err != nil {
@@ -356,7 +356,7 @@ func doHeartbeat() {
 
 // deleteInstance 删除实例
 func deleteInstance() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	err := actiontaskmd.DeleteInstance(ctx, instanceId)
 	if err != nil {
@@ -365,7 +365,7 @@ func deleteInstance() {
 }
 
 func checkFail() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	rows, err := actiontaskmd.UpdateInstanceTaskFailStatus(ctx, instanceId)
 	if err != nil {
@@ -376,7 +376,7 @@ func checkFail() {
 }
 
 func checkSuspend() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	// 遍历挂起任务 并尝试加入协程池
 	err := actiontaskmd.IterateTask(ctx, instanceId, actiontaskmd.TaskSuspendStatus, func(task *actiontaskmd.Task) error {

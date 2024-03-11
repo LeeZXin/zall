@@ -15,7 +15,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/patrickmn/go-cache"
 	"strconv"
 	"time"
@@ -32,7 +32,7 @@ func (s *innerImpl) GetTeamUserPermDetail(ctx context.Context, teamId int64, acc
 		r := v.(teammd.TeamUserPermDetailDTO)
 		return r, r.GroupId != 0
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	r, b, err := teammd.GetTeamUserPermDetail(ctx, teamId, account)
 	if err != nil || !b {
@@ -62,7 +62,7 @@ func (*outerImpl) InsertTeam(ctx context.Context, reqDTO InsertTeamReqDTO) (err 
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if !reqDTO.Operator.IsAdmin {
 		// 判断是否允许用户自行创建项目
@@ -72,7 +72,7 @@ func (*outerImpl) InsertTeam(ctx context.Context, reqDTO InsertTeamReqDTO) (err 
 			return
 		}
 	}
-	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 创建项目
 		pu, err := teammd.InsertTeam(ctx, teammd.InsertTeamReqDTO{
 			Name: reqDTO.Name,
@@ -117,7 +117,7 @@ func (*outerImpl) UpdateTeam(ctx context.Context, reqDTO UpdateTeamReqDTO) (err 
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err = checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
 		return err
@@ -137,7 +137,7 @@ func (*outerImpl) ListTeamUser(ctx context.Context, reqDTO ListTeamUserReqDTO) (
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err := checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
 		return nil, 0, err
@@ -195,7 +195,7 @@ func (*outerImpl) DeleteTeamUser(ctx context.Context, reqDTO DeleteTeamUserReqDT
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err = checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
 		return
@@ -230,7 +230,7 @@ func (*outerImpl) UpsertTeamUser(ctx context.Context, reqDTO UpsertTeamUserReqDT
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err = checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
 		return
@@ -355,7 +355,7 @@ func (*outerImpl) InsertTeamUserGroup(ctx context.Context, reqDTO InsertTeamUser
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
 	if err = checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
@@ -385,7 +385,7 @@ func (*outerImpl) UpdateTeamUserGroupName(ctx context.Context, reqDTO UpdateTeam
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
 	_, err = checkTeamUserPermByGroupId(ctx, reqDTO.Operator, reqDTO.GroupId)
@@ -413,7 +413,7 @@ func (*outerImpl) UpdateTeamUserGroupPerm(ctx context.Context, reqDTO UpdateTeam
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
 	group, err := checkTeamUserPermByGroupId(ctx, reqDTO.Operator, reqDTO.GroupId)
@@ -488,7 +488,7 @@ func (*outerImpl) DeleteTeamUserGroup(ctx context.Context, reqDTO DeleteTeamUser
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
 	group, err := checkTeamUserPermByGroupId(ctx, reqDTO.Operator, reqDTO.GroupId)
@@ -517,7 +517,7 @@ func (*outerImpl) ListTeamUserGroup(ctx context.Context, reqDTO ListTeamUserGrou
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err := checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
 		return nil, err
@@ -541,7 +541,7 @@ func (*outerImpl) ListTeam(ctx context.Context, reqDTO ListTeamReqDTO) ([]TeamDT
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	puList, err := teammd.ListTeamUserByAccount(ctx, reqDTO.Operator.Account)
 	if err != nil {
@@ -579,7 +579,7 @@ func (*outerImpl) DeleteTeam(ctx context.Context, reqDTO DeleteTeamReqDTO) (err 
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
 	if err = checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
@@ -609,7 +609,7 @@ func (*outerImpl) DeleteTeam(ctx context.Context, reqDTO DeleteTeamReqDTO) (err 
 		err = util.NewBizErr(apicode.DataAlreadyExistsCode, i18n.AppRemainCountGreaterThanZero)
 		return
 	}
-	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 项目表
 		_, err := teammd.DeleteTeam(ctx, reqDTO.TeamId)
 		if err != nil {

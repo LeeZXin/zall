@@ -20,7 +20,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"gopkg.in/yaml.v3"
 	"path/filepath"
 	"strings"
@@ -34,7 +34,7 @@ func NewHook() Hook {
 }
 
 func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	repo, b, err := repomd.GetByRepoId(ctx, opts.RepoId)
 	if err != nil {
@@ -114,7 +114,7 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 }
 
 func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	repo, b := reposrv.Inner.GetByRepoId(ctx, opts.RepoId)
 	if !b {

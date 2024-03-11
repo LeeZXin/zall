@@ -14,7 +14,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/strutil"
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"go.etcd.io/etcd/api/v3/authpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -29,7 +29,7 @@ type outerImpl struct {
 }
 
 func (*outerImpl) ListSimpleEtcdNode(ctx context.Context) ([]string, error) {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	nodes, err := propmd.ListEtcdNode(ctx)
 	if err != nil {
@@ -49,7 +49,7 @@ func (*outerImpl) ListEtcdNode(ctx context.Context, reqDTO ListEtcdNodeReqDTO) (
 	if !reqDTO.Operator.IsAdmin {
 		return nil, util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	nodes, err := propmd.ListEtcdNode(ctx)
 	if err != nil {
@@ -84,7 +84,7 @@ func (*outerImpl) InsertEtcdNode(ctx context.Context, reqDTO InsertEtcdNodeReqDT
 		err = util.UnauthorizedError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := propmd.GetEtcdNodeByNodeId(ctx, reqDTO.NodeId)
 	if err != nil {
@@ -129,7 +129,7 @@ func (*outerImpl) DeleteEtcdNode(ctx context.Context, reqDTO DeleteEtcdNodeReqDT
 		err = util.UnauthorizedError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	err = propmd.DeleteEtcdNode(ctx, reqDTO.NodeId)
 	if err != nil {
@@ -155,7 +155,7 @@ func (*outerImpl) UpdateEtcdNode(ctx context.Context, reqDTO UpdateEtcdNodeReqDT
 		err = util.UnauthorizedError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err = propmd.UpdateEtcdNode(ctx, propmd.UpdateEtcdNodeReqDTO{
 		NodeId:    reqDTO.NodeId,
@@ -184,7 +184,7 @@ func (*outerImpl) GrantAuth(ctx context.Context, reqDTO GrantAuthReqDTO) (err er
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return
@@ -200,7 +200,7 @@ func (*outerImpl) GetAuth(ctx context.Context, reqDTO GetAuthReqDTO) (string, st
 	if err := reqDTO.IsValid(); err != nil {
 		return "", "", err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return "", "", err
@@ -229,7 +229,7 @@ func (*outerImpl) InsertPropContent(ctx context.Context, reqDTO InsertPropConten
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return
@@ -245,7 +245,7 @@ func (*outerImpl) InsertPropContent(ctx context.Context, reqDTO InsertPropConten
 		err = util.AlreadyExistsError()
 		return
 	}
-	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		content, err := propmd.InsertPropContent(ctx, propmd.InsertPropContentReqDTO{
 			AppId: reqDTO.AppId,
 			Name:  reqDTO.Name,
@@ -280,7 +280,7 @@ func (*outerImpl) UpdatePropContent(ctx context.Context, reqDTO UpdatePropConten
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if _, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
 		return
@@ -311,13 +311,13 @@ func (*outerImpl) DeletePropContent(ctx context.Context, reqDTO DeletePropConten
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var content propmd.PropContent
 	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
 		return
 	}
-	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 删除配置文件
 		_, err := propmd.DeletePropContent(ctx, reqDTO.Id)
 		if err != nil {
@@ -344,7 +344,7 @@ func (*outerImpl) ListPropContent(ctx context.Context, reqDTO ListPropContentReq
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return nil, err
@@ -376,7 +376,7 @@ func (*outerImpl) DeployPropContent(ctx context.Context, reqDTO DeployPropConten
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var content propmd.PropContent
 	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
@@ -418,7 +418,7 @@ func (*outerImpl) ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId); err != nil {
 		return nil, 0, err
@@ -452,7 +452,7 @@ func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]De
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId); err != nil {
 		return nil, 0, err
@@ -485,7 +485,7 @@ func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]De
 }
 
 func deleteFromEtcd(content propmd.PropContent) {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	nodes, err := propmd.ListEtcdNode(ctx)
 	if err != nil {
@@ -509,7 +509,7 @@ func deleteFromEtcd(content propmd.PropContent) {
 
 func grantAuthToEtcd(auth propmd.EtcdAuth) {
 	ctx := context.Background()
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	nodes, err := propmd.ListEtcdNode(ctx)
 	if err != nil {
@@ -582,7 +582,7 @@ type contentVal struct {
 }
 
 func deployToEtcd(id int64, appId, name, content, version string, node propmd.EtcdNode) {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	etcdClient, err := newEtcdClient(node)
 	if err != nil {
@@ -591,7 +591,7 @@ func deployToEtcd(id int64, appId, name, content, version string, node propmd.Et
 	}
 	defer etcdClient.Close()
 	kv := clientv3.NewKV(etcdClient)
-	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		err := propmd.InsertDeploy(ctx, propmd.InsertDeployReqDTO{
 			ContentId:    id,
 			Content:      content,
@@ -677,7 +677,7 @@ func checkPermByAppId(ctx context.Context, operator apisession.UserInfo, appId s
 type innerImpl struct{}
 
 func (*innerImpl) GrantAuth(ctx context.Context, appId string) {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	err := grantAuth(ctx, appId)
 	if err != nil {
@@ -686,7 +686,7 @@ func (*innerImpl) GrantAuth(ctx context.Context, appId string) {
 }
 
 func (*innerImpl) CheckConsistent() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	// 检查数据库->etcd
 	nodes, err := propmd.ListEtcdNode(ctx)
@@ -712,7 +712,7 @@ func (*innerImpl) CheckConsistent() {
 
 // checkEtcd2DbConsistent etcd -> db数据一致性
 func checkEtcd2DbConsistent(nodes []propmd.EtcdNode, clientMap map[string]*clientv3.Client) error {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	for _, node := range nodes {
 		if err := propmd.IterateDeletedDeployByNodeId(ctx, node.NodeId, func(deploy *propmd.PropDeploy) error {
@@ -753,7 +753,7 @@ func checkEtcd2DbConsistent(nodes []propmd.EtcdNode, clientMap map[string]*clien
 
 // checkDb2EtcdConsistent db -> etcd数据一致性
 func checkDb2EtcdConsistent(content *propmd.PropContent, nodes []propmd.EtcdNode, clientMap map[string]*clientv3.Client) error {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	for _, node := range nodes {
 		deploy, b, err := propmd.GetLatestDeployByNodeId(ctx, content.Id, node.NodeId)

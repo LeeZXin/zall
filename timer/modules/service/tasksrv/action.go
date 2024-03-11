@@ -12,7 +12,7 @@ import (
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"net/url"
 	"time"
 )
@@ -33,7 +33,7 @@ func InitTask() {
 	quit.AddShutdownHook(func() {
 		// 停止心跳任务
 		heartbeatTask.Stop()
-		ctx, closer := mysqlstore.Context(context.Background())
+		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		// 删除数据
 		taskmd.DeleteInstance(ctx, common.GetInstanceId())
@@ -48,7 +48,7 @@ func InitTask() {
 	compensateTask.Start()
 	quit.AddShutdownHook(compensateTask.Stop, true)
 	httptask.AppendHttpTask("clearTimerInvalidInstances", func(_ []byte, _ url.Values) {
-		ctx, closer := mysqlstore.Context(context.Background())
+		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		err := taskmd.DeleteInValidInstances(ctx, time.Now().Add(-30*time.Second).UnixMilli())
 		if err != nil {
@@ -77,7 +77,7 @@ func getInstanceIndex(ctx context.Context) (int64, int64) {
 }
 
 func doHeartbeat() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	b, err := taskmd.UpdateHeartbeatTime(ctx, common.GetInstanceId(), time.Now().UnixMilli())
 	if err != nil {
@@ -93,7 +93,7 @@ func doHeartbeat() {
 }
 
 func doExecuteTask() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	total, index := getInstanceIndex(ctx)
 	if total > 0 && index >= 0 {
@@ -110,7 +110,7 @@ func doExecuteTask() {
 }
 
 func doCompensateTask() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	total, index := getInstanceIndex(ctx)
 	if index > 0 {
@@ -129,7 +129,7 @@ func doCompensateTask() {
 
 func triggerTask(task *taskmd.Task, triggerBy string) {
 	taskExecutor.Execute(func() {
-		ctx, closer := mysqlstore.Context(context.Background())
+		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		logContent, status := handleTaskContent(task)
 		err := taskmd.InsertTaskLog(ctx, taskmd.InsertTaskLogReqDTO{
@@ -148,7 +148,7 @@ func triggerTask(task *taskmd.Task, triggerBy string) {
 
 func handleTask(task *taskmd.Task) {
 	taskExecutor.Execute(func() {
-		ctx, closer := mysqlstore.Context(context.Background())
+		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		b, err := taskmd.UpdateTaskStatus(ctx, task.Id, taskmd.Running, task.Version)
 		if err != nil {
@@ -196,7 +196,7 @@ func handleTaskContent(task *taskmd.Task) (string, taskmd.TaskStatus) {
 }
 
 func resetNextTime(task *taskmd.Task, runStatus taskmd.TaskStatus) {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	cron, err := parseCron(task.CronExp)
 	if err != nil {

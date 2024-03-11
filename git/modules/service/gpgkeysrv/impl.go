@@ -11,7 +11,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/patrickmn/go-cache"
 	"time"
@@ -20,7 +20,7 @@ import (
 type innerImpl struct{}
 
 func (*innerImpl) GetVerifiedByAccount(ctx context.Context, account string) ([]openpgp.EntityList, error) {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	keys, err := gpgkeymd.GetValidByAccount(ctx, account)
 	if err != nil {
@@ -71,7 +71,7 @@ func (s *outerImpl) InsertGpgKey(ctx context.Context, reqDTO InsertGpgKeyReqDTO)
 		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.GpgKeyVerifiedFailedError)
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	keyReqDTO := parseGpgKey(entityList[0], reqDTO.Content, reqDTO.Name, reqDTO.Operator.Account)
 	// 检查重复
@@ -152,7 +152,7 @@ func (s *outerImpl) DeleteGpgKey(ctx context.Context, reqDTO DeleteGpgKeyReqDTO)
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验是否存在
 	key, b, err := gpgkeymd.GetById(ctx, reqDTO.Id)
@@ -178,7 +178,7 @@ func (s *outerImpl) ListGpgKey(ctx context.Context, reqDTO ListGpgKeyReqDTO) ([]
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	keys, err := gpgkeymd.GetAllSimpleByAccount(ctx, reqDTO.Operator.Account)
 	if err != nil {

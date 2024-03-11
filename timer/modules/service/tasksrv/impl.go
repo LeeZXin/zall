@@ -11,7 +11,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"time"
 )
 
@@ -30,7 +30,7 @@ func (o *outerImpl) InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (er
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err = checkPerm(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
 		return
@@ -63,7 +63,7 @@ func (o *outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]Task
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err := checkPerm(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
 		return nil, 0, err
@@ -117,7 +117,7 @@ func (o *outerImpl) EnableTask(ctx context.Context, reqDTO EnableTaskReqDTO) (er
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var (
 		task taskmd.Task
@@ -171,7 +171,7 @@ func (o *outerImpl) DisableTask(ctx context.Context, reqDTO DisableTaskReqDTO) (
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var (
 		task taskmd.Task
@@ -220,7 +220,7 @@ func (o *outerImpl) DeleteTask(ctx context.Context, reqDTO DeleteTaskReqDTO) (er
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
@@ -247,7 +247,7 @@ func (o *outerImpl) TriggerTask(ctx context.Context, reqDTO TriggerTaskReqDTO) (
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var (
 		task taskmd.Task
@@ -265,7 +265,7 @@ func (o *outerImpl) ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) (
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
@@ -318,7 +318,7 @@ func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (er
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var (
 		task taskmd.Task

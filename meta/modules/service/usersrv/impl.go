@@ -12,7 +12,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/patrickmn/go-cache"
 	"time"
 )
@@ -36,7 +36,7 @@ func (s *innerImpl) getByAccount(ctx context.Context, account string) (usermd.Us
 		u := v.(usermd.User)
 		return u, u.Account != ""
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	user, b, err := usermd.GetByAccount(ctx, account)
 	if err != nil || !b {
@@ -80,7 +80,7 @@ func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (sessionId st
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	user, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
 	if err != nil {
@@ -181,7 +181,7 @@ func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (er
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 不是企业管理员
 	if !reqDTO.Operator.IsAdmin {
@@ -216,7 +216,7 @@ func (*outerImpl) RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 获取系统配置检查是否禁用注册功能
 	sysCfg, b := cfgsrv.Inner.GetSysCfg(ctx)
@@ -271,7 +271,7 @@ func (*outerImpl) DeleteUser(ctx context.Context, reqDTO DeleteUserReqDTO) (err 
 		err = util.UnauthorizedError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
 	if err != nil {
@@ -284,7 +284,7 @@ func (*outerImpl) DeleteUser(ctx context.Context, reqDTO DeleteUserReqDTO) (err 
 		return
 	}
 	// 数据库删除用户
-	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 用户表
 		_, err := usermd.DeleteUser(ctx, reqDTO.Operator.Account)
 		if err != nil {
@@ -314,7 +314,7 @@ func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) (ListUser
 	if !reqDTO.Operator.IsAdmin {
 		return ListUserRespDTO{}, util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	userList, err := usermd.ListUser(ctx, usermd.ListUserReqDTO{
 		Account: reqDTO.Account,
@@ -362,7 +362,7 @@ func (*outerImpl) UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (err 
 		err = util.UnauthorizedError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
 	if err != nil {
@@ -409,7 +409,7 @@ func (*outerImpl) UpdateAdmin(ctx context.Context, reqDTO UpdateAdminReqDTO) (er
 		err = util.InvalidArgsError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
 	if err != nil {
@@ -445,7 +445,7 @@ func (*outerImpl) UpdatePassword(ctx context.Context, reqDTO UpdatePasswordReqDT
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := usermd.GetByAccount(ctx, reqDTO.Operator.Account)
 	if err != nil {
@@ -491,7 +491,7 @@ func (s *outerImpl) SetProhibited(ctx context.Context, reqDTO SetProhibitedReqDT
 		err = util.InvalidArgsError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
 	if err != nil {

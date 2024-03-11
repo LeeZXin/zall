@@ -10,7 +10,7 @@ import (
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"net/url"
 	"time"
 )
@@ -30,7 +30,7 @@ func InitDetect() {
 	quit.AddShutdownHook(func() {
 		// 停止心跳任务
 		heartbeatTask.Stop()
-		ctx, closer := mysqlstore.Context(context.Background())
+		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		// 删除数据
 		detectmd.DeleteInstance(ctx, common.GetInstanceId())
@@ -42,7 +42,7 @@ func InitDetect() {
 	quit.AddShutdownHook(executeTask.Stop, true)
 	// 清除过期实例
 	httptask.AppendHttpTask("clearTcpDetectInvalidInstances", func(_ []byte, _ url.Values) {
-		ctx, closer := mysqlstore.Context(context.Background())
+		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		err := detectmd.DeleteInValidInstances(ctx, time.Now().Add(-30*time.Second).UnixMilli())
 		if err != nil {
@@ -51,7 +51,7 @@ func InitDetect() {
 	})
 	// 清除过期日志
 	httptask.AppendHttpTask("clearTcpDetectExpiredLog", func(_ []byte, _ url.Values) {
-		ctx, closer := mysqlstore.Context(context.Background())
+		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		err := detectmd.DeleteLogByTime(ctx, time.Now().Add(-3*24*time.Hour))
 		if err != nil {
@@ -62,7 +62,7 @@ func InitDetect() {
 }
 
 func doHeartbeat() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	b, err := detectmd.UpdateHeartbeatTime(ctx, common.GetInstanceId(), time.Now().UnixMilli())
 	if err != nil {
@@ -78,7 +78,7 @@ func doHeartbeat() {
 }
 
 func doExecuteTask() {
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	total, index := getInstanceIndex(ctx)
 	if total > 0 && index >= 0 {
@@ -97,7 +97,7 @@ func doExecuteTask() {
 func doDetect(detect *detectmd.TcpDetect) {
 	detectExecutor.Execute(func() {
 		err := detecttool.CheckTcp(detect.Ip, detect.Port)
-		ctx, closer := mysqlstore.Context(context.Background())
+		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		if err == nil {
 			err = detectmd.UpdateDetectHeartbeatTime(ctx, detect.Id, time.Now().UnixMilli())

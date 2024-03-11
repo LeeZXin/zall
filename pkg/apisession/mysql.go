@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"net/url"
 	"time"
 )
@@ -50,7 +50,7 @@ func newMysqlStore() *mysqlStore {
 }
 
 func (m *mysqlStore) GetBySessionId(sessionId string) (Session, bool, error) {
-	xsess := mysqlstore.NewXormSession(context.Background())
+	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	ret := SessionModel{}
 	b, err := xsess.Where("session_id = ?", sessionId).And("expire_at > ?", time.Now().UnixMilli()).Get(&ret)
@@ -58,7 +58,7 @@ func (m *mysqlStore) GetBySessionId(sessionId string) (Session, bool, error) {
 }
 
 func (m *mysqlStore) GetByAccount(account string) (Session, bool, error) {
-	xsess := mysqlstore.NewXormSession(context.Background())
+	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	ret := SessionModel{}
 	b, err := xsess.Where("account = ?", account).And("expire_at > ?", time.Now().UnixMilli()).Get(&ret)
@@ -67,7 +67,7 @@ func (m *mysqlStore) GetByAccount(account string) (Session, bool, error) {
 
 func (m *mysqlStore) PutSession(session Session) error {
 	userInfoJson, _ := json.Marshal(session.UserInfo)
-	xsess := mysqlstore.NewXormSession(context.Background())
+	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	_, err := xsess.Insert(&SessionModel{
 		SessionId: session.SessionId,
@@ -79,21 +79,21 @@ func (m *mysqlStore) PutSession(session Session) error {
 }
 
 func (m *mysqlStore) DeleteByAccount(account string) error {
-	xsess := mysqlstore.NewXormSession(context.Background())
+	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	_, err := xsess.Where("account = ?", account).Delete(new(SessionModel))
 	return err
 }
 
 func (m *mysqlStore) DeleteBySessionId(sessionId string) error {
-	xsess := mysqlstore.NewXormSession(context.Background())
+	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	_, err := xsess.Where("session_id = ?", sessionId).Delete(new(SessionModel))
 	return err
 }
 
 func (m *mysqlStore) RefreshExpiry(sessionId string, expireAt int64) error {
-	xsess := mysqlstore.NewXormSession(context.Background())
+	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	_, err := xsess.Where("session_id = ?", sessionId).
 		Cols("expire_at").
@@ -104,7 +104,7 @@ func (m *mysqlStore) RefreshExpiry(sessionId string, expireAt int64) error {
 }
 
 func (m *mysqlStore) ClearExpired() {
-	xsess := mysqlstore.NewXormSession(context.Background())
+	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	_, err := xsess.Where("expire_at <= ?", time.Now().UnixMilli()).Delete(new(SessionModel))
 	if err != nil {

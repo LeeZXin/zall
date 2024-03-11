@@ -15,7 +15,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/gliderlabs/ssh"
 	"github.com/kballard/go-shellquote"
@@ -107,7 +107,7 @@ func handleGitCommand(ctx context.Context, session ssh.Session) error {
 }
 
 func getUserByFingerprint(ctx context.Context, fingerprint string) *usermd.UserInfo {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	account, b, err := sshkeymd.GetAccountByFingerprint(ctx, fingerprint)
 	if err != nil {

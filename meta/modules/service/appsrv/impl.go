@@ -14,7 +14,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
 
 type outerImpl struct{}
@@ -32,7 +32,7 @@ func (*outerImpl) InsertApp(ctx context.Context, reqDTO InsertAppReqDTO) (err er
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验teamId
 	if err = checkPermAdmin(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
@@ -75,7 +75,7 @@ func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err er
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验teamId
 	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
@@ -94,7 +94,7 @@ func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, 
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	appIdList, err := checkPerm(ctx, reqDTO.Operator, reqDTO.TeamId)
 	if err != nil {
@@ -142,7 +142,7 @@ func (*outerImpl) UpdateApp(ctx context.Context, reqDTO UpdateAppReqDTO) (err er
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验teamId
 	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
@@ -179,7 +179,7 @@ func (*outerImpl) TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (
 		err = util.UnauthorizedError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := teammd.GetByTeamId(ctx, reqDTO.TeamId)
 	if err != nil {

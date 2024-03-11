@@ -11,7 +11,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
 
 type outerImpl struct{}
@@ -28,7 +28,7 @@ func (*outerImpl) InsertWebHook(ctx context.Context, reqDTO InsertWebhookReqDTO)
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err = checkPerm(ctx, reqDTO.RepoId, reqDTO.Operator); err != nil {
 		return
@@ -57,7 +57,7 @@ func (*outerImpl) DeleteWebhook(ctx context.Context, reqDTO DeleteWebhookReqDTO)
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	hook, b, err := webhookmd.GetById(ctx, reqDTO.Id)
 	if err != nil {
@@ -84,7 +84,7 @@ func (*outerImpl) ListWebhook(ctx context.Context, reqDTO ListWebhookReqDTO) ([]
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if err := checkPerm(ctx, reqDTO.RepoId, reqDTO.Operator); err != nil {
 		return nil, err

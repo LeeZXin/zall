@@ -6,7 +6,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/wraperr"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"runtime"
 	"time"
 )
@@ -20,7 +20,7 @@ type innerImpl struct{}
 
 func (*innerImpl) InsertOpLog(_ context.Context, reqDTO InsertOpLogReqDTO) {
 	e.Execute(func() {
-		ctx, closer := mysqlstore.Context(nil)
+		ctx, closer := xormstore.Context(nil)
 		defer closer.Close()
 		if reqDTO.EventTime.IsZero() {
 			reqDTO.EventTime = time.Now()

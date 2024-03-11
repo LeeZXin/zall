@@ -6,7 +6,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"github.com/bwmarrin/snowflake"
 	"math/rand"
@@ -53,7 +53,7 @@ func (o *outerImpl) InsertGenerator(ctx context.Context, bizName string, current
 	if !validBizNamePattern.MatchString(bizName) {
 		return util.InvalidArgsError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := idmd.GetByBizName(ctx, bizName)
 	if err != nil {
@@ -77,7 +77,7 @@ func (o *outerImpl) GenerateIdByBizName(ctx context.Context, bizName string, ste
 	if step <= 0 {
 		return []int64{}, nil
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	for i := 0; i < 10; i++ {
 		gen, b, err := idmd.GetByBizName(ctx, bizName)

@@ -5,7 +5,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/gitnodemd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
 
 type outerImpl struct{}
@@ -17,7 +17,7 @@ func (*outerImpl) InsertNode(ctx context.Context, reqDTO InsertNodeReqDTO) error
 	if !reqDTO.Operator.IsAdmin {
 		return util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	_, b, err := gitnodemd.GetByNodeId(ctx, reqDTO.NodeId)
 	if err != nil {
@@ -46,7 +46,7 @@ func (*outerImpl) DeleteNode(ctx context.Context, reqDTO DeleteNodeReqDTO) error
 	if !reqDTO.Operator.IsAdmin {
 		return util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(context.Background())
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	_, b, err := gitnodemd.GetByNodeId(ctx, reqDTO.NodeId)
 	if err != nil {

@@ -23,7 +23,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"time"
 )
 
@@ -42,7 +42,7 @@ func (s *outerImpl) SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequ
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
 	repo, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
@@ -111,7 +111,7 @@ func (*outerImpl) ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestR
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
 	pr, repo, err := checkPerm(ctx, reqDTO.Id, reqDTO.Operator)
@@ -151,7 +151,7 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 		err = util.InternalError(errors.New("can not get git config"))
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
 	pr, repo, err := checkPerm(ctx, reqDTO.Id, reqDTO.Operator)
@@ -197,7 +197,7 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 		err = util.NewBizErr(apicode.PullRequestCannotMergeCode, i18n.PullRequestCannotMerge)
 		return
 	}
-	err = mysqlstore.WithTx(ctx, func(ctx context.Context) error {
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		return s.mergeWithTx(ctx, pr, info, repo, reqDTO.Operator, "", gitCfg)
 	})
 	if err != nil {
@@ -268,7 +268,7 @@ func (*outerImpl) ReviewPullRequest(ctx context.Context, reqDTO ReviewPullReques
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查是否重复提交
 	_, b, err := pullrequestmd.GetReview(ctx, reqDTO.Id, reqDTO.Operator.Account)
@@ -378,7 +378,7 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 
 func triggerWebhook(repo repomd.RepoInfo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, actionType string) {
 	go func() {
-		ctx, closer := mysqlstore.Context(context.Background())
+		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		// 触发webhook
 		hookList, err := webhookmd.ListWebhook(ctx, repo.Id, webhookmd.PullRequestHook)

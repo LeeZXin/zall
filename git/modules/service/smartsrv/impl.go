@@ -14,7 +14,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
 
 type outerImpl struct{}
@@ -104,7 +104,7 @@ func (s *outerImpl) InfoRefs(ctx context.Context, reqDTO InfoRefsReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if !reqDTO.FromAccessToken {
 		// 获取权限

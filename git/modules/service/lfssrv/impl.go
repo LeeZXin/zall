@@ -14,7 +14,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
 
 type outerImpl struct {
@@ -25,7 +25,7 @@ func (*outerImpl) Lock(ctx context.Context, reqDTO LockReqDTO) (LockRespDTO, err
 		return LockRespDTO{}, err
 	}
 	// 检查仓库访问权限
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
 	if err != nil {
@@ -67,7 +67,7 @@ func (*outerImpl) ListLock(ctx context.Context, reqDTO ListLockReqDTO) (ListLock
 		return ListLockRespDTO{}, err
 	}
 	// 检查仓库访问权限
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if !reqDTO.FromAccessToken {
 		p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
@@ -108,7 +108,7 @@ func (*outerImpl) Unlock(ctx context.Context, reqDTO UnlockReqDTO) (LfsLockDTO, 
 		return LfsLockDTO{}, err
 	}
 	// 检查仓库访问权限
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
 	if err != nil {
@@ -143,7 +143,7 @@ func (s *outerImpl) Verify(ctx context.Context, reqDTO VerifyReqDTO) (bool, bool
 		return false, false, err
 	}
 	// 检查仓库访问权限
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if !reqDTO.FromAccessToken {
 		p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
@@ -184,7 +184,7 @@ func (s *outerImpl) Download(ctx context.Context, reqDTO DownloadReqDTO) (err er
 		return
 	}
 	// 检查仓库访问权限
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if !reqDTO.FromAccessToken {
 		var p perm.Detail
@@ -224,7 +224,7 @@ func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error)
 		return
 	}
 	// 检查仓库访问权限
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
 	if err != nil {
@@ -282,7 +282,7 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 	if err := reqDTO.IsValid(); err != nil {
 		return BatchRespDTO{}, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	ret := make([]ObjectDTO, 0, len(reqDTO.Objects))
 	oidList, _ := listutil.Map(reqDTO.Objects, func(t PointerDTO) (string, error) {

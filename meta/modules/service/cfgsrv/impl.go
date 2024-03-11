@@ -7,7 +7,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/patrickmn/go-cache"
 	"time"
 )
@@ -18,7 +18,7 @@ type innerImpl struct {
 
 func (s *innerImpl) InitSysCfg() {
 	ctx := context.Background()
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	ret := SysCfg{}
 	b, err := cfgmd.GetByKey(ctx, &ret)
@@ -48,7 +48,7 @@ func (s *innerImpl) GetSysCfg(ctx context.Context) (SysCfg, bool) {
 
 func (s *innerImpl) InitGitCfg() {
 	ctx := context.Background()
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	ret := GitCfg{}
 	b, err := cfgmd.GetByKey(ctx, &ret)
@@ -77,7 +77,7 @@ func (s *innerImpl) GetGitCfg(ctx context.Context) (GitCfg, bool) {
 }
 
 func getFromDB(ctx context.Context, cfg util.KeyVal) bool {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	b, err := cfgmd.GetByKey(ctx, cfg)
 	if err != nil {
@@ -125,7 +125,7 @@ func (s *outerImpl) UpdateSysCfg(ctx context.Context, reqDTO UpdateSysCfgReqDTO)
 		err = util.UnauthorizedError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err = cfgmd.UpdateByKey(ctx, &reqDTO.SysCfg)
 	if err != nil {
@@ -172,7 +172,7 @@ func (s *outerImpl) UpdateGitCfg(ctx context.Context, reqDTO UpdateGitCfgReqDTO)
 		err = util.UnauthorizedError()
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err = cfgmd.UpdateByKey(ctx, &reqDTO.GitCfg)
 	if err != nil {

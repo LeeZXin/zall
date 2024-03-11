@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	MemStoreType   = "mem"
-	MysqlStoreType = "mysql"
+	MemStoreType  = "mem"
+	xormstoreType = "mysql"
 )
 
 var (
@@ -22,7 +22,7 @@ func init() {
 	switch static.GetString("apisession.store.type") {
 	case MemStoreType:
 		storeImpl = newMemStore()
-	case MysqlStoreType:
+	case xormstoreType:
 		storeImpl = newMysqlStore()
 	default:
 		storeImpl = newMysqlStore()

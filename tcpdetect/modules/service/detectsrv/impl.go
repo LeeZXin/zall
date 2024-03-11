@@ -8,7 +8,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
 
 type outerImpl struct{}
@@ -29,7 +29,7 @@ func (*outerImpl) InsertDetect(ctx context.Context, reqDTO InsertDetectReqDTO) (
 	if !reqDTO.Operator.IsAdmin {
 		return util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var b bool
 	_, b, err = detectmd.GetDetectByIpPort(ctx, reqDTO.Ip, reqDTO.Port)
@@ -73,7 +73,7 @@ func (*outerImpl) UpdateDetect(ctx context.Context, reqDTO UpdateDetectReqDTO) (
 	if !reqDTO.Operator.IsAdmin {
 		return util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var (
 		detect detectmd.TcpDetect
@@ -110,7 +110,7 @@ func (*outerImpl) ListDetect(ctx context.Context, reqDTO ListDetectReqDTO) ([]De
 	if !reqDTO.Operator.IsAdmin {
 		return nil, 0, util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	detects, err := detectmd.ListDetect(ctx, detectmd.ListDetectReqDTO{
 		Name:   reqDTO.Name,
@@ -154,7 +154,7 @@ func (*outerImpl) DeleteDetect(ctx context.Context, reqDTO DeleteDetectReqDTO) (
 	if !reqDTO.Operator.IsAdmin {
 		return util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	err = detectmd.DeleteDetect(ctx, reqDTO.Id)
 	if err != nil {
@@ -174,7 +174,7 @@ func (*outerImpl) ListLog(ctx context.Context, reqDTO ListLogReqDTO) ([]LogDTO, 
 	if !reqDTO.Operator.IsAdmin {
 		return nil, 0, util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	logs, err := detectmd.ListLog(ctx, detectmd.ListLogReqDTO{
 		Id:     reqDTO.Id,
@@ -216,7 +216,7 @@ func (*outerImpl) EnabledDetect(ctx context.Context, reqDTO EnableDetectReqDTO) 
 	if !reqDTO.Operator.IsAdmin {
 		return util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err = detectmd.SetDetectEnabled(ctx, reqDTO.Id, true)
 	if err != nil {
@@ -243,7 +243,7 @@ func (*outerImpl) DisableDetect(ctx context.Context, reqDTO DisableDetectReqDTO)
 	if !reqDTO.Operator.IsAdmin {
 		return util.UnauthorizedError()
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err = detectmd.SetDetectEnabled(ctx, reqDTO.Id, false)
 	if err != nil {

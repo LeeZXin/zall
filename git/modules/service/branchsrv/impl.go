@@ -14,7 +14,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
 
 type outerImpl struct{}
@@ -32,7 +32,7 @@ func (*outerImpl) InsertProtectedBranch(ctx context.Context, reqDTO InsertProtec
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	repo, err := checkPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
@@ -77,7 +77,7 @@ func (*outerImpl) DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtec
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	pb, b, err := branchmd.GetById(ctx, reqDTO.Id)
 	if err != nil {
@@ -105,7 +105,7 @@ func (*outerImpl) ListProtectedBranch(ctx context.Context, reqDTO ListProtectedB
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err := checkPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {

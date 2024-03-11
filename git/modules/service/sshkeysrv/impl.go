@@ -10,7 +10,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/mysqlstore"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/patrickmn/go-cache"
 	gossh "golang.org/x/crypto/ssh"
 	"strings"
@@ -30,7 +30,7 @@ func (s *innerImpl) GetAccountByFingerprint(ctx context.Context, fingerprint str
 		}
 		return ret, true, nil
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	account, b, err := sshkeymd.GetAccountByFingerprint(ctx, fingerprint)
 	if err != nil {
@@ -47,7 +47,7 @@ func (s *innerImpl) GetAccountByFingerprint(ctx context.Context, fingerprint str
 }
 
 func (s *innerImpl) GetVerifiedByAccount(ctx context.Context, account string) ([]string, error) {
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	keys, err := sshkeymd.GetVerifiedByAccount(ctx, account)
 	if err != nil {
@@ -65,7 +65,7 @@ func (s *outerImpl) DeleteSshKey(ctx context.Context, reqDTO DeleteSshKeyReqDTO)
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	sshKey, b, err := sshkeymd.GetById(ctx, reqDTO.Id)
 	if err != nil {
@@ -106,7 +106,7 @@ func (s *outerImpl) InsertSshKey(ctx context.Context, reqDTO InsertSshKeyReqDTO)
 	//	return util.NewBizErr(apicode.SshKeyVerifyFailedCode, i18n.SshKeyVerifyFailed)
 	//}
 	fingerprint := gossh.FingerprintSHA256(publicKey)
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := sshkeymd.GetAccountByFingerprint(ctx, fingerprint)
 	if err != nil {
@@ -133,7 +133,7 @@ func (*outerImpl) ListSshKey(ctx context.Context, reqDTO ListSshKeyReqDTO) ([]ss
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 展示登录人的sshkey列表
 	keyList, err := sshkeymd.GetByAccount(ctx, reqDTO.Operator.Account)
@@ -148,7 +148,7 @@ func (s *outerImpl) GetToken(ctx context.Context, reqDTO GetTokenReqDTO) (string
 	if err := reqDTO.IsValid(); err != nil {
 		return "", nil, err
 	}
-	ctx, closer := mysqlstore.Context(ctx)
+	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	token := signature.GetToken(signature.User{
 		Account: reqDTO.Operator.Account,
