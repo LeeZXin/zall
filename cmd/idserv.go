@@ -23,7 +23,7 @@ func runIdServer(*cli.Context) error {
 		zsf.WithLifeCycles(
 			httpserver.NewServer(
 				httpserver.WithRegistryAction(
-					registry.NewDefaultHttpAction(registry.NewEtcdRegistry()),
+					registry.NewDefaultHttpAction(registry.NewDefaultEtcdRegistry()),
 				),
 			),
 		),
