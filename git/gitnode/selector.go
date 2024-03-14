@@ -5,9 +5,11 @@ import (
 	"errors"
 	"github.com/LeeZXin/zall/meta/modules/model/gitnodemd"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/localcache"
+	"github.com/LeeZXin/zsf-utils/quit"
+	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -44,57 +46,93 @@ func (r *emptyTargetsSelector) Select() string {
 	return ""
 }
 
+type nodeCache struct {
+	cache map[string][2]selector
+	sync.RWMutex
+}
+
+func (n *nodeCache) refreshCache() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	nodes, err := gitnodemd.GetAll(ctx)
+	if err != nil {
+		logger.Logger.Error(err)
+		return
+	}
+	n.Lock()
+	defer n.Unlock()
+	c := make(map[string][2]selector, 8)
+	for _, node := range nodes {
+		httpNodes := listutil.Shuffle(node.HttpHosts)
+		sshNodes := listutil.Shuffle(node.SshHosts)
+		httpSelector := newRoundRobinSelector(httpNodes)
+		sshSelector := newRoundRobinSelector(sshNodes)
+		c[node.NodeId] = [2]selector{
+			httpSelector, sshSelector,
+		}
+	}
+	n.cache = c
+}
+
+func (n *nodeCache) getHttpSelector(nodeId string) (selector, bool) {
+	n.RLock()
+	defer n.RUnlock()
+	if n.cache == nil {
+		return nil, false
+	}
+	selectors, b := n.cache[nodeId]
+	if !b {
+		return nil, false
+	}
+	return selectors[0], true
+}
+
+func (n *nodeCache) getSshSelector(nodeId string) (selector, bool) {
+	n.RLock()
+	defer n.RUnlock()
+	if n.cache == nil {
+		return nil, false
+	}
+	selectors, b := n.cache[nodeId]
+	if !b {
+		return nil, false
+	}
+	return selectors[1], true
+}
+
+func newNodeCache() *nodeCache {
+	ret := new(nodeCache)
+	task, _ := taskutil.NewPeriodicalTask(10*time.Second, ret.refreshCache)
+	task.Start()
+	quit.AddShutdownHook(task.Stop)
+	return ret
+}
+
 var (
-	nodeSelector    *localcache.SingleCacheEntry[map[string][2]selector]
+	nodeSelector    = newNodeCache()
 	NodeNotFoundErr = errors.New("node not found")
 )
 
-func init() {
-	nodeSelector, _ = localcache.NewSingleCacheEntry(func(ctx context.Context) (map[string][2]selector, error) {
-		ctx, closer := xormstore.Context(ctx)
-		defer closer.Close()
-		nodes, err := gitnodemd.GetAll(ctx)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return nil, err
-		}
-		return listutil.CollectToMap(nodes, func(t gitnodemd.GitNodeDTO) (string, error) {
-			return t.NodeId, nil
-		}, func(t gitnodemd.GitNodeDTO) ([2]selector, error) {
-			httpNodes := listutil.Shuffle(t.HttpHosts)
-			sshNodes := listutil.Shuffle(t.SshHosts)
-			httpSelector := newRoundRobinSelector(httpNodes)
-			sshSelector := newRoundRobinSelector(sshNodes)
-			return [2]selector{
-				httpSelector, sshSelector,
-			}, nil
-		})
-	}, 30*time.Second)
-}
-
-func PickHttpHost(ctx context.Context, nodeId string) (string, error) {
-	return pickHost(ctx, nodeId, 0)
-}
-
-func PickSshHost(ctx context.Context, nodeId string) (string, error) {
-	return pickHost(ctx, nodeId, 1)
-}
-
-func pickHost(ctx context.Context, nodeId string, index int) (string, error) {
-	if nodeId == "" {
-		return "", errors.New("empty nodeId")
-	}
-	ret, err := nodeSelector.LoadData(ctx)
-	if err != nil {
-		return "", err
-	}
-	slr, b := ret[nodeId]
+func PickHttpHost(nodeId string) (string, error) {
+	s, b := nodeSelector.getHttpSelector(nodeId)
 	if !b {
 		return "", NodeNotFoundErr
 	}
-	node := slr[index].Select()
-	if err != nil {
+	ret := s.Select()
+	if ret == "" {
 		return "", NodeNotFoundErr
 	}
-	return node, nil
+	return ret, nil
+}
+
+func PickSshHost(nodeId string) (string, error) {
+	s, b := nodeSelector.getSshSelector(nodeId)
+	if !b {
+		return "", NodeNotFoundErr
+	}
+	ret := s.Select()
+	if ret == "" {
+		return "", NodeNotFoundErr
+	}
+	return ret, nil
 }

@@ -409,7 +409,7 @@ func LfsStat(ctx context.Context, req reqvo.LfsStatReq, nodeId string) (reqvo.Lf
 }
 
 func postHttp(ctx context.Context, nodeId string, path string, req, resp any) error {
-	httpUrl, err := getHttpUrl(ctx, nodeId)
+	httpUrl, err := getHttpUrl(nodeId)
 	if err != nil {
 		return err
 	}
@@ -430,7 +430,7 @@ func postHttp(ctx context.Context, nodeId string, path string, req, resp any) er
 }
 
 func proxyHttp(nodeId, path string, ctx *gin.Context, headers map[string]string) error {
-	httpUrl, err := getHttpUrl(ctx, nodeId)
+	httpUrl, err := getHttpUrl(nodeId)
 	if err != nil {
 		return err
 	}
@@ -458,8 +458,8 @@ func proxyHttp(nodeId, path string, ctx *gin.Context, headers map[string]string)
 	return nil
 }
 
-func getHttpUrl(ctx context.Context, nodeId string) (string, error) {
-	ret, err := gitnode.PickHttpHost(ctx, nodeId)
+func getHttpUrl(nodeId string) (string, error) {
+	ret, err := gitnode.PickHttpHost(nodeId)
 	if err != nil {
 		return "", err
 	}

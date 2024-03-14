@@ -13,7 +13,10 @@ type GitNode struct {
 	// HttpHost 节点http地址 多个 逗号隔开
 	HttpHost string `json:"httpHost"`
 	// SshHost 节点ssh地址 多个 逗号隔开
-	SshHost string    `json:"sshHost"`
+	SshHost string `json:"sshHost"`
+	// 版本号
+	Version int64 `json:"version"`
+
 	Created time.Time `json:"created" xorm:"created"`
 	Updated time.Time `json:"updated" xorm:"updated"`
 }

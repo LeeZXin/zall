@@ -130,7 +130,7 @@ func pickRepoSshHost(ctx context.Context, repoPath string) string {
 	if !b {
 		return ""
 	}
-	host, err := gitnode.PickSshHost(ctx, repo.NodeId)
+	host, err := gitnode.PickSshHost(repo.NodeId)
 	if err != nil {
 		logger.Logger.Error(err)
 	}
