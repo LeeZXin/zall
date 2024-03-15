@@ -51,6 +51,7 @@ func (o *outerImpl) InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (er
 		NextTime:   0,
 		TaskStatus: taskmd.Closed,
 		TeamId:     reqDTO.TeamId,
+		Env:        reqDTO.Env,
 	}); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -73,6 +74,7 @@ func (o *outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]Task
 		Name:   reqDTO.Name,
 		Cursor: reqDTO.Cursor,
 		Limit:  reqDTO.Limit,
+		Env:    reqDTO.Env,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -123,7 +125,7 @@ func (o *outerImpl) EnableTask(ctx context.Context, reqDTO EnableTaskReqDTO) (er
 		task taskmd.Task
 		b    bool
 	)
-	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
+	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
 	if err != nil {
 		return
 	}
@@ -133,7 +135,13 @@ func (o *outerImpl) EnableTask(ctx context.Context, reqDTO EnableTaskReqDTO) (er
 	}
 	next := cron.Next(time.Now())
 	for i := 0; i < 10; i++ {
-		b, err = taskmd.UpdateTaskNextTimeAndStatus(ctx, reqDTO.Id, taskmd.Pending, next.UnixMilli(), task.Version)
+		b, err = taskmd.UpdateTaskNextTimeAndStatus(ctx, taskmd.UpdateTaskNextTimeAndStatusReqDTO{
+			TaskId:   reqDTO.Id,
+			Status:   taskmd.Pending,
+			NextTime: next.UnixMilli(),
+			Version:  task.Version,
+			Env:      reqDTO.Env,
+		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			err = util.InternalError(err)
@@ -142,7 +150,7 @@ func (o *outerImpl) EnableTask(ctx context.Context, reqDTO EnableTaskReqDTO) (er
 		if b {
 			return
 		}
-		task, b, err = taskmd.GetTaskById(ctx, reqDTO.Id)
+		task, b, err = taskmd.GetTaskById(ctx, reqDTO.Id, reqDTO.Env)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			err = util.InternalError(err)
@@ -177,12 +185,17 @@ func (o *outerImpl) DisableTask(ctx context.Context, reqDTO DisableTaskReqDTO) (
 		task taskmd.Task
 		b    bool
 	)
-	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
+	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
 	if err != nil {
 		return
 	}
 	for i := 0; i < 10; i++ {
-		b, err = taskmd.UpdateTaskStatus(ctx, reqDTO.Id, taskmd.Closed, task.Version)
+		b, err = taskmd.UpdateTaskStatus(ctx, taskmd.UpdateTaskStatusReqDTO{
+			TaskId:    reqDTO.Id,
+			NewStatus: taskmd.Closed,
+			Version:   task.Version,
+			Env:       reqDTO.Env,
+		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			err = util.InternalError(err)
@@ -191,7 +204,7 @@ func (o *outerImpl) DisableTask(ctx context.Context, reqDTO DisableTaskReqDTO) (
 		if b {
 			return
 		}
-		task, b, err = taskmd.GetTaskById(ctx, reqDTO.Id)
+		task, b, err = taskmd.GetTaskById(ctx, reqDTO.Id, reqDTO.Env)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			err = util.InternalError(err)
@@ -222,11 +235,11 @@ func (o *outerImpl) DeleteTask(ctx context.Context, reqDTO DeleteTaskReqDTO) (er
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
+	_, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
 	if err != nil {
 		return
 	}
-	err = taskmd.DeleteTask(ctx, reqDTO.Id)
+	err = taskmd.DeleteTask(ctx, reqDTO.Id, reqDTO.Env)
 	if err != nil {
 		err = util.InternalError(err)
 		return
@@ -252,11 +265,11 @@ func (o *outerImpl) TriggerTask(ctx context.Context, reqDTO TriggerTaskReqDTO) (
 	var (
 		task taskmd.Task
 	)
-	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
+	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
 	if err != nil {
 		return
 	}
-	triggerTask(&task, reqDTO.Operator.Account)
+	triggerTask(&task, reqDTO.Operator.Account, reqDTO.Env)
 	return nil
 }
 
@@ -267,7 +280,7 @@ func (o *outerImpl) ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) (
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
+	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -275,6 +288,7 @@ func (o *outerImpl) ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) (
 		Id:     reqDTO.Id,
 		Cursor: reqDTO.Cursor,
 		Limit:  reqDTO.Limit,
+		Env:    reqDTO.Env,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -324,7 +338,7 @@ func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (er
 		task taskmd.Task
 		b    bool
 	)
-	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
+	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
 	if err != nil {
 		return
 	}
@@ -346,6 +360,7 @@ func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (er
 			TaskStatus: taskmd.Closed,
 			NextTime:   0,
 			Version:    task.Version,
+			Env:        reqDTO.Env,
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -355,7 +370,7 @@ func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (er
 		if b {
 			return
 		}
-		task, b, err = taskmd.GetTaskById(ctx, reqDTO.Id)
+		task, b, err = taskmd.GetTaskById(ctx, reqDTO.Id, reqDTO.Env)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			err = util.InternalError(err)
@@ -382,8 +397,8 @@ func checkPerm(ctx context.Context, operator apisession.UserInfo, teamId int64) 
 	return nil
 }
 
-func checkPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId int64) (taskmd.Task, error) {
-	task, b, err := taskmd.GetTaskById(ctx, taskId)
+func checkPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId int64, env string) (taskmd.Task, error) {
+	task, b, err := taskmd.GetTaskById(ctx, taskId, env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return taskmd.Task{}, util.InternalError(err)

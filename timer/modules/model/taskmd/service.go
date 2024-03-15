@@ -20,7 +20,7 @@ func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) error {
 		TeamId:     reqDTO.TeamId,
 		Version:    0,
 	}
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	_, err := xormutil.MustGetXormSession(ctx).Table("ztimer_task_content_" + reqDTO.Env).Insert(&ret)
 	return err
 }
 
@@ -29,6 +29,7 @@ func UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (bool, error) {
 		Where("id = ?", reqDTO.Id).
 		And("version = ?", reqDTO.Version).
 		Cols("name", "cron_exp", "content", "next_time", "task_status", "version").
+		Table("ztimer_task_content_" + reqDTO.Env).
 		Update(&Task{
 			Name:       reqDTO.Name,
 			CronExp:    reqDTO.CronExp,
@@ -40,35 +41,38 @@ func UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (bool, error) {
 	return rows == 1, err
 }
 
-func UpdateTaskStatus(ctx context.Context, taskId int64, newStatus TaskStatus, version int64) (bool, error) {
+func UpdateTaskStatus(ctx context.Context, reqDTO UpdateTaskStatusReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", taskId).
-		And("version = ?", version).
+		Where("id = ?", reqDTO.TaskId).
+		And("version = ?", reqDTO.Version).
 		Cols("task_status", "version").
+		Table("ztimer_task_content_" + reqDTO.Env).
 		Update(&Task{
-			TaskStatus: newStatus,
-			Version:    version + 1,
+			TaskStatus: reqDTO.NewStatus,
+			Version:    reqDTO.Version + 1,
 		})
 	return rows == 1, err
 }
 
-func UpdateTaskNextTimeAndStatus(ctx context.Context, taskId int64, status TaskStatus, nextTime, version int64) (bool, error) {
+func UpdateTaskNextTimeAndStatus(ctx context.Context, reqDTO UpdateTaskNextTimeAndStatusReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", taskId).
-		And("version = ?", version).
+		Where("id = ?", reqDTO.TaskId).
+		And("version = ?", reqDTO.Version).
 		Cols("next_time", "version", "task_status").
+		Table("ztimer_task_content_" + reqDTO.Env).
 		Update(&Task{
-			TaskStatus: status,
-			NextTime:   nextTime,
-			Version:    version + 1,
+			TaskStatus: reqDTO.Status,
+			NextTime:   reqDTO.NextTime,
+			Version:    reqDTO.Version + 1,
 		})
 	return rows == 1, err
 }
 
-func IterateTask(ctx context.Context, nextTime int64, status TaskStatus, fn func(*Task) error) error {
+func IterateTask(ctx context.Context, nextTime int64, status TaskStatus, env string, fn func(*Task) error) error {
 	return xormutil.MustGetXormSession(ctx).
 		Where("next_time <= ?", nextTime).
 		And("task_status = ?", status).
+		Table("ztimer_task_content_"+env).
 		Iterate(new(Task), func(idx int, obj interface{}) error {
 			if err := fn(obj.(*Task)); err != nil {
 				return err
@@ -78,7 +82,9 @@ func IterateTask(ctx context.Context, nextTime int64, status TaskStatus, fn func
 }
 
 func ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]Task, error) {
-	session := xormutil.MustGetXormSession(ctx).Where("team_id = ?", reqDTO.TeamId)
+	session := xormutil.MustGetXormSession(ctx).
+		Where("team_id = ?", reqDTO.TeamId).
+		Table("ztimer_task_content_" + reqDTO.Env)
 	if reqDTO.Cursor > 0 {
 		session.And("id > ?", reqDTO.Cursor)
 	}
@@ -102,13 +108,15 @@ func InsertTaskLog(ctx context.Context, reqDTO InsertTaskLogReqDTO) error {
 		TriggerBy:   reqDTO.TriggerBy,
 		TaskStatus:  reqDTO.TaskStatus,
 	}
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	_, err := xormutil.MustGetXormSession(ctx).Table("ztimer_task_log_" + reqDTO.Env).Insert(&ret)
 	return err
 }
 
 func ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) ([]TaskLog, error) {
 	ret := make([]TaskLog, 0)
-	session := xormutil.MustGetXormSession(ctx).Where("task_id = ?", reqDTO.Id)
+	session := xormutil.MustGetXormSession(ctx).
+		Where("task_id = ?", reqDTO.Id).
+		Table("ztimer_task_log_" + reqDTO.Env)
 	if reqDTO.Cursor > 0 {
 		session.And("id < ?", reqDTO.Cursor)
 	}
@@ -119,55 +127,67 @@ func ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) ([]TaskLog, erro
 	return ret, err
 }
 
-func InsertInstance(ctx context.Context, instanceId string) error {
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&Instance{
-		InstanceId:    instanceId,
-		HeartbeatTime: time.Now().UnixMilli(),
-	})
+func InsertInstance(ctx context.Context, instanceId, env string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Table("ztimer_instance_" + env).
+		Insert(&Instance{
+			InstanceId:    instanceId,
+			HeartbeatTime: time.Now().UnixMilli(),
+		})
 	return err
 }
 
-func UpdateHeartbeatTime(ctx context.Context, instanceId string, heartbeatTime int64) (bool, error) {
+func UpdateHeartbeatTime(ctx context.Context, instanceId string, heartbeatTime int64, env string) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("instance_id = ?", instanceId).
 		Cols("heartbeat_time").
+		Table("ztimer_instance_" + env).
 		Update(&Instance{
 			HeartbeatTime: heartbeatTime,
 		})
 	return rows == 1, err
 }
 
-func DeleteInstance(ctx context.Context, instanceId string) error {
+func DeleteInstance(ctx context.Context, instanceId, env string) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Where("instance_id = ?", instanceId).
+		Table("ztimer_instance_" + env).
 		Limit(1).
 		Delete(new(Instance))
 	return err
 }
 
-func GetValidInstances(ctx context.Context, after int64) ([]Instance, error) {
+func GetValidInstances(ctx context.Context, after int64, env string) ([]Instance, error) {
 	ret := make([]Instance, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("heartbeat_time>= ?", after).
+		Table("ztimer_instance_" + env).
 		OrderBy("id asc").
 		Find(&ret)
 	return ret, err
 }
 
-func DeleteInValidInstances(ctx context.Context, before int64) error {
+func DeleteInValidInstances(ctx context.Context, before int64, env string) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Where("heartbeat_time < ?", before).
+		Table("ztimer_instance_" + env).
 		Delete(new(Instance))
 	return err
 }
 
-func GetTaskById(ctx context.Context, id int64) (Task, bool, error) {
+func GetTaskById(ctx context.Context, id int64, env string) (Task, bool, error) {
 	var ret Task
-	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Table("ztimer_task_content_" + env).
+		Get(&ret)
 	return ret, b, err
 }
 
-func DeleteTask(ctx context.Context, id int64) error {
-	_, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Delete(new(Task))
+func DeleteTask(ctx context.Context, id int64, env string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Table("ztimer_task_content_" + env).
+		Delete(new(Task))
 	return err
 }

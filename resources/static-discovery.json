@@ -1,11 +1,12 @@
 {
   "static": [
     {
-      "serviceName": "metadata-http",
+      "name": "meta-http",
       "targets": [
         {
-          "addr": "127.0.0.1",
-          "port": 80
+          "host": "127.0.0.1",
+          "port": 80,
+          "weight": 1
         }
       ]
     }

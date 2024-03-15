@@ -17,6 +17,7 @@ type InsertTaskReqDTO struct {
 	TaskType string              `json:"taskType"`
 	HttpTask HttpTask            `json:"httpTask"`
 	TeamId   int64               `json:"teamId"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -36,6 +37,9 @@ func (r *InsertTaskReqDTO) IsValid() error {
 	default:
 		return util.InvalidArgsError()
 	}
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -47,6 +51,7 @@ type ListTaskReqDTO struct {
 	Name     string              `json:"name"`
 	Cursor   int64               `json:"cursor"`
 	Limit    int                 `json:"limit"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -60,15 +65,22 @@ func (r *ListTaskReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	return nil
 }
 
 type EnableTaskReqDTO struct {
 	Id       int64               `json:"id"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *EnableTaskReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -80,10 +92,14 @@ func (r *EnableTaskReqDTO) IsValid() error {
 
 type DisableTaskReqDTO struct {
 	Id       int64               `json:"id"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DisableTaskReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -95,10 +111,14 @@ func (r *DisableTaskReqDTO) IsValid() error {
 
 type DeleteTaskReqDTO struct {
 	Id       int64               `json:"id"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteTaskReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -123,10 +143,14 @@ type ListTaskLogReqDTO struct {
 	Id       int64               `json:"id"`
 	Cursor   int64               `json:"cursor"`
 	Limit    int                 `json:"limit"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListTaskLogReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if r.Id <= 0 || r.Cursor < 0 || r.Limit < 0 {
 		return util.InvalidArgsError()
 	}
@@ -148,10 +172,14 @@ type TaskLogDTO struct {
 
 type TriggerTaskReqDTO struct {
 	Id       int64               `json:"id"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *TriggerTaskReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -167,10 +195,14 @@ type UpdateTaskReqDTO struct {
 	CronExp  string              `json:"cronExp"`
 	TaskType string              `json:"taskType"`
 	HttpTask HttpTask            `json:"httpTask"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdateTaskReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !taskmd.IsTaskNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}

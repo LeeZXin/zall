@@ -325,6 +325,21 @@ var (
 			DefaultRet: "关闭tcp探测",
 		},
 	}
+
+	GitNodeSrvKeysVO = GitNodeSrvKeys{
+		InsertNode: KeyItem{
+			Id:         "gitNodeSrv.InsertNode",
+			DefaultRet: "新增git节点信息",
+		},
+		DeleteNode: KeyItem{
+			Id:         "gitNodeSrv.DeleteNode",
+			DefaultRet: "删除git节点信息",
+		},
+		UpdateNode: KeyItem{
+			Id:         "gitNodeSrv.UpdateNode",
+			DefaultRet: "编辑git节点信息",
+		},
+	}
 )
 
 type KeyItem struct {
@@ -446,4 +461,10 @@ type TcpDetectSrvKeys struct {
 	UpdateDetect  KeyItem
 	EnableDetect  KeyItem
 	DisableDetect KeyItem
+}
+
+type GitNodeSrvKeys struct {
+	InsertNode KeyItem
+	DeleteNode KeyItem
+	UpdateNode KeyItem
 }

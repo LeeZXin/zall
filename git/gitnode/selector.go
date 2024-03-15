@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/LeeZXin/zall/meta/modules/model/gitnodemd"
+	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
@@ -47,8 +48,40 @@ func (r *emptyTargetsSelector) Select() string {
 }
 
 type nodeCache struct {
-	cache map[string][2]selector
+	versions  map[string]int64
+	selectors map[string][2]selector
 	sync.RWMutex
+}
+
+func (n *nodeCache) getVersion(nodeId string) (int64, bool) {
+	n.RLock()
+	defer n.RUnlock()
+	ret, b := n.versions[nodeId]
+	return ret, b
+}
+
+func (n *nodeCache) putCache(nodeId string, httpSelector, sshSelector selector, version int64) {
+	n.Lock()
+	defer n.Unlock()
+	n.selectors[nodeId] = [2]selector{httpSelector, sshSelector}
+	n.versions[nodeId] = version
+}
+
+func (n *nodeCache) delCache(nodeId string) {
+	n.Lock()
+	defer n.Unlock()
+	delete(n.selectors, nodeId)
+	delete(n.versions, nodeId)
+}
+
+func (n *nodeCache) allNodeIds() *hashset.HashSet[string] {
+	n.RLock()
+	defer n.RUnlock()
+	ret := make([]string, 0, len(n.selectors))
+	for nodeId := range n.selectors {
+		ret = append(ret, nodeId)
+	}
+	return hashset.NewHashSet(ret...)
 }
 
 func (n *nodeCache) refreshCache() {
@@ -59,28 +92,35 @@ func (n *nodeCache) refreshCache() {
 		logger.Logger.Error(err)
 		return
 	}
-	n.Lock()
-	defer n.Unlock()
-	c := make(map[string][2]selector, 8)
-	for _, node := range nodes {
-		httpNodes := listutil.Shuffle(node.HttpHosts)
-		sshNodes := listutil.Shuffle(node.SshHosts)
-		httpSelector := newRoundRobinSelector(httpNodes)
-		sshSelector := newRoundRobinSelector(sshNodes)
-		c[node.NodeId] = [2]selector{
-			httpSelector, sshSelector,
+	tmp := make(map[string]gitnodemd.GitNodeDTO, len(nodes))
+	for i := range nodes {
+		tmp[nodes[i].NodeId] = nodes[i]
+	}
+	// 检查新增的或编辑过的
+	for nodeId, node := range tmp {
+		version, b := n.getVersion(nodeId)
+		// 不存在或版本号不一致
+		if !b || version != node.Version {
+			httpNodes := listutil.Shuffle(node.HttpHosts)
+			sshNodes := listutil.Shuffle(node.SshHosts)
+			httpSelector := newRoundRobinSelector(httpNodes)
+			sshSelector := newRoundRobinSelector(sshNodes)
+			n.putCache(nodeId, httpSelector, sshSelector, node.Version)
 		}
 	}
-	n.cache = c
+	// 检查删除的
+	n.allNodeIds().Range(func(nodeId string) {
+		_, b := tmp[nodeId]
+		if !b {
+			n.delCache(nodeId)
+		}
+	})
 }
 
 func (n *nodeCache) getHttpSelector(nodeId string) (selector, bool) {
 	n.RLock()
 	defer n.RUnlock()
-	if n.cache == nil {
-		return nil, false
-	}
-	selectors, b := n.cache[nodeId]
+	selectors, b := n.selectors[nodeId]
 	if !b {
 		return nil, false
 	}
@@ -90,10 +130,7 @@ func (n *nodeCache) getHttpSelector(nodeId string) (selector, bool) {
 func (n *nodeCache) getSshSelector(nodeId string) (selector, bool) {
 	n.RLock()
 	defer n.RUnlock()
-	if n.cache == nil {
-		return nil, false
-	}
-	selectors, b := n.cache[nodeId]
+	selectors, b := n.selectors[nodeId]
 	if !b {
 		return nil, false
 	}
@@ -101,7 +138,10 @@ func (n *nodeCache) getSshSelector(nodeId string) (selector, bool) {
 }
 
 func newNodeCache() *nodeCache {
-	ret := new(nodeCache)
+	ret := &nodeCache{
+		selectors: make(map[string][2]selector),
+		versions:  make(map[string]int64),
+	}
 	task, _ := taskutil.NewPeriodicalTask(10*time.Second, ret.refreshCache)
 	task.Start()
 	quit.AddShutdownHook(task.Stop)

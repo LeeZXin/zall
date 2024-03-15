@@ -16,6 +16,7 @@ func InsertGitNode(ctx context.Context, reqDTO InsertNodeReqDTO) error {
 		NodeId:   reqDTO.NodeId,
 		HttpHost: strings.Join(reqDTO.HttpHosts, ","),
 		SshHost:  strings.Join(reqDTO.SshHosts, ","),
+		Version:  0,
 	})
 	return err
 }
@@ -31,6 +32,19 @@ func DeleteNode(ctx context.Context, nodeId string) (bool, error) {
 		Where("node_id = ?", nodeId).
 		Limit(1).
 		Delete(new(GitNode))
+	return rows == 1, err
+}
+
+func UpdateNode(ctx context.Context, reqDTO UpdateNodeReqDTO) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("node_id = ?", reqDTO.NodeId).
+		Cols("version", "http_host", "ssh_host").
+		Incr("version").
+		Limit(1).
+		Update(GitNode{
+			HttpHost: strings.Join(reqDTO.HttpHosts, ","),
+			SshHost:  strings.Join(reqDTO.SshHosts, ","),
+		})
 	return rows == 1, err
 }
 
@@ -51,5 +65,6 @@ func md2dto(node GitNode) GitNodeDTO {
 		NodeId:    node.NodeId,
 		HttpHosts: strings.Split(node.HttpHost, ","),
 		SshHosts:  strings.Split(node.SshHost, ","),
+		Version:   node.Version,
 	}
 }

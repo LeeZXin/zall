@@ -23,6 +23,11 @@ func InitApi() {
 			group.GET("/get", getGitCfg)
 			group.POST("/update", updateGitCfg)
 		}
+		group = e.Group("/api/envCfg", apisession.CheckLogin)
+		{
+			group.GET("/get", getEnvCfg)
+			group.POST("/update", updateEnvCfg)
+		}
 	})
 }
 
@@ -56,24 +61,53 @@ func updateSysCfg(c *gin.Context) {
 }
 
 func getGitCfg(c *gin.Context) {
-	cfg, err := cfgsrv.Outer.GetSysCfg(c, cfgsrv.GetSysCfgReqDTO{
+	cfg, err := cfgsrv.Outer.GetGitCfg(c, cfgsrv.GetGitCfgReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, GetSysCfgRespVO{
+	c.JSON(http.StatusOK, GetGitCfgRespVO{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Cfg:      cfg,
 	})
 }
 
 func updateGitCfg(c *gin.Context) {
-	var req UpdateSysCfgReqVO
+	var req UpdateGitCfgReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := cfgsrv.Outer.UpdateSysCfg(c, cfgsrv.UpdateSysCfgReqDTO{
-			SysCfg:   req.SysCfg,
+		err := cfgsrv.Outer.UpdateGitCfg(c, cfgsrv.UpdateGitCfgReqDTO{
+			GitCfg:   req.GitCfg,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func getEnvCfg(c *gin.Context) {
+	cfg, err := cfgsrv.Outer.GetEnvCfg(c, cfgsrv.GetEnvCfgReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, GetEnvCfgRespVO{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Cfg:      cfg,
+	})
+}
+
+func updateEnvCfg(c *gin.Context) {
+	var req UpdateEnvCfgReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := cfgsrv.Outer.UpdateEnvCfg(c, cfgsrv.UpdateEnvCfgReqDTO{
+			Envs:     req.Envs,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {

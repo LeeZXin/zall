@@ -16,10 +16,14 @@ type EtcdNodeDTO struct {
 }
 
 type ListEtcdNodeReqDTO struct {
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListEtcdNodeReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -31,10 +35,14 @@ type InsertEtcdNodeReqDTO struct {
 	Endpoints []string            `json:"endpoints"`
 	Username  string              `json:"username"`
 	Password  string              `json:"password"`
+	Env       string              `json:"env"`
 	Operator  apisession.UserInfo `json:"operator"`
 }
 
 func (r *InsertEtcdNodeReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !propmd.IsNodeIdValid(r.NodeId) {
 		return util.InvalidArgsError()
 	}
@@ -49,10 +57,14 @@ func (r *InsertEtcdNodeReqDTO) IsValid() error {
 
 type DeleteEtcdNodeReqDTO struct {
 	NodeId   string              `json:"nodeId"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteEtcdNodeReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !propmd.IsNodeIdValid(r.NodeId) {
 		return util.InvalidArgsError()
 	}
@@ -67,10 +79,14 @@ type UpdateEtcdNodeReqDTO struct {
 	Endpoints []string            `json:"endpoints"`
 	Username  string              `json:"username"`
 	Password  string              `json:"password"`
+	Env       string              `json:"env"`
 	Operator  apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdateEtcdNodeReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !propmd.IsNodeIdValid(r.NodeId) {
 		return util.InvalidArgsError()
 	}
@@ -85,10 +101,14 @@ func (r *UpdateEtcdNodeReqDTO) IsValid() error {
 
 type GrantAuthReqDTO struct {
 	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *GrantAuthReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
@@ -100,10 +120,14 @@ func (r *GrantAuthReqDTO) IsValid() error {
 
 type GetAuthReqDTO struct {
 	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *GetAuthReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
@@ -117,10 +141,14 @@ type InsertPropContentReqDTO struct {
 	AppId    string              `json:"appId"`
 	Name     string              `json:"name"`
 	Content  string              `json:"content"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *InsertPropContentReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
@@ -136,10 +164,14 @@ func (r *InsertPropContentReqDTO) IsValid() error {
 type UpdatePropContentReqDTO struct {
 	Id       int64               `json:"id"`
 	Content  string              `json:"content"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdatePropContentReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -151,10 +183,14 @@ func (r *UpdatePropContentReqDTO) IsValid() error {
 
 type DeletePropContentReqDTO struct {
 	Id       int64               `json:"id"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeletePropContentReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -166,10 +202,14 @@ func (r *DeletePropContentReqDTO) IsValid() error {
 
 type ListPropContentReqDTO struct {
 	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListPropContentReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
@@ -189,10 +229,14 @@ type DeployPropContentReqDTO struct {
 	Id           int64               `json:"id"`
 	Version      string              `json:"version"`
 	EtcdNodeList []string            `json:"etcdNodeList"`
+	Env          string              `json:"env"`
 	Operator     apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeployPropContentReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -213,10 +257,14 @@ type ListHistoryReqDTO struct {
 	Version   string              `json:"version"`
 	Cursor    int64               `json:"cursor"`
 	Limit     int                 `json:"limit"`
+	Env       string              `json:"env"`
 	Operator  apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListHistoryReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if r.ContentId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -238,10 +286,14 @@ type ListDeployReqDTO struct {
 	Version   string              `json:"version"`
 	Cursor    int64               `json:"cursor"`
 	Limit     int                 `json:"limit"`
+	Env       string              `json:"env"`
 	Operator  apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListDeployReqDTO) IsValid() error {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
 	if len(r.Version) > 32 {
 		return util.InvalidArgsError()
 	}
@@ -265,6 +317,7 @@ type HistoryDTO struct {
 	Content   string    `json:"content"`
 	Version   string    `json:"version"`
 	Created   time.Time `json:"created"`
+	Creator   string    `json:"creator"`
 }
 
 type DeployDTO struct {
@@ -273,4 +326,5 @@ type DeployDTO struct {
 	Version   string    `json:"version"`
 	NodeId    string    `json:"nodeId"`
 	Created   time.Time `json:"created"`
+	Creator   string    `json:"creator"`
 }

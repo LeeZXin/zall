@@ -17,6 +17,8 @@ type InnerService interface {
 	InitSysCfg()
 	GetGitCfg(context.Context) (GitCfg, bool)
 	InitGitCfg()
+	GetEnvCfg(context.Context) ([]string, bool)
+	InitEnvCfg()
 }
 
 type OuterService interface {
@@ -24,4 +26,6 @@ type OuterService interface {
 	UpdateSysCfg(context.Context, UpdateSysCfgReqDTO) error
 	GetGitCfg(context.Context, GetGitCfgReqDTO) (GitCfg, error)
 	UpdateGitCfg(context.Context, UpdateGitCfgReqDTO) error
+	GetEnvCfg(context.Context, GetEnvCfgReqDTO) ([]string, error)
+	UpdateEnvCfg(context.Context, UpdateEnvCfgReqDTO) error
 }

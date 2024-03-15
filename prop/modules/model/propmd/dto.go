@@ -5,6 +5,7 @@ type InsertEtcdNodeReqDTO struct {
 	Endpoints string
 	Username  string
 	Password  string
+	Env       string
 }
 
 type UpdateEtcdNodeReqDTO struct {
@@ -12,17 +13,21 @@ type UpdateEtcdNodeReqDTO struct {
 	Endpoints string
 	Username  string
 	Password  string
+	Env       string
 }
 
 type InsertPropContentReqDTO struct {
 	AppId string
 	Name  string
+	Env   string
 }
 
 type InsertHistoryReqDTO struct {
 	ContentId int64
 	Content   string
 	Version   string
+	Env       string
+	Creator   string
 }
 
 type InsertDeployReqDTO struct {
@@ -35,6 +40,8 @@ type InsertDeployReqDTO struct {
 	Endpoints    string
 	Username     string
 	Password     string
+	Creator      string
+	Env          string
 }
 
 type ListHistoryReqDTO struct {
@@ -42,6 +49,7 @@ type ListHistoryReqDTO struct {
 	Version   string
 	Cursor    int64
 	Limit     int
+	Env       string
 }
 
 type ListDeployReqDTO struct {
@@ -50,10 +58,12 @@ type ListDeployReqDTO struct {
 	NodeId    string
 	Cursor    int64
 	Limit     int
+	Env       string
 }
 
 type InsertAuthReqDTO struct {
 	AppId    string
 	Username string
 	Password string
+	Env      string
 }

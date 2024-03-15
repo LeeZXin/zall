@@ -99,6 +99,10 @@ func (s *Server) OnApplicationStart() {
 	}()
 }
 
+func (s *Server) Order() int {
+	return 0
+}
+
 func (s *Server) AfterInitialize() {}
 
 func (s *Server) OnApplicationShutdown() {

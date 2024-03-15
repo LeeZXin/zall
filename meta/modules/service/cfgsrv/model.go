@@ -24,12 +24,17 @@ var (
 		ActionToken:  idutil.RandomUuid(),
 		RepoToken:    idutil.RandomUuid(),
 	}
+	DefaultEnvCfg = &EnvCfg{
+		Envs: []string{
+			"prd",
+		},
+	}
 )
 
 type SysCfg struct {
 	// 禁用用户自行注册账号
 	DisableSelfRegisterUser bool `json:"disableSelfRegisterUser"`
-	// 允许用户自行创建项目组
+	// 允许用户(非管理员)自行创建项目组
 	AllowUserCreateTeam bool `json:"allowUserCreateTeam"`
 	// 禁用http smart协议
 	DisableSmartHttp bool `json:"disableSmartHttp"`
@@ -99,4 +104,21 @@ func (c *GitCfg) FromStore(val string) error {
 		}
 	}
 	return nil
+}
+
+type EnvCfg struct {
+	Envs []string `json:"envs"`
+}
+
+func (c *EnvCfg) Key() string {
+	return "env_cfg"
+}
+
+func (c *EnvCfg) Val() string {
+	ret, _ := json.Marshal(c)
+	return string(ret)
+}
+
+func (c *EnvCfg) FromStore(val string) error {
+	return json.Unmarshal([]byte(val), c)
 }

@@ -10,10 +10,8 @@ import (
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/common"
-	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"net/url"
 	"time"
 )
 
@@ -22,10 +20,16 @@ var (
 	heartbeatTask  *taskutil.PeriodicalTask
 	executeTask    *taskutil.PeriodicalTask
 	compensateTask *taskutil.PeriodicalTask
+
+	taskEnv string
 )
 
-func InitTask() {
-	logger.Logger.Infof("start timer task service")
+func InitTask(env string) {
+	taskEnv = env
+	if taskEnv == "" {
+		logger.Logger.Fatal("empty timer task env")
+	}
+	logger.Logger.Infof("start timer task service with env: %s", taskEnv)
 	taskExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
 	// 触发心跳任务
 	heartbeatTask, _ = taskutil.NewPeriodicalTask(8*time.Second, doHeartbeat)
@@ -36,7 +40,7 @@ func InitTask() {
 		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		// 删除数据
-		taskmd.DeleteInstance(ctx, common.GetInstanceId())
+		taskmd.DeleteInstance(ctx, common.GetInstanceId(), taskEnv)
 	}, true)
 	time.Sleep(time.Second)
 	// 执行任务
@@ -47,18 +51,10 @@ func InitTask() {
 	compensateTask, _ = taskutil.NewPeriodicalTask(5*time.Minute, doCompensateTask)
 	compensateTask.Start()
 	quit.AddShutdownHook(compensateTask.Stop, true)
-	httptask.AppendHttpTask("clearTimerInvalidInstances", func(_ []byte, _ url.Values) {
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		err := taskmd.DeleteInValidInstances(ctx, time.Now().Add(-30*time.Second).UnixMilli())
-		if err != nil {
-			logger.Logger.Error(err)
-		}
-	})
 }
 
 func getInstanceIndex(ctx context.Context) (int64, int64) {
-	instances, err := taskmd.GetValidInstances(ctx, time.Now().Add(-10*time.Second).UnixMilli())
+	instances, err := taskmd.GetValidInstances(ctx, time.Now().Add(-10*time.Second).UnixMilli(), taskEnv)
 	if err != nil {
 		logger.Logger.Error(err)
 		return int64(len(instances)), -1
@@ -79,13 +75,13 @@ func getInstanceIndex(ctx context.Context) (int64, int64) {
 func doHeartbeat() {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	b, err := taskmd.UpdateHeartbeatTime(ctx, common.GetInstanceId(), time.Now().UnixMilli())
+	b, err := taskmd.UpdateHeartbeatTime(ctx, common.GetInstanceId(), time.Now().UnixMilli(), taskEnv)
 	if err != nil {
 		logger.Logger.Error(err)
 		return
 	}
 	if !b {
-		err = taskmd.InsertInstance(ctx, common.GetInstanceId())
+		err = taskmd.InsertInstance(ctx, common.GetInstanceId(), taskEnv)
 		if err != nil {
 			logger.Logger.Error(err)
 		}
@@ -97,7 +93,7 @@ func doExecuteTask() {
 	defer closer.Close()
 	total, index := getInstanceIndex(ctx)
 	if total > 0 && index >= 0 {
-		err := taskmd.IterateTask(ctx, time.Now().UnixMilli(), taskmd.Pending, func(task *taskmd.Task) error {
+		err := taskmd.IterateTask(ctx, time.Now().UnixMilli(), taskmd.Pending, taskEnv, func(task *taskmd.Task) error {
 			if task.Id%total == index {
 				handleTask(task)
 			}
@@ -115,7 +111,7 @@ func doCompensateTask() {
 	total, index := getInstanceIndex(ctx)
 	if index > 0 {
 		// 过去五分钟内未执行完成的任务重置下次执行时间
-		err := taskmd.IterateTask(ctx, time.Now().Add(-5*time.Minute).UnixMilli(), taskmd.Running, func(task *taskmd.Task) error {
+		err := taskmd.IterateTask(ctx, time.Now().Add(-5*time.Minute).UnixMilli(), taskmd.Running, taskEnv, func(task *taskmd.Task) error {
 			if task.Id%total == index {
 				resetNextTime(task, taskmd.Failed)
 			}
@@ -127,7 +123,7 @@ func doCompensateTask() {
 	}
 }
 
-func triggerTask(task *taskmd.Task, triggerBy string) {
+func triggerTask(task *taskmd.Task, triggerBy, env string) {
 	taskExecutor.Execute(func() {
 		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
@@ -139,6 +135,7 @@ func triggerTask(task *taskmd.Task, triggerBy string) {
 			TriggerType: taskmd.ManualTriggerType,
 			TriggerBy:   triggerBy,
 			TaskStatus:  status,
+			Env:         env,
 		})
 		if err != nil {
 			logger.Logger.Error(err)
@@ -150,7 +147,12 @@ func handleTask(task *taskmd.Task) {
 	taskExecutor.Execute(func() {
 		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
-		b, err := taskmd.UpdateTaskStatus(ctx, task.Id, taskmd.Running, task.Version)
+		b, err := taskmd.UpdateTaskStatus(ctx, taskmd.UpdateTaskStatusReqDTO{
+			TaskId:    task.Id,
+			NewStatus: taskmd.Running,
+			Version:   task.Version,
+			Env:       taskEnv,
+		})
 		if err != nil {
 			logger.Logger.Error(err)
 			return
@@ -166,6 +168,7 @@ func handleTask(task *taskmd.Task) {
 			TriggerType: taskmd.AutoTriggerType,
 			TriggerBy:   taskmd.DefaultTrigger,
 			TaskStatus:  status,
+			Env:         taskEnv,
 		})
 		if err != nil {
 			logger.Logger.Error(err)
@@ -206,12 +209,23 @@ func resetNextTime(task *taskmd.Task, runStatus taskmd.TaskStatus) {
 	now := time.Now()
 	next := cron.Next(now)
 	if next.After(now) {
-		_, err = taskmd.UpdateTaskNextTimeAndStatus(ctx, task.Id, taskmd.Pending, next.UnixMilli(), task.Version)
+		_, err = taskmd.UpdateTaskNextTimeAndStatus(ctx, taskmd.UpdateTaskNextTimeAndStatusReqDTO{
+			TaskId:   task.Id,
+			Status:   taskmd.Pending,
+			NextTime: next.UnixMilli(),
+			Version:  task.Version,
+			Env:      taskEnv,
+		})
 		if err != nil {
 			logger.Logger.Error(err)
 		}
 	} else {
-		_, err = taskmd.UpdateTaskStatus(ctx, task.Id, runStatus, task.Version)
+		_, err = taskmd.UpdateTaskStatus(ctx, taskmd.UpdateTaskStatusReqDTO{
+			TaskId:    task.Id,
+			NewStatus: runStatus,
+			Version:   task.Version,
+			Env:       taskEnv,
+		})
 		if err != nil {
 			logger.Logger.Error(err)
 		}

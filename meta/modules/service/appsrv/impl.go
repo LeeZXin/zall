@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
@@ -58,7 +59,14 @@ func (*outerImpl) InsertApp(ctx context.Context, reqDTO InsertAppReqDTO) (err er
 		err = util.InternalError(err)
 		return
 	}
-	propsrv.Inner.GrantAuth(ctx, reqDTO.AppId)
+	go func() {
+		envs, b := cfgsrv.Inner.GetEnvCfg(ctx)
+		if b {
+			for _, env := range envs {
+				propsrv.Inner.GrantAuth(ctx, reqDTO.AppId, env)
+			}
+		}
+	}()
 	return
 }
 

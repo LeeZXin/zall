@@ -11,22 +11,27 @@ type InsertTaskReqVO struct {
 	TaskType string           `json:"taskType"`
 	HttpTask tasksrv.HttpTask `json:"httpTask"`
 	TeamId   int64            `json:"teamId"`
+	Env      string           `json:"env"`
 }
 
 type EnabledTaskReqVO struct {
-	Id int64 `json:"id"`
+	Id  int64  `json:"id"`
+	Env string `json:"env"`
 }
 
 type DisableTaskReqVO struct {
-	Id int64 `json:"id"`
+	Id  int64  `json:"id"`
+	Env string `json:"env"`
 }
 
 type DeleteTaskReqVO struct {
-	Id int64 `json:"id"`
+	Id  int64  `json:"id"`
+	Env string `json:"env"`
 }
 
 type TriggerTaskReqVO struct {
-	Id int64 `json:"id"`
+	Id  int64  `json:"id"`
+	Env string `json:"env"`
 }
 
 type ListTaskReqVO struct {
@@ -34,6 +39,7 @@ type ListTaskReqVO struct {
 	Name   string `json:"name"`
 	Cursor int64  `json:"cursor"`
 	Limit  int    `json:"limit"`
+	Env    string `json:"env"`
 }
 
 type TaskVO struct {
@@ -54,9 +60,10 @@ type ListTaskRespVO struct {
 }
 
 type ListLogReqVO struct {
-	Id     int64 `json:"id"`
-	Cursor int64 `json:"cursor"`
-	Limit  int   `json:"limit"`
+	Id     int64  `json:"id"`
+	Cursor int64  `json:"cursor"`
+	Limit  int    `json:"limit"`
+	Env    string `json:"env"`
 }
 
 type ListLogRespVO struct {
@@ -81,4 +88,5 @@ type UpdateTaskReqVO struct {
 	CronExp  string           `json:"cronExp"`
 	TaskType string           `json:"taskType"`
 	HttpTask tasksrv.HttpTask `json:"httpTask"`
+	Env      string           `json:"env"`
 }

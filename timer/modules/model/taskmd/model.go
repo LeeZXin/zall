@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	TaskTableName     = "ztimer_task"
+	TaskTableName     = "ztimer_task_content"
 	LogTableName      = "ztimer_task_log"
 	InstanceTableName = "ztimer_instance"
 

@@ -261,13 +261,6 @@ var (
 )
 
 var (
-	LfsNotSupported = KeyItem{
-		Id:         "lfs.notSupported",
-		DefaultRet: "不支持lfs",
-	}
-)
-
-var (
 	SshCmdNotSupported = KeyItem{
 		Id:         "ssh.notSupportedCmd",
 		DefaultRet: "不支持该命令",
@@ -339,5 +332,48 @@ var (
 	AppRemainCountGreaterThanZero = KeyItem{
 		Id:         "app.remainCountGreaterThanZero",
 		DefaultRet: "app数量仍大于0",
+	}
+)
+
+var (
+	FlowPendingStatus = KeyItem{
+		Id:         "flowStatus.pending",
+		DefaultRet: "执行中",
+	}
+	FlowAgreeStatus = KeyItem{
+		Id:         "flowStatus.agree",
+		DefaultRet: "同意",
+	}
+	FlowDisagreeStatus = KeyItem{
+		Id:         "flowStatus.disagree",
+		DefaultRet: "不同意",
+	}
+	FlowErrStatus = KeyItem{
+		Id:         "flowStatus.err",
+		DefaultRet: "出现错误",
+	}
+	FlowCanceledStatus = KeyItem{
+		Id:         "flowStatus.canceled",
+		DefaultRet: "已取消",
+	}
+	FlowUnknownStatus = KeyItem{
+		Id:         "flowStatus.unknown",
+		DefaultRet: "未知",
+	}
+	FlowAgreeOp = KeyItem{
+		Id:         "flowOp.agree",
+		DefaultRet: "同意",
+	}
+	FlowDisagreeOp = KeyItem{
+		Id:         "flowOp.disagree",
+		DefaultRet: "不同意",
+	}
+	FlowCancelOp = KeyItem{
+		Id:         "flowOp.cancel",
+		DefaultRet: "取消",
+	}
+	FlowUnknownOp = KeyItem{
+		Id:         "flowOp.unknown",
+		DefaultRet: "未知",
 	}
 )

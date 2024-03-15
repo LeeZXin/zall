@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/genid/modules/api/idapi"
 	"github.com/LeeZXin/zall/git/modules/api/actionapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
@@ -16,8 +17,10 @@ import (
 	reposerver "github.com/LeeZXin/zall/git/repo/server"
 	"github.com/LeeZXin/zall/meta/modules/api/appapi"
 	"github.com/LeeZXin/zall/meta/modules/api/cfgapi"
+	"github.com/LeeZXin/zall/meta/modules/api/gitnodeapi"
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
+	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/prop/modules/api/propapi"
 	"github.com/LeeZXin/zall/tcpdetect/modules/api/detectapi"
@@ -39,6 +42,10 @@ var Run = &cli.Command{
 }
 
 func runZall(*cli.Context) error {
+	// for envs
+	{
+		cfgsrv.Inner.InitEnvCfg()
+	}
 	lifeCycles := make([]zsf.LifeCycle, 0)
 	// for meta
 	{
@@ -57,6 +64,7 @@ func runZall(*cli.Context) error {
 		repoapi.InitApi()
 		sshkeyapi.InitApi()
 		gpgkeyapi.InitApi()
+		gitnodeapi.InitApi()
 		webhookapi.InitApi()
 		lifeCycles = append(lifeCycles, sshproxy.InitProxy())
 		if static.GetBool("git.repo.server.enabled") {
@@ -75,7 +83,7 @@ func runZall(*cli.Context) error {
 		taskapi.InitApi()
 		if static.GetBool("timer.enabled") {
 			logger.Logger.Info("timer executor enabled")
-			tasksrv.InitTask()
+			tasksrv.InitTask(static.GetString("timer.env"))
 		}
 	}
 	// for idserver
@@ -96,6 +104,10 @@ func runZall(*cli.Context) error {
 			logger.Logger.Info("tcp detect enabled")
 			detectsrv.InitDetect()
 		}
+	}
+	// for approval
+	{
+		approvalapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer())
 	zsf.Run(

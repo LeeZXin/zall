@@ -6,8 +6,15 @@ type InsertNodeReqDTO struct {
 	SshHosts  []string
 }
 
+type UpdateNodeReqDTO struct {
+	NodeId    string
+	HttpHosts []string
+	SshHosts  []string
+}
+
 type GitNodeDTO struct {
-	NodeId    string   `json:"nodeId"`
-	HttpHosts []string `json:"httpHosts"`
-	SshHosts  []string `json:"sshHosts"`
+	NodeId    string
+	HttpHosts []string
+	SshHosts  []string
+	Version   int64
 }

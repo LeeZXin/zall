@@ -52,6 +52,7 @@ type PropHistory struct {
 	ContentId int64     `json:"contentId"`
 	Content   string    `json:"content"`
 	Version   string    `json:"version"`
+	Creator   string    `json:"creator"`
 	Created   time.Time `json:"created" xorm:"created"`
 }
 
@@ -70,6 +71,7 @@ type PropDeploy struct {
 	Endpoints    string    `json:"endpoints"`
 	Username     string    `json:"username"`
 	Password     string    `json:"password"`
+	Creator      string    `json:"creator"`
 	Deleted      bool      `json:"delete"`
 	Created      time.Time `json:"created" xorm:"created"`
 }

@@ -1,6 +1,8 @@
 package propapi
 
 import (
+	"context"
+	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/prop/modules/service/propsrv"
 	"github.com/LeeZXin/zall/util"
@@ -8,8 +10,10 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"net/url"
 )
 
 func InitApi() {
@@ -35,6 +39,14 @@ func InitApi() {
 			group.POST("/listDeploy", listDeploy)
 		}
 	})
+	httptask.AppendHttpTask("checkPropDbEtcdConsistent", func(_ []byte, _ url.Values) {
+		envs, b := cfgsrv.Inner.GetEnvCfg(context.Background())
+		if b {
+			for _, env := range envs {
+				propsrv.Inner.CheckConsistent(env)
+			}
+		}
+	})
 }
 
 func insertEtcdNode(c *gin.Context) {
@@ -45,6 +57,7 @@ func insertEtcdNode(c *gin.Context) {
 			Endpoints: req.Endpoints,
 			Username:  req.Username,
 			Password:  req.Password,
+			Env:       req.Env,
 			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -63,6 +76,7 @@ func updateEtcdNode(c *gin.Context) {
 			Endpoints: req.Endpoints,
 			Username:  req.Username,
 			Password:  req.Password,
+			Env:       req.Env,
 			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -78,6 +92,7 @@ func deleteEtcdNode(c *gin.Context) {
 	if util.ShouldBindJSON(&req, c) {
 		err := propsrv.Outer.DeleteEtcdNode(c, propsrv.DeleteEtcdNodeReqDTO{
 			NodeId:   req.NodeId,
+			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -89,37 +104,44 @@ func deleteEtcdNode(c *gin.Context) {
 }
 
 func listEtcdNode(c *gin.Context) {
-	nodes, err := propsrv.Outer.ListEtcdNode(c, propsrv.ListEtcdNodeReqDTO{
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
+	var req ListEtcdNodeReqVO
+	if util.ShouldBindJSON(&req, c) {
+		nodes, err := propsrv.Outer.ListEtcdNode(c, propsrv.ListEtcdNodeReqDTO{
+			Env:      req.Env,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		resp := ListEtcdNodeRespVO{
+			BaseResp: ginutil.DefaultSuccessResp,
+		}
+		resp.Data, _ = listutil.Map(nodes, func(t propsrv.EtcdNodeDTO) (EtcdNodeVO, error) {
+			return EtcdNodeVO{
+				NodeId:    t.NodeId,
+				Endpoints: t.Endpoints,
+				Username:  t.Username,
+				Password:  t.Password,
+			}, nil
+		})
+		c.JSON(http.StatusOK, resp)
 	}
-	resp := ListEtcdNodeRespVO{
-		BaseResp: ginutil.DefaultSuccessResp,
-	}
-	resp.Data, _ = listutil.Map(nodes, func(t propsrv.EtcdNodeDTO) (EtcdNodeVO, error) {
-		return EtcdNodeVO{
-			NodeId:    t.NodeId,
-			Endpoints: t.Endpoints,
-			Username:  t.Username,
-			Password:  t.Password,
-		}, nil
-	})
-	c.JSON(http.StatusOK, resp)
 }
 
 func listSimpleEtcdNode(c *gin.Context) {
-	nodes, err := propsrv.Outer.ListSimpleEtcdNode(c)
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
+	var req ListSimpleEtcdNodeReqVO
+	if util.ShouldBindJSON(&req, c) {
+		nodes, err := propsrv.Outer.ListSimpleEtcdNode(c, req.Env)
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ListSimpleEtcdNodeRespVO{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     nodes,
+		})
 	}
-	c.JSON(http.StatusOK, ListSimpleEtcdNodeRespVO{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     nodes,
-	})
 }
 
 func insertContent(c *gin.Context) {
@@ -129,6 +151,7 @@ func insertContent(c *gin.Context) {
 			AppId:    req.AppId,
 			Name:     req.Name,
 			Content:  req.Content,
+			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -145,6 +168,7 @@ func updateContent(c *gin.Context) {
 		err := propsrv.Outer.UpdatePropContent(c, propsrv.UpdatePropContentReqDTO{
 			Id:       req.Id,
 			Content:  req.Content,
+			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -160,6 +184,7 @@ func deleteContent(c *gin.Context) {
 	if util.ShouldBindJSON(&req, c) {
 		err := propsrv.Outer.DeletePropContent(c, propsrv.DeletePropContentReqDTO{
 			Id:       req.Id,
+			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -177,6 +202,7 @@ func deployContent(c *gin.Context) {
 			Id:           req.Id,
 			Version:      req.Version,
 			EtcdNodeList: req.EtcdNodeList,
+			Env:          req.Env,
 			Operator:     apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -192,6 +218,7 @@ func listContent(c *gin.Context) {
 	if util.ShouldBindJSON(&req, c) {
 		contents, err := propsrv.Outer.ListPropContent(c, propsrv.ListPropContentReqDTO{
 			AppId:    req.AppId,
+			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -220,6 +247,7 @@ func listHistory(c *gin.Context) {
 			Version:   req.Version,
 			Cursor:    req.Cursor,
 			Limit:     req.Limit,
+			Env:       req.Env,
 			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -236,6 +264,7 @@ func listHistory(c *gin.Context) {
 				Content:   t.Content,
 				Version:   t.Version,
 				Created:   t.Created.Format(timeutil.DefaultTimeFormat),
+				Creator:   t.Creator,
 			}, nil
 		})
 		c.JSON(http.StatusOK, resp)
@@ -247,6 +276,7 @@ func grantAuth(c *gin.Context) {
 	if util.ShouldBindJSON(&req, c) {
 		err := propsrv.Outer.GrantAuth(c, propsrv.GrantAuthReqDTO{
 			AppId:    req.AppId,
+			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -262,6 +292,7 @@ func getAuth(c *gin.Context) {
 	if util.ShouldBindJSON(&req, c) {
 		username, password, err := propsrv.Outer.GetAuth(c, propsrv.GetAuthReqDTO{
 			AppId:    req.AppId,
+			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -285,6 +316,7 @@ func listDeploy(c *gin.Context) {
 			Cursor:    req.Cursor,
 			Limit:     req.Limit,
 			NodeId:    req.NodeId,
+			Env:       req.Env,
 			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {

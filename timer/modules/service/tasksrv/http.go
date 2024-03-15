@@ -24,11 +24,12 @@ type TaskObj struct {
 }
 
 type HttpTask struct {
-	Url      string            `json:"url"`
-	Headers  map[string]string `json:"headers"`
-	Method   string            `json:"method"`
-	PostJson string            `json:"postJson"`
-	Zones    []string          `json:"zones"`
+	Url         string            `json:"url"`
+	Headers     map[string]string `json:"headers"`
+	Method      string            `json:"method"`
+	BodyStr     string            `json:"bodyStr"`
+	ContentType string            `json:"contentType"`
+	Zones       []string          `json:"zones"`
 }
 
 func (t *HttpTask) IsValid() bool {
@@ -36,7 +37,7 @@ func (t *HttpTask) IsValid() bool {
 	if err != nil {
 		return false
 	}
-	if !util.FindInSlice([]string{"GET", "POST"}, t.Method) {
+	if t.Method == "" {
 		return false
 	}
 	return true
@@ -49,7 +50,7 @@ func handleHttpTask(content string, sb *util.SimpleLogger) bool {
 		sb.WriteString(fmt.Sprintf("unmarshal task content err: %v", err))
 		return false
 	}
-	rawUrl := task.Url
+	finalUrl := task.Url
 	parsedUrl, err := url.Parse(task.Url)
 	if err != nil {
 		sb.WriteString(fmt.Sprintf("invalid http url err: %v", task.Url))
@@ -73,8 +74,8 @@ func handleHttpTask(content string, sb *util.SimpleLogger) bool {
 					continue
 				}
 				server := servers[rand.Int()%len(servers)]
-				rawUrl = parsedUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parsedUrl.RequestURI()
-				zoneRet = zoneRet && doHttpRequest(sb, rawUrl, &task)
+				finalUrl = parsedUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parsedUrl.RequestURI()
+				zoneRet = zoneRet && doHttpRequest(sb, finalUrl, &task)
 				sb.WriteString("--------- end zone: " + zone)
 			}
 			return zoneRet
@@ -89,49 +90,30 @@ func handleHttpTask(content string, sb *util.SimpleLogger) bool {
 				return false
 			}
 			server := servers[rand.Int()%len(servers)]
-			rawUrl = parsedUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parsedUrl.RequestURI()
+			finalUrl = parsedUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parsedUrl.RequestURI()
 		}
 	}
-	return doHttpRequest(sb, rawUrl, &task)
+	return doHttpRequest(sb, finalUrl, &task)
 }
 
 func doHttpRequest(sb *util.SimpleLogger, rawUrl string, task *HttpTask) bool {
 	sb.WriteString(fmt.Sprintf("do http task url: %s method: %s", rawUrl, task.Method))
-	switch task.Method {
-	case "GET":
-		req, err := http.NewRequest("GET", rawUrl, nil)
-		if err != nil {
-			sb.WriteString(fmt.Sprintf("http request failed: %v", err))
-			return false
-		}
-		for k, v := range task.Headers {
-			req.Header.Set(k, v)
-		}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			sb.WriteString(fmt.Sprintf("http request failed: %v", err))
-			return false
-		}
-		sb.WriteString(fmt.Sprintf("http request return code: %v", resp.StatusCode))
-	case "POST":
-		req, err := http.NewRequest("POST", rawUrl, strings.NewReader(task.PostJson))
-		if err != nil {
-			sb.WriteString(fmt.Sprintf("http request failed: %v", err))
-			return false
-		}
-		req.Header.Set("Content-Type", httputil.JsonContentType)
-		for k, v := range task.Headers {
-			req.Header.Set(k, v)
-		}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			sb.WriteString(fmt.Sprintf("http request failed: %v", err))
-			return false
-		}
-		sb.WriteString(fmt.Sprintf("http request return code: %v", resp.StatusCode))
-	default:
-		sb.WriteString(fmt.Sprintf("unsupported method: %s", task.Method))
+	req, err := http.NewRequest(task.Method, rawUrl, strings.NewReader(task.BodyStr))
+	if err != nil {
+		sb.WriteString(fmt.Sprintf("http request failed: %v", err))
 		return false
 	}
+	if task.ContentType != "" {
+		req.Header.Set("Content-Type", task.ContentType)
+	}
+	for k, v := range task.Headers {
+		req.Header.Set(k, v)
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		sb.WriteString(fmt.Sprintf("http request failed: %v", err))
+		return false
+	}
+	sb.WriteString(fmt.Sprintf("http request return code: %v", resp.StatusCode))
 	return true
 }

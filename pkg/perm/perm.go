@@ -21,7 +21,12 @@ var (
 		CanUpdateToken:           true,
 	}
 	DefaultAppPerm = AppPerm{
-		CanHandleProp: true,
+		CanReadPropContent:    true,
+		CanWritePropContent:   true,
+		CanDeployPropContent:  true,
+		CanReadPropAuth:       true,
+		CanGrantPropAuth:      true,
+		CanHandlePropApproval: true,
 	}
 	DefaultPermDetail = Detail{
 		TeamPerm:        DefaultTeamPerm,
@@ -120,5 +125,10 @@ type AppPermWithAppId struct {
 }
 
 type AppPerm struct {
-	CanHandleProp bool `json:"canHandleProp"`
+	CanReadPropContent    bool `json:"canReadPropContent"`
+	CanWritePropContent   bool `json:"canWritePropContent"`
+	CanDeployPropContent  bool `json:"canDeployPropContent"`
+	CanReadPropAuth       bool `json:"canReadPropAuth"`
+	CanGrantPropAuth      bool `json:"CanGrantPropAuth"`
+	CanHandlePropApproval bool `json:"canHandlePropApproval"`
 }

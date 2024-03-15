@@ -9,10 +9,12 @@ type InsertEtcdNodeReqVO struct {
 	Endpoints []string `json:"endpoints"`
 	Username  string   `json:"username"`
 	Password  string   `json:"password"`
+	Env       string   `json:"env"`
 }
 
 type DeleteEtcdNodeReqVO struct {
 	NodeId string `json:"nodeId"`
+	Env    string `json:"env"`
 }
 
 type UpdateEtcdNodeReqVO struct {
@@ -20,6 +22,7 @@ type UpdateEtcdNodeReqVO struct {
 	Endpoints []string `json:"endpoints"`
 	Username  string   `json:"username"`
 	Password  string   `json:"password"`
+	Env       string   `json:"env"`
 }
 
 type EtcdNodeVO struct {
@@ -43,25 +46,30 @@ type InsertContentReqVO struct {
 	AppId   string `json:"appId"`
 	Name    string `json:"name"`
 	Content string `json:"content"`
+	Env     string `json:"env"`
 }
 
 type UpdateContentReqVO struct {
 	Id      int64  `json:"id"`
 	Content string `json:"content"`
+	Env     string `json:"env"`
 }
 
 type DeleteContentReqVO struct {
-	Id int64 `json:"id"`
+	Id  int64  `json:"id"`
+	Env string `json:"env"`
 }
 
 type ListContentReqVO struct {
 	AppId string `json:"appId"`
+	Env   string `json:"env"`
 }
 
 type DeployContentReqVO struct {
 	Id           int64    `json:"id"`
 	Version      string   `json:"version"`
 	EtcdNodeList []string `json:"etcdNodeList"`
+	Env          string   `json:"env"`
 }
 
 type ListHistoryReqVO struct {
@@ -69,6 +77,7 @@ type ListHistoryReqVO struct {
 	Version   string `json:"version"`
 	Cursor    int64  `json:"cursor"`
 	Limit     int    `json:"limit"`
+	Env       string `json:"env"`
 }
 
 type ListDeployReqVO struct {
@@ -77,6 +86,7 @@ type ListDeployReqVO struct {
 	Version   string `json:"version"`
 	Cursor    int64  `json:"cursor"`
 	Limit     int    `json:"limit"`
+	Env       string `json:"env"`
 }
 
 type PropContentVO struct {
@@ -95,6 +105,7 @@ type HistoryVO struct {
 	Content   string `json:"content"`
 	Version   string `json:"version"`
 	Created   string `json:"created"`
+	Creator   string `json:"creator"`
 }
 
 type ListHistoryRespVO struct {
@@ -109,6 +120,7 @@ type DeployVO struct {
 	Version   string `json:"version"`
 	NodeId    string `json:"nodeId"`
 	Created   string `json:"created"`
+	Creator   string `json:"creator"`
 }
 
 type ListDeployRespVO struct {
@@ -119,14 +131,24 @@ type ListDeployRespVO struct {
 
 type GrantAuthReqVO struct {
 	AppId string `json:"appId"`
+	Env   string `json:"env"`
 }
 
 type GetAuthReqVO struct {
 	AppId string `json:"appId"`
+	Env   string `json:"env"`
 }
 
 type GetAuthRespVO struct {
 	ginutil.BaseResp
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type ListSimpleEtcdNodeReqVO struct {
+	Env string `json:"env"`
+}
+
+type ListEtcdNodeReqVO struct {
+	Env string `json:"env"`
 }

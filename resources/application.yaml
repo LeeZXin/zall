@@ -26,6 +26,7 @@ git:
 
 timer:
   enabled: true
+  env: dev
 
 idserver:
   enabled: true
@@ -38,3 +39,6 @@ httptask:
 
 tcpDetect:
   enabled: true
+
+discovery:
+  type: static
