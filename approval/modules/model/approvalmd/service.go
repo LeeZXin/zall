@@ -20,35 +20,35 @@ func IsProcessNameValid(name string) bool {
 }
 
 func InsertProcess(ctx context.Context, reqDTO InsertProcessReqDTO) error {
-	jsonBytes, _ := json.Marshal(reqDTO.Approval)
+	jsonBytes, _ := json.Marshal(reqDTO.Process)
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&Process{
-		Pid:      reqDTO.Pid,
-		Name:     reqDTO.Name,
-		Approval: string(jsonBytes),
+		Pid:     reqDTO.Pid,
+		Name:    reqDTO.Name,
+		Content: string(jsonBytes),
 	})
 	return err
 }
 
 func UpdateProcess(ctx context.Context, reqDTO UpdateProcessReqDTO) (bool, error) {
-	jsonBytes, _ := json.Marshal(reqDTO.Approval)
+	jsonBytes, _ := json.Marshal(reqDTO.Process)
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
 		Cols("approval", "name").
 		Update(&Process{
-			Name:     reqDTO.Name,
-			Approval: string(jsonBytes),
+			Name:    reqDTO.Name,
+			Content: string(jsonBytes),
 		})
 	return rows == 1, err
 }
 
 func UpdateProcessByPid(ctx context.Context, reqDTO UpdateProcessByPidReqDTO) (bool, error) {
-	jsonBytes, _ := json.Marshal(reqDTO.Approval)
+	jsonBytes, _ := json.Marshal(reqDTO.Process)
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("pid = ?", reqDTO.Pid).
 		Cols("approval", "name").
 		Update(&Process{
-			Name:     reqDTO.Name,
-			Approval: string(jsonBytes),
+			Name:    reqDTO.Name,
+			Content: string(jsonBytes),
 		})
 	return rows == 1, err
 }
@@ -84,23 +84,23 @@ func GetProcessById(ctx context.Context, id int64) (ProcessDTO, bool, error) {
 }
 
 func processMd2Dto(p Process) ProcessDTO {
-	approval, _ := p.GetApproval()
+	process, _ := p.GetUnmarshalProcess()
 	return ProcessDTO{
-		Id:       p.Id,
-		Pid:      p.Pid,
-		Approval: approval,
-		Created:  p.Created,
+		Id:      p.Id,
+		Pid:     p.Pid,
+		Process: process,
+		Created: p.Created,
 	}
 }
 
 func InsertFlow(ctx context.Context, reqDTO InsertFlowReqDTO) (Flow, error) {
-	jsonBytes, _ := json.Marshal(reqDTO.Approval)
+	jsonBytes, _ := json.Marshal(reqDTO.Process)
 	var ret = Flow{
-		ProcessId:  reqDTO.ProcessId,
-		Approval:   string(jsonBytes),
-		CurrIndex:  reqDTO.CurrIndex,
-		FlowStatus: reqDTO.FlowStatus,
-		Creator:    reqDTO.Creator,
+		ProcessId:      reqDTO.ProcessId,
+		ProcessContent: string(jsonBytes),
+		CurrIndex:      reqDTO.CurrIndex,
+		FlowStatus:     reqDTO.FlowStatus,
+		Creator:        reqDTO.Creator,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&ret)
@@ -190,4 +190,14 @@ func InsertDetail(ctx context.Context, reqDTO InsertDetailReqDTO) error {
 		Op:        reqDTO.FlowOp,
 	})
 	return err
+}
+
+func UpdateNotifyDone(ctx context.Context, notifyId int64, done bool) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", notifyId).
+		Cols("done").
+		Update(&Notify{
+			Done: done,
+		})
+	return rows == 1, err
 }

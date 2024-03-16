@@ -72,39 +72,39 @@ const (
 )
 
 type Process struct {
-	Id       int64     `xorm:"pk autoincr"`
-	Pid      string    `json:"pid"`
-	Name     string    `json:"name"`
-	Approval string    `json:"approval"`
-	Created  time.Time `json:"created" xorm:"created"`
-	Updated  time.Time `json:"updated" xorm:"updated"`
+	Id      int64     `xorm:"pk autoincr"`
+	Pid     string    `json:"pid"`
+	Name    string    `json:"name"`
+	Content string    `json:"content"`
+	Created time.Time `json:"created" xorm:"created"`
+	Updated time.Time `json:"updated" xorm:"updated"`
 }
 
 func (*Process) TableName() string {
 	return ProcessTableName
 }
 
-func (p *Process) GetApproval() (approval.Approval, error) {
-	var ret approval.Approval
-	err := json.Unmarshal([]byte(p.Approval), &ret)
+func (p *Process) GetUnmarshalProcess() (approval.Process, error) {
+	var ret approval.Process
+	err := json.Unmarshal([]byte(p.Content), &ret)
 	return ret, err
 }
 
 type Flow struct {
-	Id         int64      `xorm:"pk autoincr"`
-	ProcessId  int64      `json:"processId"`
-	Approval   string     `json:"approval"`
-	CurrIndex  int        `json:"currIndex"`
-	FlowStatus FlowStatus `json:"flowStatus"`
-	ErrMsg     string     `json:"errMsg"`
-	Creator    string     `json:"creator"`
-	Created    time.Time  `json:"created" xorm:"created"`
-	Updated    time.Time  `json:"updated" xorm:"updated"`
+	Id             int64      `xorm:"pk autoincr"`
+	ProcessId      int64      `json:"processId"`
+	ProcessContent string     `json:"processContent"`
+	CurrIndex      int        `json:"currIndex"`
+	FlowStatus     FlowStatus `json:"flowStatus"`
+	ErrMsg         string     `json:"errMsg"`
+	Creator        string     `json:"creator"`
+	Created        time.Time  `json:"created" xorm:"created"`
+	Updated        time.Time  `json:"updated" xorm:"updated"`
 }
 
-func (f *Flow) GetApproval() (approval.Approval, error) {
-	var ret approval.Approval
-	err := json.Unmarshal([]byte(f.Approval), &ret)
+func (f *Flow) GetProcess() (approval.Process, error) {
+	var ret approval.Process
+	err := json.Unmarshal([]byte(f.ProcessContent), &ret)
 	return ret, err
 }
 

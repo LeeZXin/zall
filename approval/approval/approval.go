@@ -20,11 +20,17 @@ import (
 var (
 	httpClient = httputil.NewRetryableHttpClient()
 	// methodMap 存储方法
-	methodMap = make(map[string]func() (map[string]any, error))
+	methodMap = make(map[string]func(*FlowContext) (map[string]any, error))
 )
 
+type FlowContext struct {
+	context.Context
+	FlowId  int64
+	Process *Process
+}
+
 // RegisterMethod 注册方法 no thread-safe
-func RegisterMethod(name string, fn func() (map[string]any, error)) {
+func RegisterMethod(name string, fn func(*FlowContext) (map[string]any, error)) {
 	if fn == nil {
 		logger.Logger.Fatalf("nil process method func: %s", name)
 	}
@@ -54,7 +60,7 @@ func (a *Api) IsValid() bool {
 	return true
 }
 
-func (a *Api) DoRequest() (map[string]any, error) {
+func (a *Api) DoRequest(ctx *FlowContext) (map[string]any, error) {
 	finalUrl := a.Url
 	parseUrl, err := url.Parse(finalUrl)
 	if err != nil {
@@ -70,6 +76,11 @@ func (a *Api) DoRequest() (map[string]any, error) {
 		}
 		server := servers[rand.Int()%len(servers)]
 		finalUrl = parseUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parseUrl.RequestURI()
+		if parseUrl.RawQuery != "" {
+			finalUrl = finalUrl + fmt.Sprintf("&flowId=%d", ctx.FlowId)
+		} else {
+			finalUrl = finalUrl + fmt.Sprintf("?flowId=%d", ctx.FlowId)
+		}
 	}
 	request, err := http.NewRequest(a.Method, finalUrl, strings.NewReader(a.BodyStr))
 	if err != nil {
@@ -107,12 +118,12 @@ type Method struct {
 	Name string `json:"name"`
 }
 
-func (m *Method) DoMethod() (map[string]any, error) {
+func (m *Method) DoMethod(ctx *FlowContext) (map[string]any, error) {
 	fn, b := methodMap[m.Name]
 	if !b {
 		return nil, fmt.Errorf("unknown process method: %s", m.Name)
 	}
-	return fn()
+	return fn(ctx)
 }
 
 func (m *Method) IsValid() bool {
@@ -133,9 +144,9 @@ const (
 	AgreeNode
 )
 
-type ConditionNode struct {
-	Node      *Node  `json:"node"`
-	Condition string `json:"condition"`
+type ConditionalNodeCfg struct {
+	Node      *NodeCfg `json:"node"`
+	Condition string   `json:"condition"`
 }
 
 type Kv struct {
@@ -144,26 +155,26 @@ type Kv struct {
 	Type  string `json:"type"`
 }
 
-type Node struct {
-	NodeType   NodeType          `json:"nodeType"`
-	Api        *Api              `json:"api"`
-	Method     *Method           `json:"method"`
-	Accounts   []string          `json:"accounts"`
-	AtLeastNum int               `json:"atLeastNum"`
-	Title      string            `json:"title"`
-	Content    string            `json:"content"`
-	Vars       map[string]string `json:"vars"`
-	Next       []*ConditionNode  `json:"next"`
+type NodeCfg struct {
+	NodeType   NodeType              `json:"nodeType"`
+	Api        *Api                  `json:"api"`
+	Method     *Method               `json:"method"`
+	Accounts   []string              `json:"accounts"`
+	AtLeastNum int                   `json:"atLeastNum"`
+	Title      string                `json:"title"`
+	Content    string                `json:"content"`
+	Vars       map[string]string     `json:"vars"`
+	Next       []*ConditionalNodeCfg `json:"next"`
 }
 
-func (n *Node) IsValid() bool {
+func (n *NodeCfg) IsValid() bool {
 	if n.Title == "" {
 		return false
 	}
 	switch n.NodeType {
 	case PeopleNode:
 		accounts := hashset.NewHashSet(n.Accounts...)
-		if accounts.Size() == 0 || len(n.Accounts) != accounts.Size() || n.AtLeastNum < 1 || n.AtLeastNum > accounts.Size() {
+		if accounts.Size() > 100 || accounts.Size() == 0 || len(n.Accounts) != accounts.Size() || n.AtLeastNum < 1 || n.AtLeastNum > accounts.Size() {
 			return false
 		}
 	case ApiNode:
@@ -193,18 +204,18 @@ func (n *Node) IsValid() bool {
 	return true
 }
 
-func (n *Node) ToApproval() *Approval {
-	var c convert
-	return c.ToApproval(n)
+func (n *NodeCfg) Convert() *Node {
+	var c nodeConverter
+	return c.ConvertNode(n)
 }
 
-type convert struct {
+type nodeConverter struct {
 	nodeId int
 }
 
-func (c *convert) ToApproval(n *Node) *Approval {
+func (c *nodeConverter) ConvertNode(n *NodeCfg) *Node {
 	c.nodeId += 1
-	ret := &Approval{
+	ret := &Node{
 		NodeId:     c.nodeId,
 		NodeType:   n.NodeType,
 		Api:        n.Api,
@@ -215,61 +226,105 @@ func (c *convert) ToApproval(n *Node) *Approval {
 		Content:    n.Content,
 		Vars:       n.Vars,
 	}
-	ret.Next, _ = listutil.Map(n.Next, func(t *ConditionNode) (*ConditionApproval, error) {
-		return c.ToConditionApproval(t), nil
+	ret.Next, _ = listutil.Map(n.Next, func(t *ConditionalNodeCfg) (*ConditionalNode, error) {
+		return c.ConvertConditionalNode(t), nil
 	})
 	return ret
 }
 
-func (c *convert) ToConditionApproval(n *ConditionNode) *ConditionApproval {
-	return &ConditionApproval{
-		Node:      c.ToApproval(n.Node),
+func (c *nodeConverter) ConvertConditionalNode(n *ConditionalNodeCfg) *ConditionalNode {
+	return &ConditionalNode{
+		Node:      c.ConvertNode(n.Node),
 		Condition: n.Condition,
 	}
 }
 
-type Approval struct {
-	NodeId     int                  `json:"nodeId"`
-	NodeType   NodeType             `json:"nodeType"`
-	Api        *Api                 `json:"api"`
-	Method     *Method              `json:"method"`
-	Accounts   []string             `json:"accounts"`
-	AtLeastNum int                  `json:"atLeastNum"`
-	Title      string               `json:"title"`
-	Content    string               `json:"content"`
-	Vars       map[string]string    `json:"vars"`
-	Next       []*ConditionApproval `json:"next"`
+type Node struct {
+	NodeId     int                `json:"nodeId"`
+	NodeType   NodeType           `json:"nodeType"`
+	Api        *Api               `json:"api"`
+	Method     *Method            `json:"method"`
+	Accounts   []string           `json:"accounts"`
+	AtLeastNum int                `json:"atLeastNum"`
+	Title      string             `json:"title"`
+	Content    string             `json:"content"`
+	Vars       map[string]string  `json:"vars"`
+	Next       []*ConditionalNode `json:"next"`
 }
 
-type ConditionApproval struct {
-	Node      *Approval `json:"node"`
-	Condition string    `json:"condition"`
+type ConditionalNode struct {
+	Node      *Node  `json:"node"`
+	Condition string `json:"condition"`
 }
 
-func findByNodeId(a *Approval, nodeId int) *Approval {
-	if a.NodeId == nodeId {
-		return a
+type ProcessCfg struct {
+	Kvs  []Kv     `json:"kvs"`
+	Node *NodeCfg `json:"node"`
+}
+
+func (c *ProcessCfg) IsValid() bool {
+	if c.Node == nil {
+		return false
 	}
-	for _, n := range a.Next {
-		p := findByNodeId(n.Node, nodeId)
+	return c.Node.IsValid()
+}
+
+func (c *ProcessCfg) Convert() Process {
+	ret := Process{}
+	ret.Kvs = c.Kvs
+	if c.Node != nil {
+		ret.Node = c.Node.Convert()
+	}
+	return ret
+}
+
+type Process struct {
+	Kvs  []Kv  `json:"kvs"`
+	Node *Node `json:"node"`
+}
+
+func (p *Process) Find(nodeId int) *Node {
+	if p.Node == nil {
+		return nil
+	}
+	return p.Node.Find(nodeId)
+}
+
+func (p *Process) FindAndDo(nodeId int, fnMap map[NodeType]func(*Node)) {
+	if p.Node == nil {
+		return
+	}
+	p.Node.FindAndDo(nodeId, fnMap)
+}
+
+func findByNodeId(node *Node, nodeId int) *Node {
+	if node == nil {
+		return nil
+	}
+	if node.NodeId == nodeId {
+		return node
+	}
+	for _, next := range node.Next {
+		p := findByNodeId(next.Node, nodeId)
 		if p != nil {
 			return p
 		}
 	}
 	return nil
 }
-func (a *Approval) Find(nodeId int) *Approval {
-	return findByNodeId(a, nodeId)
+
+func (n *Node) Find(nodeId int) *Node {
+	return findByNodeId(n, nodeId)
 }
 
-func (a *Approval) FindAndDo(nodeId int, fnMap map[NodeType]func(*Approval)) {
-	n := findByNodeId(a, nodeId)
-	if n == nil {
+func (n *Node) FindAndDo(nodeId int, fnMap map[NodeType]func(*Node)) {
+	node := findByNodeId(n, nodeId)
+	if node == nil {
 		return
 	}
-	fn, b := fnMap[a.NodeType]
+	fn, b := fnMap[node.NodeType]
 	if !b {
 		return
 	}
-	fn(n)
+	fn(node)
 }

@@ -8,9 +8,9 @@ import (
 )
 
 type InsertProcessReqDTO struct {
-	Pid      string        `json:"pid"`
-	Name     string        `json:"name"`
-	Approval approval.Node `json:"approval"`
+	Pid     string              `json:"pid"`
+	Name    string              `json:"name"`
+	Process approval.ProcessCfg `json:"process"`
 }
 
 func (r *InsertProcessReqDTO) IsValid() error {
@@ -20,16 +20,16 @@ func (r *InsertProcessReqDTO) IsValid() error {
 	if !approvalmd.IsProcessNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if !r.Approval.IsValid() {
+	if !r.Process.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
 type UpdateProcessReqDTO struct {
-	Pid      string        `json:"pid"`
-	Name     string        `json:"name"`
-	Approval approval.Node `json:"approval"`
+	Pid     string              `json:"pid"`
+	Name    string              `json:"name"`
+	Process approval.ProcessCfg `json:"process"`
 }
 
 func (r *UpdateProcessReqDTO) IsValid() error {
@@ -39,7 +39,7 @@ func (r *UpdateProcessReqDTO) IsValid() error {
 	if !approvalmd.IsProcessNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if !r.Approval.IsValid() {
+	if !r.Process.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil

@@ -15,7 +15,7 @@ import (
 type innerImpl struct {
 }
 
-func (*innerImpl) InsertFlow(ctx context.Context, pid string) error {
+func (*innerImpl) InsertFlow(ctx context.Context, pid, account string) error {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	process, b, err := approvalmd.GetProcessByPid(ctx, pid)
@@ -27,10 +27,10 @@ func (*innerImpl) InsertFlow(ctx context.Context, pid string) error {
 	}
 	flow, err := approvalmd.InsertFlow(ctx, approvalmd.InsertFlowReqDTO{
 		ProcessId:  process.Id,
-		Approval:   process.Approval,
+		Process:    process.Process,
 		CurrIndex:  1,
 		FlowStatus: approvalmd.PendingFlowStatus,
-		Creator:    "system",
+		Creator:    account,
 	})
 	if err != nil {
 		return err
@@ -53,9 +53,9 @@ func (*innerImpl) InsertProcess(ctx context.Context, reqDTO InsertProcessReqDTO)
 		return fmt.Errorf("pid: %s already exists", reqDTO.Pid)
 	}
 	return approvalmd.InsertProcess(ctx, approvalmd.InsertProcessReqDTO{
-		Pid:      reqDTO.Pid,
-		Name:     reqDTO.Name,
-		Approval: *reqDTO.Approval.ToApproval(),
+		Pid:     reqDTO.Pid,
+		Name:    reqDTO.Name,
+		Process: reqDTO.Process.Convert(),
 	})
 }
 
@@ -66,33 +66,41 @@ func (*innerImpl) UpdateProcess(ctx context.Context, reqDTO UpdateProcessReqDTO)
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err := approvalmd.UpdateProcessByPid(ctx, approvalmd.UpdateProcessByPidReqDTO{
-		Pid:      reqDTO.Pid,
-		Name:     reqDTO.Name,
-		Approval: *reqDTO.Approval.ToApproval(),
+		Pid:     reqDTO.Pid,
+		Name:    reqDTO.Name,
+		Process: reqDTO.Process.Convert(),
 	})
 	return err
 }
 
 func executeFlow(flow approvalmd.Flow) {
 	go func() {
-		p, err := flow.GetApproval()
+		process, err := flow.GetProcess()
 		if err != nil {
 			logger.Logger.Error(err)
 			return
 		}
-		runFlow(&flow, &p)
+		flowCtx := &approval.FlowContext{
+			Context: context.Background(),
+			FlowId:  flow.Id,
+			Process: &process,
+		}
+		runFlow(flowCtx, &flow, process.Node)
 	}()
 }
 
-func runFlow(flow *approvalmd.Flow, p *approval.Approval) {
-	p.FindAndDo(flow.CurrIndex, map[approval.NodeType]func(*approval.Approval){
-		approval.PeopleNode: func(p *approval.Approval) {
+func runFlow(flowCtx *approval.FlowContext, flow *approvalmd.Flow, node *approval.Node) {
+	if node == nil {
+		return
+	}
+	node.FindAndDo(flow.CurrIndex, map[approval.NodeType]func(*approval.Node){
+		approval.PeopleNode: func(node *approval.Node) {
 			ctx, closer := xormstore.Context(context.Background())
 			defer closer.Close()
 			err := xormstore.WithTx(ctx, func(ctx context.Context) error {
 				return approvalmd.InsertNotify(ctx, approvalmd.InsertNotifyReqDTO{
 					FlowId:    flow.Id,
-					Accounts:  p.Accounts,
+					Accounts:  node.Accounts,
 					Done:      false,
 					FlowIndex: flow.CurrIndex,
 				})
@@ -101,10 +109,10 @@ func runFlow(flow *approvalmd.Flow, p *approval.Approval) {
 				logger.Logger.Error(err)
 			}
 		},
-		approval.ApiNode: func(p *approval.Approval) {
+		approval.ApiNode: func(node *approval.Node) {
 			ctx, closer := xormstore.Context(context.Background())
 			defer closer.Close()
-			if p.Api == nil {
+			if node.Api == nil {
 				logger.Logger.Errorf("flowId: %d currIndex: %d its api node has no config", flow.Id, flow.CurrIndex)
 				_, err := approvalmd.UpdateFlowStatusAndErrMsgWithOldStatus(
 					ctx,
@@ -118,7 +126,7 @@ func runFlow(flow *approvalmd.Flow, p *approval.Approval) {
 				}
 				return
 			}
-			response, err := p.Api.DoRequest()
+			response, err := node.Api.DoRequest(flowCtx)
 			if err != nil {
 				logger.Logger.Errorf("flowId: %d currIndex: %d its api request err: %v", flow.Id, flow.CurrIndex, err)
 				_, err = approvalmd.UpdateFlowStatusAndErrMsgWithOldStatus(
@@ -133,12 +141,12 @@ func runFlow(flow *approvalmd.Flow, p *approval.Approval) {
 				}
 				return
 			}
-			runNext(flow, p, response)
+			runNext(flowCtx, flow, node, response)
 		},
-		approval.MethodNode: func(p *approval.Approval) {
+		approval.MethodNode: func(node *approval.Node) {
 			ctx, closer := xormstore.Context(context.Background())
 			defer closer.Close()
-			if p.Method == nil {
+			if node.Method == nil {
 				logger.Logger.Errorf("flowId: %d currIndex: %d its method node has no config", flow.Id, flow.CurrIndex)
 				_, err := approvalmd.UpdateFlowStatusAndErrMsgWithOldStatus(
 					ctx,
@@ -152,9 +160,9 @@ func runFlow(flow *approvalmd.Flow, p *approval.Approval) {
 				}
 				return
 			}
-			response, err := p.Method.DoMethod()
+			response, err := node.Method.DoMethod(flowCtx)
 			if err != nil {
-				logger.Logger.Errorf("flowId: %d currIndex: %d its method: %s err: %v", flow.Id, flow.CurrIndex, p.Method.Name, err)
+				logger.Logger.Errorf("flowId: %d currIndex: %d its method: %s err: %v", flow.Id, flow.CurrIndex, node.Method.Name, err)
 				_, err = approvalmd.UpdateFlowStatusAndErrMsgWithOldStatus(
 					ctx,
 					flow.Id,
@@ -167,9 +175,9 @@ func runFlow(flow *approvalmd.Flow, p *approval.Approval) {
 				}
 				return
 			}
-			runNext(flow, p, response)
+			runNext(flowCtx, flow, node, response)
 		},
-		approval.DisagreeNode: func(p *approval.Approval) {
+		approval.DisagreeNode: func(node *approval.Node) {
 			ctx, closer := xormstore.Context(context.Background())
 			defer closer.Close()
 			_, err := approvalmd.UpdateFlowStatusWithOldStatus(
@@ -182,7 +190,7 @@ func runFlow(flow *approvalmd.Flow, p *approval.Approval) {
 				logger.Logger.Error(err)
 			}
 		},
-		approval.AgreeNode: func(p *approval.Approval) {
+		approval.AgreeNode: func(node *approval.Node) {
 			ctx, closer := xormstore.Context(context.Background())
 			defer closer.Close()
 			_, err := approvalmd.UpdateFlowStatusWithOldStatus(
@@ -198,10 +206,10 @@ func runFlow(flow *approvalmd.Flow, p *approval.Approval) {
 	})
 }
 
-func runNext(flow *approvalmd.Flow, p *approval.Approval, response map[string]any) {
-	ctx, closer := xormstore.Context(context.Background())
+func runNext(flowCtx *approval.FlowContext, flow *approvalmd.Flow, node *approval.Node, response map[string]any) {
+	ctx, closer := xormstore.Context(flowCtx)
 	defer closer.Close()
-	if len(p.Next) == 0 {
+	if len(node.Next) == 0 {
 		logger.Logger.Errorf("flowId: %d currIndex: %d has no next", flow.Id, flow.CurrIndex)
 		_, err := approvalmd.UpdateFlowStatusAndErrMsgWithOldStatus(
 			ctx,
@@ -213,18 +221,19 @@ func runNext(flow *approvalmd.Flow, p *approval.Approval, response map[string]an
 		if err != nil {
 			logger.Logger.Error(err)
 		}
+		return
 	}
-	for _, c := range p.Next {
-		if doCondition(c.Condition, response) {
+	for _, next := range node.Next {
+		if doCondition(next.Condition, response) {
 			// 更新currIndex
-			b, err := approvalmd.UpdateFlowCurrIndexWithOldCurrIndex(ctx, flow.Id, c.Node.NodeId, flow.CurrIndex)
+			b, err := approvalmd.UpdateFlowCurrIndexWithOldCurrIndex(ctx, flow.Id, next.Node.NodeId, flow.CurrIndex)
 			if err != nil {
 				logger.Logger.Error(err)
 				return
 			}
 			if b {
-				flow.CurrIndex = c.Node.NodeId
-				runFlow(flow, c.Node)
+				flow.CurrIndex = next.Node.NodeId
+				runFlow(flowCtx, flow, next.Node)
 			}
 			return
 		}
@@ -279,6 +288,9 @@ func (*outerImpl) Agree(ctx context.Context, reqDTO AgreeFlowReqDTO) error {
 	if !b {
 		return util.InvalidArgsError()
 	}
+	if notify.Done {
+		return util.AlreadyExistsError()
+	}
 	flow, b, err := approvalmd.GetFlowById(ctx, notify.FlowId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -290,20 +302,20 @@ func (*outerImpl) Agree(ctx context.Context, reqDTO AgreeFlowReqDTO) error {
 	if flow.CurrIndex != notify.FlowIndex {
 		return util.InvalidArgsError()
 	}
-	p, err := flow.GetApproval()
+	process, err := flow.GetProcess()
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	n := p.Find(notify.FlowIndex)
-	if n == nil {
+	node := process.Find(notify.FlowIndex)
+	if node == nil {
 		return util.InvalidArgsError()
 	}
-	if n.NodeType != approval.PeopleNode {
+	if node.NodeType != approval.PeopleNode {
 		return util.InvalidArgsError()
 	}
 	findAccount := false
-	for _, account := range n.Accounts {
+	for _, account := range node.Accounts {
 		if account == reqDTO.Operator.Account {
 			findAccount = true
 			break
@@ -312,31 +324,44 @@ func (*outerImpl) Agree(ctx context.Context, reqDTO AgreeFlowReqDTO) error {
 	if !findAccount {
 		return util.UnauthorizedError()
 	}
-	b, err = approvalmd.ExistsDetailByAccount(ctx, flow.Id, flow.CurrIndex, reqDTO.Operator.Account)
+	ctx, committer, err := xormstore.TxContext(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if b {
-		return util.AlreadyExistsError()
-	}
-	err = approvalmd.InsertDetail(ctx, approvalmd.InsertDetailReqDTO{
-		FlowId:    flow.Id,
-		FlowIndex: flow.CurrIndex,
-		FlowOp:    approvalmd.AgreeOp,
-		Account:   reqDTO.Operator.Account,
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+	// 事务
+	{
+		err = approvalmd.InsertDetail(ctx, approvalmd.InsertDetailReqDTO{
+			FlowId:    flow.Id,
+			FlowIndex: flow.CurrIndex,
+			FlowOp:    approvalmd.AgreeOp,
+			Account:   reqDTO.Operator.Account,
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			committer.Rollback()
+			return util.InternalError(err)
+		}
+		_, err = approvalmd.UpdateNotifyDone(ctx, reqDTO.NotifyId, true)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			committer.Rollback()
+			return util.InternalError(err)
+		}
+		committer.Commit()
 	}
 	count, err := approvalmd.CountDetail(ctx, flow.Id, flow.CurrIndex, approvalmd.AgreeOp)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if int(count) >= p.AtLeastNum {
-		go runNext(&flow, n, map[string]any{
+	if int(count) >= node.AtLeastNum {
+		flowCtx := &approval.FlowContext{
+			Context: context.Background(),
+			FlowId:  flow.Id,
+			Process: &process,
+		}
+		go runNext(flowCtx, &flow, node, map[string]any{
 			"agree": "y",
 		})
 	}
@@ -357,6 +382,9 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 	if !b {
 		return util.InvalidArgsError()
 	}
+	if notify.Done {
+		return util.AlreadyExistsError()
+	}
 	flow, b, err := approvalmd.GetFlowById(ctx, notify.FlowId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -368,20 +396,20 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 	if flow.CurrIndex != notify.FlowIndex {
 		return util.InvalidArgsError()
 	}
-	p, err := flow.GetApproval()
+	process, err := flow.GetProcess()
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	n := p.Find(flow.CurrIndex)
-	if n == nil {
+	node := process.Find(flow.CurrIndex)
+	if node == nil {
 		return util.InvalidArgsError()
 	}
-	if n.NodeType != approval.PeopleNode {
+	if node.NodeType != approval.PeopleNode {
 		return util.InvalidArgsError()
 	}
 	findAccount := false
-	for _, account := range n.Accounts {
+	for _, account := range node.Accounts {
 		if account == reqDTO.Operator.Account {
 			findAccount = true
 			break
@@ -390,32 +418,45 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 	if !findAccount {
 		return util.UnauthorizedError()
 	}
-	b, err = approvalmd.ExistsDetailByAccount(ctx, flow.Id, flow.CurrIndex, reqDTO.Operator.Account)
+	ctx, committer, err := xormstore.TxContext(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if b {
-		return util.AlreadyExistsError()
-	}
-	err = approvalmd.InsertDetail(ctx, approvalmd.InsertDetailReqDTO{
-		FlowId:    flow.Id,
-		FlowIndex: flow.CurrIndex,
-		FlowOp:    approvalmd.DisagreeOp,
-		Account:   reqDTO.Operator.Account,
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+	// 事务
+	{
+		err = approvalmd.InsertDetail(ctx, approvalmd.InsertDetailReqDTO{
+			FlowId:    flow.Id,
+			FlowIndex: flow.CurrIndex,
+			FlowOp:    approvalmd.DisagreeOp,
+			Account:   reqDTO.Operator.Account,
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			committer.Rollback()
+			return util.InternalError(err)
+		}
+		_, err = approvalmd.UpdateNotifyDone(ctx, reqDTO.NotifyId, true)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			committer.Rollback()
+			return util.InternalError(err)
+		}
+		committer.Commit()
 	}
 	count, err := approvalmd.CountDetail(ctx, flow.Id, flow.CurrIndex, approvalmd.DisagreeOp)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if int(count)+p.AtLeastNum >= len(p.Accounts) {
-		go runNext(&flow, n, map[string]any{
-			"agree": "n",
+	if int(count)+node.AtLeastNum >= len(node.Accounts) {
+		flowCtx := &approval.FlowContext{
+			Context: context.Background(),
+			FlowId:  flow.Id,
+			Process: &process,
+		}
+		go runNext(flowCtx, &flow, node, map[string]any{
+			"agree": "node",
 		})
 	}
 	return nil

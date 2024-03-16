@@ -6,33 +6,33 @@ import (
 )
 
 type InsertProcessReqDTO struct {
-	Pid      string
-	Name     string
-	Approval approval.Approval
+	Pid     string
+	Name    string
+	Process approval.Process
 }
 
 type UpdateProcessReqDTO struct {
-	Id       int64
-	Name     string
-	Approval approval.Approval
+	Id      int64
+	Name    string
+	Process approval.Process
 }
 
 type UpdateProcessByPidReqDTO struct {
-	Pid      string
-	Name     string
-	Approval approval.Approval
+	Pid     string
+	Name    string
+	Process approval.Process
 }
 
 type ProcessDTO struct {
-	Id       int64
-	Pid      string
-	Approval approval.Approval
-	Created  time.Time
+	Id      int64
+	Pid     string
+	Process approval.Process
+	Created time.Time
 }
 
 type InsertFlowReqDTO struct {
 	ProcessId  int64
-	Approval   approval.Approval
+	Process    approval.Process
 	CurrIndex  int
 	FlowStatus FlowStatus
 	Creator    string

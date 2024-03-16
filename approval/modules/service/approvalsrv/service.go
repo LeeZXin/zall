@@ -8,7 +8,7 @@ var (
 )
 
 type InnerService interface {
-	InsertFlow(context.Context, string) error
+	InsertFlow(context.Context, string, string) error
 	InsertProcess(context.Context, InsertProcessReqDTO) error
 	UpdateProcess(context.Context, UpdateProcessReqDTO) error
 }
@@ -19,5 +19,5 @@ type OuterService interface {
 	//InsertProcess(context.Context, InsertProcessReqDTO) error
 	//UpdateProcess(context.Context, UpdateProcessReqDTO) error
 	//DeleteProcess(context.Context, DeleteProcessReqDTO) error
-	//GetProcess(context.Context, GetProcessReqDTO) (approval.Approval, bool, error)
+	//GetProcess(context.Context, GetProcessReqDTO) (approval.Process, bool, error)
 }
