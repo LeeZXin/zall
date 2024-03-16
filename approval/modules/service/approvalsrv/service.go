@@ -8,7 +8,7 @@ var (
 )
 
 type InnerService interface {
-	InsertFlow(context.Context, string, string) error
+	InsertFlow(context.Context, InsertFlowReqDTO) error
 	InsertProcess(context.Context, InsertProcessReqDTO) error
 	UpdateProcess(context.Context, UpdateProcessReqDTO) error
 }
