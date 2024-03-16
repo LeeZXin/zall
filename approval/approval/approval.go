@@ -26,6 +26,7 @@ var (
 type FlowContext struct {
 	context.Context
 	FlowId  int64
+	BizId   string
 	Process *Process
 }
 
@@ -77,9 +78,9 @@ func (a *Api) DoRequest(ctx *FlowContext) (map[string]any, error) {
 		server := servers[rand.Int()%len(servers)]
 		finalUrl = parseUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parseUrl.RequestURI()
 		if parseUrl.RawQuery != "" {
-			finalUrl = finalUrl + fmt.Sprintf("&flowId=%d", ctx.FlowId)
+			finalUrl = finalUrl + fmt.Sprintf("&bizId=%s", ctx.BizId)
 		} else {
-			finalUrl = finalUrl + fmt.Sprintf("?flowId=%d", ctx.FlowId)
+			finalUrl = finalUrl + fmt.Sprintf("?bizId=%s", ctx.BizId)
 		}
 	}
 	request, err := http.NewRequest(a.Method, finalUrl, strings.NewReader(a.BodyStr))

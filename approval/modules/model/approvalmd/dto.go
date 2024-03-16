@@ -36,6 +36,7 @@ type InsertFlowReqDTO struct {
 	CurrIndex  int
 	FlowStatus FlowStatus
 	Creator    string
+	BizId      string
 }
 
 type InsertNotifyReqDTO struct {

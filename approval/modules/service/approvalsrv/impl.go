@@ -15,22 +15,23 @@ import (
 type innerImpl struct {
 }
 
-func (*innerImpl) InsertFlow(ctx context.Context, pid, account string) error {
+func (*innerImpl) InsertFlow(ctx context.Context, reqDTO InsertFlowReqDTO) error {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	process, b, err := approvalmd.GetProcessByPid(ctx, pid)
+	process, b, err := approvalmd.GetProcessByPid(ctx, reqDTO.Pid)
 	if err != nil {
 		return err
 	}
 	if !b {
-		return fmt.Errorf("process not found: %s", pid)
+		return fmt.Errorf("process not found: %s", reqDTO.Pid)
 	}
 	flow, err := approvalmd.InsertFlow(ctx, approvalmd.InsertFlowReqDTO{
 		ProcessId:  process.Id,
 		Process:    process.Process,
 		CurrIndex:  1,
 		FlowStatus: approvalmd.PendingFlowStatus,
-		Creator:    account,
+		Creator:    reqDTO.Account,
+		BizId:      reqDTO.BizId,
 	})
 	if err != nil {
 		return err
@@ -84,6 +85,7 @@ func executeFlow(flow approvalmd.Flow) {
 			Context: context.Background(),
 			FlowId:  flow.Id,
 			Process: &process,
+			BizId:   flow.BizId,
 		}
 		runFlow(flowCtx, &flow, process.Node)
 	}()
@@ -360,6 +362,7 @@ func (*outerImpl) Agree(ctx context.Context, reqDTO AgreeFlowReqDTO) error {
 			Context: context.Background(),
 			FlowId:  flow.Id,
 			Process: &process,
+			BizId:   flow.BizId,
 		}
 		go runNext(flowCtx, &flow, node, map[string]any{
 			"agree": "y",
@@ -454,6 +457,7 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 			Context: context.Background(),
 			FlowId:  flow.Id,
 			Process: &process,
+			BizId:   flow.BizId,
 		}
 		go runNext(flowCtx, &flow, node, map[string]any{
 			"agree": "node",

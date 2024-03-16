@@ -104,3 +104,9 @@ func (r *DisagreeFlowReqDTO) IsValid() error {
 	}
 	return nil
 }
+
+type InsertFlowReqDTO struct {
+	Pid     string
+	Account string
+	BizId   string
+}

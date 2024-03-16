@@ -101,6 +101,7 @@ func InsertFlow(ctx context.Context, reqDTO InsertFlowReqDTO) (Flow, error) {
 		CurrIndex:      reqDTO.CurrIndex,
 		FlowStatus:     reqDTO.FlowStatus,
 		Creator:        reqDTO.Creator,
+		BizId:          reqDTO.BizId,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&ret)

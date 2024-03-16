@@ -98,6 +98,7 @@ type Flow struct {
 	FlowStatus     FlowStatus `json:"flowStatus"`
 	ErrMsg         string     `json:"errMsg"`
 	Creator        string     `json:"creator"`
+	BizId          string     `json:"bizId"`
 	Created        time.Time  `json:"created" xorm:"created"`
 	Updated        time.Time  `json:"updated" xorm:"updated"`
 }
