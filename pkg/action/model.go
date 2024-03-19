@@ -330,14 +330,10 @@ func (s *Step) replaceStr(args map[string]string, str string) string {
 func (s *Step) Run(opts *RunOpts, ctx context.Context, j *Job, index int) error {
 	var cmd *exec.Cmd
 	cmd = exec.CommandContext(ctx, "bash", "-c", s.replaceStr(opts.Args, s.script))
-	env := make([]string, 0, len(s.with)+1+len(opts.Args))
+	env := make([]string, 0, len(s.with))
 	for k, v := range s.with {
 		env = append(env, k+"="+v)
 	}
-	for k, v := range opts.Args {
-		env = append(env, k+"="+v)
-	}
-	env = append(env, "ACTION_STEP_NAME="+s.name)
 	if len(s.with) > 0 {
 		cmd.Env = append(os.Environ(), env...)
 	}
