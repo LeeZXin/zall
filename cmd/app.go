@@ -10,7 +10,7 @@ var (
 		Run,
 		RepoServer,
 		GitHook,
-		Actions,
+		ActionAgent,
 		Timer,
 		IdServer,
 		PropServer,

@@ -10,20 +10,18 @@ import (
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/executor/completable"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 var (
 	EmptyArgs   = errors.New("empty args")
 	ThereHasBug = errors.New("there has bug")
-	// 脚本存放路径
-	scriptDir = filepath.Join(common.ResourcesDir, "actions")
 )
 
 type GraphCfg struct {
@@ -145,13 +143,8 @@ func (c *GraphCfg) ConvertToGraph() (*Graph, error) {
 
 type StepCfg struct {
 	Name   string            `json:"name" yaml:"name"`
-	Uses   string            `json:"uses" yaml:"uses"`
 	With   map[string]string `json:"with" yaml:"with"`
 	Script string            `json:"script" yaml:"script"`
-}
-
-func (c *StepCfg) String() string {
-	return fmt.Sprintf("NodeId: %s uses: %s with: %v", c.Name, c.Uses, c.With)
 }
 
 func (c *StepCfg) convertToStep() *Step {
@@ -161,14 +154,13 @@ func (c *StepCfg) convertToStep() *Step {
 	}
 	return &Step{
 		name:   c.Name,
-		uses:   c.Uses,
 		with:   cpyMap,
 		script: c.Script,
 	}
 }
 
 func (c *StepCfg) IsValid() error {
-	if c.Name == "" || (c.Uses == "" && c.Script == "") {
+	if c.Name == "" || c.Script == "" {
 		return EmptyArgs
 	}
 	return nil
@@ -281,7 +273,7 @@ func (g *Graph) Run(opts RunOpts) error {
 		return j.next.Size() == 0, nil
 	})
 	finalFutures, _ := listutil.Map(layers, func(t *Job) (completable.IBase, error) {
-		return loadJob(futures, t, opts), nil
+		return loadJob(futures, t, &opts), nil
 	})
 	if len(finalFutures) > 0 {
 		// 最后一层的节点就可以不用异步
@@ -294,7 +286,7 @@ func (g *Graph) Run(opts RunOpts) error {
 }
 
 // loadJob 递归调用 从后置节点往前置节点递归整个graph
-func loadJob(all map[string]completable.Future[any], j *Job, opts RunOpts) completable.Future[any] {
+func loadJob(all map[string]completable.Future[any], j *Job, opts *RunOpts) completable.Future[any] {
 	// 防止重复执行
 	f, b := all[j.name]
 	if b {
@@ -324,18 +316,20 @@ func loadJob(all map[string]completable.Future[any], j *Job, opts RunOpts) compl
 
 type Step struct {
 	name   string
-	uses   string
 	with   map[string]string
 	script string
 }
 
-func (s *Step) Run(opts RunOpts, ctx context.Context, j *Job, index int) error {
-	var cmd *exec.Cmd
-	if s.script != "" {
-		cmd = exec.CommandContext(ctx, "bash", "-c", s.script)
-	} else {
-		cmd = exec.CommandContext(ctx, "bash", filepath.Join(scriptDir, s.uses))
+func (s *Step) replaceStr(args map[string]string, str string) string {
+	for k, v := range args {
+		str = strings.ReplaceAll(str, "{{"+k+"}}", v)
 	}
+	return str
+}
+
+func (s *Step) Run(opts *RunOpts, ctx context.Context, j *Job, index int) error {
+	var cmd *exec.Cmd
+	cmd = exec.CommandContext(ctx, "bash", "-c", s.replaceStr(opts.Args, s.script))
 	env := make([]string, 0, len(s.with)+1+len(opts.Args))
 	for k, v := range s.with {
 		env = append(env, k+"="+v)
@@ -395,7 +389,7 @@ type Job struct {
 	timeout time.Duration
 }
 
-func (j *Job) Run(opts RunOpts) error {
+func (j *Job) Run(opts *RunOpts) error {
 	ctx := context.Background()
 	if j.timeout > 0 {
 		var cancelFn context.CancelFunc
