@@ -115,6 +115,17 @@ var (
 			Id:         "repoSrv.PushCode",
 			DefaultRet: "提交代码",
 		},
+		RefreshAllGitHooks: KeyItem{
+			Id:         "repoSrv.RefreshAllGitHooks",
+			DefaultRet: "刷新所有git hook",
+		},
+		TransferTeam: KeyItem{
+			Id:         "repoSrv.TransferTeam",
+			DefaultRet: "迁移team",
+		},
+	}
+
+	GitActionSrvKeysVO = GitActionSrvKeys{
 		InsertAction: KeyItem{
 			Id:         "repoSrv.InsertAction",
 			DefaultRet: "新增action",
@@ -131,13 +142,17 @@ var (
 			Id:         "repoSrv.TriggerAction",
 			DefaultRet: "手动触发action",
 		},
-		RefreshAllGitHooks: KeyItem{
-			Id:         "repoSrv.RefreshAllGitHooks",
-			DefaultRet: "刷新所有git hook",
+		InsertNode: KeyItem{
+			Id:         "actionNodeSrv.InsertNode",
+			DefaultRet: "新增action节点信息",
 		},
-		TransferTeam: KeyItem{
-			Id:         "repoSrv.TransferTeam",
-			DefaultRet: "迁移team",
+		DeleteNode: KeyItem{
+			Id:         "actionNodeSrv.DeleteNode",
+			DefaultRet: "删除action节点信息",
+		},
+		UpdateNode: KeyItem{
+			Id:         "actionNodeSrv.UpdateNode",
+			DefaultRet: "编辑action节点信息",
 		},
 	}
 
@@ -204,6 +219,10 @@ var (
 		InsertWebhook: KeyItem{
 			Id:         "webhookSrv.InsertWebhook",
 			DefaultRet: "新增webhook",
+		},
+		UpdateWebhook: KeyItem{
+			Id:         "webhookSrv.UpdateWebhook",
+			DefaultRet: "编辑webhook",
 		},
 		DeleteWebhook: KeyItem{
 			Id:         "webhookSrv.DeleteWebhook",
@@ -326,17 +345,28 @@ var (
 		},
 	}
 
+	ApprovalSrvKeysVO = ApprovalSrvKeys{
+		InsertCustomProcess: KeyItem{
+			Id:         "approvalSrv.InsertCustomProcess",
+			DefaultRet: "新增自定义审批流",
+		},
+		UpdateCustomProcess: KeyItem{
+			Id:         "approvalSrv.UpdateCustomProcess",
+			DefaultRet: "编辑自定义审批流",
+		},
+	}
+
 	GitNodeSrvKeysVO = GitNodeSrvKeys{
 		InsertNode: KeyItem{
-			Id:         "gitNodeSrv.InsertNode",
+			Id:         "repoSrv.InsertNode",
 			DefaultRet: "新增git节点信息",
 		},
 		DeleteNode: KeyItem{
-			Id:         "gitNodeSrv.DeleteNode",
+			Id:         "repoSrv.DeleteNode",
 			DefaultRet: "删除git节点信息",
 		},
 		UpdateNode: KeyItem{
-			Id:         "gitNodeSrv.UpdateNode",
+			Id:         "repoSrv.UpdateNode",
 			DefaultRet: "编辑git节点信息",
 		},
 	}
@@ -384,12 +414,18 @@ type RepoSrvKeys struct {
 	DeleteAccessToken  KeyItem
 	AccessCode         KeyItem
 	PushCode           KeyItem
-	InsertAction       KeyItem
-	DeleteAction       KeyItem
-	UpdateAction       KeyItem
-	TriggerAction      KeyItem
 	RefreshAllGitHooks KeyItem
 	TransferTeam       KeyItem
+}
+
+type GitActionSrvKeys struct {
+	InsertAction  KeyItem
+	DeleteAction  KeyItem
+	UpdateAction  KeyItem
+	TriggerAction KeyItem
+	InsertNode    KeyItem
+	DeleteNode    KeyItem
+	UpdateNode    KeyItem
 }
 
 type PullRequestSrvKeys struct {
@@ -420,6 +456,7 @@ type LfsSrvKeys struct {
 
 type WebhookSrvKeys struct {
 	InsertWebhook KeyItem
+	UpdateWebhook KeyItem
 	DeleteWebhook KeyItem
 }
 
@@ -461,6 +498,11 @@ type TcpDetectSrvKeys struct {
 	UpdateDetect  KeyItem
 	EnableDetect  KeyItem
 	DisableDetect KeyItem
+}
+
+type ApprovalSrvKeys struct {
+	InsertCustomProcess KeyItem
+	UpdateCustomProcess KeyItem
 }
 
 type GitNodeSrvKeys struct {

@@ -7,7 +7,7 @@ const (
 )
 
 type SysCfg struct {
-	Id      int64     `xorm:"pk autoincr"`
+	Id      int64     `json:"id" xorm:"pk autoincr"`
 	CfgKey  string    `json:"cfgKey"`
 	Content string    `json:"content"`
 	Created time.Time `json:"created" xorm:"created"`

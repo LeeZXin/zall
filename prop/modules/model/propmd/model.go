@@ -11,7 +11,7 @@ const (
 )
 
 type EtcdNode struct {
-	Id        int64     `xorm:"pk autoincr"`
+	Id        int64     `json:"id" xorm:"pk autoincr"`
 	NodeId    string    `json:"nodeId"`
 	Endpoints string    `json:"endpoints"`
 	Username  string    `json:"username"`
@@ -25,7 +25,7 @@ func (*EtcdNode) TableName() string {
 }
 
 type EtcdAuth struct {
-	Id       int64     `xorm:"pk autoincr"`
+	Id       int64     `json:"id" xorm:"pk autoincr"`
 	AppId    string    `json:"appId"`
 	Username string    `json:"username"`
 	Password string    `json:"password"`
@@ -37,7 +37,7 @@ func (*EtcdAuth) TableName() string {
 }
 
 type PropContent struct {
-	Id      int64     `xorm:"pk autoincr"`
+	Id      int64     `json:"id" xorm:"pk autoincr"`
 	AppId   string    `json:"appId"`
 	Name    string    `json:"name"`
 	Created time.Time `json:"created" xorm:"created"`
@@ -48,7 +48,7 @@ func (*PropContent) TableName() string {
 }
 
 type PropHistory struct {
-	Id        int64     `xorm:"pk autoincr"`
+	Id        int64     `json:"id" xorm:"pk autoincr"`
 	ContentId int64     `json:"contentId"`
 	Content   string    `json:"content"`
 	Version   string    `json:"version"`
@@ -61,7 +61,7 @@ func (*PropHistory) TableName() string {
 }
 
 type PropDeploy struct {
-	Id           int64     `xorm:"pk autoincr"`
+	Id           int64     `json:"id" xorm:"pk autoincr"`
 	ContentId    int64     `json:"contentId"`
 	Content      string    `json:"content"`
 	Version      string    `json:"version"`

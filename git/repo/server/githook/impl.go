@@ -3,11 +3,10 @@ package githook
 import (
 	"context"
 	"github.com/IGLOU-EU/go-wildcard/v2"
-	"github.com/LeeZXin/zall/git/modules/model/actiontaskmd"
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
+	"github.com/LeeZXin/zall/git/modules/model/gitactionmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
-	"github.com/LeeZXin/zall/git/modules/service/actionsrv"
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
@@ -18,10 +17,10 @@ import (
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"gopkg.in/yaml.v3"
 	"path/filepath"
 	"strings"
 	"time"
@@ -126,13 +125,15 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 	}
 	// 查找webhook
 	var (
-		pushHookList []webhookmd.WebhookDTO
-		tagHookList  []webhookmd.WebhookDTO
+		pushHookList []webhookmd.Webhook
+		tagHookList  []webhookmd.Webhook
+		actions      []gitactionmd.Action
 		err          error
 	)
 	for _, revInfo := range opts.RevInfoList {
 		// 分支push
 		if strings.HasPrefix(revInfo.RefName, git.BranchPrefix) {
+			branch := strings.TrimPrefix(revInfo.RefName, git.BranchPrefix)
 			if pushHookList == nil {
 				pushHookList, err = webhookmd.ListWebhook(ctx, repo.Id, webhookmd.PushHook)
 				if err != nil {
@@ -140,9 +141,24 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 					return
 				}
 			}
+			hookList, _ := listutil.Filter(pushHookList, func(t webhookmd.Webhook) (bool, error) {
+				return wildcard.Match(t.WildBranch, branch), nil
+			})
 			// 触发hook
-			triggerHook(pushHookList, repo, revInfo, operator, false)
+			triggerWebhook(hookList, repo, revInfo, operator, false)
+			if actions == nil {
+				actions, err = gitactionmd.ListAction(ctx, repo.Id)
+				if err != nil {
+					logger.Logger.WithContext(ctx).Error(err)
+					return
+				}
+			}
+			actionList, _ := listutil.Filter(actions, func(t gitactionmd.Action) (bool, error) {
+				return wildcard.Match(t.WildBranch, branch), nil
+			})
+			triggerActions(actionList, branch, repo.Name)
 		} else if strings.HasPrefix(revInfo.RefName, git.TagPrefix) {
+			tag := strings.TrimPrefix(revInfo.RefName, git.TagPrefix)
 			// tag commit
 			if tagHookList == nil {
 				tagHookList, err = webhookmd.ListWebhook(ctx, repo.Id, webhookmd.TagHook)
@@ -151,50 +167,19 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 					return
 				}
 			}
+			hookList, _ := listutil.Filter(tagHookList, func(t webhookmd.Webhook) (bool, error) {
+				return wildcard.Match(t.WildTag, tag), nil
+			})
 			// 触发webhook
-			triggerHook(tagHookList, repo, revInfo, operator, true)
-		}
-	}
-	// 处理action
-	actions, err := repomd.ListAction(ctx, repo.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return
-	}
-	if len(actions) == 0 {
-		return
-	}
-	graphs := make(map[*action.Graph]repomd.Action, len(actions))
-	for _, item := range actions {
-		var cfg action.GraphCfg
-		err = yaml.Unmarshal([]byte(item.Content), &cfg)
-		if err == nil {
-			if graph, err := cfg.ConvertToGraph(); err == nil {
-				graphs[graph] = item
-			}
-		}
-	}
-	if len(graphs) == 0 {
-		return
-	}
-	// 解析并触发action
-	for graph, actionCfg := range graphs {
-		refs, b := graph.GetSupportedRefs(action.PushAction)
-		if !b {
-			continue
-		}
-		for _, revInfo := range opts.RevInfoList {
-			// 不要删除分支
-			if revInfo.NewCommitId != git.ZeroCommitId &&
-				util.WildcardMatchBranches(refs.Branches, util.BaseRefName(revInfo.RefName)) {
-				// 触发actions
-				triggerActions(repo, revInfo, operator, actionCfg.AssignInstance, actionCfg.Content)
-			}
+			triggerWebhook(hookList, repo, revInfo, operator, true)
 		}
 	}
 }
 
-func triggerHook(hookList []webhookmd.WebhookDTO, repo repomd.RepoInfo, revInfo githook.RevInfo, operator usermd.UserInfo, isTag bool) {
+func triggerWebhook(hookList []webhookmd.Webhook, repo repomd.RepoInfo, revInfo githook.RevInfo, operator usermd.UserInfo, isTag bool) {
+	if len(hookList) == 0 {
+		return
+	}
 	req := webhook.GitReceiveHook{
 		RepoId:    repo.Id,
 		RepoName:  repo.Name,
@@ -209,33 +194,35 @@ func triggerHook(hookList []webhookmd.WebhookDTO, repo repomd.RepoInfo, revInfo 
 		IsTagPush: isTag,
 	}
 	for _, hook := range hookList {
-		webhook.TriggerGitHook(hook.HookUrl, hook.HttpHeaders, req)
+		webhook.TriggerGitHook(hook.HookUrl, hook.GetHttpHeaders(), req)
 	}
 }
 
-func triggerActions(repo repomd.RepoInfo, revInfo githook.RevInfo, operator usermd.UserInfo, instanceId, yamlContent string) {
-	req := action.Webhook{
-		Action:    action.PushAction,
-		RepoId:    repo.Id,
-		RepoName:  repo.Name,
-		Ref:       revInfo.RefName,
-		EventTime: time.Now().UnixMilli(),
-		Operator: git.User{
-			Account: operator.Account,
-			Email:   operator.Email,
-		},
-		TriggerType: actiontaskmd.SysTriggerType.Int(),
-		YamlContent: yamlContent,
+func triggerActions(actions []gitactionmd.Action, branch string, repoName string) {
+	if len(actions) == 0 {
+		return
 	}
-	// 负载均衡选择一个节点
-	instance, b, err := actionsrv.SelectAndIncrJobCountInstances(context.Background(), instanceId)
+	nodeIdList, _ := listutil.Map(actions, func(t gitactionmd.Action) (int64, error) {
+		return t.NodeId, nil
+	})
+	nodeIdSet := hashset.NewHashSet(nodeIdList...)
+	nodeIdList = nodeIdSet.AllKeys()
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	nodes, err := gitactionmd.BatchGetNode(ctx, nodeIdList)
 	if err != nil {
 		logger.Logger.Error(err)
 		return
 	}
-	// 没有可用节点
-	if !b {
-		return
+	hostMap, _ := listutil.CollectToMap(nodes, func(t gitactionmd.Node) (int64, error) {
+		return t.Id, nil
+	}, func(t gitactionmd.Node) (string, error) {
+		return t.HttpHost, nil
+	})
+	for _, a := range actions {
+		action.SysTriggerAction(a.Content, hostMap[a.NodeId], map[string]string{
+			"GIT_BRANCH": branch,
+			"REPO_NAME":  repoName,
+		}, a.Id)
 	}
-	action.TriggerActionHook(req, instance.InstanceHost)
 }

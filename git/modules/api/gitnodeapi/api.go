@@ -1,7 +1,7 @@
 package gitnodeapi
 
 import (
-	"github.com/LeeZXin/zall/meta/modules/service/gitnodesrv"
+	"github.com/LeeZXin/zall/git/modules/service/gitnodesrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
@@ -27,10 +27,10 @@ func insertNode(c *gin.Context) {
 	var req InsertNodeReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := gitnodesrv.Outer.InsertNode(c, gitnodesrv.InsertNodeReqDTO{
-			NodeId:    req.NodeId,
-			HttpHosts: req.HttpHosts,
-			SshHosts:  req.SshHosts,
-			Operator:  apisession.MustGetLoginUser(c),
+			Name:     req.Name,
+			HttpHost: req.HttpHost,
+			SshHost:  req.SshHost,
+			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -44,10 +44,11 @@ func updateNode(c *gin.Context) {
 	var req UpdateNodeReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := gitnodesrv.Outer.UpdateNode(c, gitnodesrv.UpdateNodeReqDTO{
-			NodeId:    req.NodeId,
-			HttpHosts: req.HttpHosts,
-			SshHosts:  req.SshHosts,
-			Operator:  apisession.MustGetLoginUser(c),
+			Id:       req.Id,
+			Name:     req.Name,
+			HttpHost: req.HttpHost,
+			SshHost:  req.SshHost,
+			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -61,7 +62,7 @@ func deleteNode(c *gin.Context) {
 	var req DeleteNodeReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := gitnodesrv.Outer.DeleteNode(c, gitnodesrv.DeleteNodeReqDTO{
-			NodeId:   req.NodeId,
+			Id:       req.Id,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -83,11 +84,12 @@ func listNode(c *gin.Context) {
 	ret := ListGitNodeRespVO{
 		BaseResp: ginutil.DefaultSuccessResp,
 	}
-	ret.Data, _ = listutil.Map(nodes, func(t gitnodesrv.GitNodeDTO) (GitNodeVO, error) {
-		return GitNodeVO{
-			NodeId:    t.NodeId,
-			HttpHosts: t.HttpHosts,
-			SshHosts:  t.SshHosts,
+	ret.Data, _ = listutil.Map(nodes, func(t gitnodesrv.NodeDTO) (NodeVO, error) {
+		return NodeVO{
+			Id:       t.Id,
+			Name:     t.Name,
+			HttpHost: t.HttpHost,
+			SshHost:  t.SshHost,
 		}, nil
 	})
 	c.JSON(http.StatusOK, ret)

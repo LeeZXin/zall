@@ -16,7 +16,7 @@ import (
 
 type outerImpl struct{}
 
-func (*outerImpl) InsertWebHook(ctx context.Context, reqDTO InsertWebhookReqDTO) (err error) {
+func (*outerImpl) InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) (err error) {
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
@@ -38,6 +38,38 @@ func (*outerImpl) InsertWebHook(ctx context.Context, reqDTO InsertWebhookReqDTO)
 		HookUrl:     reqDTO.HookUrl,
 		HttpHeaders: reqDTO.HttpHeaders,
 		HookType:    reqDTO.HookType,
+		WildBranch:  reqDTO.WildBranch,
+		WildTag:     reqDTO.WildTag,
+	}); err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+	}
+	return
+}
+
+func (*outerImpl) UpdateWebhook(ctx context.Context, reqDTO UpdateWebhookReqDTO) (err error) {
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.WebhookSrvKeysVO.UpdateWebhook),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	if err = checkPermByHookId(ctx, reqDTO.Id, reqDTO.Operator); err != nil {
+		return
+	}
+	if _, err = webhookmd.UpdateWebhook(ctx, webhookmd.UpdateWebhookReqDTO{
+		Id:          reqDTO.Id,
+		HookUrl:     reqDTO.HookUrl,
+		HttpHeaders: reqDTO.HttpHeaders,
+		WildBranch:  reqDTO.WildBranch,
+		WildTag:     reqDTO.WildTag,
 	}); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -94,13 +126,15 @@ func (*outerImpl) ListWebhook(ctx context.Context, reqDTO ListWebhookReqDTO) ([]
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(webhookList, func(t webhookmd.WebhookDTO) (WebhookDTO, error) {
+	return listutil.Map(webhookList, func(t webhookmd.Webhook) (WebhookDTO, error) {
 		return WebhookDTO{
 			Id:          t.Id,
 			RepoId:      t.RepoId,
 			HookUrl:     t.HookUrl,
-			HttpHeaders: t.HttpHeaders,
+			HttpHeaders: t.GetHttpHeaders(),
 			HookType:    t.HookType,
+			WildBranch:  t.WildBranch,
+			WildTag:     t.WildTag,
 		}, nil
 	})
 }
@@ -115,4 +149,16 @@ func checkPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) 
 		return util.UnauthorizedError()
 	}
 	return nil
+}
+
+func checkPermByHookId(ctx context.Context, hookId int64, operator apisession.UserInfo) error {
+	hook, b, err := webhookmd.GetById(ctx, hookId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	return checkPerm(ctx, hook.RepoId, operator)
 }

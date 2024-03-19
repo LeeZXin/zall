@@ -49,6 +49,8 @@ type Webhook struct {
 	HookUrl     string    `json:"hookUrl"`
 	HttpHeaders string    `json:"httpHeaders"`
 	HookType    HookType  `json:"hookType"`
+	WildBranch  string    `json:"wildBranch"`
+	WildTag     string    `json:"wildTag"`
 	Created     time.Time `json:"created" xorm:"created"`
 	Updated     time.Time `json:"updated" xorm:"updated"`
 }
@@ -57,19 +59,8 @@ func (*Webhook) TableName() string {
 	return WebhookTableName
 }
 
-func (h *Webhook) ToWebhookDTO() WebhookDTO {
-	dto := WebhookDTO{
-		Id:       h.Id,
-		RepoId:   h.RepoId,
-		HookUrl:  h.HookUrl,
-		HookType: h.HookType,
-	}
-	if h.HttpHeaders != "" {
-		header := make(map[string]string)
-		_ = json.Unmarshal([]byte(h.HttpHeaders), &header)
-		dto.HttpHeaders = header
-	} else {
-		dto.HttpHeaders = make(map[string]string)
-	}
-	return dto
+func (h *Webhook) GetHttpHeaders() map[string]string {
+	headers := make(map[string]string)
+	_ = json.Unmarshal([]byte(h.HttpHeaders), &headers)
+	return headers
 }

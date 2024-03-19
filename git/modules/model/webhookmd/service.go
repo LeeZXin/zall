@@ -3,15 +3,16 @@ package webhookmd
 import (
 	"context"
 	"encoding/json"
-	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
 func InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) error {
 	hook := Webhook{
-		RepoId:   reqDTO.RepoId,
-		HookUrl:  reqDTO.HookUrl,
-		HookType: reqDTO.HookType,
+		RepoId:     reqDTO.RepoId,
+		HookUrl:    reqDTO.HookUrl,
+		HookType:   reqDTO.HookType,
+		WildBranch: reqDTO.WildBranch,
+		WildTag:    reqDTO.WildTag,
 	}
 	if reqDTO.HttpHeaders != nil {
 		m, err := json.Marshal(reqDTO.HttpHeaders)
@@ -25,7 +26,9 @@ func InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) error {
 
 func UpdateWebhook(ctx context.Context, reqDTO UpdateWebhookReqDTO) (bool, error) {
 	hook := &Webhook{
-		HookUrl: reqDTO.HookUrl,
+		HookUrl:    reqDTO.HookUrl,
+		WildTag:    reqDTO.WildTag,
+		WildBranch: reqDTO.WildBranch,
 	}
 	if reqDTO.HttpHeaders != nil {
 		m, err := json.Marshal(reqDTO.HttpHeaders)
@@ -35,7 +38,7 @@ func UpdateWebhook(ctx context.Context, reqDTO UpdateWebhookReqDTO) (bool, error
 	}
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("hook_url", "http_headers").
+		Cols("hook_url", "http_headers", "wild_branch", "wild_tag").
 		Limit(1).
 		Update(hook)
 	return rows == 1, err
@@ -49,24 +52,22 @@ func DeleteById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
-func ListWebhook(ctx context.Context, repoId int64, hookType HookType) ([]WebhookDTO, error) {
+func ListWebhook(ctx context.Context, repoId int64, hookType HookType) ([]Webhook, error) {
 	ret := make([]Webhook, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("repo_id = ?", repoId).
-		And("hook_type = ?", hookType.Int()).
+		And("hook_type = ?", hookType).
 		Find(&ret)
 	if err != nil {
 		return nil, err
 	}
-	return listutil.Map(ret, func(t Webhook) (WebhookDTO, error) {
-		return t.ToWebhookDTO(), nil
-	})
+	return ret, nil
 }
 
-func GetById(ctx context.Context, id int64) (WebhookDTO, bool, error) {
+func GetById(ctx context.Context, id int64) (Webhook, bool, error) {
 	var ret Webhook
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		Get(&ret)
-	return ret.ToWebhookDTO(), b, err
+	return ret, b, err
 }

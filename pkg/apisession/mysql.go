@@ -15,7 +15,7 @@ const (
 )
 
 type SessionModel struct {
-	Id        int64     `xorm:"pk autoincr"`
+	Id        int64     `json:"id" xorm:"pk autoincr"`
 	SessionId string    `json:"sessionId"`
 	Account   string    `json:"account"`
 	UserInfo  string    `json:"userInfo"`

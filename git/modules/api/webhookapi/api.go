@@ -17,6 +17,7 @@ func InitApi() {
 		{
 			group.GET("/list", listWebhook)
 			group.POST("/insert", insertWebhook)
+			group.POST("/update", updateWebhook)
 			group.POST("/delete", deleteWebhook)
 		}
 	})
@@ -25,11 +26,33 @@ func InitApi() {
 func insertWebhook(c *gin.Context) {
 	var req InsertWebhookReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := webhooksrv.Outer.InsertWebHook(c, webhooksrv.InsertWebhookReqDTO{
+		err := webhooksrv.Outer.InsertWebhook(c, webhooksrv.InsertWebhookReqDTO{
 			RepoId:      req.RepoId,
 			HookUrl:     req.HookUrl,
 			HttpHeaders: req.Headers,
 			HookType:    req.HookType,
+			WildBranch:  req.WildBranch,
+			WildTag:     req.WildTag,
+			Operator:    apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func updateWebhook(c *gin.Context) {
+	var req UpdateWebhookReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := webhooksrv.Outer.UpdateWebhook(c, webhooksrv.UpdateWebhookReqDTO{
+			Id:          req.Id,
+			HookUrl:     req.HookUrl,
+			HttpHeaders: req.HttpHeaders,
+			HookType:    req.HookType,
+			WildBranch:  req.WildBranch,
+			WildTag:     req.WildTag,
 			Operator:    apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -77,6 +100,8 @@ func listWebhook(c *gin.Context) {
 				HookUrl:     t.HookUrl,
 				HttpHeaders: t.HttpHeaders,
 				HookType:    t.HookType.Readable(),
+				WildBranch:  t.WildBranch,
+				WildTag:     t.WildTag,
 			}, nil
 		})
 		c.JSON(http.StatusOK, respVO)

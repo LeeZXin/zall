@@ -12,7 +12,7 @@ type InsertRepoReqDTO struct {
 	GitSize       int64
 	LfsSize       int64
 	Cfg           RepoCfg
-	NodeId        string
+	NodeId        int64
 }
 
 type RepoInfo struct {
@@ -25,7 +25,7 @@ type RepoInfo struct {
 	LfsSize int64   `json:"lfsSize"`
 	CfgStr  string  `json:"-"`
 	Cfg     RepoCfg `json:"cfg"`
-	NodeId  string  `json:"nodeId"`
+	NodeId  int64   `json:"nodeId"`
 }
 
 type RepoStatus int
@@ -65,13 +65,17 @@ type GetAccessTokenReqDTO struct {
 }
 
 type InsertActionReqDTO struct {
-	RepoId         int64
-	Content        string
-	AssignInstance string
+	RepoId     int64
+	Name       string
+	Content    string
+	NodeId     int64
+	PushBranch string
 }
 
 type UpdateActionReqDTO struct {
-	Id             int64
-	Content        string
-	AssignInstance string
+	Id         int64
+	Name       string
+	Content    string
+	NodeId     int64
+	PushBranch string
 }

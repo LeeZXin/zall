@@ -2,21 +2,17 @@ package reposrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/git/modules/model/actiontaskmd"
+	"github.com/LeeZXin/zall/git/modules/model/gitnodemd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
-	"github.com/LeeZXin/zall/git/modules/service/actionsrv"
 	"github.com/LeeZXin/zall/git/modules/service/gpgkeysrv"
 	"github.com/LeeZXin/zall/git/modules/service/sshkeysrv"
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
-	"github.com/LeeZXin/zall/meta/modules/model/gitnodemd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
-	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/git/signature"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/perm"
@@ -29,8 +25,6 @@ import (
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/patrickmn/go-cache"
-	"gopkg.in/yaml.v3"
-	"hash/crc32"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -290,19 +284,16 @@ func (s *outerImpl) InitRepo(ctx context.Context, reqDTO InitRepoReqDTO) (err er
 		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.RepoAlreadyExists)
 		return
 	}
-	// 选择git节点
-	nodes, err := gitnodemd.GetAll(ctx)
+	_, b, err = gitnodemd.GetById(ctx, reqDTO.NodeId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 		return
 	}
-	if len(nodes) == 0 {
-		logger.Logger.WithContext(ctx).Error("empty git nodes")
-		err = util.NewBizErr(apicode.EmptyGitNodesErrCode, i18n.EmptyGitNodesError)
+	if !b {
+		err = util.InvalidArgsError()
 		return
 	}
-	nodeIndex := int(crc32.ChecksumIEEE([]byte(reqDTO.Name))) % len(nodes)
 	// 添加数据
 	insertReq := repomd.InsertRepoReqDTO{
 		Name:          reqDTO.Name,
@@ -311,7 +302,7 @@ func (s *outerImpl) InitRepo(ctx context.Context, reqDTO InitRepoReqDTO) (err er
 		TeamId:        reqDTO.TeamId,
 		RepoDesc:      reqDTO.Desc,
 		DefaultBranch: reqDTO.DefaultBranch,
-		NodeId:        nodes[nodeIndex].NodeId,
+		NodeId:        reqDTO.NodeId,
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 插入数据库
@@ -328,7 +319,7 @@ func (s *outerImpl) InitRepo(ctx context.Context, reqDTO InitRepoReqDTO) (err er
 			CreateReadme:  reqDTO.CreateReadme,
 			GitIgnoreName: reqDTO.GitIgnoreName,
 			DefaultBranch: reqDTO.DefaultBranch,
-		}, nodes[nodeIndex].NodeId)
+		}, reqDTO.NodeId)
 		if err != nil {
 			return err
 		}
@@ -391,9 +382,16 @@ func (s *outerImpl) DeleteRepo(ctx context.Context, reqDTO DeleteRepoReqDTO) (er
 			}
 		}
 	}
-	err = client.DeleteRepo(ctx, reqvo.DeleteRepoReq{
-		RepoPath: repo.Path,
-	}, repo.NodeId)
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		err := client.DeleteRepo(ctx, reqvo.DeleteRepoReq{
+			RepoPath: repo.Path,
+		}, repo.NodeId)
+		if err != nil {
+			return err
+		}
+		_, err = repomd.DeleteRepo(ctx, reqDTO.Id)
+		return err
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -864,173 +862,6 @@ func getPerm(ctx context.Context, Id int64, operator apisession.UserInfo) (repom
 	return repo, p.PermDetail, nil
 }
 
-func (*outerImpl) InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.InsertAction),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	// 校验权限
-	_, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
-	if err != nil {
-		return
-	}
-	// 是否可编辑action
-	if !p.GetRepoPerm(reqDTO.Id).CanUpdateAction {
-		err = util.UnauthorizedError()
-		return
-	}
-	var graph action.GraphCfg
-	err = yaml.Unmarshal([]byte(reqDTO.ActionContent), &graph)
-	if err != nil || graph.IsValid() != nil {
-		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.InvalidActionContent)
-		return
-	}
-	yamlOut, _ := yaml.Marshal(graph)
-	err = repomd.InsertAction(ctx, repomd.InsertActionReqDTO{
-		RepoId:         reqDTO.Id,
-		AssignInstance: reqDTO.AssignInstance,
-		Content:        string(yamlOut),
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
-func (*outerImpl) DeleteAction(ctx context.Context, reqDTO DeleteActionReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.DeleteAction),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	repoAction, b, err := repomd.GetByActionId(ctx, reqDTO.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	// 校验权限
-	_, p, err := getPerm(ctx, repoAction.Id, reqDTO.Operator)
-	if err != nil {
-		return
-	}
-	// 是否可编辑action
-	if !p.GetRepoPerm(repoAction.Id).CanUpdateAction {
-		err = util.UnauthorizedError()
-		return
-	}
-	_, err = repomd.DeleteAction(ctx, reqDTO.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
-func (*outerImpl) ListAction(ctx context.Context, reqDTO ListActionReqDTO) ([]repomd.Action, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	// 校验权限
-	_, p, err := getPerm(ctx, reqDTO.Id, reqDTO.Operator)
-	if err != nil {
-		return nil, err
-	}
-	// 是否可访问action
-	if !p.GetRepoPerm(reqDTO.Id).CanAccessAction {
-		return nil, util.UnauthorizedError()
-	}
-	ret, err := repomd.ListAction(ctx, reqDTO.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	return ret, nil
-}
-
-func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.UpdateAction),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	repoAction, b, err := repomd.GetByActionId(ctx, reqDTO.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	// 校验权限
-	_, p, err := getPerm(ctx, repoAction.Id, reqDTO.Operator)
-	if err != nil {
-		return
-	}
-	// 是否可编辑action
-	if !p.GetRepoPerm(repoAction.Id).CanUpdateAction {
-		err = util.UnauthorizedError()
-		return
-	}
-	var graph action.GraphCfg
-	err = yaml.Unmarshal([]byte(reqDTO.ActionContent), &graph)
-	if err != nil || graph.IsValid() != nil {
-		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.InvalidActionContent)
-		return
-	}
-	yamlOut, _ := yaml.Marshal(graph)
-	_, err = repomd.UpdateAction(ctx, repomd.UpdateActionReqDTO{
-		Id:             reqDTO.Id,
-		Content:        string(yamlOut),
-		AssignInstance: reqDTO.AssignInstance,
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
 func (s *outerImpl) RefreshAllGitHooks(ctx context.Context, reqDTO RefreshAllGitHooksReqDTO) (err error) {
 	// 插入日志
 	defer func() {
@@ -1061,55 +892,6 @@ func (s *outerImpl) RefreshAllGitHooks(ctx context.Context, reqDTO RefreshAllGit
 		}
 	}()
 	return
-}
-
-func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO) error {
-	if err := reqDTO.IsValid(); err != nil {
-		return err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	repoAction, b, err := repomd.GetByActionId(ctx, reqDTO.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	// 校验权限
-	repo, p, err := getPerm(ctx, repoAction.Id, reqDTO.Operator)
-	if err != nil {
-		return err
-	}
-	// 是否可编辑action
-	if !p.GetRepoPerm(repoAction.Id).CanTriggerAction {
-		return util.UnauthorizedError()
-	}
-	req := action.Webhook{
-		RepoId:    repo.Id,
-		RepoName:  repo.Name,
-		Ref:       reqDTO.Ref,
-		EventTime: time.Now().UnixMilli(),
-		Operator: git.User{
-			Account: reqDTO.Operator.Account,
-			Email:   reqDTO.Operator.Email,
-		},
-		TriggerType: actiontaskmd.ManualTriggerType.Int(),
-		YamlContent: repoAction.Content,
-	}
-	// 负载均衡选择一个节点
-	instance, b, err := actionsrv.SelectAndIncrJobCountInstances(context.Background(), repoAction.AssignInstance)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	// 没有可用节点
-	if !b {
-		return util.NewBizErr(apicode.ActionInstanceNotFoundCode, i18n.ActionInstanceNotFound)
-	}
-	action.TriggerActionHook(req, instance.InstanceHost)
-	return nil
 }
 
 func (*outerImpl) TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (err error) {

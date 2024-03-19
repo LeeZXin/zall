@@ -137,50 +137,6 @@ func ListAccessToken(ctx context.Context, repoId int64) ([]AccessToken, error) {
 	return ret, err
 }
 
-func InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) error {
-	ret := Action{
-		RepoId:         reqDTO.RepoId,
-		Content:        reqDTO.Content,
-		AssignInstance: reqDTO.AssignInstance,
-	}
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
-	return err
-}
-
-func UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", reqDTO.Id).
-		Cols("content", "assign_instance").
-		Update(&Action{
-			Content:        reqDTO.Content,
-			AssignInstance: reqDTO.AssignInstance,
-		})
-	return rows == 1, err
-}
-
-func DeleteAction(ctx context.Context, actionId int64) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", actionId).
-		Delete(new(Action))
-	return rows == 1, err
-}
-
-func ListAction(ctx context.Context, repoId int64) ([]Action, error) {
-	ret := make([]Action, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		Where("repo_id = ?", repoId).
-		Find(&ret)
-	return ret, err
-}
-
-func GetByActionId(ctx context.Context, actionId int64) (Action, bool, error) {
-	var ret Action
-	b, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", actionId).
-		Get(&ret)
-	return ret, b, err
-}
-
 func IterateRepo(ctx context.Context, fn func(*Repo) error) error {
 	if fn == nil {
 		return errors.New("nil iterate fn")

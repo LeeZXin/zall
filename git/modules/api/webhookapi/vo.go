@@ -6,10 +6,12 @@ import (
 )
 
 type InsertWebhookReqVO struct {
-	RepoId   int64              `json:"repoId"`
-	HookUrl  string             `json:"hookUrl"`
-	Headers  map[string]string  `json:"headers"`
-	HookType webhookmd.HookType `json:"hookType"`
+	RepoId     int64              `json:"repoId"`
+	HookUrl    string             `json:"hookUrl"`
+	Headers    map[string]string  `json:"headers"`
+	HookType   webhookmd.HookType `json:"hookType"`
+	WildBranch string             `json:"wildBranch"`
+	WildTag    string             `json:"wildTag"`
 }
 
 type DeleteWebhookReqVO struct {
@@ -27,9 +29,20 @@ type WebhookVO struct {
 	HookUrl     string            `json:"hookUrl"`
 	HttpHeaders map[string]string `json:"httpHeaders"`
 	HookType    string            `json:"hookType"`
+	WildBranch  string            `json:"wildBranch"`
+	WildTag     string            `json:"wildTag"`
 }
 
 type ListWebhookRespVO struct {
 	ginutil.BaseResp
 	Data []WebhookVO
+}
+
+type UpdateWebhookReqVO struct {
+	Id          int64              `json:"id"`
+	HookUrl     string             `json:"hookUrl"`
+	HttpHeaders map[string]string  `json:"httpHeaders"`
+	HookType    webhookmd.HookType `json:"hookType"`
+	WildBranch  string             `json:"wildBranch"`
+	WildTag     string             `json:"wildTag"`
 }

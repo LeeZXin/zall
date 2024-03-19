@@ -54,16 +54,6 @@ func InitApi() {
 			group.POST("/deleteAccessToken", deleteAccessToken)
 			// 创建访问令牌
 			group.POST("/insertAccessToken", insertAccessToken)
-			// 创建action
-			group.POST("/insertAction", insertAction)
-			// 编辑action
-			group.POST("/updateAction", updateAction)
-			// 删除action
-			group.POST("/deleteAction", deleteAction)
-			// 展示action列表
-			group.POST("/listAction", listAction)
-			// 手动触发action
-			group.POST("/triggerAction", triggerAction)
 			// 刷新hook
 			group.Any("/refreshAllGitHooks", refreshAllGitHooks)
 			// 迁移项目组
@@ -226,6 +216,7 @@ func initRepo(c *gin.Context) {
 			GitIgnoreName: req.GitIgnoreName,
 			DefaultBranch: req.DefaultBranch,
 			TeamId:        req.TeamId,
+			NodeId:        req.NodeId,
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -485,96 +476,6 @@ func deleteAccessToken(c *gin.Context) {
 	if util.ShouldBindJSON(&req, c) {
 		err := reposrv.Outer.DeleteAccessToken(c, reposrv.DeleteAccessTokenReqDTO{
 			Id:       req.Id,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func insertAction(c *gin.Context) {
-	var req InsertActionReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.InsertAction(c, reposrv.InsertActionReqDTO{
-			Id:             req.Id,
-			ActionContent:  req.ActionContent,
-			AssignInstance: req.AssignInstance,
-			Operator:       apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func listAction(c *gin.Context) {
-	var req ListActionReqVO
-	if util.ShouldBindJSON(&req, c) {
-		actions, err := reposrv.Outer.ListAction(c, reposrv.ListActionReqDTO{
-			Id:       req.Id,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		resp := ListActionRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-		}
-		resp.Data, _ = listutil.Map(actions, func(t repomd.Action) (ActionVO, error) {
-			return ActionVO{
-				Id:            t.Id,
-				ActionContent: t.Content,
-				Created:       t.Created.Format(timeutil.DefaultTimeFormat),
-			}, nil
-		})
-		c.JSON(http.StatusOK, resp)
-	}
-}
-
-func deleteAction(c *gin.Context) {
-	var req DeleteActionReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.DeleteAction(c, reposrv.DeleteActionReqDTO{
-			Id:       req.Id,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func updateAction(c *gin.Context) {
-	var req UpdateActionReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.UpdateAction(c, reposrv.UpdateActionReqDTO{
-			Id:             req.Id,
-			ActionContent:  req.ActionContent,
-			AssignInstance: req.AssignInstance,
-			Operator:       apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func triggerAction(c *gin.Context) {
-	var req TriggerActionReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.TriggerAction(c, reposrv.TriggerActionReqDTO{
-			Id:       req.Id,
-			Ref:      req.Ref,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {

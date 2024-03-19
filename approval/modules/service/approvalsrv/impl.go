@@ -3,8 +3,9 @@ package approvalsrv
 import (
 	"context"
 	"fmt"
-	"github.com/LeeZXin/zall/approval/approval"
 	"github.com/LeeZXin/zall/approval/modules/model/approvalmd"
+	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
+	"github.com/LeeZXin/zall/pkg/approval"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
@@ -12,10 +13,29 @@ import (
 	"github.com/hashicorp/go-bexpr"
 )
 
-type innerImpl struct {
+func InitDefaultGroup() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	_, b, err := approvalmd.GetGroupById(ctx, 1)
+	if err != nil {
+		logger.Logger.Fatalf("get default approval group failed")
+	}
+	if !b {
+		err = approvalmd.InsertGroup(ctx, approvalmd.InsertGroupReqDTO{
+			Name: "default",
+		})
+		if err != nil {
+			logger.Logger.Fatalf("init default approval group failed")
+		}
+	}
 }
 
+type innerImpl struct{}
+
 func (*innerImpl) InsertFlow(ctx context.Context, reqDTO InsertFlowReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	process, b, err := approvalmd.GetProcessByPid(ctx, reqDTO.Pid)
@@ -40,7 +60,7 @@ func (*innerImpl) InsertFlow(ctx context.Context, reqDTO InsertFlowReqDTO) error
 	return nil
 }
 
-func (*innerImpl) InsertProcess(ctx context.Context, reqDTO InsertProcessReqDTO) error {
+func (*innerImpl) InsertAttachedProcess(ctx context.Context, reqDTO InsertAttachedProcessReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
@@ -56,11 +76,12 @@ func (*innerImpl) InsertProcess(ctx context.Context, reqDTO InsertProcessReqDTO)
 	return approvalmd.InsertProcess(ctx, approvalmd.InsertProcessReqDTO{
 		Pid:     reqDTO.Pid,
 		Name:    reqDTO.Name,
+		GroupId: 1,
 		Process: reqDTO.Process.Convert(),
 	})
 }
 
-func (*innerImpl) UpdateProcess(ctx context.Context, reqDTO UpdateProcessReqDTO) error {
+func (*innerImpl) UpdateAttachedProcess(ctx context.Context, reqDTO UpdateAttachedProcessReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
@@ -69,6 +90,7 @@ func (*innerImpl) UpdateProcess(ctx context.Context, reqDTO UpdateProcessReqDTO)
 	_, err := approvalmd.UpdateProcessByPid(ctx, approvalmd.UpdateProcessByPidReqDTO{
 		Pid:     reqDTO.Pid,
 		Name:    reqDTO.Name,
+		GroupId: 1,
 		Process: reqDTO.Process.Convert(),
 	})
 	return err
@@ -460,8 +482,167 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 			BizId:   flow.BizId,
 		}
 		go runNext(flowCtx, &flow, node, map[string]any{
-			"agree": "node",
+			"agree": "n",
 		})
+	}
+	return nil
+}
+
+// InsertCustomProcess 创建自定义审批流
+func (*outerImpl) InsertCustomProcess(ctx context.Context, reqDTO InsertCustomProcessReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.InsertCustomProcess),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	// 检查权限
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, b, err := approvalmd.GetGroupById(ctx, reqDTO.GroupId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
+	_, b, err = approvalmd.GetProcessByPid(ctx, reqDTO.Pid)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if b {
+		err = util.AlreadyExistsError()
+		return
+	}
+	err = approvalmd.InsertProcess(ctx, approvalmd.InsertProcessReqDTO{
+		Pid:     reqDTO.Pid,
+		Name:    reqDTO.Name,
+		GroupId: reqDTO.GroupId,
+		Process: reqDTO.Process.Convert(),
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// UpdateCustomProcess 编辑自定义审批流
+func (*outerImpl) UpdateCustomProcess(ctx context.Context, reqDTO UpdateCustomProcessReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.UpdateCustomProcess),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	// 检查权限
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, b, err := approvalmd.GetGroupById(ctx, reqDTO.GroupId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
+	_, err = approvalmd.UpdateProcessById(ctx, approvalmd.UpdateProcessByIdReqDTO{
+		Id:      reqDTO.Id,
+		Name:    reqDTO.Name,
+		GroupId: reqDTO.GroupId,
+		Process: reqDTO.Process.Convert(),
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// InsertCustomFlow 发起自定义审批流
+func (*outerImpl) InsertCustomFlow(ctx context.Context, reqDTO InsertCustomFlowReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	process, b, err := approvalmd.GetProcessByPid(ctx, reqDTO.Pid)
+	if err != nil {
+		return nil, err
+	}
+	// groupId = 1是系统审批流 不是自定义审批流
+	if !b || process.GroupId == 1 {
+		return nil, util.InvalidArgsError()
+	}
+	errKeys := process.Process.CheckKvCfgs(reqDTO.Kvs)
+	if len(errKeys) > 0 {
+		return errKeys, nil
+	}
+	flow, err := approvalmd.InsertFlow(ctx, approvalmd.InsertFlowReqDTO{
+		ProcessId:  process.Id,
+		Process:    process.Process,
+		CurrIndex:  1,
+		FlowStatus: approvalmd.PendingFlowStatus,
+		Creator:    reqDTO.Operator.Account,
+		BizId:      reqDTO.BizId,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	executeFlow(flow)
+	return nil, nil
+}
+
+// CancelCustomFlow 取消自定义审批流
+func (*outerImpl) CancelCustomFlow(ctx context.Context, reqDTO CancelCustomFlowReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	flow, b, err := approvalmd.GetFlowById(ctx, reqDTO.FlowId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b || flow.FlowStatus != approvalmd.PendingFlowStatus {
+		return util.InvalidArgsError()
+	}
+	if flow.Creator != reqDTO.Operator.Account {
+		return util.UnauthorizedError()
+	}
+	_, err = approvalmd.UpdateFlowStatusWithOldStatus(ctx, reqDTO.FlowId, approvalmd.CanceledFlowStatus, approvalmd.PendingFlowStatus)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
 	}
 	return nil
 }

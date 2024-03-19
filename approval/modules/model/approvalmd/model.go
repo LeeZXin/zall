@@ -2,7 +2,7 @@ package approvalmd
 
 import (
 	"encoding/json"
-	"github.com/LeeZXin/zall/approval/approval"
+	"github.com/LeeZXin/zall/pkg/approval"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
 )
@@ -69,11 +69,13 @@ const (
 	FlowTableName    = "zapproval_flow"
 	DetailTableName  = "zapproval_detail"
 	NotifyTableName  = "zapproval_notify"
+	GroupTableName   = "zapproval_group"
 )
 
 type Process struct {
-	Id      int64     `xorm:"pk autoincr"`
+	Id      int64     `json:"id" xorm:"pk autoincr"`
 	Pid     string    `json:"pid"`
+	GroupId int64     `json:"groupId"`
 	Name    string    `json:"name"`
 	Content string    `json:"content"`
 	Created time.Time `json:"created" xorm:"created"`
@@ -91,7 +93,7 @@ func (p *Process) GetUnmarshalProcess() (approval.Process, error) {
 }
 
 type Flow struct {
-	Id             int64      `xorm:"pk autoincr"`
+	Id             int64      `json:"id" xorm:"pk autoincr"`
 	ProcessId      int64      `json:"processId"`
 	ProcessContent string     `json:"processContent"`
 	CurrIndex      int        `json:"currIndex"`
@@ -99,6 +101,7 @@ type Flow struct {
 	ErrMsg         string     `json:"errMsg"`
 	Creator        string     `json:"creator"`
 	BizId          string     `json:"bizId"`
+	Kvs            string     `json:"kvs"`
 	Created        time.Time  `json:"created" xorm:"created"`
 	Updated        time.Time  `json:"updated" xorm:"updated"`
 }
@@ -109,12 +112,18 @@ func (f *Flow) GetProcess() (approval.Process, error) {
 	return ret, err
 }
 
+func (f *Flow) GetKvs() ([]approval.Kv, error) {
+	ret := make([]approval.Kv, 0)
+	err := json.Unmarshal([]byte(f.Kvs), &ret)
+	return ret, err
+}
+
 func (*Flow) TableName() string {
 	return FlowTableName
 }
 
 type Detail struct {
-	Id        int64     `xorm:"pk autoincr"`
+	Id        int64     `json:"id" xorm:"pk autoincr"`
 	FlowId    int64     `json:"flowId"`
 	Account   string    `json:"account"`
 	FlowIndex int       `json:"flowIndex"`
@@ -127,7 +136,7 @@ func (*Detail) TableName() string {
 }
 
 type Notify struct {
-	Id        int64     `xorm:"pk autoincr"`
+	Id        int64     `json:"id" xorm:"pk autoincr"`
 	FlowId    int64     `json:"flowId"`
 	Account   string    `json:"account"`
 	FlowIndex int       `json:"flowIndex"`
@@ -137,4 +146,15 @@ type Notify struct {
 
 func (*Notify) TableName() string {
 	return NotifyTableName
+}
+
+type Group struct {
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	Name    string    `json:"name"`
+	Created time.Time `json:"created" xorm:"created"`
+	Updated time.Time `json:"updated" xorm:"updated"`
+}
+
+func (*Group) TableName() string {
+	return GroupTableName
 }

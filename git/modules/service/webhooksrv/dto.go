@@ -12,6 +12,8 @@ type InsertWebhookReqDTO struct {
 	HookUrl     string              `json:"hookUrl"`
 	HttpHeaders map[string]string   `json:"httpHeaders"`
 	HookType    webhookmd.HookType  `json:"hookType"`
+	WildBranch  string              `json:"wildBranch"`
+	WildTag     string              `json:"wildTag"`
 	Operator    apisession.UserInfo `json:"operator"`
 }
 
@@ -25,6 +27,17 @@ func (r *InsertWebhookReqDTO) IsValid() error {
 	}
 	if !r.HookType.IsValid() {
 		return util.InvalidArgsError()
+	}
+	switch r.HookType {
+	case webhookmd.PushHook:
+		if len(r.WildBranch) == 0 || len(r.WildBranch) > 32 {
+			return util.InvalidArgsError()
+		}
+	case webhookmd.TagHook:
+		if len(r.WildTag) == 0 || len(r.WildTag) > 32 {
+			return util.InvalidArgsError()
+		}
+	case webhookmd.PullRequestHook:
 	}
 	return nil
 }
@@ -63,4 +76,44 @@ type WebhookDTO struct {
 	HookUrl     string
 	HttpHeaders map[string]string
 	HookType    webhookmd.HookType
+	WildBranch  string
+	WildTag     string
+}
+
+type UpdateWebhookReqDTO struct {
+	Id          int64               `json:"id"`
+	HookUrl     string              `json:"hookUrl"`
+	HttpHeaders map[string]string   `json:"httpHeaders"`
+	HookType    webhookmd.HookType  `json:"hookType"`
+	WildBranch  string              `json:"wildBranch"`
+	WildTag     string              `json:"wildTag"`
+	Operator    apisession.UserInfo `json:"operator"`
+}
+
+func (r *UpdateWebhookReqDTO) IsValid() error {
+	if r.Id <= 0 {
+		return util.InvalidArgsError()
+	}
+	_, err := url.Parse(r.HookUrl)
+	if err != nil {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !r.HookType.IsValid() {
+		return util.InvalidArgsError()
+	}
+	switch r.HookType {
+	case webhookmd.PushHook:
+		if len(r.WildBranch) == 0 || len(r.WildBranch) > 32 {
+			return util.InvalidArgsError()
+		}
+	case webhookmd.TagHook:
+		if len(r.WildTag) == 0 || len(r.WildTag) > 32 {
+			return util.InvalidArgsError()
+		}
+	case webhookmd.PullRequestHook:
+	}
+	return nil
 }

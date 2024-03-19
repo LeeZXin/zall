@@ -19,26 +19,16 @@ import (
 	"time"
 )
 
-const (
-	PushAction = "push"
-)
-
 var (
-	EmptyArgs         = errors.New("empty args")
-	UnsupportedAction = errors.New("unsupported action")
-	ThereHasBug       = errors.New("there has bug")
+	EmptyArgs   = errors.New("empty args")
+	ThereHasBug = errors.New("there has bug")
 	// 脚本存放路径
 	scriptDir = filepath.Join(common.ResourcesDir, "actions")
-	// 允许执行的操作
-	supportedAction = hashset.NewHashSet(
-		PushAction,
-	)
 )
 
 type GraphCfg struct {
-	Name string             `json:"name" yaml:"name"`
-	On   map[string]RefsCfg `json:"on" yaml:"on"`
-	Jobs map[string]JobCfg  `json:"jobs" yaml:"jobs"`
+	Name string            `json:"name" yaml:"name"`
+	Jobs map[string]JobCfg `json:"jobs" yaml:"jobs"`
 }
 
 func (c *GraphCfg) String() string {
@@ -46,17 +36,8 @@ func (c *GraphCfg) String() string {
 }
 
 func (c *GraphCfg) IsValid() error {
-	if c.Name == "" || len(c.Jobs) == 0 || len(c.On) == 0 {
+	if c.Name == "" || len(c.Jobs) == 0 {
 		return EmptyArgs
-	}
-	// 检查on
-	for k, cfg := range c.On {
-		if !supportedAction.Contains(k) {
-			return UnsupportedAction
-		}
-		if err := cfg.IsValid(); err != nil {
-			return err
-		}
 	}
 	allJobNames := hashset.NewHashSet[string]()
 	// 检查是否有重复的jobName
@@ -156,29 +137,10 @@ func (c *GraphCfg) ConvertToGraph() (*Graph, error) {
 		jobs = append(jobs, j.convertToJob(k))
 	}
 	graphJobs(jobs, c.Jobs)
-	// 转换on
-	on := make(map[string]Refs, len(c.On))
-	for k, r := range c.On {
-		on[k] = Refs{
-			Branches: r.Branches[:],
-		}
-	}
 	return &Graph{
 		Name:    c.Name,
 		allJobs: jobs,
-		on:      on,
 	}, nil
-}
-
-type RefsCfg struct {
-	Branches []string `json:"branches" yaml:"branches"`
-}
-
-func (c *RefsCfg) IsValid() error {
-	if len(c.Branches) == 0 {
-		return EmptyArgs
-	}
-	return nil
 }
 
 type StepCfg struct {
@@ -215,7 +177,7 @@ func (c *StepCfg) IsValid() error {
 type JobCfg struct {
 	Needs   []string  `json:"needs" yaml:"needs"`
 	Steps   []StepCfg `json:"steps" yaml:"steps"`
-	Timeout int64     `json:"timeout"`
+	Timeout int64     `json:"timeout" yaml:"timeout"`
 }
 
 func (c *JobCfg) String() string {
@@ -251,7 +213,7 @@ func (c *JobCfg) convertToJob(jobName string) *Job {
 type RunOpts struct {
 	tempDir string
 	// 执行前触发
-	// err != nil 就不会触发
+	// err == nil 就不会触发
 	BeforeStartFunc func(GraphRunStat) error
 	StepOutputFunc  func(StepOutputStat)
 	StepAfterFunc   func(error, StepRunStat)
@@ -279,17 +241,6 @@ type StepOutputStat struct {
 type Graph struct {
 	Name    string
 	allJobs []*Job
-	on      map[string]Refs
-}
-
-func (g *Graph) GetSupportedRefs(action string) (Refs, bool) {
-	refs, b := g.on[action]
-	if !b {
-		return Refs{}, false
-	}
-	return Refs{
-		Branches: refs.Branches[:],
-	}, true
 }
 
 func (g *Graph) ListJobInfo() []JobInfo {
@@ -369,10 +320,6 @@ func loadJob(all map[string]completable.Future[any], j *Job, opts RunOpts) compl
 		})
 	}
 	return all[j.name]
-}
-
-type Refs struct {
-	Branches []string
 }
 
 type Step struct {

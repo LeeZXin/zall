@@ -15,6 +15,7 @@ type InitRepoReqVO struct {
 	RepoType      int    `json:"repoType"`
 	CreateReadme  bool   `json:"createReadme"`
 	TeamId        int64  `json:"teamId"`
+	NodeId        int64  `json:"nodeId"`
 	GitIgnoreName string `json:"gitIgnoreName"`
 	DefaultBranch string `json:"defaultBranch"`
 }
@@ -251,42 +252,6 @@ type ListAccessTokenReqVO struct {
 type ListAccessTokenRespVO struct {
 	ginutil.BaseResp
 	Data []AccessTokenVO `json:"data"`
-}
-
-type InsertActionReqVO struct {
-	Id             int64  `json:"id"`
-	AssignInstance string `json:"assignInstance"`
-	ActionContent  string `json:"actionContent"`
-}
-
-type DeleteActionReqVO struct {
-	Id int64 `json:"id"`
-}
-
-type ListActionReqVO struct {
-	Id int64 `json:"id"`
-}
-
-type ListActionRespVO struct {
-	ginutil.BaseResp
-	Data []ActionVO `json:"data"`
-}
-
-type UpdateActionReqVO struct {
-	Id             int64  `json:"id"`
-	AssignInstance string `json:"assignInstance"`
-	ActionContent  string `json:"actionContent"`
-}
-
-type ActionVO struct {
-	Id            int64  `json:"id"`
-	ActionContent string `json:"actionContent"`
-	Created       string `json:"created"`
-}
-
-type TriggerActionReqVO struct {
-	Id  int64  `json:"id"`
-	Ref string `json:"ref"`
 }
 
 type TransferTeam struct {

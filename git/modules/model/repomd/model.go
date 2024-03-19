@@ -7,8 +7,7 @@ import (
 
 const (
 	RepoTableName        = "zgit_repo"
-	AccessTokenTableName = "zgit_repo_access_token"
-	ActionTableName      = "zgit_repo_actions"
+	AccessTokenTableName = "zgit_access_token"
 )
 
 type Repo struct {
@@ -23,7 +22,7 @@ type Repo struct {
 	GitSize       int64     `json:"gitSize"`
 	LfsSize       int64     `json:"lfsSize"`
 	Cfg           string    `json:"cfg"`
-	NodeId        string    `json:"nodeId"`
+	NodeId        int64     `json:"nodeId"`
 	Created       time.Time `json:"created" xorm:"created"`
 	Updated       time.Time `json:"updated" xorm:"updated"`
 }
@@ -77,17 +76,4 @@ type RepoCfg struct {
 func (c *RepoCfg) ToString() string {
 	m, _ := json.Marshal(c)
 	return string(m)
-}
-
-type Action struct {
-	Id             int64     `json:"id" xorm:"pk autoincr"`
-	RepoId         int64     `json:"repoId"`
-	Content        string    `json:"content"`
-	AssignInstance string    `json:"assignInstance"`
-	Created        time.Time `json:"created" xorm:"created"`
-	Updated        time.Time `json:"updated" xorm:"updated"`
-}
-
-func (*Action) TableName() string {
-	return ActionTableName
 }

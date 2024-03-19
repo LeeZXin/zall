@@ -7,7 +7,7 @@ const (
 )
 
 type App struct {
-	Id      int64     `xorm:"pk autoincr"`
+	Id      int64     `json:"id" xorm:"pk autoincr"`
 	AppId   string    `json:"appId"`
 	TeamId  int64     `json:"teamId"`
 	Name    string    `json:"name"`

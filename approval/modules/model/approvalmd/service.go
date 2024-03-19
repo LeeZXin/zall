@@ -24,18 +24,20 @@ func InsertProcess(ctx context.Context, reqDTO InsertProcessReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&Process{
 		Pid:     reqDTO.Pid,
 		Name:    reqDTO.Name,
+		GroupId: reqDTO.GroupId,
 		Content: string(jsonBytes),
 	})
 	return err
 }
 
-func UpdateProcess(ctx context.Context, reqDTO UpdateProcessReqDTO) (bool, error) {
+func UpdateProcessById(ctx context.Context, reqDTO UpdateProcessByIdReqDTO) (bool, error) {
 	jsonBytes, _ := json.Marshal(reqDTO.Process)
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("approval", "name").
+		Cols("approval", "name", "group_id").
 		Update(&Process{
 			Name:    reqDTO.Name,
+			GroupId: reqDTO.GroupId,
 			Content: string(jsonBytes),
 		})
 	return rows == 1, err
@@ -45,9 +47,10 @@ func UpdateProcessByPid(ctx context.Context, reqDTO UpdateProcessByPidReqDTO) (b
 	jsonBytes, _ := json.Marshal(reqDTO.Process)
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("pid = ?", reqDTO.Pid).
-		Cols("approval", "name").
+		Cols("approval", "name", "group_id").
 		Update(&Process{
 			Name:    reqDTO.Name,
+			GroupId: reqDTO.GroupId,
 			Content: string(jsonBytes),
 		})
 	return rows == 1, err
@@ -89,19 +92,22 @@ func processMd2Dto(p Process) ProcessDTO {
 		Id:      p.Id,
 		Pid:     p.Pid,
 		Process: process,
+		GroupId: p.GroupId,
 		Created: p.Created,
 	}
 }
 
 func InsertFlow(ctx context.Context, reqDTO InsertFlowReqDTO) (Flow, error) {
-	jsonBytes, _ := json.Marshal(reqDTO.Process)
+	processJson, _ := json.Marshal(reqDTO.Process)
+	kvsJson, _ := json.Marshal(reqDTO.Kvs)
 	var ret = Flow{
 		ProcessId:      reqDTO.ProcessId,
-		ProcessContent: string(jsonBytes),
+		ProcessContent: string(processJson),
 		CurrIndex:      reqDTO.CurrIndex,
 		FlowStatus:     reqDTO.FlowStatus,
 		Creator:        reqDTO.Creator,
 		BizId:          reqDTO.BizId,
+		Kvs:            string(kvsJson),
 	}
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&ret)
@@ -201,4 +207,28 @@ func UpdateNotifyDone(ctx context.Context, notifyId int64, done bool) (bool, err
 			Done: done,
 		})
 	return rows == 1, err
+}
+
+func InsertGroup(ctx context.Context, reqDTO InsertGroupReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Insert(&Group{
+			Name: reqDTO.Name,
+		})
+	return err
+}
+
+func UpdateGroup(ctx context.Context, reqDTO UpdateGroupReqDTO) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", reqDTO.Id).
+		Cols("name").
+		Update(&Group{
+			Name: reqDTO.Name,
+		})
+	return rows == 1, err
+}
+
+func GetGroupById(ctx context.Context, id int64) (Group, bool, error) {
+	var ret Group
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	return ret, b, err
 }

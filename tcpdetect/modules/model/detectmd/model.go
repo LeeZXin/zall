@@ -9,7 +9,7 @@ const (
 )
 
 type TcpDetect struct {
-	Id            int64     `xorm:"pk autoincr"`
+	Id            int64     `json:"id" xorm:"pk autoincr"`
 	Ip            string    `json:"ip"`
 	Port          int       `json:"port"`
 	Name          string    `json:"name"`
@@ -35,7 +35,7 @@ func (*Instance) TableName() string {
 }
 
 type DetectLog struct {
-	Id       int64     `xorm:"pk autoincr"`
+	Id       int64     `json:"id" xorm:"pk autoincr"`
 	DetectId int64     `json:"detectId"`
 	Ip       string    `json:"ip"`
 	Port     int       `json:"port"`

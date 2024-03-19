@@ -9,7 +9,8 @@ var (
 )
 
 type OuterService interface {
-	InsertWebHook(context.Context, InsertWebhookReqDTO) error
+	InsertWebhook(context.Context, InsertWebhookReqDTO) error
+	UpdateWebhook(context.Context, UpdateWebhookReqDTO) error
 	DeleteWebhook(context.Context, DeleteWebhookReqDTO) error
 	ListWebhook(context.Context, ListWebhookReqDTO) ([]WebhookDTO, error)
 }

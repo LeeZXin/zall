@@ -17,7 +17,7 @@ type KeyInfo struct {
 }
 
 type SshKey struct {
-	Id          int64     `xorm:"pk autoincr"`
+	Id          int64     `json:"id" xorm:"pk autoincr"`
 	Account     string    `json:"account"`
 	Name        string    `json:"name"`
 	Fingerprint string    `json:"fingerprint"`

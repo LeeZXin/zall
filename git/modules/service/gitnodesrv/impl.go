@@ -2,7 +2,7 @@ package gitnodesrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/meta/modules/model/gitnodemd"
+	"github.com/LeeZXin/zall/git/modules/model/gitnodemd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
@@ -32,20 +32,10 @@ func (*outerImpl) InsertNode(ctx context.Context, reqDTO InsertNodeReqDTO) (err 
 	}
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	_, b, err := gitnodemd.GetByNodeId(ctx, reqDTO.NodeId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if b {
-		err = util.AlreadyExistsError()
-		return
-	}
-	err = gitnodemd.InsertGitNode(ctx, gitnodemd.InsertNodeReqDTO{
-		NodeId:    reqDTO.NodeId,
-		HttpHosts: reqDTO.HttpHosts,
-		SshHosts:  reqDTO.SshHosts,
+	err = gitnodemd.InsertNode(ctx, gitnodemd.InsertNodeReqDTO{
+		Name:     reqDTO.Name,
+		HttpHost: reqDTO.HttpHost,
+		SshHost:  reqDTO.SshHost,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -74,16 +64,7 @@ func (*outerImpl) DeleteNode(ctx context.Context, reqDTO DeleteNodeReqDTO) (err 
 	}
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	_, b, err := gitnodemd.GetByNodeId(ctx, reqDTO.NodeId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	_, err = gitnodemd.DeleteNode(ctx, reqDTO.NodeId)
+	_, err = gitnodemd.DeleteNode(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -111,19 +92,11 @@ func (*outerImpl) UpdateNode(ctx context.Context, reqDTO UpdateNodeReqDTO) (err 
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, b, err := gitnodemd.GetByNodeId(ctx, reqDTO.NodeId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
 	_, err = gitnodemd.UpdateNode(ctx, gitnodemd.UpdateNodeReqDTO{
-		NodeId:    reqDTO.NodeId,
-		HttpHosts: reqDTO.HttpHosts,
-		SshHosts:  reqDTO.SshHosts,
+		Id:       reqDTO.Id,
+		Name:     reqDTO.Name,
+		HttpHost: reqDTO.HttpHost,
+		SshHost:  reqDTO.SshHost,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -133,7 +106,7 @@ func (*outerImpl) UpdateNode(ctx context.Context, reqDTO UpdateNodeReqDTO) (err 
 	return
 }
 
-func (*outerImpl) ListNode(ctx context.Context, reqDTO ListNodeReqDTO) ([]GitNodeDTO, error) {
+func (*outerImpl) ListNode(ctx context.Context, reqDTO ListNodeReqDTO) ([]NodeDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
@@ -142,16 +115,17 @@ func (*outerImpl) ListNode(ctx context.Context, reqDTO ListNodeReqDTO) ([]GitNod
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	all, err := gitnodemd.GetAll(ctx)
+	all, err := gitnodemd.GetAllNodes(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(all, func(t gitnodemd.GitNodeDTO) (GitNodeDTO, error) {
-		return GitNodeDTO{
-			NodeId:    t.NodeId,
-			HttpHosts: t.HttpHosts,
-			SshHosts:  t.SshHosts,
+	return listutil.Map(all, func(t gitnodemd.Node) (NodeDTO, error) {
+		return NodeDTO{
+			Id:       t.Id,
+			Name:     t.Name,
+			HttpHost: t.HttpHost,
+			SshHost:  t.SshHost,
 		}, nil
 	})
 }

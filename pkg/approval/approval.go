@@ -150,10 +150,15 @@ type ConditionalNodeCfg struct {
 	Condition string   `json:"condition"`
 }
 
+type KvCfg struct {
+	Key      string `json:"key"`
+	Type     string `json:"type"`
+	Required bool   `json:"required"`
+}
+
 type Kv struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
-	Type  string `json:"type"`
 }
 
 type NodeCfg struct {
@@ -259,12 +264,13 @@ type ConditionalNode struct {
 }
 
 type ProcessCfg struct {
-	Kvs  []Kv     `json:"kvs"`
-	Node *NodeCfg `json:"node"`
+	Title  string   `json:"title"`
+	KvCfgs []KvCfg  `json:"kvCfgs"`
+	Node   *NodeCfg `json:"node"`
 }
 
 func (c *ProcessCfg) IsValid() bool {
-	if c.Node == nil {
+	if c.Node == nil || c.Title == "" || len(c.KvCfgs) > 1000 {
 		return false
 	}
 	return c.Node.IsValid()
@@ -272,7 +278,8 @@ func (c *ProcessCfg) IsValid() bool {
 
 func (c *ProcessCfg) Convert() Process {
 	ret := Process{}
-	ret.Kvs = c.Kvs
+	ret.Title = c.Title
+	ret.KvCfgs = c.KvCfgs
 	if c.Node != nil {
 		ret.Node = c.Node.Convert()
 	}
@@ -280,8 +287,9 @@ func (c *ProcessCfg) Convert() Process {
 }
 
 type Process struct {
-	Kvs  []Kv  `json:"kvs"`
-	Node *Node `json:"node"`
+	Title  string  `json:"title"`
+	KvCfgs []KvCfg `json:"kvCfgs"`
+	Node   *Node   `json:"node"`
 }
 
 func (p *Process) Find(nodeId int) *Node {
@@ -289,6 +297,26 @@ func (p *Process) Find(nodeId int) *Node {
 		return nil
 	}
 	return p.Node.Find(nodeId)
+}
+
+func (p *Process) CheckKvCfgs(kvs []Kv) []string {
+	errKeys := make([]string, 0)
+	for _, cfg := range p.KvCfgs {
+		find := false
+		for _, kv := range kvs {
+			if cfg.Key == kv.Key {
+				find = true
+				if cfg.Required && kv.Value == "" {
+					errKeys = append(errKeys, kv.Key)
+				}
+				break
+			}
+		}
+		if cfg.Required && !find {
+			errKeys = append(errKeys, cfg.Key)
+		}
+	}
+	return errKeys
 }
 
 func (p *Process) FindAndDo(nodeId int, fnMap map[NodeType]func(*Node)) {

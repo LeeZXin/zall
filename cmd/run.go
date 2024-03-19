@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
+	"github.com/LeeZXin/zall/approval/modules/service/approvalsrv"
 	"github.com/LeeZXin/zall/genid/modules/api/idapi"
-	"github.com/LeeZXin/zall/git/modules/api/actionapi"
+	"github.com/LeeZXin/zall/git/modules/api/actionagentapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
+	"github.com/LeeZXin/zall/git/modules/api/gitactionapi"
+	"github.com/LeeZXin/zall/git/modules/api/gitnodeapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
 	"github.com/LeeZXin/zall/git/modules/api/lfsapi"
 	"github.com/LeeZXin/zall/git/modules/api/pullrequestapi"
@@ -12,12 +15,10 @@ import (
 	"github.com/LeeZXin/zall/git/modules/api/smartapi"
 	"github.com/LeeZXin/zall/git/modules/api/sshkeyapi"
 	"github.com/LeeZXin/zall/git/modules/api/webhookapi"
-	"github.com/LeeZXin/zall/git/modules/service/actionsrv"
 	"github.com/LeeZXin/zall/git/modules/sshproxy"
 	reposerver "github.com/LeeZXin/zall/git/repo/server"
 	"github.com/LeeZXin/zall/meta/modules/api/appapi"
 	"github.com/LeeZXin/zall/meta/modules/api/cfgapi"
-	"github.com/LeeZXin/zall/meta/modules/api/gitnodeapi"
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
@@ -65,6 +66,7 @@ func runZall(*cli.Context) error {
 		sshkeyapi.InitApi()
 		gpgkeyapi.InitApi()
 		gitnodeapi.InitApi()
+		gitactionapi.InitApi()
 		webhookapi.InitApi()
 		lifeCycles = append(lifeCycles, sshproxy.InitProxy())
 		if static.GetBool("git.repo.server.enabled") {
@@ -72,10 +74,9 @@ func runZall(*cli.Context) error {
 			reposerver.InitHttpApi()
 			lifeCycles = append(lifeCycles, reposerver.InitSshServer())
 		}
-		if static.GetBool("actions.enabled") {
-			logger.Logger.Info("git actions server enabled")
-			actionapi.InitApi()
-			actionsrv.InitSrv()
+		if static.GetBool("git.action.enabled") {
+			logger.Logger.Info("git action agent enabled")
+			actionagentapi.InitApi()
 		}
 	}
 	// for timer
@@ -107,6 +108,7 @@ func runZall(*cli.Context) error {
 	}
 	// for approval
 	{
+		approvalsrv.InitDefaultGroup()
 		approvalapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer())

@@ -7,7 +7,7 @@ const (
 )
 
 type Generator struct {
-	Id        int64     `xorm:"pk autoincr"`
+	Id        int64     `json:"id" xorm:"pk autoincr"`
 	BizName   string    `json:"bizName"`
 	CurrentId int64     `json:"currentId"`
 	Version   int64     `json:"version"`

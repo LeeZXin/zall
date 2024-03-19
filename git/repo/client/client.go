@@ -3,13 +3,14 @@ package client
 import (
 	"context"
 	"errors"
-	"github.com/LeeZXin/zall/git/gitnode"
+	"fmt"
+	"github.com/LeeZXin/zall/git/modules/model/gitnodemd"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
-	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
@@ -22,7 +23,7 @@ var (
 )
 
 // InitRepo 初始化仓库
-func InitRepo(ctx context.Context, req reqvo.InitRepoReq, nodeId string) error {
+func InitRepo(ctx context.Context, req reqvo.InitRepoReq, nodeId int64) error {
 	var resp ginutil.BaseResp
 	err := postHttp(
 		ctx,
@@ -41,7 +42,7 @@ func InitRepo(ctx context.Context, req reqvo.InitRepoReq, nodeId string) error {
 }
 
 // DeleteRepo 删除仓库
-func DeleteRepo(ctx context.Context, req reqvo.DeleteRepoReq, nodeId string) error {
+func DeleteRepo(ctx context.Context, req reqvo.DeleteRepoReq, nodeId int64) error {
 	var resp ginutil.BaseResp
 	err := postHttp(
 		ctx,
@@ -60,7 +61,7 @@ func DeleteRepo(ctx context.Context, req reqvo.DeleteRepoReq, nodeId string) err
 }
 
 // GetAllBranches 获取所有的分支
-func GetAllBranches(ctx context.Context, req reqvo.GetAllBranchesReq, nodeId string) ([]string, error) {
+func GetAllBranches(ctx context.Context, req reqvo.GetAllBranchesReq, nodeId int64) ([]string, error) {
 	var resp ginutil.DataResp[[]string]
 	err := postHttp(
 		ctx,
@@ -79,7 +80,7 @@ func GetAllBranches(ctx context.Context, req reqvo.GetAllBranchesReq, nodeId str
 }
 
 // GetAllTags 获取所有的tag
-func GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq, nodeId string) ([]string, error) {
+func GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq, nodeId int64) ([]string, error) {
 	var resp ginutil.DataResp[[]string]
 	err := postHttp(
 		ctx,
@@ -98,7 +99,7 @@ func GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq, nodeId string) ([]
 }
 
 // Gc 仓库gc
-func Gc(ctx context.Context, req reqvo.GcReq, nodeId string) error {
+func Gc(ctx context.Context, req reqvo.GcReq, nodeId int64) error {
 	var resp ginutil.BaseResp
 	err := postHttp(
 		ctx,
@@ -117,7 +118,7 @@ func Gc(ctx context.Context, req reqvo.GcReq, nodeId string) error {
 }
 
 // DiffRefs 比较两个refs
-func DiffRefs(ctx context.Context, req reqvo.DiffRefsReq, nodeId string) (reqvo.DiffRefsResp, error) {
+func DiffRefs(ctx context.Context, req reqvo.DiffRefsReq, nodeId int64) (reqvo.DiffRefsResp, error) {
 	var resp ginutil.DataResp[reqvo.DiffRefsResp]
 	err := postHttp(
 		ctx,
@@ -136,7 +137,7 @@ func DiffRefs(ctx context.Context, req reqvo.DiffRefsReq, nodeId string) (reqvo.
 }
 
 // DiffFile 比较两个ref单个文件差异
-func DiffFile(ctx context.Context, req reqvo.DiffFileReq, nodeId string) (reqvo.DiffFileResp, error) {
+func DiffFile(ctx context.Context, req reqvo.DiffFileReq, nodeId int64) (reqvo.DiffFileResp, error) {
 	var resp ginutil.DataResp[reqvo.DiffFileResp]
 	err := postHttp(
 		ctx,
@@ -155,7 +156,7 @@ func DiffFile(ctx context.Context, req reqvo.DiffFileReq, nodeId string) (reqvo.
 }
 
 // GetRepoSize 获取仓库大小
-func GetRepoSize(ctx context.Context, req reqvo.GetRepoSizeReq, nodeId string) (int64, error) {
+func GetRepoSize(ctx context.Context, req reqvo.GetRepoSizeReq, nodeId int64) (int64, error) {
 	var resp ginutil.DataResp[int64]
 	err := postHttp(
 		ctx,
@@ -173,7 +174,7 @@ func GetRepoSize(ctx context.Context, req reqvo.GetRepoSizeReq, nodeId string) (
 	return resp.Data, nil
 }
 
-func ShowDiffTextContent(ctx context.Context, req reqvo.ShowDiffTextContentReq, nodeId string) ([]reqvo.DiffLineVO, error) {
+func ShowDiffTextContent(ctx context.Context, req reqvo.ShowDiffTextContentReq, nodeId int64) ([]reqvo.DiffLineVO, error) {
 	var resp ginutil.DataResp[[]reqvo.DiffLineVO]
 	err := postHttp(
 		ctx,
@@ -191,7 +192,7 @@ func ShowDiffTextContent(ctx context.Context, req reqvo.ShowDiffTextContentReq, 
 	return resp.Data, nil
 }
 
-func HistoryCommits(ctx context.Context, req reqvo.HistoryCommitsReq, nodeId string) (reqvo.HistoryCommitsResp, error) {
+func HistoryCommits(ctx context.Context, req reqvo.HistoryCommitsReq, nodeId int64) (reqvo.HistoryCommitsResp, error) {
 	var resp ginutil.DataResp[reqvo.HistoryCommitsResp]
 	err := postHttp(
 		ctx,
@@ -209,7 +210,7 @@ func HistoryCommits(ctx context.Context, req reqvo.HistoryCommitsReq, nodeId str
 	return resp.Data, nil
 }
 
-func InitRepoHook(ctx context.Context, req reqvo.InitRepoHookReq, nodeId string) error {
+func InitRepoHook(ctx context.Context, req reqvo.InitRepoHookReq, nodeId int64) error {
 	var resp ginutil.BaseResp
 	err := postHttp(
 		ctx,
@@ -227,7 +228,7 @@ func InitRepoHook(ctx context.Context, req reqvo.InitRepoHookReq, nodeId string)
 	return nil
 }
 
-func EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq, nodeId string) (reqvo.TreeVO, error) {
+func EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq, nodeId int64) (reqvo.TreeVO, error) {
 	var resp ginutil.DataResp[reqvo.TreeVO]
 	err := postHttp(
 		ctx,
@@ -245,7 +246,7 @@ func EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq, nodeId string) (
 	return resp.Data, nil
 }
 
-func CatFile(ctx context.Context, req reqvo.CatFileReq, nodeId string) (reqvo.CatFileResp, error) {
+func CatFile(ctx context.Context, req reqvo.CatFileReq, nodeId int64) (reqvo.CatFileResp, error) {
 	var resp ginutil.DataResp[reqvo.CatFileResp]
 	err := postHttp(
 		ctx,
@@ -263,7 +264,7 @@ func CatFile(ctx context.Context, req reqvo.CatFileReq, nodeId string) (reqvo.Ca
 	return resp.Data, nil
 }
 
-func TreeRepo(ctx context.Context, req reqvo.TreeRepoReq, nodeId string) (reqvo.TreeRepoResp, error) {
+func TreeRepo(ctx context.Context, req reqvo.TreeRepoReq, nodeId int64) (reqvo.TreeRepoResp, error) {
 	var resp ginutil.DataResp[reqvo.TreeRepoResp]
 	err := postHttp(
 		ctx,
@@ -281,7 +282,7 @@ func TreeRepo(ctx context.Context, req reqvo.TreeRepoReq, nodeId string) (reqvo.
 	return resp.Data, nil
 }
 
-func Merge(ctx context.Context, req reqvo.MergeReq, nodeId string) error {
+func Merge(ctx context.Context, req reqvo.MergeReq, nodeId int64) error {
 	var resp ginutil.BaseResp
 	err := postHttp(
 		ctx,
@@ -299,13 +300,13 @@ func Merge(ctx context.Context, req reqvo.MergeReq, nodeId string) error {
 	return nil
 }
 
-func UploadPack(req reqvo.UploadPackReq, nodeId string, repoId int64, pusherAccount, pusherEmail, appUrl string) error {
+func UploadPack(req reqvo.UploadPackReq, nodeId int64, repoId int64, pusherAccount, pusherEmail, appUrl string) error {
 	return proxyHttp(
 		nodeId,
 		"/api/v1/git/smart/"+req.RepoPath+"/git-upload-pack",
 		req.C,
 		map[string]string{
-			"Repo-RepoId":    strconv.FormatInt(repoId, 10),
+			"Repo-Id":        strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
 			"AppId-Url":      appUrl,
@@ -313,13 +314,13 @@ func UploadPack(req reqvo.UploadPackReq, nodeId string, repoId int64, pusherAcco
 	)
 }
 
-func ReceivePack(req reqvo.ReceivePackReq, nodeId string, repoId int64, pusherAccount, pusherEmail, appUrl string) error {
+func ReceivePack(req reqvo.ReceivePackReq, nodeId int64, repoId int64, pusherAccount, pusherEmail, appUrl string) error {
 	return proxyHttp(
 		nodeId,
 		"/api/v1/git/smart/"+req.RepoPath+"/git-receive-pack",
 		req.C,
 		map[string]string{
-			"Repo-RepoId":    strconv.FormatInt(repoId, 10),
+			"Repo-Id":        strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
 			"AppId-Url":      appUrl,
@@ -327,7 +328,7 @@ func ReceivePack(req reqvo.ReceivePackReq, nodeId string, repoId int64, pusherAc
 	)
 }
 
-func InfoRefs(req reqvo.InfoRefsReq, nodeId string) error {
+func InfoRefs(req reqvo.InfoRefsReq, nodeId int64) error {
 	return proxyHttp(
 		nodeId,
 		"/api/v1/git/smart/"+req.RepoPath+"/info/refs?service="+req.C.Query("service"),
@@ -336,7 +337,7 @@ func InfoRefs(req reqvo.InfoRefsReq, nodeId string) error {
 	)
 }
 
-func LfsUpload(req reqvo.LfsUploadReq, nodeId string) error {
+func LfsUpload(req reqvo.LfsUploadReq, nodeId int64) error {
 	return proxyHttp(
 		nodeId,
 		"/api/v1/lfs/file/"+req.RepoPath+"/"+req.Oid+"/upload",
@@ -345,7 +346,7 @@ func LfsUpload(req reqvo.LfsUploadReq, nodeId string) error {
 	)
 }
 
-func LfsDownload(req reqvo.LfsDownloadReq, nodeId string) error {
+func LfsDownload(req reqvo.LfsDownloadReq, nodeId int64) error {
 	return proxyHttp(
 		nodeId,
 		"/api/v1/lfs/file/"+req.RepoPath+"/"+req.Oid+"/download",
@@ -354,7 +355,7 @@ func LfsDownload(req reqvo.LfsDownloadReq, nodeId string) error {
 	)
 }
 
-func LfsExists(ctx context.Context, req reqvo.LfsExistsReq, nodeId string) (bool, error) {
+func LfsExists(ctx context.Context, req reqvo.LfsExistsReq, nodeId int64) (bool, error) {
 	var resp ginutil.DataResp[bool]
 	err := postHttp(
 		ctx,
@@ -372,7 +373,7 @@ func LfsExists(ctx context.Context, req reqvo.LfsExistsReq, nodeId string) (bool
 	return resp.Data, nil
 }
 
-func LfsBatchExists(ctx context.Context, req reqvo.LfsBatchExistsReq, nodeId string) (map[string]bool, error) {
+func LfsBatchExists(ctx context.Context, req reqvo.LfsBatchExistsReq, nodeId int64) (map[string]bool, error) {
 	var resp ginutil.DataResp[map[string]bool]
 	err := postHttp(
 		ctx,
@@ -390,7 +391,7 @@ func LfsBatchExists(ctx context.Context, req reqvo.LfsBatchExistsReq, nodeId str
 	return resp.Data, nil
 }
 
-func LfsStat(ctx context.Context, req reqvo.LfsStatReq, nodeId string) (reqvo.LfsStatResp, error) {
+func LfsStat(ctx context.Context, req reqvo.LfsStatReq, nodeId int64) (reqvo.LfsStatResp, error) {
 	var resp ginutil.DataResp[reqvo.LfsStatResp]
 	err := postHttp(
 		ctx,
@@ -408,7 +409,7 @@ func LfsStat(ctx context.Context, req reqvo.LfsStatReq, nodeId string) (reqvo.Lf
 	return resp.Data, nil
 }
 
-func postHttp(ctx context.Context, nodeId string, path string, req, resp any) error {
+func postHttp(ctx context.Context, nodeId int64, path string, req, resp any) error {
 	httpUrl, err := getHttpUrl(nodeId)
 	if err != nil {
 		return err
@@ -416,9 +417,7 @@ func postHttp(ctx context.Context, nodeId string, path string, req, resp any) er
 	err = httputil.Post(ctx,
 		httpClient,
 		httpUrl+path,
-		map[string]string{
-			"Authorization": getRepoToken(ctx),
-		},
+		nil,
 		req,
 		resp,
 	)
@@ -429,7 +428,7 @@ func postHttp(ctx context.Context, nodeId string, path string, req, resp any) er
 	return nil
 }
 
-func proxyHttp(nodeId, path string, ctx *gin.Context, headers map[string]string) error {
+func proxyHttp(nodeId int64, path string, ctx *gin.Context, headers map[string]string) error {
 	httpUrl, err := getHttpUrl(nodeId)
 	if err != nil {
 		return err
@@ -443,7 +442,6 @@ func proxyHttp(nodeId, path string, ctx *gin.Context, headers map[string]string)
 	for k, v := range headers {
 		proxyReq.Header.Set(k, v)
 	}
-	proxyReq.Header.Set("Authorization", getRepoToken(ctx))
 	proxyResp, err := httpClient.Do(proxyReq)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -458,18 +456,15 @@ func proxyHttp(nodeId, path string, ctx *gin.Context, headers map[string]string)
 	return nil
 }
 
-func getHttpUrl(nodeId string) (string, error) {
-	ret, err := gitnode.PickHttpHost(nodeId)
+func getHttpUrl(nodeId int64) (string, error) {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	node, b, err := gitnodemd.GetById(ctx, nodeId)
 	if err != nil {
 		return "", err
 	}
-	return "http://" + ret, nil
-}
-
-func getRepoToken(ctx context.Context) string {
-	cfg, b := cfgsrv.Inner.GetGitCfg(ctx)
 	if !b {
-		return ""
+		return "", fmt.Errorf("unknown git node id: %d", nodeId)
 	}
-	return cfg.RepoToken
+	return "http://" + node.HttpHost, nil
 }

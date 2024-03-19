@@ -1,7 +1,6 @@
 package reposrv
 
 import (
-	"github.com/LeeZXin/zall/git/modules/model/actiontaskmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
@@ -26,6 +25,7 @@ type InitRepoReqDTO struct {
 	TeamId        int64               `json:"teamId"`
 	Name          string              `json:"name"`
 	Desc          string              `json:"desc"`
+	NodeId        int64               `json:"nodeId"`
 	CreateReadme  bool                `json:"createReadme"`
 	GitIgnoreName string              `json:"gitIgnoreName"`
 	DefaultBranch string              `json:"defaultBranch"`
@@ -45,6 +45,9 @@ func (r *InitRepoReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if r.GitIgnoreName != "" && !gitignoreSet.Contains(r.GitIgnoreName) {
+		return util.InvalidArgsError()
+	}
+	if r.NodeId <= 0 {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -470,91 +473,11 @@ func (r *CheckAccessTokenReqDTO) IsValid() error {
 	return nil
 }
 
-type InsertActionReqDTO struct {
-	Id             int64               `json:"id"`
-	ActionContent  string              `json:"actionContent"`
-	AssignInstance string              `json:"assignInstance"`
-	Operator       apisession.UserInfo `json:"operator"`
-}
-
-func (r *InsertActionReqDTO) IsValid() error {
-	if r.ActionContent == "" {
-		return util.InvalidArgsError()
-	}
-	if r.AssignInstance != "" && !actiontaskmd.IsInstanceIdValid(r.AssignInstance) {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type DeleteActionReqDTO struct {
-	Id       int64               `json:"id"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *DeleteActionReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type ListActionReqDTO struct {
-	Id       int64               `json:"id"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *ListActionReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type UpdateActionReqDTO struct {
-	Id             int64               `json:"id"`
-	ActionContent  string              `json:"actionContent"`
-	AssignInstance string              `json:"assignInstance"`
-	Operator       apisession.UserInfo `json:"operator"`
-}
-
-func (r *UpdateActionReqDTO) IsValid() error {
-	if r.ActionContent == "" {
-		return util.InvalidArgsError()
-	}
-	if r.AssignInstance != "" && !actiontaskmd.IsInstanceIdValid(r.AssignInstance) {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
 type RefreshAllGitHooksReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *RefreshAllGitHooksReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type TriggerActionReqDTO struct {
-	Id       int64               `json:"id"`
-	Ref      string              `json:"ref"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *TriggerActionReqDTO) IsValid() error {
-	if len(r.Ref) > 255 {
-		return util.InvalidArgsError()
-	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}

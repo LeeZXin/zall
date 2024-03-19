@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/LeeZXin/zall/git/modules/api/actionapi"
 	"github.com/LeeZXin/zall/git/modules/service/actionsrv"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/zsf"
@@ -17,7 +16,7 @@ var Actions = &cli.Command{
 
 func runActions(*cli.Context) error {
 	// action
-	actionapi.InitApi()
+	actionagentapi.InitApi()
 	actionsrv.InitSrv()
 	zsf.Run(
 		zsf.WithLifeCycles(

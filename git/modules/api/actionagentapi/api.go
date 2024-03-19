@@ -1,7 +1,7 @@
-package actionapi
+package actionagentapi
 
 import (
-	"github.com/LeeZXin/zall/git/modules/service/actionsrv"
+	"github.com/LeeZXin/zall/git/modules/service/gitactionsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zsf-utils/ginutil"
@@ -12,17 +12,17 @@ import (
 
 func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/actions", checkToken)
+		group := e.Group("/actionAgent", checkToken)
 		{
-			group.POST("/git", gitAction)
+			group.POST("/execute", executeAction)
 		}
 	})
 }
 
-func gitAction(c *gin.Context) {
-	var req action.Webhook
+func executeAction(c *gin.Context) {
+	var req action.Hook
 	if ginutil.ShouldBind(&req, c) {
-		go actionsrv.TriggerGitAction(c, req)
+		go gitactionsrv.Inner.ExecuteAction(c, req)
 		c.String(http.StatusOK, "received")
 	}
 }
