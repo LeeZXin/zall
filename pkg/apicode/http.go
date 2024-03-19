@@ -21,9 +21,7 @@ const (
 	InvalidReviewCountWhenCreatePrCode
 	ForcePushForbiddenCode
 	MethodUnImplementedCode
-	ActionInstanceNotFoundCode
 	ThereHasBugErrCode
-	EmptyGitNodesErrCode
 	OperationFailedErrCode
 )
 

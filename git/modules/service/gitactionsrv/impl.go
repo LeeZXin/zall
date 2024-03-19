@@ -392,6 +392,9 @@ func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO)
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	if !b {
+		return util.ThereHasBugErr()
+	}
 	action.ManualTriggerAction(repoAction.Content, node.HttpHost, reqDTO.Args, reqDTO.Id)
 	return nil
 }
