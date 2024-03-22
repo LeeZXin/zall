@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/LeeZXin/zall/git/gitnode"
+	"github.com/LeeZXin/zall/git/modules/model/gitnodemd"
 	"github.com/LeeZXin/zall/git/modules/model/sshkeymd"
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
@@ -93,9 +93,10 @@ func handleGitCommand(ctx context.Context, session ssh.Session) error {
 	}
 	repoPath := strings.TrimPrefix(words[1], "/")
 	// 寻找仓库存储节点
-	sshHost := pickRepoSshHost(ctx, repoPath)
-	if sshHost == "" {
-		return fmt.Errorf("ssh host not found: %s", repoPath)
+	sshHost, err := pickRepoSshHost(ctx, repoPath)
+	if err != nil {
+		logger.Logger.Error(err)
+		return err
 	}
 	err = proxyDialer.ProxySession(sshHost, session, &zssh.ProxyOpts{
 		SrcFingerprint: ctx.Value(fingerprintKey).(string),
@@ -125,14 +126,19 @@ func getUserByFingerprint(ctx context.Context, fingerprint string) *usermd.UserI
 	return &user
 }
 
-func pickRepoSshHost(ctx context.Context, repoPath string) string {
+func pickRepoSshHost(ctx context.Context, repoPath string) (string, error) {
 	repo, b := reposrv.Inner.GetByRepoPath(ctx, repoPath)
 	if !b {
-		return ""
+		return "", fmt.Errorf("unknown repo path: %s", repoPath)
 	}
-	host, err := gitnode.PickSshHost(repo.NodeId)
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	node, b, err := gitnodemd.GetById(ctx, repo.NodeId)
 	if err != nil {
-		logger.Logger.Error(err)
+		return "", err
 	}
-	return host
+	if !b {
+		return "", fmt.Errorf("unknown git node id: %d", repo.NodeId)
+	}
+	return node.SshHost, nil
 }

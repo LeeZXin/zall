@@ -397,7 +397,7 @@ func triggerWebhook(repo repomd.RepoInfo, operator apisession.UserInfo, pr pullr
 				},
 			}
 			for _, hook := range hookList {
-				webhook.TriggerPrHook(hook.HookUrl, hook.HttpHeaders, req)
+				webhook.TriggerPrHook(hook.HookUrl, hook.GetHttpHeaders(), req)
 			}
 		} else {
 			logger.Logger.Error(err)

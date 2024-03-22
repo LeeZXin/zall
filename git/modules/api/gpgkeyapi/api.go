@@ -6,10 +6,10 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 func InitApi() {
@@ -91,7 +91,7 @@ func listGpgKey(c *gin.Context) {
 			Id:         t.Id,
 			Name:       t.Name,
 			PubKeyId:   t.PubKeyId,
-			ExpireTime: t.ExpireTime.Format(timeutil.DefaultTimeFormat),
+			ExpireTime: t.ExpireTime.Format(time.DateTime),
 			EmailList:  t.EmailList,
 		}, nil
 	})

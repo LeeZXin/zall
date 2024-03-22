@@ -8,12 +8,12 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 func InitApi() {
@@ -263,7 +263,7 @@ func listHistory(c *gin.Context) {
 				ContentId: t.ContentId,
 				Content:   t.Content,
 				Version:   t.Version,
-				Created:   t.Created.Format(timeutil.DefaultTimeFormat),
+				Created:   t.Created.Format(time.DateTime),
 				Creator:   t.Creator,
 			}, nil
 		})
@@ -333,7 +333,7 @@ func listDeploy(c *gin.Context) {
 				Content:   t.Content,
 				Version:   t.Version,
 				NodeId:    t.NodeId,
-				Created:   t.Created.Format(timeutil.DefaultTimeFormat),
+				Created:   t.Created.Format(time.DateTime),
 			}, nil
 		})
 		c.JSON(http.StatusOK, resp)

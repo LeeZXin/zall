@@ -354,6 +354,22 @@ var (
 			Id:         "approvalSrv.UpdateCustomProcess",
 			DefaultRet: "编辑自定义审批流",
 		},
+		DeleteCustomProcess: KeyItem{
+			Id:         "approvalSrv.DeleteCustomProcess",
+			DefaultRet: "删除自定义审批流",
+		},
+		InsertGroup: KeyItem{
+			Id:         "approvalSrv.InsertGroup",
+			DefaultRet: "新增审批流分组",
+		},
+		DeleteGroup: KeyItem{
+			Id:         "approvalSrv.DeleteGroup",
+			DefaultRet: "删除审批流分组",
+		},
+		UpdateGroup: KeyItem{
+			Id:         "approvalSrv.UpdateGroup",
+			DefaultRet: "编辑审批流分组",
+		},
 	}
 
 	GitNodeSrvKeysVO = GitNodeSrvKeys{
@@ -503,6 +519,10 @@ type TcpDetectSrvKeys struct {
 type ApprovalSrvKeys struct {
 	InsertCustomProcess KeyItem
 	UpdateCustomProcess KeyItem
+	DeleteCustomProcess KeyItem
+	InsertGroup         KeyItem
+	DeleteGroup         KeyItem
+	UpdateGroup         KeyItem
 }
 
 type GitNodeSrvKeys struct {

@@ -360,6 +360,10 @@ var (
 		Id:         "flowStatus.unknown",
 		DefaultRet: "未知",
 	}
+	FlowPendingOp = KeyItem{
+		Id:         "flowOp.pending",
+		DefaultRet: "等待执行",
+	}
 	FlowAgreeOp = KeyItem{
 		Id:         "flowOp.agree",
 		DefaultRet: "同意",
@@ -371,6 +375,14 @@ var (
 	FlowCancelOp = KeyItem{
 		Id:         "flowOp.cancel",
 		DefaultRet: "取消",
+	}
+	FlowAutoAgreeOp = KeyItem{
+		Id:         "flowOp.autoAgree",
+		DefaultRet: "自动同意",
+	}
+	FlowAutoDisagreeOp = KeyItem{
+		Id:         "flowOp.autoDisagree",
+		DefaultRet: "自动不同意",
 	}
 	FlowUnknownOp = KeyItem{
 		Id:         "flowOp.unknown",

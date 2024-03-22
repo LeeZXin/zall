@@ -42,3 +42,8 @@ tcpDetect:
 
 discovery:
   type: static
+
+files:
+  normal:
+    token: 123
+  domain: http://localhost

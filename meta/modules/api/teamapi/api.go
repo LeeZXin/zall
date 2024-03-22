@@ -6,10 +6,10 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 func InitApi() {
@@ -71,7 +71,7 @@ func listTeam(c *gin.Context) {
 		return TeamVO{
 			TeamId:  t.TeamId,
 			Name:    t.Name,
-			Created: t.Created.Format(timeutil.DefaultTimeFormat),
+			Created: t.Created.Format(time.DateTime),
 		}, nil
 	})
 	c.JSON(http.StatusOK, ret)
@@ -149,7 +149,7 @@ func listTeamUser(c *gin.Context) {
 				Account:   t.Account,
 				GroupId:   t.GroupId,
 				GroupName: t.GroupName,
-				Created:   t.Created.Format(timeutil.DefaultTimeFormat),
+				Created:   t.Created.Format(time.DateTime),
 			}, nil
 		})
 		c.JSON(http.StatusOK, ret)

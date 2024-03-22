@@ -6,7 +6,6 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -102,7 +101,7 @@ func listDetect(c *gin.Context) {
 				Ip:            t.Ip,
 				Port:          t.Port,
 				Name:          t.Name,
-				HeartbeatTime: time.UnixMilli(t.HeartbeatTime).Format(timeutil.DefaultTimeFormat),
+				HeartbeatTime: time.UnixMilli(t.HeartbeatTime).Format(time.DateTime),
 				Valid:         t.HeartbeatTime > validHeartbeatTime,
 				Enabled:       t.Enabled,
 			}, nil
@@ -133,7 +132,7 @@ func listLog(c *gin.Context) {
 				Ip:      t.Ip,
 				Port:    t.Port,
 				Valid:   t.Valid,
-				Created: t.Created.Format(timeutil.DefaultTimeFormat),
+				Created: t.Created.Format(time.DateTime),
 			}, nil
 		})
 		c.JSON(http.StatusOK, resp)

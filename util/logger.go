@@ -1,7 +1,6 @@
 package util
 
 import (
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"strings"
 	"time"
 )
@@ -17,7 +16,7 @@ func NewSimpleLogger() *SimpleLogger {
 }
 
 func (l *SimpleLogger) WriteString(content string) {
-	l.sb.WriteString(time.Now().Format(timeutil.DefaultTimeFormat) + " " + content + "\n")
+	l.sb.WriteString(time.Now().Format(time.DateTime) + " " + content + "\n")
 }
 
 func (l *SimpleLogger) Clear() {

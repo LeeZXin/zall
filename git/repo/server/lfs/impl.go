@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
+	"github.com/LeeZXin/zall/pkg/files"
 	"github.com/LeeZXin/zall/pkg/git"
-	"github.com/LeeZXin/zall/pkg/git/lfs"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
 	"net/http"
@@ -14,7 +14,7 @@ import (
 )
 
 func NewLfs() Lfs {
-	lfsStore, err := lfs.NewLocalStorage(git.LfsDir(), git.TempDir())
+	lfsStore, err := files.NewLocalStorage(git.LfsDir(), git.TempDir())
 	if err != nil {
 		logger.Logger.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func NewLfs() Lfs {
 }
 
 type lfsImpl struct {
-	lfsStore lfs.Storage
+	lfsStore files.Storage
 }
 
 func (s *lfsImpl) Exists(ctx context.Context, req reqvo.LfsExistsReq) (bool, error) {

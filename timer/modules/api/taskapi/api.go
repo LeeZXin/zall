@@ -9,7 +9,6 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
@@ -144,7 +143,7 @@ func listTask(c *gin.Context) {
 				TaskType:   t.TaskType,
 				HttpTask:   t.HttpTask,
 				TeamId:     t.TeamId,
-				NextTime:   time.UnixMilli(t.NextTime).Format(timeutil.DefaultTimeFormat),
+				NextTime:   time.UnixMilli(t.NextTime).Format(time.DateTime),
 				TaskStatus: t.TaskStatus.Readable(),
 			}, nil
 		})
@@ -178,7 +177,7 @@ func listLog(c *gin.Context) {
 				TriggerType: t.TriggerType.Readable(),
 				TriggerBy:   t.TriggerBy,
 				TaskStatus:  t.TaskStatus.Readable(),
-				Created:     t.Created.Format(timeutil.DefaultTimeFormat),
+				Created:     t.Created.Format(time.DateTime),
 			}, nil
 		})
 		c.JSON(http.StatusOK, resp)

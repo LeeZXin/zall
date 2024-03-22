@@ -8,27 +8,13 @@ import (
 	"github.com/LeeZXin/zall/pkg/approval"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/hashicorp/go-bexpr"
+	"sort"
+	"time"
 )
-
-func InitDefaultGroup() {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	_, b, err := approvalmd.GetGroupById(ctx, 1)
-	if err != nil {
-		logger.Logger.Fatalf("get default approval group failed")
-	}
-	if !b {
-		err = approvalmd.InsertGroup(ctx, approvalmd.InsertGroupReqDTO{
-			Name: "default",
-		})
-		if err != nil {
-			logger.Logger.Fatalf("init default approval group failed")
-		}
-	}
-}
 
 type innerImpl struct{}
 
@@ -45,13 +31,15 @@ func (*innerImpl) InsertFlow(ctx context.Context, reqDTO InsertFlowReqDTO) error
 	if !b {
 		return fmt.Errorf("process not found: %s", reqDTO.Pid)
 	}
+	up, _ := process.GetUnmarshalProcess()
 	flow, err := approvalmd.InsertFlow(ctx, approvalmd.InsertFlowReqDTO{
-		ProcessId:  process.Id,
-		Process:    process.Process,
-		CurrIndex:  1,
-		FlowStatus: approvalmd.PendingFlowStatus,
-		Creator:    reqDTO.Account,
-		BizId:      reqDTO.BizId,
+		ProcessId:   process.Id,
+		ProcessName: process.Name,
+		Process:     up,
+		CurrIndex:   1,
+		FlowStatus:  approvalmd.PendingFlowStatus,
+		Creator:     reqDTO.Account,
+		BizId:       reqDTO.BizId,
 	})
 	if err != nil {
 		return err
@@ -74,10 +62,10 @@ func (*innerImpl) InsertAttachedProcess(ctx context.Context, reqDTO InsertAttach
 		return fmt.Errorf("pid: %s already exists", reqDTO.Pid)
 	}
 	return approvalmd.InsertProcess(ctx, approvalmd.InsertProcessReqDTO{
-		Pid:     reqDTO.Pid,
-		Name:    reqDTO.Name,
-		GroupId: 1,
-		Process: reqDTO.Process.Convert(),
+		Pid:        reqDTO.Pid,
+		Name:       reqDTO.Name,
+		Process:    reqDTO.Process.Convert(),
+		SourceType: approvalmd.SystemSourceType,
 	})
 }
 
@@ -90,9 +78,19 @@ func (*innerImpl) UpdateAttachedProcess(ctx context.Context, reqDTO UpdateAttach
 	_, err := approvalmd.UpdateProcessByPid(ctx, approvalmd.UpdateProcessByPidReqDTO{
 		Pid:     reqDTO.Pid,
 		Name:    reqDTO.Name,
-		GroupId: 1,
 		Process: reqDTO.Process.Convert(),
 	})
+	return err
+}
+
+// DeleteAttachedProcess 删除系统审批流
+func (*innerImpl) DeleteAttachedProcess(ctx context.Context, pid string) error {
+	if pid == "" {
+		return util.InvalidArgsError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err := approvalmd.DeleteProcessByPid(ctx, pid)
 	return err
 }
 
@@ -103,11 +101,13 @@ func executeFlow(flow approvalmd.Flow) {
 			logger.Logger.Error(err)
 			return
 		}
+		kvs, _ := flow.GetKvs()
 		flowCtx := &approval.FlowContext{
 			Context: context.Background(),
 			FlowId:  flow.Id,
-			Process: &process,
 			BizId:   flow.BizId,
+			Kvs:     kvs,
+			Process: &process,
 		}
 		runFlow(flowCtx, &flow, process.Node)
 	}()
@@ -282,7 +282,7 @@ func doCondition(condition string, vars map[string]any) bool {
 	}
 	eval, err := bexpr.CreateEvaluator(condition)
 	if err != nil {
-		logger.Logger.Errorf("condition: %s create with err: %v", condition, err)
+		logger.Logger.Errorf("condition: %s copmile with err: %v", condition, err)
 		return false
 	}
 	if vars == nil {
@@ -309,7 +309,7 @@ func (*outerImpl) Agree(ctx context.Context, reqDTO AgreeFlowReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b {
+	if !b || notify.Account != reqDTO.Operator.Account {
 		return util.InvalidArgsError()
 	}
 	if notify.Done {
@@ -320,7 +320,7 @@ func (*outerImpl) Agree(ctx context.Context, reqDTO AgreeFlowReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b {
+	if !b || flow.FlowStatus != approvalmd.PendingFlowStatus {
 		return util.InvalidArgsError()
 	}
 	if flow.CurrIndex != notify.FlowIndex {
@@ -348,47 +348,32 @@ func (*outerImpl) Agree(ctx context.Context, reqDTO AgreeFlowReqDTO) error {
 	if !findAccount {
 		return util.UnauthorizedError()
 	}
-	ctx, committer, err := xormstore.TxContext(ctx)
+	b, err = approvalmd.UpdateNotifyDoneWithOldDone(ctx, reqDTO.NotifyId, true, false, approvalmd.AgreeOp)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	// 事务
-	{
-		err = approvalmd.InsertDetail(ctx, approvalmd.InsertDetailReqDTO{
-			FlowId:    flow.Id,
-			FlowIndex: flow.CurrIndex,
-			FlowOp:    approvalmd.AgreeOp,
-			Account:   reqDTO.Operator.Account,
-		})
+	if b {
+		count, err := approvalmd.CountOperate(ctx, flow.Id, flow.CurrIndex, approvalmd.AgreeOp)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
-			committer.Rollback()
 			return util.InternalError(err)
 		}
-		_, err = approvalmd.UpdateNotifyDone(ctx, reqDTO.NotifyId, true)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			committer.Rollback()
-			return util.InternalError(err)
+		if int(count) >= node.AtLeastNum {
+			// 其他人被迫同意
+			_ = approvalmd.UpdateNotifyDoneWithOldDoneByFlowIdAndIndex(ctx, true, false, approvalmd.AutoAgreeOp, flow.Id, flow.CurrIndex)
+			kvs, _ := flow.GetKvs()
+			flowCtx := &approval.FlowContext{
+				Context: context.Background(),
+				FlowId:  flow.Id,
+				BizId:   flow.BizId,
+				Kvs:     kvs,
+				Process: &process,
+			}
+			go runNext(flowCtx, &flow, node, map[string]any{
+				"agree": "y",
+			})
 		}
-		committer.Commit()
-	}
-	count, err := approvalmd.CountDetail(ctx, flow.Id, flow.CurrIndex, approvalmd.AgreeOp)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if int(count) >= node.AtLeastNum {
-		flowCtx := &approval.FlowContext{
-			Context: context.Background(),
-			FlowId:  flow.Id,
-			Process: &process,
-			BizId:   flow.BizId,
-		}
-		go runNext(flowCtx, &flow, node, map[string]any{
-			"agree": "y",
-		})
 	}
 	return nil
 }
@@ -404,7 +389,7 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b {
+	if !b || notify.Account != reqDTO.Operator.Account {
 		return util.InvalidArgsError()
 	}
 	if notify.Done {
@@ -415,7 +400,7 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b {
+	if !b || flow.FlowStatus != approvalmd.PendingFlowStatus {
 		return util.InvalidArgsError()
 	}
 	if flow.CurrIndex != notify.FlowIndex {
@@ -443,47 +428,32 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 	if !findAccount {
 		return util.UnauthorizedError()
 	}
-	ctx, committer, err := xormstore.TxContext(ctx)
+	b, err = approvalmd.UpdateNotifyDoneWithOldDone(ctx, reqDTO.NotifyId, true, false, approvalmd.DisagreeOp)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	// 事务
-	{
-		err = approvalmd.InsertDetail(ctx, approvalmd.InsertDetailReqDTO{
-			FlowId:    flow.Id,
-			FlowIndex: flow.CurrIndex,
-			FlowOp:    approvalmd.DisagreeOp,
-			Account:   reqDTO.Operator.Account,
-		})
+	if b {
+		count, err := approvalmd.CountOperate(ctx, flow.Id, flow.CurrIndex, approvalmd.DisagreeOp)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
-			committer.Rollback()
 			return util.InternalError(err)
 		}
-		_, err = approvalmd.UpdateNotifyDone(ctx, reqDTO.NotifyId, true)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			committer.Rollback()
-			return util.InternalError(err)
+		if int(count)+node.AtLeastNum > len(node.Accounts) {
+			// 其他人被迫不同意
+			_ = approvalmd.UpdateNotifyDoneWithOldDoneByFlowIdAndIndex(ctx, true, false, approvalmd.AutoDisagreeOp, flow.Id, flow.CurrIndex)
+			kvs, _ := flow.GetKvs()
+			flowCtx := &approval.FlowContext{
+				Context: context.Background(),
+				FlowId:  flow.Id,
+				BizId:   flow.BizId,
+				Kvs:     kvs,
+				Process: &process,
+			}
+			go runNext(flowCtx, &flow, node, map[string]any{
+				"agree": "n",
+			})
 		}
-		committer.Commit()
-	}
-	count, err := approvalmd.CountDetail(ctx, flow.Id, flow.CurrIndex, approvalmd.DisagreeOp)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if int(count)+node.AtLeastNum >= len(node.Accounts) {
-		flowCtx := &approval.FlowContext{
-			Context: context.Background(),
-			FlowId:  flow.Id,
-			Process: &process,
-			BizId:   flow.BizId,
-		}
-		go runNext(flowCtx, &flow, node, map[string]any{
-			"agree": "n",
-		})
 	}
 	return nil
 }
@@ -529,10 +499,12 @@ func (*outerImpl) InsertCustomProcess(ctx context.Context, reqDTO InsertCustomPr
 		return
 	}
 	err = approvalmd.InsertProcess(ctx, approvalmd.InsertProcessReqDTO{
-		Pid:     reqDTO.Pid,
-		Name:    reqDTO.Name,
-		GroupId: reqDTO.GroupId,
-		Process: reqDTO.Process.Convert(),
+		Pid:        reqDTO.Pid,
+		Name:       reqDTO.Name,
+		GroupId:    reqDTO.GroupId,
+		IconUrl:    reqDTO.IconUrl,
+		Process:    reqDTO.Process.Convert(),
+		SourceType: approvalmd.CustomSourceType,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -576,6 +548,7 @@ func (*outerImpl) UpdateCustomProcess(ctx context.Context, reqDTO UpdateCustomPr
 		Id:      reqDTO.Id,
 		Name:    reqDTO.Name,
 		GroupId: reqDTO.GroupId,
+		IconUrl: reqDTO.IconUrl,
 		Process: reqDTO.Process.Convert(),
 	})
 	if err != nil {
@@ -595,23 +568,25 @@ func (*outerImpl) InsertCustomFlow(ctx context.Context, reqDTO InsertCustomFlowR
 	defer closer.Close()
 	process, b, err := approvalmd.GetProcessByPid(ctx, reqDTO.Pid)
 	if err != nil {
-		return nil, err
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
 	}
-	// groupId = 1是系统审批流 不是自定义审批流
-	if !b || process.GroupId == 1 {
+	if !b {
 		return nil, util.InvalidArgsError()
 	}
-	errKeys := process.Process.CheckKvCfgs(reqDTO.Kvs)
+	up, _ := process.GetUnmarshalProcess()
+	errKeys := up.CheckKvCfgs(reqDTO.Kvs)
 	if len(errKeys) > 0 {
 		return errKeys, nil
 	}
 	flow, err := approvalmd.InsertFlow(ctx, approvalmd.InsertFlowReqDTO{
-		ProcessId:  process.Id,
-		Process:    process.Process,
-		CurrIndex:  1,
-		FlowStatus: approvalmd.PendingFlowStatus,
-		Creator:    reqDTO.Operator.Account,
-		BizId:      reqDTO.BizId,
+		ProcessId:   process.Id,
+		ProcessName: process.Name,
+		Process:     up,
+		CurrIndex:   1,
+		FlowStatus:  approvalmd.PendingFlowStatus,
+		Kvs:         reqDTO.Kvs,
+		Creator:     reqDTO.Operator.Account,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -639,10 +614,350 @@ func (*outerImpl) CancelCustomFlow(ctx context.Context, reqDTO CancelCustomFlowR
 	if flow.Creator != reqDTO.Operator.Account {
 		return util.UnauthorizedError()
 	}
-	_, err = approvalmd.UpdateFlowStatusWithOldStatus(ctx, reqDTO.FlowId, approvalmd.CanceledFlowStatus, approvalmd.PendingFlowStatus)
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		_, err := approvalmd.UpdateFlowStatusWithOldStatus(ctx, reqDTO.FlowId, approvalmd.CanceledFlowStatus, approvalmd.PendingFlowStatus)
+		if err != nil {
+			return err
+		}
+		return approvalmd.UpdateNotifyDoneWithOldDoneByFlowId(ctx, true, false, approvalmd.CancelOp, reqDTO.FlowId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
 	return nil
+}
+
+// ListAllGroupProcess 自定义审批流列表
+func (*outerImpl) ListAllGroupProcess(ctx context.Context, reqDTO ListAllGroupProcessReqDTO) ([]GroupProcessDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	groups, err := approvalmd.GetAllGroups(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	processes, err := approvalmd.GetAllCustomProcesses(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	processMap := make(map[int64][]approvalmd.SimpleProcess, 8)
+	for _, process := range processes {
+		pl, b := processMap[process.GroupId]
+		if !b {
+			pl = make([]approvalmd.SimpleProcess, 0)
+		}
+		pl = append(pl, process)
+		processMap[process.GroupId] = pl
+	}
+	groupsRet, _ := listutil.Map(groups, func(t approvalmd.Group) (GroupProcessDTO, error) {
+		pl := processMap[t.Id]
+		ps, _ := listutil.Map(pl, func(t approvalmd.SimpleProcess) (SimpleProcessDTO, error) {
+			return SimpleProcessDTO{
+				Id:      t.Id,
+				Name:    t.Name,
+				IconUrl: t.IconUrl,
+			}, nil
+		})
+		sort.SliceStable(ps, func(i, j int) bool {
+			return ps[i].Id < ps[j].Id
+		})
+		return GroupProcessDTO{
+			Id:        t.Id,
+			Name:      t.Name,
+			Processes: ps,
+		}, nil
+	})
+	sort.SliceStable(groupsRet, func(i, j int) bool {
+		return groupsRet[i].Id < groupsRet[j].Id
+	})
+	return groupsRet, nil
+}
+
+// ListCustomFlow 获取申请的审批流
+func (*outerImpl) ListCustomFlow(ctx context.Context, reqDTO ListCustomFlowReqDTO) ([]FlowDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	startTime, _ := time.Parse(time.DateTime, reqDTO.DayTime+" 00:00:00")
+	endTime, _ := time.Parse(time.DateTime, reqDTO.DayTime+" 23:59:59")
+	flows, err := approvalmd.GetFlowByCreatorAndTime(ctx, reqDTO.Operator.Account, startTime, endTime)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(flows, func(t approvalmd.Flow) (FlowDTO, error) {
+		return FlowDTO{
+			Id:          t.Id,
+			ProcessName: t.ProcessName,
+			FlowStatus:  t.FlowStatus,
+			Creator:     t.Creator,
+			Created:     t.Created,
+		}, nil
+	})
+}
+
+// ListOperateFlow 获取所有未审批提醒
+func (*outerImpl) ListOperateFlow(ctx context.Context, reqDTO ListOperateFlowReqDTO) ([]FlowDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	startTime, _ := time.Parse(time.DateTime, reqDTO.DayTime+" 00:00:00")
+	endTime, _ := time.Parse(time.DateTime, reqDTO.DayTime+" 23:59:59")
+	notifies, err := approvalmd.GetNotifyByAccountAndTime(ctx, reqDTO.Operator.Account, startTime, endTime, reqDTO.Done)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	flowIds, _ := listutil.Map(notifies, func(t approvalmd.Notify) (int64, error) {
+		return t.FlowId, nil
+	})
+	flows, err := approvalmd.BatchGetFlows(ctx, flowIds)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(flows, func(t approvalmd.Flow) (FlowDTO, error) {
+		return FlowDTO{
+			Id:          t.Id,
+			ProcessName: t.ProcessName,
+			FlowStatus:  t.FlowStatus,
+			Creator:     t.Creator,
+			Created:     t.Created,
+		}, nil
+	})
+}
+
+// DeleteCustomProcess 删除自定义审批流
+func (*outerImpl) DeleteCustomProcess(ctx context.Context, reqDTO DeleteCustomProcessReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.DeleteCustomProcess),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	// 系统管理员
+	if !reqDTO.Operator.IsAdmin {
+		return util.InvalidArgsError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err = approvalmd.DeleteProcessById(ctx, reqDTO.Id)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// GetFlowDetail 获取审批流详情
+func (*outerImpl) GetFlowDetail(ctx context.Context, reqDTO GetFlowDetailReqDTO) (FlowDetailDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return FlowDetailDTO{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	flow, b, err := approvalmd.GetFlowById(ctx, reqDTO.FlowId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return FlowDetailDTO{}, util.InternalError(err)
+	}
+	if !b {
+		return FlowDetailDTO{}, util.InvalidArgsError()
+	}
+	if !reqDTO.Operator.IsAdmin && flow.Creator != reqDTO.Operator.Account {
+		b, err = approvalmd.ExistNotifyByAccountAndFlowId(ctx, reqDTO.Operator.Account, reqDTO.FlowId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return FlowDetailDTO{}, util.InternalError(err)
+		}
+		if !b {
+			return FlowDetailDTO{}, util.UnauthorizedError()
+		}
+	}
+	process, _ := flow.GetProcess()
+	kvs, _ := flow.GetKvs()
+	notifies, err := approvalmd.GetNotifyByFlowId(ctx, flow.Id)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return FlowDetailDTO{}, util.InternalError(err)
+	}
+	ret := FlowDetailDTO{
+		Id:          flow.Id,
+		ProcessName: flow.ProcessName,
+		FlowStatus:  flow.FlowStatus,
+		Creator:     flow.Creator,
+		Created:     flow.Created,
+		Kvs:         kvs,
+		Process:     process,
+	}
+	ret.NotifyList, _ = listutil.Map(notifies, func(t approvalmd.Notify) (NotifyDTO, error) {
+		return NotifyDTO{
+			Account:   t.Account,
+			FlowIndex: t.FlowIndex,
+			Done:      t.Done,
+			Op:        t.Op,
+			Updated:   t.Updated,
+		}, nil
+	})
+	return ret, nil
+}
+
+// ListCustomProcess 展示详细审批流列表
+func (*outerImpl) ListCustomProcess(ctx context.Context, reqDTO ListCustomProcessReqDTO) ([]ProcessDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	if !reqDTO.Operator.IsAdmin {
+		return nil, util.UnauthorizedError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	processes, err := approvalmd.GetProcessByGroupId(ctx, reqDTO.GroupId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(processes, func(t approvalmd.Process) (ProcessDTO, error) {
+		up, _ := t.GetUnmarshalProcess()
+		return ProcessDTO{
+			Id:      t.Id,
+			Pid:     t.Pid,
+			GroupId: t.GroupId,
+			Name:    t.Name,
+			Content: up,
+			IconUrl: t.IconUrl,
+			Created: t.Created,
+		}, nil
+	})
+}
+
+// InsertGroup 插入审批流分组
+func (*outerImpl) InsertGroup(ctx context.Context, reqDTO InsertGroupReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.InsertGroup),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err = approvalmd.InsertGroup(ctx, approvalmd.InsertGroupReqDTO{
+		Name: reqDTO.Name,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return nil
+}
+
+// DeleteGroup 删除分组
+func (*outerImpl) DeleteGroup(ctx context.Context, reqDTO DeleteGroupReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.DeleteGroup),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err = approvalmd.DeleteGroup(ctx, reqDTO.Id)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// ListGroup 展示分组
+func (*outerImpl) ListGroup(ctx context.Context, reqDTO ListGroupReqDTO) ([]GroupDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	if !reqDTO.Operator.IsAdmin {
+		return nil, util.UnauthorizedError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	groups, err := approvalmd.GetAllGroups(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(groups, func(t approvalmd.Group) (GroupDTO, error) {
+		return GroupDTO{
+			Id:   t.Id,
+			Name: t.Name,
+		}, nil
+	})
+}
+
+// UpdateGroup 修改分组
+func (*outerImpl) UpdateGroup(ctx context.Context, reqDTO UpdateGroupReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.UpdateGroup),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err = approvalmd.UpdateGroup(ctx, approvalmd.UpdateGroupReqDTO{
+		Id:   reqDTO.Id,
+		Name: reqDTO.Name,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/LeeZXin/zsf/services/discovery"
 	"github.com/LeeZXin/zsf/services/lb"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -27,6 +26,7 @@ type FlowContext struct {
 	context.Context
 	FlowId  int64
 	BizId   string
+	Kvs     []Kv
 	Process *Process
 }
 
@@ -61,6 +61,13 @@ func (a *Api) IsValid() bool {
 	return true
 }
 
+func (a *Api) replaceStr(kvs []Kv, str string) string {
+	for _, kv := range kvs {
+		str = strings.ReplaceAll(str, "{{"+kv.Key+"}}", kv.Value)
+	}
+	return str
+}
+
 func (a *Api) DoRequest(ctx *FlowContext) (map[string]any, error) {
 	finalUrl := a.Url
 	parseUrl, err := url.Parse(finalUrl)
@@ -75,15 +82,16 @@ func (a *Api) DoRequest(ctx *FlowContext) (map[string]any, error) {
 		if len(servers) == 0 {
 			return nil, lb.ServerNotFound
 		}
-		server := servers[rand.Int()%len(servers)]
+		server := discovery.ChooseRandomServer(servers)
 		finalUrl = parseUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parseUrl.RequestURI()
-		if parseUrl.RawQuery != "" {
-			finalUrl = finalUrl + fmt.Sprintf("&bizId=%s", ctx.BizId)
-		} else {
-			finalUrl = finalUrl + fmt.Sprintf("?bizId=%s", ctx.BizId)
-		}
 	}
-	request, err := http.NewRequest(a.Method, finalUrl, strings.NewReader(a.BodyStr))
+	if parseUrl.RawQuery != "" {
+		finalUrl = finalUrl + fmt.Sprintf("&bizId=%s", ctx.BizId)
+	} else {
+		finalUrl = finalUrl + fmt.Sprintf("?bizId=%s", ctx.BizId)
+	}
+	bodyStr := a.replaceStr(ctx.Kvs, a.BodyStr)
+	request, err := http.NewRequest(a.Method, finalUrl, strings.NewReader(bodyStr))
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +160,7 @@ type ConditionalNodeCfg struct {
 
 type KvCfg struct {
 	Key      string `json:"key"`
+	Name     string `json:"name"`
 	Type     string `json:"type"`
 	Required bool   `json:"required"`
 }
@@ -264,13 +273,12 @@ type ConditionalNode struct {
 }
 
 type ProcessCfg struct {
-	Title  string   `json:"title"`
 	KvCfgs []KvCfg  `json:"kvCfgs"`
 	Node   *NodeCfg `json:"node"`
 }
 
 func (c *ProcessCfg) IsValid() bool {
-	if c.Node == nil || c.Title == "" || len(c.KvCfgs) > 1000 {
+	if c.Node == nil || len(c.KvCfgs) > 1000 {
 		return false
 	}
 	return c.Node.IsValid()
@@ -278,7 +286,6 @@ func (c *ProcessCfg) IsValid() bool {
 
 func (c *ProcessCfg) Convert() Process {
 	ret := Process{}
-	ret.Title = c.Title
 	ret.KvCfgs = c.KvCfgs
 	if c.Node != nil {
 		ret.Node = c.Node.Convert()
@@ -287,7 +294,6 @@ func (c *ProcessCfg) Convert() Process {
 }
 
 type Process struct {
-	Title  string  `json:"title"`
 	KvCfgs []KvCfg `json:"kvCfgs"`
 	Node   *Node   `json:"node"`
 }

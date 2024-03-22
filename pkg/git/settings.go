@@ -1,6 +1,7 @@
 package git
 
 import (
+	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf/logger"
 	"os"
@@ -25,7 +26,7 @@ func initAllSettings() {
 	tempDir = filepath.Join(dataDir, "temp")
 	repoDir = filepath.Join(dataDir, "repo")
 	actionDir = filepath.Join(dataDir, "action")
-	mkdirAll(
+	util.MkdirAll(
 		homeDir,
 		lfsDir,
 		tempDir,
@@ -33,15 +34,6 @@ func initAllSettings() {
 		actionDir,
 	)
 	hookToken = idutil.RandomUuid()
-}
-
-func mkdirAll(dirs ...string) {
-	for _, dir := range dirs {
-		err := os.MkdirAll(dir, os.ModePerm)
-		if err != nil {
-			logger.Logger.Fatalf("zgit os.MkdirAll %s err: %v", dir, err)
-		}
-	}
 }
 
 func HomeDir() string {

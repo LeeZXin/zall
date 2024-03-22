@@ -8,7 +8,6 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -260,7 +259,7 @@ func listRepo(c *gin.Context) {
 				TeamId:  t.TeamId,
 				GitSize: t.GitSize,
 				LfsSize: t.LfsSize,
-				Created: t.Created.Format(timeutil.DefaultTimeFormat),
+				Created: t.Created.Format(time.DateTime),
 			}, nil
 		})
 		c.JSON(http.StatusOK, ListRepoRespVO{
@@ -449,7 +448,7 @@ func listAccessToken(c *gin.Context) {
 				Id:      t.Id,
 				Account: t.Account,
 				Token:   t.Token,
-				Created: t.Created.Format(timeutil.DefaultTimeFormat),
+				Created: t.Created.Format(time.DateTime),
 			}, nil
 		})
 		c.JSON(http.StatusOK, respVO)

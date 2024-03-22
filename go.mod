@@ -5,12 +5,13 @@ go 1.20
 require (
 	github.com/42wim/sshsig v0.0.0-20211121163825-841cf5bbc121
 	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
-	github.com/LeeZXin/zsf v1.1.42
-	github.com/LeeZXin/zsf-utils v1.0.43
+	github.com/LeeZXin/zsf v1.1.46
+	github.com/LeeZXin/zsf-utils v1.0.44
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gliderlabs/ssh v0.3.5
 	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/hashicorp/go-bexpr v0.1.14
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/keybase/go-crypto v0.0.0-20200123153347-de78d2cb44f4
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -61,7 +62,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.3.1 // indirect
-	github.com/hashicorp/go-bexpr v0.1.14 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.16.6 // indirect

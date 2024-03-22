@@ -15,6 +15,7 @@ var (
 		IdServer,
 		PropServer,
 		TcpDetect,
+		FileServer,
 	}
 )
 

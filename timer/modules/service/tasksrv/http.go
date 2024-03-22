@@ -8,7 +8,6 @@ import (
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf/services/discovery"
 	"github.com/LeeZXin/zsf/services/lb"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -73,7 +72,7 @@ func handleHttpTask(content string, sb *util.SimpleLogger) bool {
 					sb.WriteString(fmt.Sprintf("can not find service: %s with zone: %s err: %v", parsedUrl.Host, zone, lb.ServerNotFound))
 					continue
 				}
-				server := servers[rand.Int()%len(servers)]
+				server := discovery.ChooseRandomServer(servers)
 				finalUrl = parsedUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parsedUrl.RequestURI()
 				zoneRet = zoneRet && doHttpRequest(sb, finalUrl, &task)
 				sb.WriteString("--------- end zone: " + zone)
@@ -89,7 +88,7 @@ func handleHttpTask(content string, sb *util.SimpleLogger) bool {
 				sb.WriteString(fmt.Sprintf("can not find service: %s err: %v", parsedUrl.Host, lb.ServerNotFound))
 				return false
 			}
-			server := servers[rand.Int()%len(servers)]
+			server := discovery.ChooseRandomServer(servers)
 			finalUrl = parsedUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parsedUrl.RequestURI()
 		}
 	}

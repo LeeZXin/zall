@@ -2,7 +2,6 @@ package detectmd
 
 import (
 	"context"
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
 )
@@ -83,7 +82,7 @@ func InsertLog(ctx context.Context, reqDTO InsertLogReqDTO) error {
 
 func DeleteLogByTime(ctx context.Context, before time.Time) error {
 	_, err := xormutil.MustGetXormSession(ctx).
-		Where("created < ?", before.Format(timeutil.DefaultTimeFormat)).
+		Where("created < ?", before.Format(time.DateTime)).
 		Delete(new(DetectLog))
 	return err
 }

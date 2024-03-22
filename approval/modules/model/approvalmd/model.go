@@ -10,19 +10,28 @@ import (
 type FlowOp int
 
 const (
-	AgreeOp FlowOp = iota
+	PendingOp FlowOp = iota
+	AgreeOp
 	DisagreeOp
 	CancelOp
+	AutoAgreeOp
+	AutoDisagreeOp
 )
 
 func (o FlowOp) Readable() string {
 	switch o {
+	case PendingOp:
+		return i18n.GetByKey(i18n.FlowPendingOp)
 	case AgreeOp:
 		return i18n.GetByKey(i18n.FlowAgreeOp)
 	case DisagreeOp:
 		return i18n.GetByKey(i18n.FlowDisagreeOp)
 	case CancelOp:
 		return i18n.GetByKey(i18n.FlowCancelOp)
+	case AutoAgreeOp:
+		return i18n.GetByKey(i18n.FlowAutoAgreeOp)
+	case AutoDisagreeOp:
+		return i18n.GetByKey(i18n.FlowAutoDisagreeOp)
 	default:
 		return i18n.GetByKey(i18n.FlowUnknownOp)
 	}
@@ -64,25 +73,45 @@ func (s FlowStatus) IsValid() bool {
 	}
 }
 
+type SourceType int
+
+const (
+	CustomSourceType SourceType = iota
+	SystemSourceType
+)
+
 const (
 	ProcessTableName = "zapproval_process"
 	FlowTableName    = "zapproval_flow"
-	DetailTableName  = "zapproval_detail"
 	NotifyTableName  = "zapproval_notify"
 	GroupTableName   = "zapproval_group"
 )
 
 type Process struct {
-	Id      int64     `json:"id" xorm:"pk autoincr"`
-	Pid     string    `json:"pid"`
-	GroupId int64     `json:"groupId"`
-	Name    string    `json:"name"`
-	Content string    `json:"content"`
-	Created time.Time `json:"created" xorm:"created"`
-	Updated time.Time `json:"updated" xorm:"updated"`
+	Id         int64      `json:"id" xorm:"pk autoincr"`
+	Pid        string     `json:"pid"`
+	GroupId    int64      `json:"groupId"`
+	Name       string     `json:"name"`
+	Content    string     `json:"content"`
+	IconUrl    string     `json:"iconUrl"`
+	SourceType SourceType `json:"sourceType"`
+	Created    time.Time  `json:"created" xorm:"created"`
+	Updated    time.Time  `json:"updated" xorm:"updated"`
 }
 
 func (*Process) TableName() string {
+	return ProcessTableName
+}
+
+type SimpleProcess struct {
+	Id      int64  `json:"id" xorm:"pk autoincr"`
+	Pid     string `json:"pid"`
+	GroupId int64  `json:"groupId"`
+	Name    string `json:"name"`
+	IconUrl string `json:"iconUrl"`
+}
+
+func (*SimpleProcess) TableName() string {
 	return ProcessTableName
 }
 
@@ -95,6 +124,7 @@ func (p *Process) GetUnmarshalProcess() (approval.Process, error) {
 type Flow struct {
 	Id             int64      `json:"id" xorm:"pk autoincr"`
 	ProcessId      int64      `json:"processId"`
+	ProcessName    string     `json:"processName"`
 	ProcessContent string     `json:"processContent"`
 	CurrIndex      int        `json:"currIndex"`
 	FlowStatus     FlowStatus `json:"flowStatus"`
@@ -122,26 +152,15 @@ func (*Flow) TableName() string {
 	return FlowTableName
 }
 
-type Detail struct {
-	Id        int64     `json:"id" xorm:"pk autoincr"`
-	FlowId    int64     `json:"flowId"`
-	Account   string    `json:"account"`
-	FlowIndex int       `json:"flowIndex"`
-	Op        FlowOp    `json:"op"`
-	Created   time.Time `json:"created" xorm:"created"`
-}
-
-func (*Detail) TableName() string {
-	return DetailTableName
-}
-
 type Notify struct {
 	Id        int64     `json:"id" xorm:"pk autoincr"`
 	FlowId    int64     `json:"flowId"`
 	Account   string    `json:"account"`
 	FlowIndex int       `json:"flowIndex"`
 	Done      bool      `json:"done"`
+	Op        FlowOp    `json:"op"`
 	Created   time.Time `json:"created" xorm:"created"`
+	Updated   time.Time `json:"updated" xorm:"updated"`
 }
 
 func (*Notify) TableName() string {

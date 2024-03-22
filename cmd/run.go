@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
-	"github.com/LeeZXin/zall/approval/modules/service/approvalsrv"
+	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/genid/modules/api/idapi"
 	"github.com/LeeZXin/zall/git/modules/api/actionagentapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
@@ -108,8 +108,11 @@ func runZall(*cli.Context) error {
 	}
 	// for approval
 	{
-		approvalsrv.InitDefaultGroup()
 		approvalapi.InitApi()
+	}
+	// for file server
+	{
+		fileapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer())
 	zsf.Run(

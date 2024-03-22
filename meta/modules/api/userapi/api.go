@@ -6,10 +6,10 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 func InitApi() {
@@ -170,8 +170,8 @@ func listUser(c *gin.Context) {
 				IsAdmin:      t.IsAdmin,
 				IsProhibited: t.IsProhibited,
 				AvatarUrl:    t.AvatarUrl,
-				Created:      t.Created.Format(timeutil.DefaultTimeFormat),
-				Updated:      t.Updated.Format(timeutil.DefaultTimeFormat),
+				Created:      t.Created.Format(time.DateTime),
+				Updated:      t.Updated.Format(time.DateTime),
 			}, nil
 		})
 		c.JSON(http.StatusOK, ret)

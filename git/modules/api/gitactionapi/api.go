@@ -7,10 +7,10 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/timeutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 func InitApi() {
@@ -73,7 +73,7 @@ func listAction(c *gin.Context) {
 			return ActionVO{
 				Id:            t.Id,
 				ActionContent: t.Content,
-				Created:       t.Created.Format(timeutil.DefaultTimeFormat),
+				Created:       t.Created.Format(time.DateTime),
 			}, nil
 		})
 		c.JSON(http.StatusOK, resp)
