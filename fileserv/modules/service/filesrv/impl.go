@@ -13,10 +13,11 @@ import (
 )
 
 var (
-	iconStorage   files.Storage
-	normalStorage files.Storage
-	avatarStorage files.Storage
-	domain        string
+	iconStorage    files.Storage
+	normalStorage  files.Storage
+	avatarStorage  files.Storage
+	productStorage files.Storage
+	domain         string
 )
 
 func InitStorage() {
@@ -28,13 +29,19 @@ func InitStorage() {
 	iconDir := filepath.Join(dataDir, "icon")
 	avatarDir := filepath.Join(dataDir, "avatar")
 	normalDir := filepath.Join(dataDir, "normal")
+	productDir := filepath.Join(dataDir, "product")
 	iconTempDir := filepath.Join(iconDir, "temp")
 	avatarTempDir := filepath.Join(avatarDir, "temp")
 	normalTempDir := filepath.Join(normalDir, "temp")
-	util.MkdirAll(iconDir, normalDir)
+	productTempDir := filepath.Join(productDir, "temp")
+	util.MkdirAll(
+		iconDir, normalDir, avatarDir, productDir,
+		iconTempDir, normalTempDir, avatarTempDir, productTempDir,
+	)
 	iconStorage, _ = files.NewLocalStorage(iconDir, iconTempDir)
 	normalStorage, _ = files.NewLocalStorage(normalDir, normalTempDir)
 	avatarStorage, _ = files.NewLocalStorage(avatarDir, avatarTempDir)
+	productStorage, _ = files.NewLocalStorage(productDir, productTempDir)
 	domain = static.GetString("files.domain")
 }
 
@@ -89,8 +96,8 @@ func (*outerImpl) GetAvatar(ctx context.Context, reqDTO GetAvatarReqDTO) (string
 	if err := reqDTO.IsValid(); err != nil {
 		return "", nil
 	}
-	iconPath := filepath.Join(convertPointerPath(reqDTO.Id), reqDTO.Name)
-	b, err := avatarStorage.Exists(ctx, iconPath)
+	avatarPath := filepath.Join(convertPointerPath(reqDTO.Id), reqDTO.Name)
+	b, err := avatarStorage.Exists(ctx, avatarPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
@@ -98,7 +105,7 @@ func (*outerImpl) GetAvatar(ctx context.Context, reqDTO GetAvatarReqDTO) (string
 	if !b {
 		return "", nil
 	}
-	return filepath.Join(iconStorage.StoreDir(), iconPath), nil
+	return filepath.Join(avatarStorage.StoreDir(), avatarPath), nil
 }
 
 func (*outerImpl) UploadNormal(ctx context.Context, reqDTO UploadNormalReqDTO) (string, error) {
@@ -118,8 +125,8 @@ func (*outerImpl) GetNormal(ctx context.Context, reqDTO GetNormalReqDTO) (string
 	if err := reqDTO.IsValid(); err != nil {
 		return "", nil
 	}
-	iconPath := filepath.Join(convertPointerPath(reqDTO.Id), reqDTO.Name)
-	b, err := normalStorage.Exists(ctx, iconPath)
+	normalPath := filepath.Join(convertPointerPath(reqDTO.Id), reqDTO.Name)
+	b, err := normalStorage.Exists(ctx, normalPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
@@ -127,7 +134,35 @@ func (*outerImpl) GetNormal(ctx context.Context, reqDTO GetNormalReqDTO) (string
 	if !b {
 		return "", nil
 	}
-	return filepath.Join(normalStorage.StoreDir(), iconPath), nil
+	return filepath.Join(normalStorage.StoreDir(), normalPath), nil
+}
+
+func (*outerImpl) UploadProduct(ctx context.Context, reqDTO UploadProductReqDTO) (string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return "", nil
+	}
+	_, err := productStorage.Save(ctx, filepath.Join(reqDTO.App, reqDTO.Name), reqDTO.Body)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	return domain + fmt.Sprintf("/api/files/product/get/%s/%s", reqDTO.App, reqDTO.Name), nil
+}
+
+func (*outerImpl) GetProduct(ctx context.Context, reqDTO GetProductReqDTO) (string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return "", nil
+	}
+	productPath := filepath.Join(reqDTO.App, reqDTO.Name)
+	b, err := productStorage.Exists(ctx, productPath)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	if !b {
+		return "", nil
+	}
+	return filepath.Join(productStorage.StoreDir(), productPath), nil
 }
 
 func convertPointerPath(id string) string {

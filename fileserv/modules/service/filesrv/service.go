@@ -15,4 +15,6 @@ type OuterService interface {
 	GetNormal(context.Context, GetNormalReqDTO) (string, error)
 	UploadAvatar(context.Context, UploadAvatarReqDTO) (string, error)
 	GetAvatar(context.Context, GetAvatarReqDTO) (string, error)
+	UploadProduct(context.Context, UploadProductReqDTO) (string, error)
+	GetProduct(context.Context, GetProductReqDTO) (string, error)
 }

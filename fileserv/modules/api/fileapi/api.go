@@ -16,11 +16,12 @@ import (
 )
 
 var (
-	token string
+	normalToken, productToken string
 )
 
 func InitApi() {
-	token = static.GetString("files.normal.token")
+	normalToken = static.GetString("files.normal.token")
+	productToken = static.GetString("files.product.token")
 	filesrv.InitStorage()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/files/icon", apisession.CheckLogin)
@@ -33,19 +34,35 @@ func InitApi() {
 			group.POST("/upload/:name", uploadAvatar)
 			group.GET("/get/:id/:name", getAvatar)
 		}
-		group = e.Group("/api/files/normal", checkToken)
+		group = e.Group("/api/files/normal", checkNormalToken)
 		{
 			group.POST("/upload/:name", uploadNormal)
 			group.GET("/get/:id/:name", getNormal)
 		}
+		// 简单制品库
+		group = e.Group("/api/files/product", checkProductToken)
+		{
+			group.POST("/upload/:app/:name", uploadProduct)
+			group.GET("/get/:app/:name", getProduct)
+		}
 	})
 }
 
-func checkToken(c *gin.Context) {
-	if c.Query("t") != token {
+func checkNormalToken(c *gin.Context) {
+	if c.Query("t") != normalToken {
 		c.JSON(http.StatusUnauthorized, ginutil.BaseResp{
 			Code:    apicode.UnauthorizedCode.Int(),
-			Message: "invalid token",
+			Message: "invalid normalToken",
+		})
+		c.Abort()
+	}
+}
+
+func checkProductToken(c *gin.Context) {
+	if c.Query("t") != productToken {
+		c.JSON(http.StatusUnauthorized, ginutil.BaseResp{
+			Code:    apicode.UnauthorizedCode.Int(),
+			Message: "invalid normalToken",
 		})
 		c.Abort()
 	}
@@ -179,6 +196,55 @@ func getNormal(c *gin.Context) {
 	name := c.Param("name")
 	path, err := filesrv.Outer.GetNormal(c, filesrv.GetNormalReqDTO{
 		Id:   c.Param("id"),
+		Name: name,
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	if path == "" {
+		c.JSON(http.StatusNotFound, ginutil.BaseResp{
+			Code:    apicode.DataNotExistsCode.Int(),
+			Message: "file not found",
+		})
+		return
+	}
+	if c.Query("a") == "1" {
+		c.Header("Content-Disposition", "attachment; filename=\""+name+"\"")
+		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
+	}
+	c.File(path)
+}
+
+func uploadProduct(c *gin.Context) {
+	body, b, err := getBody(c)
+	if err != nil {
+		logger.Logger.WithContext(c).Error(err)
+		util.HandleApiErr(err, c)
+		return
+	}
+	if b {
+		defer body.Close()
+	}
+	path, err := filesrv.Outer.UploadProduct(c, filesrv.UploadProductReqDTO{
+		App:  c.Param("app"),
+		Name: c.Param("name"),
+		Body: body,
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, UploadIconRespVO{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     path,
+	})
+}
+
+func getProduct(c *gin.Context) {
+	name := c.Param("name")
+	path, err := filesrv.Outer.GetProduct(c, filesrv.GetProductReqDTO{
+		App:  c.Param("app"),
 		Name: name,
 	})
 	if err != nil {
