@@ -7,6 +7,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/gin-gonic/gin"
 	"io"
@@ -53,6 +54,7 @@ func checkToken(c *gin.Context) {
 func uploadIcon(c *gin.Context) {
 	body, b, err := getBody(c)
 	if err != nil {
+		logger.Logger.WithContext(c).Error(err)
 		util.HandleApiErr(err, c)
 		return
 	}
@@ -102,6 +104,7 @@ func getIcon(c *gin.Context) {
 func uploadAvatar(c *gin.Context) {
 	body, b, err := getBody(c)
 	if err != nil {
+		logger.Logger.WithContext(c).Error(err)
 		util.HandleApiErr(err, c)
 		return
 	}
@@ -151,6 +154,7 @@ func getAvatar(c *gin.Context) {
 func uploadNormal(c *gin.Context) {
 	body, b, err := getBody(c)
 	if err != nil {
+		logger.Logger.WithContext(c).Error(err)
 		util.HandleApiErr(err, c)
 		return
 	}
