@@ -87,7 +87,7 @@ func uploadIcon(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, UploadIconRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[string]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     path,
 	})
@@ -137,7 +137,7 @@ func uploadAvatar(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, UploadIconRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[string]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     path,
 	})
@@ -186,7 +186,7 @@ func uploadNormal(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, UploadIconRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[string]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     path,
 	})
@@ -237,7 +237,7 @@ func uploadProduct(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, UploadIconRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[string]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     path,
 	})
