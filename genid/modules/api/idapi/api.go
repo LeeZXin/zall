@@ -28,10 +28,9 @@ func genSnowflakeIds(c *gin.Context) {
 		util.HandleApiErr(util.InvalidArgsError(), c)
 		return
 	}
-	ids := idsrv.Outer.GenSnowflakeIds(c, int(batchNum))
-	c.JSON(http.StatusOK, IdsRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]int64]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     ids,
+		Data:     idsrv.Outer.GenSnowflakeIds(c, int(batchNum)),
 	})
 }
 
@@ -59,7 +58,7 @@ func incrGenerator(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, IdsRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]int64]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     ids,
 	})

@@ -72,7 +72,7 @@ func allBranches(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, AllBranchesRespVO{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     branches,
 		})
@@ -90,7 +90,7 @@ func allTags(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, AllBranchesRespVO{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     branches,
 		})
@@ -115,7 +115,7 @@ func gc(c *gin.Context) {
 // allGitIgnoreTemplateList 获取模版列表
 func allGitIgnoreTemplateList(c *gin.Context) {
 	templateList := reposrv.Outer.AllGitIgnoreTemplateList()
-	c.JSON(http.StatusOK, AllGitIgnoreTemplateListRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     templateList,
 	})
@@ -390,10 +390,7 @@ func showDiffTextContent(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		ret := ShowDiffTextContentRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-		}
-		ret.Lines, _ = listutil.Map(lines, func(t reposrv.DiffLineDTO) (DiffLineVO, error) {
+		data, _ := listutil.Map(lines, func(t reposrv.DiffLineDTO) (DiffLineVO, error) {
 			return DiffLineVO{
 				Index:   t.Index,
 				LeftNo:  t.LeftNo,
@@ -402,7 +399,10 @@ func showDiffTextContent(c *gin.Context) {
 				Text:    t.Text,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ret)
+		c.JSON(http.StatusOK, ginutil.DataResp[[]DiffLineVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
+		})
 	}
 }
 
@@ -440,10 +440,7 @@ func listAccessToken(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		respVO := ListAccessTokenRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-		}
-		respVO.Data, _ = listutil.Map(tokens, func(t reposrv.AccessTokenDTO) (AccessTokenVO, error) {
+		data, _ := listutil.Map(tokens, func(t reposrv.AccessTokenDTO) (AccessTokenVO, error) {
 			return AccessTokenVO{
 				Id:      t.Id,
 				Account: t.Account,
@@ -451,7 +448,10 @@ func listAccessToken(c *gin.Context) {
 				Created: t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, respVO)
+		c.JSON(http.StatusOK, ginutil.DataResp[[]AccessTokenVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
+		})
 	}
 }
 

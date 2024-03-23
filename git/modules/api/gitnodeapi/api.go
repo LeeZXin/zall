@@ -81,10 +81,7 @@ func listNode(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	ret := ListGitNodeRespVO{
-		BaseResp: ginutil.DefaultSuccessResp,
-	}
-	ret.Data, _ = listutil.Map(nodes, func(t gitnodesrv.NodeDTO) (NodeVO, error) {
+	data, _ := listutil.Map(nodes, func(t gitnodesrv.NodeDTO) (NodeVO, error) {
 		return NodeVO{
 			Id:       t.Id,
 			Name:     t.Name,
@@ -92,5 +89,8 @@ func listNode(c *gin.Context) {
 			SshHost:  t.SshHost,
 		}, nil
 	})
-	c.JSON(http.StatusOK, ret)
+	c.JSON(http.StatusOK, ginutil.DataResp[[]NodeVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }

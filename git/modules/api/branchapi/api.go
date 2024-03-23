@@ -67,16 +67,16 @@ func listProtectedBranch(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		respVO := ListProtectedBranchRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-		}
-		respVO.Branches, _ = listutil.Map(branchList, func(t branchsrv.ProtectedBranchDTO) (ProtectedBranchVO, error) {
+		data, _ := listutil.Map(branchList, func(t branchsrv.ProtectedBranchDTO) (ProtectedBranchVO, error) {
 			return ProtectedBranchVO{
 				Id:     t.Id,
 				Branch: t.Branch,
 				Cfg:    t.Cfg,
 			}, nil
 		})
-		c.JSON(http.StatusOK, respVO)
+		c.JSON(http.StatusOK, ginutil.DataResp[[]ProtectedBranchVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
+		})
 	}
 }

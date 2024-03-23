@@ -172,11 +172,6 @@ type UserDTO struct {
 	Updated      time.Time `json:"updated"`
 }
 
-type ListUserRespDTO struct {
-	UserList []UserDTO `json:"userList"`
-	Cursor   int64     `json:"cursor"`
-}
-
 type UpdateUserReqDTO struct {
 	Account  string              `json:"account"`
 	Name     string              `json:"name"`

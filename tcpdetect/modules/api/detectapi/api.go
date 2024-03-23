@@ -90,12 +90,8 @@ func listDetect(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListDetectRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Cursor:   cursor,
-		}
 		validHeartbeatTime := time.Now().Add(-20 * time.Second).UnixMilli()
-		resp.Data, _ = listutil.Map(detects, func(t detectsrv.DetectDTO) (DetectVO, error) {
+		data, _ := listutil.Map(detects, func(t detectsrv.DetectDTO) (DetectVO, error) {
 			return DetectVO{
 				Id:            t.Id,
 				Ip:            t.Ip,
@@ -106,7 +102,13 @@ func listDetect(c *gin.Context) {
 				Enabled:       t.Enabled,
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.PageResp[[]DetectVO]{
+			DataResp: ginutil.DataResp[[]DetectVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: cursor,
+		})
 	}
 }
 
@@ -123,11 +125,7 @@ func listLog(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListLogRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Cursor:   cursor,
-		}
-		resp.Data, _ = listutil.Map(logs, func(t detectsrv.LogDTO) (LogVO, error) {
+		data, _ := listutil.Map(logs, func(t detectsrv.LogDTO) (LogVO, error) {
 			return LogVO{
 				Ip:      t.Ip,
 				Port:    t.Port,
@@ -135,7 +133,13 @@ func listLog(c *gin.Context) {
 				Created: t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.PageResp[[]LogVO]{
+			DataResp: ginutil.DataResp[[]LogVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: cursor,
+		})
 	}
 }
 

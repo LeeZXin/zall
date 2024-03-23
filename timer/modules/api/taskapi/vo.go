@@ -2,7 +2,6 @@ package taskapi
 
 import (
 	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
-	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
 type InsertTaskReqVO struct {
@@ -53,23 +52,11 @@ type TaskVO struct {
 	TaskStatus string           `json:"taskStatus"`
 }
 
-type ListTaskRespVO struct {
-	ginutil.BaseResp
-	Data   []TaskVO `json:"data"`
-	Cursor int64    `json:"cursor"`
-}
-
 type ListLogReqVO struct {
 	Id     int64  `json:"id"`
 	Cursor int64  `json:"cursor"`
 	Limit  int    `json:"limit"`
 	Env    string `json:"env"`
-}
-
-type ListLogRespVO struct {
-	ginutil.BaseResp
-	Data   []TaskLogVO `json:"data"`
-	Cursor int64       `json:"cursor"`
 }
 
 type TaskLogVO struct {

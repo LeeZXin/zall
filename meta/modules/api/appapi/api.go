@@ -86,17 +86,19 @@ func listApp(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListAppRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Cursor:   cursor,
-		}
-		resp.Data, _ = listutil.Map(apps, func(t appsrv.AppDTO) (AppVO, error) {
+		data, _ := listutil.Map(apps, func(t appsrv.AppDTO) (AppVO, error) {
 			return AppVO{
 				AppId: t.AppId,
 				Name:  t.Name,
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.PageResp[[]AppVO]{
+			DataResp: ginutil.DataResp[[]AppVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: cursor,
+		})
 	}
 }
 

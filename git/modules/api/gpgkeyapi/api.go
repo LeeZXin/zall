@@ -83,10 +83,7 @@ func listGpgKey(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	ret := ListGpgKeyRespVO{
-		BaseResp: ginutil.DefaultSuccessResp,
-	}
-	ret.Data, _ = listutil.Map(dtoList, func(t gpgkeysrv.GpgKeyDTO) (GpgKeyVO, error) {
+	data, _ := listutil.Map(dtoList, func(t gpgkeysrv.GpgKeyDTO) (GpgKeyVO, error) {
 		return GpgKeyVO{
 			Id:         t.Id,
 			Name:       t.Name,
@@ -95,5 +92,8 @@ func listGpgKey(c *gin.Context) {
 			EmailList:  t.EmailList,
 		}, nil
 	})
-	c.JSON(http.StatusOK, ret)
+	c.JSON(http.StatusOK, ginutil.DataResp[[]GpgKeyVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }

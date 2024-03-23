@@ -2,7 +2,6 @@ package teamapi
 
 import (
 	"github.com/LeeZXin/zall/pkg/perm"
-	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
 type InsertTeamReqVO struct {
@@ -30,12 +29,6 @@ type ListTeamUserReqVO struct {
 	Account string `json:"account"`
 	Cursor  int64  `json:"cursor"`
 	Limit   int    `json:"limit"`
-}
-
-type ListTeamUserRespVO struct {
-	ginutil.BaseResp
-	Data []TeamUserVO `json:"data"`
-	Next int64        `json:"next"`
 }
 
 type TeamUserVO struct {
@@ -77,21 +70,11 @@ type TeamUserGroupVO struct {
 	Perm    perm.Detail `json:"perm"`
 }
 
-type ListTeamUserGroupRespVO struct {
-	ginutil.BaseResp
-	Data []TeamUserGroupVO `json:"data"`
-}
-
 type TeamVO struct {
 	TeamId  int64  `json:"teamId"`
 	Name    string `json:"name"`
 	Desc    string `json:"desc"`
 	Created string `json:"created"`
-}
-
-type ListTeamRespVO struct {
-	ginutil.BaseResp
-	Data []TeamVO `json:"data"`
 }
 
 type DeleteTeamReqVO struct {

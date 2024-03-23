@@ -1,7 +1,5 @@
 package gitnodeapi
 
-import "github.com/LeeZXin/zsf-utils/ginutil"
-
 type InsertNodeReqVO struct {
 	Id       int64  `json:"id"`
 	Name     string `json:"name"`
@@ -25,9 +23,4 @@ type NodeVO struct {
 	Name     string `json:"name"`
 	HttpHost string `json:"httpHost"`
 	SshHost  string `json:"sshHost"`
-}
-
-type ListGitNodeRespVO struct {
-	ginutil.BaseResp
-	Data []NodeVO `json:"data"`
 }

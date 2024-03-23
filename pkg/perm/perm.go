@@ -131,4 +131,5 @@ type AppPerm struct {
 	CanReadPropAuth       bool `json:"canReadPropAuth"`
 	CanGrantPropAuth      bool `json:"CanGrantPropAuth"`
 	CanHandlePropApproval bool `json:"canHandlePropApproval"`
+	CanAccessProduct      bool `json:"canAccessProduct"`
 }

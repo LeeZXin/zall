@@ -131,11 +131,7 @@ func listTask(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListTaskRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Cursor:   cursor,
-		}
-		resp.Data, _ = listutil.Map(tasks, func(t tasksrv.TaskDTO) (TaskVO, error) {
+		data, _ := listutil.Map(tasks, func(t tasksrv.TaskDTO) (TaskVO, error) {
 			return TaskVO{
 				Id:         t.Id,
 				Name:       t.Name,
@@ -147,7 +143,13 @@ func listTask(c *gin.Context) {
 				TaskStatus: t.TaskStatus.Readable(),
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.PageResp[[]TaskVO]{
+			DataResp: ginutil.DataResp[[]TaskVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: cursor,
+		})
 	}
 }
 
@@ -165,11 +167,7 @@ func listLog(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListLogRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Cursor:   cursor,
-		}
-		resp.Data, _ = listutil.Map(logs, func(t tasksrv.TaskLogDTO) (TaskLogVO, error) {
+		data, _ := listutil.Map(logs, func(t tasksrv.TaskLogDTO) (TaskLogVO, error) {
 			return TaskLogVO{
 				TaskType:    t.TaskType,
 				HttpTask:    t.HttpTask,
@@ -180,7 +178,13 @@ func listLog(c *gin.Context) {
 				Created:     t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.PageResp[[]TaskLogVO]{
+			DataResp: ginutil.DataResp[[]TaskLogVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: cursor,
+		})
 	}
 }
 

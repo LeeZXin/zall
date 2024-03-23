@@ -3,11 +3,17 @@ package filesrv
 import (
 	"context"
 	"fmt"
+	"github.com/LeeZXin/zall/fileserv/modules/model/productmd"
+	"github.com/LeeZXin/zall/meta/modules/model/appmd"
+	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
+	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/files"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"os"
 	"path/filepath"
 )
@@ -49,7 +55,7 @@ type outerImpl struct{}
 
 func (*outerImpl) UploadIcon(ctx context.Context, reqDTO UploadIconReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return "", nil
+		return "", err
 	}
 	if !reqDTO.Operator.IsAdmin {
 		return "", util.UnauthorizedError()
@@ -65,7 +71,7 @@ func (*outerImpl) UploadIcon(ctx context.Context, reqDTO UploadIconReqDTO) (stri
 
 func (*outerImpl) GetIcon(ctx context.Context, reqDTO GetIconReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return "", nil
+		return "", err
 	}
 	iconPath := filepath.Join(convertPointerPath(reqDTO.Id), reqDTO.Name)
 	b, err := iconStorage.Exists(ctx, iconPath)
@@ -81,7 +87,7 @@ func (*outerImpl) GetIcon(ctx context.Context, reqDTO GetIconReqDTO) (string, er
 
 func (*outerImpl) UploadAvatar(ctx context.Context, reqDTO UploadAvatarReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return "", nil
+		return "", err
 	}
 	id := idutil.RandomUuid()
 	_, err := avatarStorage.Save(ctx, filepath.Join(convertPointerPath(id), reqDTO.Name), reqDTO.Body)
@@ -94,7 +100,7 @@ func (*outerImpl) UploadAvatar(ctx context.Context, reqDTO UploadAvatarReqDTO) (
 
 func (*outerImpl) GetAvatar(ctx context.Context, reqDTO GetAvatarReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return "", nil
+		return "", err
 	}
 	avatarPath := filepath.Join(convertPointerPath(reqDTO.Id), reqDTO.Name)
 	b, err := avatarStorage.Exists(ctx, avatarPath)
@@ -110,7 +116,7 @@ func (*outerImpl) GetAvatar(ctx context.Context, reqDTO GetAvatarReqDTO) (string
 
 func (*outerImpl) UploadNormal(ctx context.Context, reqDTO UploadNormalReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return "", nil
+		return "", err
 	}
 	id := idutil.RandomUuid()
 	_, err := normalStorage.Save(ctx, filepath.Join(convertPointerPath(id), reqDTO.Name), reqDTO.Body)
@@ -123,7 +129,7 @@ func (*outerImpl) UploadNormal(ctx context.Context, reqDTO UploadNormalReqDTO) (
 
 func (*outerImpl) GetNormal(ctx context.Context, reqDTO GetNormalReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return "", nil
+		return "", err
 	}
 	normalPath := filepath.Join(convertPointerPath(reqDTO.Id), reqDTO.Name)
 	b, err := normalStorage.Exists(ctx, normalPath)
@@ -139,21 +145,53 @@ func (*outerImpl) GetNormal(ctx context.Context, reqDTO GetNormalReqDTO) (string
 
 func (*outerImpl) UploadProduct(ctx context.Context, reqDTO UploadProductReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return "", nil
+		return "", err
 	}
-	_, err := productStorage.Save(ctx, filepath.Join(reqDTO.App, reqDTO.Name), reqDTO.Body)
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, b, err := productmd.GetProduct(ctx, productmd.GetProductReqDTO{
+		AppId: reqDTO.AppId,
+		Name:  reqDTO.Name,
+		Env:   reqDTO.Env,
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
 	}
-	return domain + fmt.Sprintf("/api/files/product/get/%s/%s", reqDTO.App, reqDTO.Name), nil
+	if b {
+		return "", util.AlreadyExistsError()
+	}
+	_, b, err = appmd.GetByAppId(ctx, reqDTO.AppId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	if !b {
+		return "", util.InvalidArgsError()
+	}
+	err = productmd.InsertProduct(ctx, productmd.InsertProductReqDTO{
+		AppId:   reqDTO.AppId,
+		Name:    reqDTO.Name,
+		Creator: reqDTO.Creator,
+		Env:     reqDTO.Env,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	_, err = productStorage.Save(ctx, filepath.Join(reqDTO.Env, reqDTO.AppId, reqDTO.Name), reqDTO.Body)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	return domain + fmt.Sprintf("/api/files/product/get/%s/%s?env=%s", reqDTO.AppId, reqDTO.Name, reqDTO.Env), nil
 }
 
 func (*outerImpl) GetProduct(ctx context.Context, reqDTO GetProductReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return "", nil
+		return "", err
 	}
-	productPath := filepath.Join(reqDTO.App, reqDTO.Name)
+	productPath := filepath.Join(reqDTO.Env, reqDTO.AppId, reqDTO.Name)
 	b, err := productStorage.Exists(ctx, productPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -163,6 +201,49 @@ func (*outerImpl) GetProduct(ctx context.Context, reqDTO GetProductReqDTO) (stri
 		return "", nil
 	}
 	return filepath.Join(productStorage.StoreDir(), productPath), nil
+}
+
+func (*outerImpl) ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]ProductDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err := checkAccessProductPerm(ctx, reqDTO.AppId, reqDTO.Operator)
+	if err != nil {
+		return nil, err
+	}
+	products, err := productmd.ListProduct(ctx, reqDTO.AppId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(products, func(t productmd.Product) (ProductDTO, error) {
+		return ProductDTO{
+			Name:    t.Name,
+			Creator: t.Creator,
+			Created: t.Created,
+		}, nil
+	})
+}
+
+func checkAccessProductPerm(ctx context.Context, appId string, operator apisession.UserInfo) error {
+	app, b, err := appmd.GetByAppId(ctx, appId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	if operator.IsAdmin {
+		return nil
+	}
+	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, app.TeamId, operator.Account)
+	if !b || !p.PermDetail.GetAppPerm(appId).CanAccessProduct {
+		return util.UnauthorizedError()
+	}
+	return nil
 }
 
 func convertPointerPath(id string) string {

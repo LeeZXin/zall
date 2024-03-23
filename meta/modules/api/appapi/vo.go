@@ -1,7 +1,5 @@
 package appapi
 
-import "github.com/LeeZXin/zsf-utils/ginutil"
-
 type InsertAppReqVO struct {
 	AppId  string `json:"appId"`
 	TeamId int64  `json:"teamId"`
@@ -32,10 +30,4 @@ type TransferTeamReqVO struct {
 type AppVO struct {
 	AppId string `json:"appId"`
 	Name  string `json:"name"`
-}
-
-type ListAppRespVO struct {
-	ginutil.BaseResp
-	Data   []AppVO `json:"data"`
-	Cursor int64   `json:"cursor"`
 }

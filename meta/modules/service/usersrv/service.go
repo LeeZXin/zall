@@ -25,7 +25,7 @@ type OuterService interface {
 	RegisterUser(context.Context, RegisterUserReqDTO) error
 	InsertUser(context.Context, InsertUserReqDTO) error
 	DeleteUser(context.Context, DeleteUserReqDTO) error
-	ListUser(context.Context, ListUserReqDTO) (ListUserRespDTO, error)
+	ListUser(context.Context, ListUserReqDTO) ([]UserDTO, int64, error)
 	UpdateUser(context.Context, UpdateUserReqDTO) error
 	// SetProhibited 禁用用户
 	SetProhibited(context.Context, SetProhibitedReqDTO) error

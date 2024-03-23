@@ -1,7 +1,5 @@
 package gitactionapi
 
-import "github.com/LeeZXin/zsf-utils/ginutil"
-
 type InsertActionReqVO struct {
 	Id            int64  `json:"id"`
 	NodeId        int64  `json:"nodeId"`
@@ -14,11 +12,6 @@ type DeleteActionReqVO struct {
 
 type ListActionReqVO struct {
 	Id int64 `json:"id"`
-}
-
-type ListActionRespVO struct {
-	ginutil.BaseResp
-	Data []ActionVO `json:"data"`
 }
 
 type UpdateActionReqVO struct {
@@ -59,9 +52,4 @@ type NodeVO struct {
 	Id       int64  `json:"id"`
 	Name     string `json:"name"`
 	HttpHost string `json:"httpHost"`
-}
-
-type ListGitNodeRespVO struct {
-	ginutil.BaseResp
-	Data []NodeVO `json:"data"`
 }

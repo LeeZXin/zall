@@ -39,9 +39,9 @@ func getSysCfg(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, GetSysCfgRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[cfgsrv.SysCfg]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Cfg:      cfg,
+		Data:     cfg,
 	})
 }
 
@@ -68,9 +68,9 @@ func getGitCfg(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, GetGitCfgRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[cfgsrv.GitCfg]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Cfg:      cfg,
+		Data:     cfg,
 	})
 }
 
@@ -97,9 +97,9 @@ func getEnvCfg(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, GetEnvCfgRespVO{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Cfg:      cfg,
+		Data:     cfg,
 	})
 }
 

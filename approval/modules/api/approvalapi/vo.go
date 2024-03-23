@@ -73,16 +73,6 @@ type ProcessVO struct {
 	Created string           `json:"created"`
 }
 
-type ListCustomGroupsRespVO struct {
-	ginutil.BaseResp
-	Data []GroupProcessVO `json:"data"`
-}
-
-type ListCustomProcessRespVO struct {
-	ginutil.BaseResp
-	Data []ProcessVO `json:"data"`
-}
-
 type GetFlowReqVO struct {
 	FlowId int64 `json:"flowId"`
 }
@@ -137,26 +127,11 @@ type GroupVO struct {
 	Name string `json:"name"`
 }
 
-type ListGroupRespVO struct {
-	ginutil.BaseResp
-	Data []GroupVO `json:"data"`
-}
-
 type ListCustomFlowReqVO struct {
 	DayTime string `json:"dayTime"`
-}
-
-type ListCustomFlowRespVO struct {
-	ginutil.BaseResp
-	Data []FlowVO `json:"data"`
 }
 
 type ListOperateFlowReqVO struct {
 	DayTime string `json:"dayTime"`
 	Done    bool   `json:"done"`
-}
-
-type ListOperateFlowRespVO struct {
-	ginutil.BaseResp
-	Data []FlowVO `json:"data"`
 }

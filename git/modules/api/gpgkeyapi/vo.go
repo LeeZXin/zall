@@ -31,8 +31,3 @@ type GpgKeyVO struct {
 	ExpireTime string   `json:"expireTime"`
 	EmailList  []string `json:"emailList"`
 }
-
-type ListGpgKeyRespVO struct {
-	ginutil.BaseResp
-	Data []GpgKeyVO `json:"data"`
-}

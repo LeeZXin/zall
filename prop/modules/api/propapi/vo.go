@@ -32,16 +32,6 @@ type EtcdNodeVO struct {
 	Password  string   `json:"password"`
 }
 
-type ListEtcdNodeRespVO struct {
-	ginutil.BaseResp
-	Data []EtcdNodeVO
-}
-
-type ListSimpleEtcdNodeRespVO struct {
-	ginutil.BaseResp
-	Data []string
-}
-
 type InsertContentReqVO struct {
 	AppId   string `json:"appId"`
 	Name    string `json:"name"`
@@ -95,23 +85,12 @@ type PropContentVO struct {
 	Name  string `json:"name"`
 }
 
-type ListContentRespVO struct {
-	ginutil.BaseResp
-	Data []PropContentVO `json:"data"`
-}
-
 type HistoryVO struct {
 	ContentId int64  `json:"contentId"`
 	Content   string `json:"content"`
 	Version   string `json:"version"`
 	Created   string `json:"created"`
 	Creator   string `json:"creator"`
-}
-
-type ListHistoryRespVO struct {
-	ginutil.BaseResp
-	Cursor int64       `json:"cursor"`
-	Data   []HistoryVO `json:"data"`
 }
 
 type DeployVO struct {
@@ -121,12 +100,6 @@ type DeployVO struct {
 	NodeId    string `json:"nodeId"`
 	Created   string `json:"created"`
 	Creator   string `json:"creator"`
-}
-
-type ListDeployRespVO struct {
-	ginutil.BaseResp
-	Cursor int64      `json:"cursor"`
-	Data   []DeployVO `json:"data"`
 }
 
 type GrantAuthReqVO struct {

@@ -17,4 +17,5 @@ type OuterService interface {
 	GetAvatar(context.Context, GetAvatarReqDTO) (string, error)
 	UploadProduct(context.Context, UploadProductReqDTO) (string, error)
 	GetProduct(context.Context, GetProductReqDTO) (string, error)
+	ListProduct(context.Context, ListProductReqDTO) ([]ProductDTO, error)
 }

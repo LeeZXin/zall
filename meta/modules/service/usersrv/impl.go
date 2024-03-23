@@ -306,13 +306,13 @@ func (*outerImpl) DeleteUser(ctx context.Context, reqDTO DeleteUserReqDTO) (err 
 }
 
 // ListUser 展示用户列表
-func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) (ListUserRespDTO, error) {
+func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return ListUserRespDTO{}, err
+		return nil, 0, err
 	}
 	// 只有系统管理员才能操作
 	if !reqDTO.Operator.IsAdmin {
-		return ListUserRespDTO{}, util.UnauthorizedError()
+		return nil, 0, util.UnauthorizedError()
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
@@ -323,10 +323,9 @@ func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) (ListUser
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return ListUserRespDTO{}, util.InternalError(err)
+		return nil, 0, util.InternalError(err)
 	}
-	ret := ListUserRespDTO{}
-	ret.UserList, _ = listutil.Map(userList, func(t usermd.User) (UserDTO, error) {
+	data, _ := listutil.Map(userList, func(t usermd.User) (UserDTO, error) {
 		return UserDTO{
 			Account:      t.Account,
 			Name:         t.Name,
@@ -338,10 +337,11 @@ func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) (ListUser
 			Updated:      t.Updated,
 		}, nil
 	})
+	var next int64 = 0
 	if len(userList) == reqDTO.Limit {
-		ret.Cursor = userList[len(userList)-1].Id
+		next = userList[len(userList)-1].Id
 	}
-	return ret, nil
+	return data, next, nil
 }
 
 func (*outerImpl) UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (err error) {

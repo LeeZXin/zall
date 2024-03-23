@@ -2,7 +2,6 @@ package branchapi
 
 import (
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
-	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
 type InsertProtectedBranchReqVO struct {
@@ -23,9 +22,4 @@ type ProtectedBranchVO struct {
 	Id     int64  `json:"id"`
 	Branch string `json:"branch"`
 	Cfg    branchmd.ProtectedBranchCfg
-}
-
-type ListProtectedBranchRespVO struct {
-	ginutil.BaseResp
-	Branches []ProtectedBranchVO
 }

@@ -64,17 +64,17 @@ func listTeam(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	ret := ListTeamRespVO{
-		BaseResp: ginutil.DefaultSuccessResp,
-	}
-	ret.Data, _ = listutil.Map(teamList, func(t teamsrv.TeamDTO) (TeamVO, error) {
+	data, _ := listutil.Map(teamList, func(t teamsrv.TeamDTO) (TeamVO, error) {
 		return TeamVO{
 			TeamId:  t.TeamId,
 			Name:    t.Name,
 			Created: t.Created.Format(time.DateTime),
 		}, nil
 	})
-	c.JSON(http.StatusOK, ret)
+	c.JSON(http.StatusOK, ginutil.DataResp[[]TeamVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }
 
 func deleteTeam(c *gin.Context) {
@@ -139,11 +139,7 @@ func listTeamUser(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		ret := ListTeamUserRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Next:     next,
-		}
-		ret.Data, _ = listutil.Map(users, func(t teamsrv.TeamUserDTO) (TeamUserVO, error) {
+		data, _ := listutil.Map(users, func(t teamsrv.TeamUserDTO) (TeamUserVO, error) {
 			return TeamUserVO{
 				TeamId:    t.TeamId,
 				Account:   t.Account,
@@ -152,7 +148,13 @@ func listTeamUser(c *gin.Context) {
 				Created:   t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ret)
+		c.JSON(http.StatusOK, ginutil.PageResp[[]TeamUserVO]{
+			DataResp: ginutil.DataResp[[]TeamUserVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: next,
+		})
 	}
 }
 
@@ -255,7 +257,7 @@ func listTeamUserGroup(c *gin.Context) {
 				Perm:    t.Perm,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ListTeamUserGroupRespVO{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]TeamUserGroupVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     ret,
 		})

@@ -148,7 +148,7 @@ func updateUser(c *gin.Context) {
 func listUser(c *gin.Context) {
 	var req ListUserReqVO
 	if util.ShouldBindJSON(&req, c) {
-		respDTO, err := usersrv.Outer.ListUser(c, usersrv.ListUserReqDTO{
+		users, next, err := usersrv.Outer.ListUser(c, usersrv.ListUserReqDTO{
 			Account:  req.Account,
 			Cursor:   req.Cursor,
 			Limit:    req.Limit,
@@ -158,11 +158,7 @@ func listUser(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		ret := ListUserRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Cursor:   respDTO.Cursor,
-		}
-		ret.UserList, _ = listutil.Map(respDTO.UserList, func(t usersrv.UserDTO) (UserVO, error) {
+		data, _ := listutil.Map(users, func(t usersrv.UserDTO) (UserVO, error) {
 			return UserVO{
 				Account:      t.Account,
 				Name:         t.Name,
@@ -174,7 +170,13 @@ func listUser(c *gin.Context) {
 				Updated:      t.Updated.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ret)
+		c.JSON(http.StatusOK, ginutil.PageResp[[]UserVO]{
+			DataResp: ginutil.DataResp[[]UserVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: next,
+		})
 	}
 }
 

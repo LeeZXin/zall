@@ -5,6 +5,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
 	"io"
+	"time"
 )
 
 type UploadIconReqDTO struct {
@@ -105,13 +106,18 @@ func (r *GetNormalReqDTO) IsValid() error {
 }
 
 type UploadProductReqDTO struct {
-	App  string    `json:"app"`
-	Name string    `json:"name"`
-	Body io.Reader `json:"-"`
+	AppId   string    `json:"appId"`
+	Name    string    `json:"name"`
+	Creator string    `json:"creator"`
+	Env     string    `json:"env"`
+	Body    io.Reader `json:"-"`
 }
 
 func (r *UploadProductReqDTO) IsValid() error {
-	if r.Name == "" || !appmd.IsAppIdValid(r.App) {
+	if r.Name == "" || !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	if r.Env == "" || r.Creator == "" {
 		return util.InvalidArgsError()
 	}
 	if r.Body == nil {
@@ -121,24 +127,39 @@ func (r *UploadProductReqDTO) IsValid() error {
 }
 
 type GetProductReqDTO struct {
-	App  string `json:"app"`
-	Name string `json:"name"`
+	AppId string `json:"appId"`
+	Name  string `json:"name"`
+	Env   string `json:"env"`
 }
 
 func (r *GetProductReqDTO) IsValid() error {
-	if r.Name == "" || !appmd.IsAppIdValid(r.App) {
+	if r.Name == "" || !appmd.IsAppIdValid(r.AppId) || r.Env == "" {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
 type ListProductReqDTO struct {
-	App string `json:"app"`
+	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListProductReqDTO) IsValid() error {
-	if r.App == "" {
+	if r.Env == "" {
+		return util.InvalidArgsError()
+	}
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
+}
+
+type ProductDTO struct {
+	Name    string
+	Creator string
+	Created time.Time
 }

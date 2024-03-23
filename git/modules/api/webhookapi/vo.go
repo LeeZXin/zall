@@ -2,7 +2,6 @@ package webhookapi
 
 import (
 	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
-	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
 type InsertWebhookReqVO struct {
@@ -31,11 +30,6 @@ type WebhookVO struct {
 	HookType    string            `json:"hookType"`
 	WildBranch  string            `json:"wildBranch"`
 	WildTag     string            `json:"wildTag"`
-}
-
-type ListWebhookRespVO struct {
-	ginutil.BaseResp
-	Data []WebhookVO
 }
 
 type UpdateWebhookReqVO struct {

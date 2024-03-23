@@ -114,10 +114,7 @@ func listEtcdNode(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListEtcdNodeRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-		}
-		resp.Data, _ = listutil.Map(nodes, func(t propsrv.EtcdNodeDTO) (EtcdNodeVO, error) {
+		data, _ := listutil.Map(nodes, func(t propsrv.EtcdNodeDTO) (EtcdNodeVO, error) {
 			return EtcdNodeVO{
 				NodeId:    t.NodeId,
 				Endpoints: t.Endpoints,
@@ -125,7 +122,10 @@ func listEtcdNode(c *gin.Context) {
 				Password:  t.Password,
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.DataResp[[]EtcdNodeVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
+		})
 	}
 }
 
@@ -137,7 +137,7 @@ func listSimpleEtcdNode(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ListSimpleEtcdNodeRespVO{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     nodes,
 		})
@@ -225,17 +225,17 @@ func listContent(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListContentRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-		}
-		resp.Data, _ = listutil.Map(contents, func(t propsrv.PropContentDTO) (PropContentVO, error) {
+		data, _ := listutil.Map(contents, func(t propsrv.PropContentDTO) (PropContentVO, error) {
 			return PropContentVO{
 				Id:    t.Id,
 				AppId: t.AppId,
 				Name:  t.Name,
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.DataResp[[]PropContentVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
+		})
 	}
 }
 
@@ -254,11 +254,7 @@ func listHistory(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListHistoryRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Cursor:   cursor,
-		}
-		resp.Data, _ = listutil.Map(histories, func(t propsrv.HistoryDTO) (HistoryVO, error) {
+		data, _ := listutil.Map(histories, func(t propsrv.HistoryDTO) (HistoryVO, error) {
 			return HistoryVO{
 				ContentId: t.ContentId,
 				Content:   t.Content,
@@ -267,7 +263,13 @@ func listHistory(c *gin.Context) {
 				Creator:   t.Creator,
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.PageResp[[]HistoryVO]{
+			DataResp: ginutil.DataResp[[]HistoryVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: cursor,
+		})
 	}
 }
 
@@ -323,11 +325,7 @@ func listDeploy(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListDeployRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Cursor:   cursor,
-		}
-		resp.Data, _ = listutil.Map(deploys, func(t propsrv.DeployDTO) (DeployVO, error) {
+		data, _ := listutil.Map(deploys, func(t propsrv.DeployDTO) (DeployVO, error) {
 			return DeployVO{
 				ContentId: t.ContentId,
 				Content:   t.Content,
@@ -336,6 +334,12 @@ func listDeploy(c *gin.Context) {
 				Created:   t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.PageResp[[]DeployVO]{
+			DataResp: ginutil.DataResp[[]DeployVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: cursor,
+		})
 	}
 }

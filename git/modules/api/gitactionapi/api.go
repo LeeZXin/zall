@@ -66,17 +66,17 @@ func listAction(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		resp := ListActionRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-		}
-		resp.Data, _ = listutil.Map(actions, func(t gitactionmd.Action) (ActionVO, error) {
+		data, _ := listutil.Map(actions, func(t gitactionmd.Action) (ActionVO, error) {
 			return ActionVO{
 				Id:            t.Id,
 				ActionContent: t.Content,
 				Created:       t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, ginutil.DataResp[[]ActionVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
+		})
 	}
 }
 
@@ -184,15 +184,15 @@ func listNode(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	ret := ListGitNodeRespVO{
-		BaseResp: ginutil.DefaultSuccessResp,
-	}
-	ret.Data, _ = listutil.Map(nodes, func(t gitactionsrv.NodeDTO) (NodeVO, error) {
+	data, _ := listutil.Map(nodes, func(t gitactionsrv.NodeDTO) (NodeVO, error) {
 		return NodeVO{
 			Id:       t.Id,
 			Name:     t.Name,
 			HttpHost: t.HttpHost,
 		}, nil
 	})
-	c.JSON(http.StatusOK, ret)
+	c.JSON(http.StatusOK, ginutil.DataResp[[]NodeVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }

@@ -67,17 +67,17 @@ func listSshKey(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	ret := ListSshKeyRespVO{
-		BaseResp: ginutil.DefaultSuccessResp,
-	}
-	ret.Data, _ = listutil.Map(respDTO, func(t sshkeymd.SshKey) (SshKeyVO, error) {
+	data, _ := listutil.Map(respDTO, func(t sshkeymd.SshKey) (SshKeyVO, error) {
 		return SshKeyVO{
 			Id:          t.Id,
 			Name:        t.Name,
 			Fingerprint: t.Fingerprint,
 		}, nil
 	})
-	c.JSON(http.StatusOK, ret)
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SshKeyVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }
 
 func getToken(c *gin.Context) {
@@ -90,10 +90,13 @@ func getToken(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, GetTokenRespVO{
+		tokenVO := TokenVO{
+			Token:  token,
+			Guides: guides,
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[TokenVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
-			Token:    token,
-			Guides:   guides,
+			Data:     tokenVO,
 		})
 	}
 }

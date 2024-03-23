@@ -55,12 +55,6 @@ type ListUserReqVO struct {
 	Limit   int    `json:"limit"`
 }
 
-type ListUserRespVO struct {
-	ginutil.BaseResp
-	UserList []UserVO `json:"userList"`
-	Cursor   int64    `json:"cursor"`
-}
-
 type UpdateUserReqVO struct {
 	Account string `json:"account"`
 	Name    string `json:"name"`

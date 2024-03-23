@@ -1,7 +1,5 @@
 package sshkeyapi
 
-import "github.com/LeeZXin/zsf-utils/ginutil"
-
 type InsertSshKeyReqVO struct {
 	Name          string `json:"name"`
 	PubKeyContent string `json:"pubKeyContent"`
@@ -17,17 +15,11 @@ type SshKeyVO struct {
 	Fingerprint string `json:"fingerprint"`
 }
 
-type ListSshKeyRespVO struct {
-	ginutil.BaseResp
-	Data []SshKeyVO `json:"data"`
-}
-
 type GetTokenReqVO struct {
 	KeyId string `json:"keyId"`
 }
 
-type GetTokenRespVO struct {
-	ginutil.BaseResp
+type TokenVO struct {
 	Token  string   `json:"token"`
 	Guides []string `json:"guides"`
 }

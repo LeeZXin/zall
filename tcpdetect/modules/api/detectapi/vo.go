@@ -1,9 +1,5 @@
 package detectapi
 
-import (
-	"github.com/LeeZXin/zsf-utils/ginutil"
-)
-
 type InsertDetectReqVO struct {
 	Ip   string `json:"ip"`
 	Port int    `json:"port"`
@@ -37,12 +33,6 @@ type DetectVO struct {
 	Enabled       bool   `json:"enabled"`
 }
 
-type ListDetectRespVO struct {
-	ginutil.BaseResp
-	Data   []DetectVO `json:"data"`
-	Cursor int64      `json:"cursor"`
-}
-
 type ListLogReqVO struct {
 	Id     int64 `json:"id"`
 	Cursor int64 `json:"cursor"`
@@ -54,12 +44,6 @@ type LogVO struct {
 	Port    int    `json:"port"`
 	Created string `json:"created"`
 	Valid   bool   `json:"valid"`
-}
-
-type ListLogRespVO struct {
-	ginutil.BaseResp
-	Data   []LogVO `json:"data"`
-	Cursor int64   `json:"cursor"`
 }
 
 type EnableDetectReqVO struct {

@@ -4,11 +4,6 @@ import (
 	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
-type AllGitIgnoreTemplateListRespVO struct {
-	ginutil.BaseResp
-	Data []string `json:"data"`
-}
-
 type InitRepoReqVO struct {
 	Name          string `json:"name"`
 	Desc          string `json:"Desc"`
@@ -114,27 +109,12 @@ type RepoTypeVO struct {
 	Name   string `json:"name"`
 }
 
-type AllTypeListRespVO struct {
-	ginutil.BaseResp
-	Data []RepoTypeVO `json:"data"`
-}
-
 type AllBranchesReqVO struct {
 	Id int64 `json:"id"`
 }
 
-type AllBranchesRespVO struct {
-	ginutil.BaseResp
-	Data []string `json:"data"`
-}
-
 type AllTagsReqVO struct {
 	Id int64 `json:"id"`
-}
-
-type AllTagsRespVO struct {
-	ginutil.BaseResp
-	Data []string `json:"data"`
 }
 
 type GcReqVO struct {
@@ -213,11 +193,6 @@ type ShowDiffTextContentReqVO struct {
 	Direction string `json:"direction"`
 }
 
-type ShowDiffTextContentRespVO struct {
-	ginutil.BaseResp
-	Lines []DiffLineVO `json:"lines"`
-}
-
 type HistoryCommitsReqVO struct {
 	Id     int64  `json:"id"`
 	Ref    string `json:"ref"`
@@ -247,11 +222,6 @@ type DeleteAccessTokenReqVO struct {
 
 type ListAccessTokenReqVO struct {
 	Id int64 `json:"id"`
-}
-
-type ListAccessTokenRespVO struct {
-	ginutil.BaseResp
-	Data []AccessTokenVO `json:"data"`
 }
 
 type TransferTeam struct {
