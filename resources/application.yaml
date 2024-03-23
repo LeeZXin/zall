@@ -44,6 +44,7 @@ discovery:
   type: static
 
 files:
+  enabled: true
   normal:
     token: 123
   domain: http://localhost

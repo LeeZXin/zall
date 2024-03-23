@@ -118,6 +118,7 @@ func runZall(*cli.Context) error {
 	// for files server
 	{
 		if static.GetBool("files.enabled") {
+			logger.Logger.Info("file server enabled")
 			fileapi.InitApi()
 		}
 	}
