@@ -6,7 +6,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
-	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
@@ -14,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 var (
@@ -42,11 +40,10 @@ func InitApi() {
 			group.GET("/get/:id/:name", getNormal)
 		}
 		// 简单制品库
-		group = e.Group("/api/files/product")
+		group = e.Group("/api/files/product", checkProductToken)
 		{
-			group.POST("/upload/:app/:name", checkProductToken, uploadProduct)
-			group.GET("/get/:app/:name", checkProductToken, getProduct)
-			group.GET("/list/:app", apisession.CheckLogin, listProduct)
+			group.POST("/upload/:app/:name", uploadProduct)
+			group.GET("/get/:app/:name", getProduct)
 		}
 	})
 }
@@ -269,29 +266,6 @@ func getProduct(c *gin.Context) {
 		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	}
 	c.File(path)
-}
-
-func listProduct(c *gin.Context) {
-	products, err := filesrv.Outer.ListProduct(c, filesrv.ListProductReqDTO{
-		AppId:    c.Param("app"),
-		Env:      c.Query("env"),
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	data, _ := listutil.Map(products, func(t filesrv.ProductDTO) (ProductVO, error) {
-		return ProductVO{
-			Name:    t.Name,
-			Creator: t.Creator,
-			Created: t.Created.Format(time.DateTime),
-		}, nil
-	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]ProductVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
-	})
 }
 
 func getBody(c *gin.Context) (io.ReadCloser, bool, error) {

@@ -27,6 +27,7 @@ var (
 		CanReadPropAuth:       true,
 		CanGrantPropAuth:      true,
 		CanHandlePropApproval: true,
+		CanDeployProduct:      true,
 	}
 	DefaultPermDetail = Detail{
 		TeamPerm:        DefaultTeamPerm,
@@ -131,5 +132,5 @@ type AppPerm struct {
 	CanReadPropAuth       bool `json:"canReadPropAuth"`
 	CanGrantPropAuth      bool `json:"CanGrantPropAuth"`
 	CanHandlePropApproval bool `json:"canHandlePropApproval"`
-	CanAccessProduct      bool `json:"canAccessProduct"`
+	CanDeployProduct      bool `json:"CanDeployProduct"`
 }
