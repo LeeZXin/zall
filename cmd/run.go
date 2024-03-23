@@ -111,10 +111,15 @@ func runZall(*cli.Context) error {
 	{
 		approvalapi.InitApi()
 	}
-	// for file server
+	// for product
 	{
-		fileapi.InitApi()
 		productapi.InitApi()
+	}
+	// for files server
+	{
+		if static.GetBool("files.enabled") {
+			fileapi.InitApi()
+		}
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer())
 	zsf.Run(

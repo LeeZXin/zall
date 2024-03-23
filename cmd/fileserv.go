@@ -8,7 +8,7 @@ import (
 )
 
 var FileServer = &cli.Command{
-	Name:        "propServer",
+	Name:        "fileServer",
 	Usage:       "This command starts file server",
 	Description: "this provides file service",
 	Action:      runFileServer,

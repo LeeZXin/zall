@@ -28,10 +28,6 @@ func InitStorage() {
 	if err != nil {
 		logger.Logger.Fatalf("os.Getwd err: %v", err)
 	}
-	env := static.GetString("files.env")
-	if env == "" {
-		logger.Logger.Fatalf("empty files.env")
-	}
 	dataDir := filepath.Join(pwd, "data")
 	iconDir := filepath.Join(dataDir, "icon")
 	avatarDir := filepath.Join(dataDir, "avatar")
