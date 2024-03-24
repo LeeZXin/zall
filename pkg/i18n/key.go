@@ -389,3 +389,54 @@ var (
 		DefaultRet: "未知",
 	}
 )
+
+var (
+	ActionWebhookTriggerType = KeyItem{
+		Id:         "action.webhookTriggerType",
+		DefaultRet: "webhook触发",
+	}
+	ActionManualTriggerType = KeyItem{
+		Id:         "action.manualTriggerType",
+		DefaultRet: "手动触发",
+	}
+	ActionUnknownTriggerType = KeyItem{
+		Id:         "action.unknownTriggerType",
+		DefaultRet: "未知类型触发",
+	}
+	ActionTaskRunningStatus = KeyItem{
+		Id:         "action.taskRunningStatus",
+		DefaultRet: "执行中",
+	}
+	ActionTaskSuccessStatus = KeyItem{
+		Id:         "action.taskSuccessStatus",
+		DefaultRet: "执行成功",
+	}
+	ActionTaskFailStatus = KeyItem{
+		Id:         "action.taskFailStatus",
+		DefaultRet: "执行失败",
+	}
+	ActionTaskUnknownStatus = KeyItem{
+		Id:         "action.taskUnknownStatus",
+		DefaultRet: "未知状态",
+	}
+	ActionStepWaitingStatus = KeyItem{
+		Id:         "action.stepWaitingStatus",
+		DefaultRet: "未执行",
+	}
+	ActionStepRunningStatus = KeyItem{
+		Id:         "action.stepRunningStatus",
+		DefaultRet: "执行中",
+	}
+	ActionStepSuccessStatus = KeyItem{
+		Id:         "action.stepSuccessStatus",
+		DefaultRet: "执行成功",
+	}
+	ActionStepFailStatus = KeyItem{
+		Id:         "action.stepFailStatus",
+		DefaultRet: "执行失败",
+	}
+	ActionStepUnknownStatus = KeyItem{
+		Id:         "action.stepUnknownStatus",
+		DefaultRet: "未知状态",
+	}
+)

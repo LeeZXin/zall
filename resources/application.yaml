@@ -48,3 +48,7 @@ files:
   normal:
     token: 123
   domain: http://localhost
+
+action:
+  agent:
+    enabled: true

@@ -1,11 +1,11 @@
-package gitactionmd
+package actionmd
 
 type InsertTaskReqDTO struct {
 	ActionId      int64
-	TaskName      string
 	TaskStatus    TaskStatus
-	TriggerType   int
+	TriggerType   TriggerType
 	ActionContent string
+	Operator      string
 }
 
 type InsertStepReqDTO struct {
@@ -19,26 +19,33 @@ type InsertStepReqDTO struct {
 type InsertNodeReqDTO struct {
 	Name     string
 	HttpHost string
+	Token    string
 }
 
 type UpdateNodeReqDTO struct {
 	Id       int64
 	Name     string
+	Token    string
 	HttpHost string
 }
 
 type InsertActionReqDTO struct {
-	RepoId     int64
-	Name       string
-	Content    string
-	NodeId     int64
-	PushBranch string
+	Aid     string
+	TeamId  int64
+	Name    string
+	Content string
+	NodeId  int64
 }
 
 type UpdateActionReqDTO struct {
-	Id         int64
-	Name       string
-	Content    string
-	NodeId     int64
-	PushBranch string
+	Id      int64
+	Name    string
+	Content string
+	NodeId  int64
+}
+
+type GetTaskReqDTO struct {
+	ActionId int64
+	Cursor   int64
+	Limit    int
 }

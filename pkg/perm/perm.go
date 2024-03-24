@@ -2,9 +2,12 @@ package perm
 
 var (
 	DefaultTeamPerm = TeamPerm{
-		CanInitRepo:    true,
-		CanDeleteRepo:  true,
-		CanHandleTimer: true,
+		CanInitRepo:      true,
+		CanDeleteRepo:    true,
+		CanHandleTimer:   true,
+		CanAccessAction:  true,
+		CanUpdateAction:  true,
+		CanTriggerAction: true,
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:            true,
@@ -15,8 +18,6 @@ var (
 		CanHandleWebhook:         true,
 		CanAccessWiki:            true,
 		CanUpdateWiki:            true,
-		CanAccessAction:          true,
-		CanUpdateAction:          true,
 		CanAccessToken:           true,
 		CanUpdateToken:           true,
 	}
@@ -99,12 +100,6 @@ type RepoPerm struct {
 	CanAccessWiki bool `json:"canAccessWiki"`
 	// 是否可编辑wiki
 	CanUpdateWiki bool `json:"canUpdateWiki"`
-	// 是否可查看action
-	CanAccessAction bool `json:"canAccessAction"`
-	// 是否可编辑action
-	CanUpdateAction bool `json:"canUpdateAction"`
-	// 是否可手动触发action
-	CanTriggerAction bool `json:"canTriggerAction"`
 	// 是否可查看accessToken
 	CanAccessToken bool `json:"canAccessToken"`
 	// 是否可编辑accessToken
@@ -118,6 +113,12 @@ type TeamPerm struct {
 	CanDeleteRepo bool `json:"canDeleteRepo"`
 	// 是否可处理定时任务
 	CanHandleTimer bool `json:"canHandleTimer"`
+	// 是否可查看action
+	CanAccessAction bool `json:"canAccessAction"`
+	// 是否可编辑action
+	CanUpdateAction bool `json:"canUpdateAction"`
+	// 是否可手动触发action
+	CanTriggerAction bool `json:"canTriggerAction"`
 }
 
 type AppPermWithAppId struct {

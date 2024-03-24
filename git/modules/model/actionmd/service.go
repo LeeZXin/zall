@@ -1,4 +1,4 @@
-package gitactionmd
+package actionmd
 
 import (
 	"context"
@@ -6,19 +6,23 @@ import (
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
+func IsActionNameValid(name string) bool {
+	return len(name) > 0 && len(name) <= 32
+}
+
 func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 	ret := Task{
-		TaskName:      reqDTO.TaskName,
 		ActionId:      reqDTO.ActionId,
-		TriggerType:   reqDTO.TriggerType,
 		TaskStatus:    reqDTO.TaskStatus,
+		TriggerType:   reqDTO.TriggerType,
 		ActionContent: reqDTO.ActionContent,
+		Operator:      reqDTO.Operator,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
 }
 
-func UpdateTaskStatus(ctx context.Context, taskId int64, oldStatus, newStatus TaskStatus) (bool, error) {
+func UpdateTaskStatusWithOldStatus(ctx context.Context, taskId int64, oldStatus, newStatus TaskStatus) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", taskId).
 		And("task_status = ?", oldStatus).
@@ -47,26 +51,6 @@ func BatchInsertSteps(ctx context.Context, reqDTO []InsertStepReqDTO) ([]Step, e
 	return listutil.Map(ret, func(t *Step) (Step, error) {
 		return *t, nil
 	})
-}
-
-func UpdateTaskStatusWithOldStatus(ctx context.Context, instanceId string, newStatus, oldStatus TaskStatus) (int64, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("instance_id = ?", instanceId).
-		And("task_status = ?", oldStatus).
-		Cols("task_status").
-		Update(&Task{
-			TaskStatus: newStatus,
-		})
-	return rows, err
-}
-
-func IterateTask(ctx context.Context, instanceId string, taskStatus TaskStatus, fn func(*Task) error) error {
-	return xormutil.MustGetXormSession(ctx).
-		Where("instance_id = ?", instanceId).
-		And("task_status = ?", taskStatus).
-		Iterate(new(Task), func(_ int, bean interface{}) error {
-			return fn(bean.(*Task))
-		})
 }
 
 func UpdateStepStatus(ctx context.Context, taskId int64, jobName string, stepIndex int, oldStatus, newStatus StepStatus) (bool, error) {
@@ -100,11 +84,16 @@ func IsNodeNameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
 }
 
+func IsNodeTokenValid(token string) bool {
+	return len(token) >= 0 && len(token) <= 32
+}
+
 func InsertNode(ctx context.Context, reqDTO InsertNodeReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&Node{
 			Name:     reqDTO.Name,
 			HttpHost: reqDTO.HttpHost,
+			Token:    reqDTO.Token,
 		})
 	return err
 }
@@ -115,14 +104,6 @@ func GetNodeById(ctx context.Context, id int64) (Node, bool, error) {
 		Where("id = ?", id).
 		Get(&ret)
 	return ret, b, err
-}
-
-func BatchGetNode(ctx context.Context, idList []int64) ([]Node, error) {
-	ret := make([]Node, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		In("id", idList).
-		Find(&ret)
-	return ret, err
 }
 
 func DeleteNode(ctx context.Context, id int64) (bool, error) {
@@ -136,11 +117,12 @@ func DeleteNode(ctx context.Context, id int64) (bool, error) {
 func UpdateNode(ctx context.Context, reqDTO UpdateNodeReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("name", "http_host").
+		Cols("name", "http_host", "token").
 		Limit(1).
 		Update(Node{
 			HttpHost: reqDTO.HttpHost,
 			Name:     reqDTO.Name,
+			Token:    reqDTO.Token,
 		})
 	return rows == 1, err
 }
@@ -157,11 +139,11 @@ func GetAllNodes(ctx context.Context) ([]Node, error) {
 
 func InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) error {
 	ret := Action{
-		RepoId:     reqDTO.RepoId,
-		Content:    reqDTO.Content,
-		NodeId:     reqDTO.NodeId,
-		WildBranch: reqDTO.PushBranch,
-		Name:       reqDTO.Name,
+		Aid:     reqDTO.Aid,
+		TeamId:  reqDTO.TeamId,
+		Content: reqDTO.Content,
+		NodeId:  reqDTO.NodeId,
+		Name:    reqDTO.Name,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return err
@@ -172,10 +154,9 @@ func UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (bool, error) 
 		Where("id = ?", reqDTO.Id).
 		Cols("content", "node_id", "push_branch", "name").
 		Update(&Action{
-			Content:    reqDTO.Content,
-			NodeId:     reqDTO.NodeId,
-			WildBranch: reqDTO.PushBranch,
-			Name:       reqDTO.Name,
+			Content: reqDTO.Content,
+			NodeId:  reqDTO.NodeId,
+			Name:    reqDTO.Name,
 		})
 	return rows == 1, err
 }
@@ -201,4 +182,37 @@ func GetActionById(ctx context.Context, actionId int64) (Action, bool, error) {
 		Where("id = ?", actionId).
 		Get(&ret)
 	return ret, b, err
+}
+
+func GetActionByAid(ctx context.Context, aid string) (Action, bool, error) {
+	var ret Action
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("aid = ?", aid).
+		Get(&ret)
+	return ret, b, err
+}
+
+func GetTask(ctx context.Context, reqDTO GetTaskReqDTO) ([]Task, error) {
+	ret := make([]Task, 0)
+	session := xormutil.MustGetXormSession(ctx).Where("action_id = ?", reqDTO.ActionId)
+	if reqDTO.Cursor > 0 {
+		session.And("id < ?", reqDTO.Cursor)
+	}
+	if reqDTO.Limit > 0 {
+		session.Limit(reqDTO.Limit)
+	}
+	err := session.Find(&ret)
+	return ret, err
+}
+
+func GetTaskById(ctx context.Context, id int64) (Task, bool, error) {
+	var ret Task
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	return ret, b, err
+}
+
+func GetStepByTaskId(ctx context.Context, taskId int64) ([]Step, error) {
+	ret := make([]Step, 0)
+	err := xormutil.MustGetXormSession(ctx).Where("task_id = ?", taskId).Find(&ret)
+	return ret, err
 }

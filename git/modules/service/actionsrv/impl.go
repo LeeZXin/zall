@@ -1,9 +1,8 @@
-package gitactionsrv
+package actionsrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/git/modules/model/gitactionmd"
-	"github.com/LeeZXin/zall/git/modules/service/reposrv"
+	"github.com/LeeZXin/zall/git/modules/model/actionmd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/action"
@@ -11,10 +10,10 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"gopkg.in/yaml.v3"
 	"io"
 )
@@ -27,10 +26,30 @@ const (
 
 type innerImpl struct{}
 
-func (s *innerImpl) ExecuteAction(ctx context.Context, hook action.Hook) {
+func (s *innerImpl) ExecuteAction(aid, operator string, triggerType actionmd.TriggerType) {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	gitAction, b, err := actionmd.GetActionByAid(ctx, aid)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return
+	}
+	if !b {
+		logger.Logger.WithContext(ctx).Errorf("%s is not exists", aid)
+		return
+	}
+	node, b, err := actionmd.GetNodeById(ctx, gitAction.NodeId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return
+	}
+	if !b {
+		logger.Logger.WithContext(ctx).Errorf("node %s is not exists", gitAction.NodeId)
+		return
+	}
 	var p action.GraphCfg
 	// 解析yaml
-	err := yaml.Unmarshal([]byte(hook.ActionYaml), &p)
+	err = yaml.Unmarshal([]byte(gitAction.Content), &p)
 	if err != nil {
 		logger.Logger.Errorf("can not marshal action yaml: %v", err)
 		return
@@ -41,36 +60,34 @@ func (s *innerImpl) ExecuteAction(ctx context.Context, hook action.Hook) {
 		logger.Logger.Errorf("can not convert action graph: %v", err)
 		return
 	}
-	s.execGraph(ctx, graph, &hook)
+	s.execGraph(graph, gitAction.Id, gitAction.Content, operator, triggerType, node.HttpHost, node.Token)
 }
 
-func (s *innerImpl) execGraph(ctx context.Context, graph *action.Graph, hook *action.Hook) {
-	var (
-		err    error
-		closer xormutil.Closer
-	)
-	ctx, closer = xormstore.Context(ctx)
+func (s *innerImpl) execGraph(graph *action.Graph, actionId int64, actionYaml, operator string, triggerType actionmd.TriggerType, nodeHost, nodeToken string) {
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	// 先插入记录
-	taskId, err := s.insertTaskRecord(ctx, graph, hook)
+	taskId, err := s.insertTaskRecord(ctx, graph, actionId, actionYaml, operator, triggerType)
 	if err != nil {
 		return
 	}
 	// 执行任务
-	s.runGraph(graph, taskId, hook)
+	s.runGraph(graph, taskId, nodeHost, nodeToken)
 }
 
-func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, hook *action.Hook) {
+func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, nodeHost, token string) {
 	err := graph.Run(action.RunOpts{
-		Args: hook.Args,
+		RunWithAgent: true,
+		AgentUrl:     nodeHost,
+		AgentToken:   token,
 		StepOutputFunc: func(stat action.StepOutputStat) {
 			defer stat.Output.Close()
 			if _, err := s.updateStepStatusWithOldStatus(
 				taskId,
 				stat.JobName,
 				stat.Index,
-				gitactionmd.StepWaitingStatus,
-				gitactionmd.StepRunningStatus,
+				actionmd.StepWaitingStatus,
+				actionmd.StepRunningStatus,
 			); err != nil {
 				return
 			}
@@ -82,7 +99,7 @@ func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, hook *action.Hoo
 			}
 			ctx, closer := xormstore.Context(context.Background())
 			defer closer.Close()
-			_, err = gitactionmd.UpdateStepLogContent(ctx, taskId, stat.JobName, stat.Index, string(logContent))
+			_, err = actionmd.UpdateStepLogContent(ctx, taskId, stat.JobName, stat.Index, string(logContent))
 			if err != nil {
 				logger.Logger.Error(err)
 				return
@@ -95,41 +112,42 @@ func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, hook *action.Hoo
 					taskId,
 					stat.JobName,
 					stat.Index,
-					gitactionmd.StepRunningStatus,
-					gitactionmd.StepFailStatus,
+					actionmd.StepRunningStatus,
+					actionmd.StepFailStatus,
 				)
 			} else {
 				s.updateStepStatusWithOldStatus(
 					taskId,
 					stat.JobName,
 					stat.Index,
-					gitactionmd.StepRunningStatus,
-					gitactionmd.StepSuccessStatus,
+					actionmd.StepRunningStatus,
+					actionmd.StepSuccessStatus,
 				)
 			}
 		},
 	})
 	if err != nil {
+		logger.Logger.Errorf("taskId: %v ran with err: %v", taskId, err)
 		// 任务执行失败
 		s.updateTaskStatusWithOldStatus(
 			taskId,
-			gitactionmd.TaskRunningStatus,
-			gitactionmd.TaskFailStatus,
+			actionmd.TaskRunningStatus,
+			actionmd.TaskFailStatus,
 		)
 	} else {
 		// 任务执行成功
 		s.updateTaskStatusWithOldStatus(
 			taskId,
-			gitactionmd.TaskRunningStatus,
-			gitactionmd.TaskSuccessStatus,
+			actionmd.TaskRunningStatus,
+			actionmd.TaskSuccessStatus,
 		)
 	}
 }
 
-func (s *innerImpl) updateTaskStatusWithOldStatus(taskId int64, oldStatus, newStatus gitactionmd.TaskStatus) (bool, error) {
+func (s *innerImpl) updateTaskStatusWithOldStatus(taskId int64, oldStatus, newStatus actionmd.TaskStatus) (bool, error) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	b, err := gitactionmd.UpdateTaskStatus(
+	b, err := actionmd.UpdateTaskStatusWithOldStatus(
 		ctx,
 		taskId,
 		oldStatus,
@@ -141,10 +159,10 @@ func (s *innerImpl) updateTaskStatusWithOldStatus(taskId int64, oldStatus, newSt
 	return b, err
 }
 
-func (s *innerImpl) updateStepStatusWithOldStatus(taskId int64, jobName string, index int, oldStatus, newStatus gitactionmd.StepStatus) (bool, error) {
+func (s *innerImpl) updateStepStatusWithOldStatus(taskId int64, jobName string, index int, oldStatus, newStatus actionmd.StepStatus) (bool, error) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	b, err := gitactionmd.UpdateStepStatus(
+	b, err := actionmd.UpdateStepStatus(
 		ctx,
 		taskId,
 		jobName,
@@ -158,36 +176,36 @@ func (s *innerImpl) updateStepStatusWithOldStatus(taskId int64, jobName string, 
 	return b, err
 }
 
-func (*innerImpl) insertTaskRecord(ctx context.Context, graph *action.Graph, hook *action.Hook) (int64, error) {
+func (*innerImpl) insertTaskRecord(ctx context.Context, graph *action.Graph, actionId int64, actionYaml, operator string, triggerType actionmd.TriggerType) (int64, error) {
 	var taskId int64
 	infos := graph.ListJobInfo()
 	err := xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 插入一条任务记录
-		task, err := gitactionmd.InsertTask(ctx, gitactionmd.InsertTaskReqDTO{
-			ActionId:      hook.ActionId,
-			TaskName:      graph.Name,
-			TriggerType:   hook.TriggerType,
-			TaskStatus:    gitactionmd.TaskRunningStatus,
-			ActionContent: hook.ActionYaml,
+		task, err := actionmd.InsertTask(ctx, actionmd.InsertTaskReqDTO{
+			ActionId:      actionId,
+			TriggerType:   triggerType,
+			TaskStatus:    actionmd.TaskRunningStatus,
+			ActionContent: actionYaml,
+			Operator:      operator,
 		})
 		if err != nil {
 			return err
 		}
 		taskId = task.Id
 		// 插入job记录
-		stepsReq := make([]gitactionmd.InsertStepReqDTO, 0)
+		stepsReq := make([]actionmd.InsertStepReqDTO, 0)
 		for _, job := range infos {
 			for _, step := range job.Steps {
-				stepsReq = append(stepsReq, gitactionmd.InsertStepReqDTO{
+				stepsReq = append(stepsReq, actionmd.InsertStepReqDTO{
 					TaskId:     taskId,
 					JobName:    job.Name,
 					StepName:   step.Name,
 					StepIndex:  step.Index,
-					StepStatus: gitactionmd.StepRunningStatus,
+					StepStatus: actionmd.StepRunningStatus,
 				})
 			}
 		}
-		_, err = gitactionmd.BatchInsertSteps(ctx, stepsReq)
+		_, err = actionmd.BatchInsertSteps(ctx, stepsReq)
 		return err
 	})
 	if err != nil {
@@ -214,12 +232,12 @@ func (*outerImpl) InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) (
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err = getPerm(ctx, reqDTO.Id, reqDTO.Operator, updateAction)
+	err = checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator, updateAction)
 	if err != nil {
 		return
 	}
 	// 检查nodeId
-	_, b, err := gitactionmd.GetNodeById(ctx, reqDTO.NodeId)
+	_, b, err := actionmd.GetNodeById(ctx, reqDTO.NodeId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -235,11 +253,13 @@ func (*outerImpl) InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) (
 		return
 	}
 	yamlOut, _ := yaml.Marshal(graph)
-	err = gitactionmd.InsertAction(ctx, gitactionmd.InsertActionReqDTO{
-		RepoId:     reqDTO.Id,
-		NodeId:     reqDTO.NodeId,
-		Content:    string(yamlOut),
-		PushBranch: reqDTO.PushBranch,
+
+	err = actionmd.InsertAction(ctx, actionmd.InsertActionReqDTO{
+		Aid:     idutil.RandomUuid(),
+		Name:    reqDTO.Name,
+		TeamId:  reqDTO.TeamId,
+		NodeId:  reqDTO.NodeId,
+		Content: string(yamlOut),
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -264,7 +284,7 @@ func (*outerImpl) DeleteAction(ctx context.Context, reqDTO DeleteActionReqDTO) (
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repoAction, b, err := gitactionmd.GetActionById(ctx, reqDTO.Id)
+	repoAction, b, err := actionmd.GetActionById(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -275,11 +295,11 @@ func (*outerImpl) DeleteAction(ctx context.Context, reqDTO DeleteActionReqDTO) (
 		return
 	}
 	// 校验权限
-	err = getPerm(ctx, repoAction.Id, reqDTO.Operator, updateAction)
+	err = checkPerm(ctx, repoAction.TeamId, reqDTO.Operator, updateAction)
 	if err != nil {
 		return
 	}
-	_, err = gitactionmd.DeleteAction(ctx, reqDTO.Id)
+	_, err = actionmd.DeleteAction(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -288,18 +308,18 @@ func (*outerImpl) DeleteAction(ctx context.Context, reqDTO DeleteActionReqDTO) (
 	return
 }
 
-func (*outerImpl) ListAction(ctx context.Context, reqDTO ListActionReqDTO) ([]gitactionmd.Action, error) {
+func (*outerImpl) ListAction(ctx context.Context, reqDTO ListActionReqDTO) ([]actionmd.Action, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err := getPerm(ctx, reqDTO.Id, reqDTO.Operator, accessAction)
+	err := checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator, accessAction)
 	if err != nil {
 		return nil, err
 	}
-	ret, err := gitactionmd.ListAction(ctx, reqDTO.Id)
+	ret, err := actionmd.ListAction(ctx, reqDTO.TeamId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -322,7 +342,7 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repoAction, b, err := gitactionmd.GetActionById(ctx, reqDTO.Id)
+	repoAction, b, err := actionmd.GetActionById(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -333,12 +353,12 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 		return
 	}
 	// 校验权限
-	err = getPerm(ctx, repoAction.Id, reqDTO.Operator, updateAction)
+	err = checkPerm(ctx, repoAction.TeamId, reqDTO.Operator, updateAction)
 	if err != nil {
 		return
 	}
 	// 检查nodeId
-	_, b, err = gitactionmd.GetNodeById(ctx, reqDTO.NodeId)
+	_, b, err = actionmd.GetNodeById(ctx, reqDTO.NodeId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -354,11 +374,10 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 		return
 	}
 	yamlOut, _ := yaml.Marshal(graph)
-	_, err = gitactionmd.UpdateAction(ctx, gitactionmd.UpdateActionReqDTO{
-		Id:         reqDTO.Id,
-		Content:    string(yamlOut),
-		NodeId:     reqDTO.NodeId,
-		PushBranch: reqDTO.PushBranch,
+	_, err = actionmd.UpdateAction(ctx, actionmd.UpdateActionReqDTO{
+		Id:      reqDTO.Id,
+		Content: string(yamlOut),
+		NodeId:  reqDTO.NodeId,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -374,7 +393,7 @@ func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repoAction, b, err := gitactionmd.GetActionById(ctx, reqDTO.Id)
+	gitAction, b, err := actionmd.GetActionById(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -383,11 +402,11 @@ func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO)
 		return util.InvalidArgsError()
 	}
 	// 校验权限
-	err = getPerm(ctx, repoAction.Id, reqDTO.Operator, triggerAction)
+	err = checkPerm(ctx, gitAction.TeamId, reqDTO.Operator, triggerAction)
 	if err != nil {
 		return err
 	}
-	node, b, err := gitactionmd.GetNodeById(ctx, repoAction.NodeId)
+	node, b, err := actionmd.GetNodeById(ctx, gitAction.NodeId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -395,19 +414,15 @@ func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO)
 	if !b {
 		return util.ThereHasBugErr()
 	}
-	action.ManualTriggerAction(repoAction.Content, node.HttpHost, reqDTO.Args, reqDTO.Id)
+	action.TriggerAction(node.HttpHost, gitAction.Aid, reqDTO.Operator.Account)
 	return nil
 }
 
-func getPerm(ctx context.Context, repoId int64, operator apisession.UserInfo, permCode int) error {
-	repo, b := reposrv.Inner.GetByRepoId(ctx, repoId)
-	if !b {
-		return util.InvalidArgsError()
-	}
+func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo, permCode int) error {
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, repo.TeamId, operator.Account)
+	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, teamId, operator.Account)
 	if !b {
 		return util.UnauthorizedError()
 	}
@@ -417,11 +432,11 @@ func getPerm(ctx context.Context, repoId int64, operator apisession.UserInfo, pe
 	pass := false
 	switch permCode {
 	case updateAction:
-		pass = p.PermDetail.GetRepoPerm(repoId).CanUpdateAction
+		pass = p.PermDetail.TeamPerm.CanUpdateAction
 	case accessAction:
-		pass = p.PermDetail.GetRepoPerm(repoId).CanAccessAction
+		pass = p.PermDetail.TeamPerm.CanAccessAction
 	case triggerAction:
-		pass = p.PermDetail.GetRepoPerm(repoId).CanTriggerAction
+		pass = p.PermDetail.TeamPerm.CanTriggerAction
 	}
 	if !pass {
 		return util.UnauthorizedError()
@@ -448,9 +463,10 @@ func (*outerImpl) InsertNode(ctx context.Context, reqDTO InsertNodeReqDTO) (err 
 	}
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	err = gitactionmd.InsertNode(ctx, gitactionmd.InsertNodeReqDTO{
+	err = actionmd.InsertNode(ctx, actionmd.InsertNodeReqDTO{
 		Name:     reqDTO.Name,
 		HttpHost: reqDTO.HttpHost,
+		Token:    reqDTO.Token,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -479,7 +495,7 @@ func (*outerImpl) DeleteNode(ctx context.Context, reqDTO DeleteNodeReqDTO) (err 
 	}
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	_, err = gitactionmd.DeleteNode(ctx, reqDTO.Id)
+	_, err = actionmd.DeleteNode(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -507,10 +523,11 @@ func (*outerImpl) UpdateNode(ctx context.Context, reqDTO UpdateNodeReqDTO) (err 
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err = gitactionmd.UpdateNode(ctx, gitactionmd.UpdateNodeReqDTO{
+	_, err = actionmd.UpdateNode(ctx, actionmd.UpdateNodeReqDTO{
 		Id:       reqDTO.Id,
 		Name:     reqDTO.Name,
 		HttpHost: reqDTO.HttpHost,
+		Token:    reqDTO.Token,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -529,16 +546,125 @@ func (*outerImpl) ListNode(ctx context.Context, reqDTO ListNodeReqDTO) ([]NodeDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	all, err := gitactionmd.GetAllNodes(ctx)
+	all, err := actionmd.GetAllNodes(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(all, func(t gitactionmd.Node) (NodeDTO, error) {
+	return listutil.Map(all, func(t actionmd.Node) (NodeDTO, error) {
 		return NodeDTO{
 			Id:       t.Id,
 			Name:     t.Name,
 			HttpHost: t.HttpHost,
+			Token:    t.Token,
+		}, nil
+	})
+}
+
+func (*outerImpl) AllNode(ctx context.Context, reqDTO AllNodeReqDTO) ([]SimpleNodeDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	all, err := actionmd.GetAllNodes(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(all, func(t actionmd.Node) (SimpleNodeDTO, error) {
+		return SimpleNodeDTO{
+			Id:   t.Id,
+			Name: t.Name,
+		}, nil
+	})
+}
+
+func (*outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]TaskDTO, int64, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, 0, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	gitAction, b, err := actionmd.GetActionById(ctx, reqDTO.ActionId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	if !b {
+		return nil, 0, util.InvalidArgsError()
+	}
+	// 校验权限
+	err = checkPerm(ctx, gitAction.TeamId, reqDTO.Operator, accessAction)
+	if err != nil {
+		return nil, 0, err
+	}
+	tasks, err := actionmd.GetTask(ctx, actionmd.GetTaskReqDTO{
+		ActionId: reqDTO.ActionId,
+		Cursor:   reqDTO.Cursor,
+		Limit:    reqDTO.Limit,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	var next int64 = 0
+	if len(tasks) == reqDTO.Limit {
+		next = tasks[len(tasks)-1].Id
+	}
+	data, _ := listutil.Map(tasks, func(t actionmd.Task) (TaskDTO, error) {
+		return TaskDTO{
+			TaskStatus:    t.TaskStatus,
+			TriggerType:   t.TriggerType,
+			ActionContent: t.ActionContent,
+			Operator:      t.Operator,
+			Created:       t.Created,
+		}, nil
+	})
+	return data, next, nil
+}
+
+func (*outerImpl) ListStep(ctx context.Context, reqDTO ListStepReqDTO) ([]StepDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	task, b, err := actionmd.GetTaskById(ctx, reqDTO.TaskId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
+	gitAction, b, err := actionmd.GetActionById(ctx, task.ActionId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
+	// 校验权限
+	err = checkPerm(ctx, gitAction.TeamId, reqDTO.Operator, accessAction)
+	if err != nil {
+		return nil, err
+	}
+	steps, err := actionmd.GetStepByTaskId(ctx, reqDTO.TaskId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(steps, func(t actionmd.Step) (StepDTO, error) {
+		return StepDTO{
+			JobName:    t.JobName,
+			StepName:   t.StepName,
+			StepIndex:  t.StepIndex,
+			LogContent: t.LogContent,
+			StepStatus: t.StepStatus,
+			Created:    t.Created,
+			Updated:    t.Updated,
 		}, nil
 	})
 }

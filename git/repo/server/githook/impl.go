@@ -4,20 +4,17 @@ import (
 	"context"
 	"github.com/IGLOU-EU/go-wildcard/v2"
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
-	"github.com/LeeZXin/zall/git/modules/model/gitactionmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
-	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/githook"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
@@ -127,7 +124,6 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 	var (
 		pushHookList []webhookmd.Webhook
 		tagHookList  []webhookmd.Webhook
-		actions      []gitactionmd.Action
 		err          error
 	)
 	for _, revInfo := range opts.RevInfoList {
@@ -146,17 +142,6 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 			})
 			// 触发hook
 			triggerWebhook(hookList, repo, revInfo, operator, false)
-			if actions == nil {
-				actions, err = gitactionmd.ListAction(ctx, repo.Id)
-				if err != nil {
-					logger.Logger.WithContext(ctx).Error(err)
-					return
-				}
-			}
-			actionList, _ := listutil.Filter(actions, func(t gitactionmd.Action) (bool, error) {
-				return wildcard.Match(t.WildBranch, branch), nil
-			})
-			triggerActions(actionList, branch, repo.Name)
 		} else if strings.HasPrefix(revInfo.RefName, git.TagPrefix) {
 			tag := strings.TrimPrefix(revInfo.RefName, git.TagPrefix)
 			// tag commit
@@ -195,34 +180,5 @@ func triggerWebhook(hookList []webhookmd.Webhook, repo repomd.RepoInfo, revInfo 
 	}
 	for _, hook := range hookList {
 		webhook.TriggerGitHook(hook.HookUrl, hook.GetHttpHeaders(), req)
-	}
-}
-
-func triggerActions(actions []gitactionmd.Action, branch string, repoName string) {
-	if len(actions) == 0 {
-		return
-	}
-	nodeIdList, _ := listutil.Map(actions, func(t gitactionmd.Action) (int64, error) {
-		return t.NodeId, nil
-	})
-	nodeIdSet := hashset.NewHashSet(nodeIdList...)
-	nodeIdList = nodeIdSet.AllKeys()
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	nodes, err := gitactionmd.BatchGetNode(ctx, nodeIdList)
-	if err != nil {
-		logger.Logger.Error(err)
-		return
-	}
-	hostMap, _ := listutil.CollectToMap(nodes, func(t gitactionmd.Node) (int64, error) {
-		return t.Id, nil
-	}, func(t gitactionmd.Node) (string, error) {
-		return t.HttpHost, nil
-	})
-	for _, a := range actions {
-		action.SysTriggerAction(a.Content, hostMap[a.NodeId], map[string]string{
-			"GIT_BRANCH": branch,
-			"REPO_NAME":  repoName,
-		}, a.Id)
 	}
 }

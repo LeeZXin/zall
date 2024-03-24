@@ -1,40 +1,53 @@
 package actionagentapi
 
 import (
-	"github.com/LeeZXin/zall/git/modules/service/gitactionsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
-	"github.com/LeeZXin/zall/pkg/action"
-	"github.com/LeeZXin/zsf-utils/ginutil"
+	"bytes"
+	"github.com/LeeZXin/zall/pkg/git/process"
+	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zsf/property/static"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"os"
+	"os/exec"
+)
+
+var (
+	agentToken string
 )
 
 func InitApi() {
+	agentToken = static.GetString("action.agent.token")
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/actionAgent", checkToken)
+		group := e.Group("/api/actionAgent", checkValid)
 		{
-			group.POST("/execute", executeAction)
+			group.POST("/execute", runScript)
 		}
 	})
 }
 
-func executeAction(c *gin.Context) {
-	var req action.Hook
-	if ginutil.ShouldBind(&req, c) {
-		go gitactionsrv.Inner.ExecuteAction(c, req)
-		c.String(http.StatusOK, "received")
+func runScript(c *gin.Context) {
+	var req RunScriptReqVO
+	if util.ShouldBindJSON(&req, c) {
+		cmd := exec.CommandContext(c, "bash", "-c", req.Script)
+		cmd.Env = append(os.Environ(), req.Envs...)
+		cmd.Dir = req.Workdir
+		stderr := new(bytes.Buffer)
+		stdout := new(bytes.Buffer)
+		cmd.Stderr = stderr
+		cmd.Stdout = stdout
+		process.SetSysProcAttribute(cmd)
+		cmd.Run()
+		c.JSON(http.StatusOK, RunScriptRespVO{
+			Stderr: stderr.String(),
+			Stdout: stdout.String(),
+		})
 	}
+
 }
 
-func checkToken(c *gin.Context) {
-	cfg, b := cfgsrv.Inner.GetGitCfg(c)
-	if !b {
-		c.String(http.StatusInternalServerError, "can not get git config")
-		c.Abort()
-		return
-	}
-	if c.GetHeader("Authorization") != cfg.ActionToken {
+func checkValid(c *gin.Context) {
+	if c.GetHeader("Authorization") != agentToken {
 		c.String(http.StatusForbidden, "invalid token")
 		c.Abort()
 		return

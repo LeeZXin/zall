@@ -6,8 +6,8 @@ import (
 	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/genid/modules/api/idapi"
 	"github.com/LeeZXin/zall/git/modules/api/actionagentapi"
+	"github.com/LeeZXin/zall/git/modules/api/actionapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
-	"github.com/LeeZXin/zall/git/modules/api/gitactionapi"
 	"github.com/LeeZXin/zall/git/modules/api/gitnodeapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
 	"github.com/LeeZXin/zall/git/modules/api/lfsapi"
@@ -67,7 +67,6 @@ func runZall(*cli.Context) error {
 		sshkeyapi.InitApi()
 		gpgkeyapi.InitApi()
 		gitnodeapi.InitApi()
-		gitactionapi.InitApi()
 		webhookapi.InitApi()
 		lifeCycles = append(lifeCycles, sshproxy.InitProxy())
 		if static.GetBool("git.repo.server.enabled") {
@@ -75,8 +74,12 @@ func runZall(*cli.Context) error {
 			reposerver.InitHttpApi()
 			lifeCycles = append(lifeCycles, reposerver.InitSshServer())
 		}
-		if static.GetBool("git.action.enabled") {
-			logger.Logger.Info("git action agent enabled")
+	}
+	// for action
+	{
+		actionapi.InitApi()
+		if static.GetBool("action.agent.enabled") {
+			logger.Logger.Info("action agent enabled")
 			actionagentapi.InitApi()
 		}
 	}

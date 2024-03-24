@@ -4,38 +4,36 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/git/process"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/executor/completable"
+	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 )
 
 var (
-	EmptyArgs   = errors.New("empty args")
 	ThereHasBug = errors.New("there has bug")
+	httpClient  = httputil.NewHttpClient()
 )
 
 type GraphCfg struct {
-	Name string            `json:"name" yaml:"name"`
 	Jobs map[string]JobCfg `json:"jobs" yaml:"jobs"`
 }
 
 func (c *GraphCfg) String() string {
-	return fmt.Sprintf("name: %s, jobs: %v", c.Name, c.Jobs)
+	return fmt.Sprintf("jobs: %v", c.Jobs)
 }
 
 func (c *GraphCfg) IsValid() error {
-	if c.Name == "" || len(c.Jobs) == 0 {
-		return EmptyArgs
+	if len(c.Jobs) == 0 {
+		return errors.New("empty jobs")
 	}
 	allJobNames := hashset.NewHashSet[string]()
 	// 检查是否有重复的jobName
@@ -136,7 +134,6 @@ func (c *GraphCfg) ConvertToGraph() (*Graph, error) {
 	}
 	graphJobs(jobs, c.Jobs)
 	return &Graph{
-		Name:    c.Name,
 		allJobs: jobs,
 	}, nil
 }
@@ -160,8 +157,8 @@ func (c *StepCfg) convertToStep() *Step {
 }
 
 func (c *StepCfg) IsValid() error {
-	if c.Name == "" || c.Script == "" {
-		return EmptyArgs
+	if c.Script == "" {
+		return errors.New("empty script")
 	}
 	return nil
 }
@@ -178,7 +175,7 @@ func (c *JobCfg) String() string {
 
 func (c *JobCfg) IsValid() error {
 	if len(c.Steps) == 0 {
-		return EmptyArgs
+		return errors.New("empty steps")
 	}
 	for _, cfg := range c.Steps {
 		if err := cfg.IsValid(); err != nil {
@@ -203,17 +200,13 @@ func (c *JobCfg) convertToJob(jobName string) *Job {
 }
 
 type RunOpts struct {
-	tempDir string
-	// 执行前触发
-	// err == nil 就不会触发
-	BeforeStartFunc func(GraphRunStat) error
-	StepOutputFunc  func(StepOutputStat)
-	StepAfterFunc   func(error, StepRunStat)
-	Args            map[string]string
-}
-
-type GraphRunStat struct {
-	Name string
+	RunWithAgent   bool
+	AgentUrl       string
+	AgentToken     string
+	Workdir        string
+	StepOutputFunc func(StepOutputStat)
+	StepAfterFunc  func(error, StepRunStat)
+	Args           map[string]string
 }
 
 type StepRunStat struct {
@@ -231,7 +224,6 @@ type StepOutputStat struct {
 }
 
 type Graph struct {
-	Name    string
 	allJobs []*Job
 }
 
@@ -253,20 +245,6 @@ func (g *Graph) ListJobInfo() []JobInfo {
 }
 
 func (g *Graph) Run(opts RunOpts) error {
-	tempDir := filepath.Join(git.ActionDir(), "action-"+util.RandomIdWithTime())
-	err := os.MkdirAll(tempDir, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("create tempDir err:%v", err)
-	}
-	defer util.RemoveAll(tempDir)
-	if opts.BeforeStartFunc != nil {
-		if err = opts.BeforeStartFunc(GraphRunStat{
-			Name: g.Name,
-		}); err != nil {
-			return err
-		}
-	}
-	opts.tempDir = tempDir
 	futures := make(map[string]completable.Future[any])
 	// 找到最后一层节点
 	layers, _ := listutil.Filter(g.allJobs, func(j *Job) (bool, error) {
@@ -278,7 +256,7 @@ func (g *Graph) Run(opts RunOpts) error {
 	if len(finalFutures) > 0 {
 		// 最后一层的节点就可以不用异步
 		future := completable.ThenAllOf(finalFutures...)
-		_, err = future.Get()
+		_, err := future.Get()
 		return err
 	}
 	// finalLayers必须大于0 不应该会走到这 否则就是bug
@@ -327,17 +305,70 @@ func (s *Step) replaceStr(args map[string]string, str string) string {
 	return str
 }
 
+type RunScriptReqVO struct {
+	Workdir string   `json:"workdir"`
+	Envs    []string `json:"envs"`
+	Script  string   `json:"script"`
+}
+
+type RunScriptRespVO struct {
+	Stderr string `json:"stderr"`
+	Stdout string `json:"stdout"`
+}
+
 func (s *Step) Run(opts *RunOpts, ctx context.Context, j *Job, index int) error {
-	var cmd *exec.Cmd
-	cmd = exec.CommandContext(ctx, "bash", "-c", s.replaceStr(opts.Args, s.script))
-	env := make([]string, 0, len(s.with))
+	envs := make([]string, 0, len(s.with))
 	for k, v := range s.with {
-		env = append(env, k+"="+v)
+		envs = append(envs, k+"="+v)
 	}
+	script := s.replaceStr(opts.Args, s.script)
+	if opts.RunWithAgent {
+		agentUrl := opts.AgentUrl + "/api/actionAgent/execute"
+		var resp RunScriptRespVO
+		beginTime := time.Now()
+		err := httputil.Post(ctx, httpClient, agentUrl, map[string]string{
+			"Authorization": opts.AgentToken,
+		}, RunScriptReqVO{
+			Workdir: opts.Workdir,
+			Envs:    envs,
+			Script:  script,
+		}, &resp)
+		if err != nil {
+			return err
+		}
+		var outReader io.ReadCloser
+		if resp.Stderr != "" {
+			outReader = io.NopCloser(strings.NewReader(resp.Stderr))
+		} else if resp.Stdout != "" {
+			outReader = io.NopCloser(strings.NewReader(resp.Stdout))
+		} else {
+			outReader = io.NopCloser(strings.NewReader(""))
+		}
+		go opts.StepOutputFunc(StepOutputStat{
+			JobName:   j.name,
+			Index:     index,
+			EventTime: beginTime,
+			Output:    outReader,
+		})
+		endTime := time.Now()
+		if opts.StepAfterFunc != nil {
+			opts.StepAfterFunc(err, StepRunStat{
+				JobName:   j.name,
+				Index:     index,
+				Duration:  endTime.Sub(beginTime),
+				EventTime: beginTime,
+			})
+		}
+	}
+	cmd := exec.CommandContext(ctx, "bash", "-c", script)
 	if len(s.with) > 0 {
-		cmd.Env = append(os.Environ(), env...)
+		cmd.Env = append(os.Environ(), envs...)
 	}
-	cmd.Dir = opts.tempDir
+	if opts.Workdir != "" {
+		cmd.Dir = opts.Workdir
+	} else {
+		cmd.Dir = "."
+	}
 	var (
 		stdoutReader *io.PipeReader
 		stdoutWriter *io.PipeWriter
