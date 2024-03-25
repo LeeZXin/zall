@@ -52,13 +52,13 @@ func (r *DeleteTeamReqDTO) IsValid() error {
 	return nil
 }
 
-type DeleteTeamUserReqDTO struct {
+type DeleteUserReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Account  string              `json:"account"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeleteTeamUserReqDTO) IsValid() error {
+func (r *DeleteUserReqDTO) IsValid() error {
 	if !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
@@ -68,7 +68,7 @@ func (r *DeleteTeamUserReqDTO) IsValid() error {
 	return nil
 }
 
-type ListTeamUserReqDTO struct {
+type ListUserReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Account  string              `json:"account"`
 	Cursor   int64               `json:"cursor"`
@@ -76,7 +76,7 @@ type ListTeamUserReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListTeamUserReqDTO) IsValid() error {
+func (r *ListUserReqDTO) IsValid() error {
 	if r.Account != "" && !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
@@ -89,35 +89,35 @@ func (r *ListTeamUserReqDTO) IsValid() error {
 	return nil
 }
 
-type UpsertTeamUserReqDTO struct {
+type UpsertUserReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Account  string              `json:"account"`
-	GroupId  int64               `json:"groupId"`
+	RoleId   int64               `json:"roleId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpsertTeamUserReqDTO) IsValid() error {
+func (r *UpsertUserReqDTO) IsValid() error {
 	if !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if r.GroupId <= 0 {
+	if r.RoleId <= 0 {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type InsertTeamUserGroupReqDTO struct {
+type InsertRoleReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Name     string              `json:"name"`
 	Perm     perm.Detail         `json:"perm"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertTeamUserGroupReqDTO) IsValid() error {
-	if !teammd.IsGroupNameValid(r.Name) {
+func (r *InsertRoleReqDTO) IsValid() error {
+	if !teammd.IsRoleNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -126,14 +126,14 @@ func (r *InsertTeamUserGroupReqDTO) IsValid() error {
 	return nil
 }
 
-type UpdateTeamUserGroupNameReqDTO struct {
-	GroupId  int64               `json:"groupId"`
+type UpdateRoleNameReqDTO struct {
+	RoleId   int64               `json:"roleId"`
 	Name     string              `json:"name"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpdateTeamUserGroupNameReqDTO) IsValid() error {
-	if !teammd.IsGroupNameValid(r.Name) {
+func (r *UpdateRoleNameReqDTO) IsValid() error {
+	if !teammd.IsRoleNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -142,13 +142,13 @@ func (r *UpdateTeamUserGroupNameReqDTO) IsValid() error {
 	return nil
 }
 
-type UpdateTeamUserGroupPermReqDTO struct {
-	GroupId  int64               `json:"groupId"`
+type UpdateRolePermReqDTO struct {
+	RoleId   int64               `json:"roleId"`
 	Perm     perm.Detail         `json:"perm"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpdateTeamUserGroupPermReqDTO) IsValid() error {
+func (r *UpdateRolePermReqDTO) IsValid() error {
 	if !r.Perm.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -158,13 +158,13 @@ func (r *UpdateTeamUserGroupPermReqDTO) IsValid() error {
 	return nil
 }
 
-type DeleteTeamUserGroupReqDTO struct {
-	GroupId  int64               `json:"groupId"`
+type DeleteRoleReqDTO struct {
+	RoleId   int64               `json:"roleId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeleteTeamUserGroupReqDTO) IsValid() error {
-	if r.GroupId <= 0 {
+func (r *DeleteRoleReqDTO) IsValid() error {
+	if r.RoleId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -173,23 +173,23 @@ func (r *DeleteTeamUserGroupReqDTO) IsValid() error {
 	return nil
 }
 
-type ListTeamUserGroupReqDTO struct {
+type ListRoleReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListTeamUserGroupReqDTO) IsValid() error {
+func (r *ListRoleReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type TeamUserGroupDTO struct {
-	GroupId int64       `json:"groupId"`
-	TeamId  int64       `json:"teamId"`
-	Name    string      `json:"name"`
-	Perm    perm.Detail `json:"perm"`
+type RoleDTO struct {
+	RoleId int64       `json:"roleId"`
+	TeamId int64       `json:"teamId"`
+	Name   string      `json:"name"`
+	Perm   perm.Detail `json:"perm"`
 }
 
 type ListTeamReqDTO struct {
@@ -209,10 +209,10 @@ type TeamDTO struct {
 	Created time.Time `json:"created"`
 }
 
-type TeamUserDTO struct {
-	TeamId    int64     `json:"teamId"`
-	Account   string    `json:"account"`
-	GroupId   int64     `json:"groupId"`
-	GroupName string    `json:"groupName"`
-	Created   time.Time `json:"created"`
+type UserDTO struct {
+	TeamId   int64     `json:"teamId"`
+	Account  string    `json:"account"`
+	RoleId   int64     `json:"roleId"`
+	RoleName string    `json:"roleName"`
+	Created  time.Time `json:"created"`
 }

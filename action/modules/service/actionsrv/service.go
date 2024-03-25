@@ -2,7 +2,7 @@ package actionsrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/git/modules/model/actionmd"
+	"github.com/LeeZXin/zall/action/modules/model/actionmd"
 )
 
 var (
@@ -20,11 +20,6 @@ type OuterService interface {
 	DeleteAction(context.Context, DeleteActionReqDTO) error
 	ListAction(context.Context, ListActionReqDTO) ([]actionmd.Action, error)
 	TriggerAction(context.Context, TriggerActionReqDTO) error
-	InsertNode(context.Context, InsertNodeReqDTO) error
-	DeleteNode(context.Context, DeleteNodeReqDTO) error
-	UpdateNode(context.Context, UpdateNodeReqDTO) error
-	ListNode(context.Context, ListNodeReqDTO) ([]NodeDTO, error)
-	AllNode(context.Context, AllNodeReqDTO) ([]SimpleNodeDTO, error)
 	ListTask(context.Context, ListTaskReqDTO) ([]TaskDTO, int64, error)
 	ListStep(context.Context, ListStepReqDTO) ([]StepDTO, error)
 }

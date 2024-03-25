@@ -241,7 +241,7 @@ func getFlow(c *gin.Context) {
 			Creator:     flow.Creator,
 			Created:     flow.Created.Format(time.DateTime),
 			Kvs:         flow.Kvs,
-			Process:     flow.Process,
+			Process:     &flow.Process,
 		}
 		data.NotifyList, _ = listutil.Map(flow.NotifyList, func(t approvalsrv.NotifyDTO) (NotifyVO, error) {
 			return NotifyVO{

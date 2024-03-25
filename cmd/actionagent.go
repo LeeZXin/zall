@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/LeeZXin/zall/git/modules/api/actionagentapi"
+	"github.com/LeeZXin/zall/action/modules/api/actionagentapi"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"

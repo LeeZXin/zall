@@ -18,7 +18,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/git/lfs"
 	"github.com/LeeZXin/zall/pkg/git/process"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	"github.com/LeeZXin/zall/pkg/perm"
 	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/common"
@@ -38,15 +37,21 @@ import (
 )
 
 const (
+	noneRepo = iota
+	accessRepo
+	updateRepo
+)
+
+const (
 	lfsAuthenticateVerb = "git-lfs-authenticate"
 )
 
 var (
-	allowedCommands = map[string]perm.AccessMode{
-		"git-upload-pack":    perm.AccessModeRead,
-		"git-upload-archive": perm.AccessModeRead,
-		"git-receive-pack":   perm.AccessModeWrite,
-		lfsAuthenticateVerb:  perm.AccessModeNone,
+	allowedCommands = map[string]int{
+		"git-upload-pack":    accessRepo,
+		"git-upload-archive": accessRepo,
+		"git-receive-pack":   updateRepo,
+		lfsAuthenticateVerb:  noneRepo,
 	}
 )
 
@@ -110,9 +115,9 @@ func handleGitCommand(ctx context.Context, user *usermd.UserInfo, session ssh.Se
 	}
 	if verb == lfsAuthenticateVerb {
 		if lfsVerb == "upload" {
-			accessMode = perm.AccessModeWrite
+			accessMode = updateRepo
 		} else if lfsVerb == "download" {
-			accessMode = perm.AccessModeRead
+			accessMode = accessRepo
 		} else {
 			return errors.New(i18n.GetByKey(i18n.SshCmdNotSupported))
 		}
@@ -152,17 +157,17 @@ func handleGitCommand(ctx context.Context, user *usermd.UserInfo, session ssh.Se
 		}
 		return nil
 	}
-	if accessMode == perm.AccessModeRead {
+	if accessMode == accessRepo {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    user.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.AccessCode),
+			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.AccessRepo),
 			ReqContent: repo,
 			Err:        err,
 		})
 	} else {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    user.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.PushCode),
+			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.PushRepo),
 			ReqContent: repo,
 			Err:        err,
 		})
@@ -199,28 +204,27 @@ func handleGitCommand(ctx context.Context, user *usermd.UserInfo, session ssh.Se
 	return gitCmd.Run()
 }
 
-func checkAccessMode(ctx context.Context, account, repoPath string, accessMode perm.AccessMode) (repomd.RepoInfo, error) {
+func checkAccessMode(ctx context.Context, account, repoPath string, permCode int) (repomd.RepoInfo, error) {
 	repo, b := reposrv.Inner.GetByRepoPath(ctx, repoPath)
 	if !b {
 		return repomd.RepoInfo{}, util.InvalidArgsError()
 	}
 	// 获取权限
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, repo.TeamId, account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, account)
 	if !b {
 		return repomd.RepoInfo{}, util.UnauthorizedError()
 	}
-	if accessMode == perm.AccessModeWrite {
-		// 检查权限
-		if !p.PermDetail.GetRepoPerm(repo.Id).CanUpdateRepo {
-			return repomd.RepoInfo{}, util.UnauthorizedError()
-		}
-	} else if accessMode == perm.AccessModeRead {
-		// 检查权限
-		if !p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo {
-			return repomd.RepoInfo{}, util.UnauthorizedError()
-		}
-	} else {
-		return repomd.RepoInfo{}, util.InvalidArgsError()
+	pass := false
+	switch permCode {
+	case accessRepo:
+		pass = p.PermDetail.GetRepoPerm(repo.Id).CanUpdateRepo
+	case updateRepo:
+		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo
+	case noneRepo:
+		pass = true
+	}
+	if !pass {
+		return repomd.RepoInfo{}, util.UnauthorizedError()
 	}
 	return repo, nil
 }

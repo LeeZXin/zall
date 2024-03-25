@@ -197,7 +197,7 @@ func (r *InsertFlowReqDTO) IsValid() error {
 
 type InsertCustomFlowReqDTO struct {
 	Pid      string              `json:"pid"`
-	Kvs      []approval.Kv       `json:"kvs"`
+	Kvs      approval.Kvs        `json:"kvs"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 

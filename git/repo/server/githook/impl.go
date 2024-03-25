@@ -179,6 +179,6 @@ func triggerWebhook(hookList []webhookmd.Webhook, repo repomd.RepoInfo, revInfo 
 		IsTagPush: isTag,
 	}
 	for _, hook := range hookList {
-		webhook.TriggerGitHook(hook.HookUrl, hook.GetHttpHeaders(), req)
+		webhook.TriggerGitHook(hook.HookUrl, hook.HttpHeaders, req)
 	}
 }

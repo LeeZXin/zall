@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	RepoTableName        = "zgit_repo"
-	AccessTokenTableName = "zgit_access_token"
+	RepoTableName      = "zgit_repo"
+	RepoTokenTableName = "zgit_repo_token"
 )
 
 type Repo struct {
@@ -31,7 +31,7 @@ func (*Repo) TableName() string {
 	return RepoTableName
 }
 
-type AccessToken struct {
+type RepoToken struct {
 	Id      int64     `json:"id" xorm:"pk autoincr"`
 	RepoId  int64     `json:"repoId"`
 	Account string    `json:"account"`
@@ -39,8 +39,8 @@ type AccessToken struct {
 	Created time.Time `json:"created" xorm:"created"`
 }
 
-func (*AccessToken) TableName() string {
-	return AccessTokenTableName
+func (*RepoToken) TableName() string {
+	return RepoTokenTableName
 }
 
 func (r *Repo) GetCfg() RepoCfg {

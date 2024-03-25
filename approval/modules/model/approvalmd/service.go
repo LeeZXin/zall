@@ -2,7 +2,6 @@ package approvalmd
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"regexp"
 	"time"
@@ -25,12 +24,11 @@ func IsGroupNameValid(name string) bool {
 }
 
 func InsertProcess(ctx context.Context, reqDTO InsertProcessReqDTO) error {
-	jsonBytes, _ := json.Marshal(reqDTO.Process)
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&Process{
 		Pid:        reqDTO.Pid,
 		Name:       reqDTO.Name,
 		GroupId:    reqDTO.GroupId,
-		Content:    string(jsonBytes),
+		Content:    &reqDTO.Process,
 		IconUrl:    reqDTO.IconUrl,
 		SourceType: reqDTO.SourceType,
 	})
@@ -38,7 +36,6 @@ func InsertProcess(ctx context.Context, reqDTO InsertProcessReqDTO) error {
 }
 
 func UpdateProcessById(ctx context.Context, reqDTO UpdateProcessByIdReqDTO) (bool, error) {
-	jsonBytes, _ := json.Marshal(reqDTO.Process)
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
 		Cols("approval", "name", "group_id", "icon_url", "content").
@@ -46,21 +43,20 @@ func UpdateProcessById(ctx context.Context, reqDTO UpdateProcessByIdReqDTO) (boo
 		Update(&Process{
 			Name:    reqDTO.Name,
 			GroupId: reqDTO.GroupId,
-			Content: string(jsonBytes),
+			Content: &reqDTO.Process,
 			IconUrl: reqDTO.IconUrl,
 		})
 	return rows == 1, err
 }
 
 func UpdateProcessByPid(ctx context.Context, reqDTO UpdateProcessByPidReqDTO) (bool, error) {
-	jsonBytes, _ := json.Marshal(reqDTO.Process)
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("pid = ?", reqDTO.Pid).
 		Cols("approval", "name", "group_id").
 		Update(&Process{
 			Name:    reqDTO.Name,
 			GroupId: reqDTO.GroupId,
-			Content: string(jsonBytes),
+			Content: &reqDTO.Process,
 		})
 	return rows == 1, err
 }
@@ -106,17 +102,15 @@ func GetProcessByGroupId(ctx context.Context, groupId int64) ([]Process, error) 
 }
 
 func InsertFlow(ctx context.Context, reqDTO InsertFlowReqDTO) (Flow, error) {
-	processJson, _ := json.Marshal(reqDTO.Process)
-	kvsJson, _ := json.Marshal(reqDTO.Kvs)
 	var ret = Flow{
 		ProcessName:    reqDTO.ProcessName,
 		ProcessId:      reqDTO.ProcessId,
-		ProcessContent: string(processJson),
+		ProcessContent: &reqDTO.Process,
 		CurrIndex:      reqDTO.CurrIndex,
 		FlowStatus:     reqDTO.FlowStatus,
 		Creator:        reqDTO.Creator,
 		BizId:          reqDTO.BizId,
-		Kvs:            string(kvsJson),
+		Kvs:            reqDTO.Kvs,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&ret)

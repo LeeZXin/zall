@@ -1,5 +1,7 @@
 package perm
 
+import "encoding/json"
+
 var (
 	DefaultTeamPerm = TeamPerm{
 		CanInitRepo:      true,
@@ -16,71 +18,56 @@ var (
 		CanHandleProtectedBranch: true,
 		CanHandlePullRequest:     true,
 		CanHandleWebhook:         true,
-		CanAccessWiki:            true,
-		CanUpdateWiki:            true,
 		CanAccessToken:           true,
 		CanUpdateToken:           true,
-	}
-	DefaultAppPerm = AppPerm{
-		CanReadPropContent:    true,
-		CanWritePropContent:   true,
-		CanDeployPropContent:  true,
-		CanReadPropAuth:       true,
-		CanGrantPropAuth:      true,
-		CanHandlePropApproval: true,
-		CanDeployProduct:      true,
 	}
 	DefaultPermDetail = Detail{
 		TeamPerm:        DefaultTeamPerm,
 		DefaultRepoPerm: DefaultRepoPerm,
-		DefaultAppPerm:  DefaultAppPerm,
 	}
 )
 
 type Detail struct {
 	// 项目权限
 	TeamPerm TeamPerm `json:"teamPerm"`
-	// 默认仓库权限
+	// 仓库权限
 	DefaultRepoPerm RepoPerm `json:"defaultRepoPerm"`
-	// 可访问仓库权限列表
-	RepoPermList []RepoPermWithId `json:"repoPermList,omitempty"`
-	// app权限
-	DefaultAppPerm AppPerm `json:"defaultAppPerm"`
-	// 可访问app
-	AppPermList []AppPermWithAppId `json:"appPermList"`
-}
-
-func (d *Detail) IsValid() bool {
-	return len(d.RepoPermList) <= 1000 && len(d.AppPermList) <= 1000
+	// 特殊仓库权限
+	RepoPermList []RepoPermWithId `json:"repoPermList"`
+	// 可开发应用
+	DevelopAppList []string `json:"developAppList"`
 }
 
 func (d *Detail) GetRepoPerm(repoId int64) RepoPerm {
 	if len(d.RepoPermList) == 0 {
 		return d.DefaultRepoPerm
 	}
-	for _, perm := range d.RepoPermList {
-		if perm.RepoId == repoId {
-			return perm.RepoPerm
+	for _, p := range d.RepoPermList {
+		if p.RepoId == repoId {
+			return p.RepoPerm
 		}
 	}
 	return RepoPerm{}
 }
 
-func (d *Detail) GetAppPerm(appId string) AppPerm {
-	if len(d.AppPermList) == 0 {
-		return d.DefaultAppPerm
+func (d *Detail) IsValid() bool {
+	return len(d.RepoPermList) < 1000 && len(d.DevelopAppList) < 1000
+}
+
+func (d *Detail) FromDB(content []byte) error {
+	if d == nil {
+		*d = Detail{}
 	}
-	for _, perm := range d.AppPermList {
-		if perm.AppId == appId {
-			return perm.AppPerm
-		}
-	}
-	return AppPerm{}
+	return json.Unmarshal(content, d)
+}
+
+func (d *Detail) ToDB() ([]byte, error) {
+	return json.Marshal(d)
 }
 
 type RepoPermWithId struct {
-	RepoId int64 `json:"repoId"`
 	RepoPerm
+	RepoId int64 `json:"repoId"`
 }
 
 type RepoPerm struct {
@@ -96,13 +83,9 @@ type RepoPerm struct {
 	CanHandlePullRequest bool `json:"canHandlePullRequest"`
 	// 是否可配置webhook
 	CanHandleWebhook bool `json:"canHandleWebhook"`
-	// 是否可访问wiki
-	CanAccessWiki bool `json:"canAccessWiki"`
-	// 是否可编辑wiki
-	CanUpdateWiki bool `json:"canUpdateWiki"`
-	// 是否可查看accessToken
+	// 是否可查看Token
 	CanAccessToken bool `json:"canAccessToken"`
-	// 是否可编辑accessToken
+	// 是否可编辑Token
 	CanUpdateToken bool `json:"canUpdateToken"`
 }
 
@@ -119,19 +102,4 @@ type TeamPerm struct {
 	CanUpdateAction bool `json:"canUpdateAction"`
 	// 是否可手动触发action
 	CanTriggerAction bool `json:"canTriggerAction"`
-}
-
-type AppPermWithAppId struct {
-	AppId string `json:"appId"`
-	AppPerm
-}
-
-type AppPerm struct {
-	CanReadPropContent    bool `json:"canReadPropContent"`
-	CanWritePropContent   bool `json:"canWritePropContent"`
-	CanDeployPropContent  bool `json:"canDeployPropContent"`
-	CanReadPropAuth       bool `json:"canReadPropAuth"`
-	CanGrantPropAuth      bool `json:"CanGrantPropAuth"`
-	CanHandlePropApproval bool `json:"canHandlePropApproval"`
-	CanDeployProduct      bool `json:"CanDeployProduct"`
 }

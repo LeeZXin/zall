@@ -38,8 +38,8 @@ type UpdateCustomProcessReqVO struct {
 }
 
 type InsertCustomFlowReqVO struct {
-	Pid string        `json:"pid"`
-	Kvs []approval.Kv `json:"kvs"`
+	Pid string       `json:"pid"`
+	Kvs approval.Kvs `json:"kvs"`
 }
 
 type InsertCustomFlowRespVO struct {
@@ -78,14 +78,14 @@ type GetFlowReqVO struct {
 }
 
 type FlowDetailVO struct {
-	Id          int64            `json:"flowId"`
-	ProcessName string           `json:"processName"`
-	FlowStatus  string           `json:"flowStatus"`
-	Creator     string           `json:"creator"`
-	Created     string           `json:"created"`
-	Kvs         []approval.Kv    `json:"kvs"`
-	Process     approval.Process `json:"process"`
-	NotifyList  []NotifyVO       `json:"notifyList"`
+	Id          int64             `json:"flowId"`
+	ProcessName string            `json:"processName"`
+	FlowStatus  string            `json:"flowStatus"`
+	Creator     string            `json:"creator"`
+	Created     string            `json:"created"`
+	Kvs         approval.Kvs      `json:"kvs"`
+	Process     *approval.Process `json:"process"`
+	NotifyList  []NotifyVO        `json:"notifyList"`
 }
 
 type FlowVO struct {

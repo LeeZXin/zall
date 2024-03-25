@@ -26,7 +26,7 @@ type FlowContext struct {
 	context.Context
 	FlowId  int64
 	BizId   string
-	Kvs     []Kv
+	Kvs     Kvs
 	Process *Process
 }
 
@@ -163,6 +163,22 @@ type KvCfg struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"`
 	Required bool   `json:"required"`
+}
+
+type Kvs []Kv
+
+func (k *Kvs) FromDB(content []byte) error {
+	ret := make(Kvs, 0)
+	err := json.Unmarshal(content, &ret)
+	if err != nil {
+		return err
+	}
+	*k = ret
+	return nil
+}
+
+func (k *Kvs) ToDB() ([]byte, error) {
+	return json.Marshal(k)
 }
 
 type Kv struct {
@@ -305,7 +321,7 @@ func (p *Process) Find(nodeId int) *Node {
 	return p.Node.Find(nodeId)
 }
 
-func (p *Process) CheckKvCfgs(kvs []Kv) []string {
+func (p *Process) CheckKvCfgs(kvs Kvs) []string {
 	errKeys := make([]string, 0)
 	for _, cfg := range p.KvCfgs {
 		find := false
@@ -330,6 +346,17 @@ func (p *Process) FindAndDo(nodeId int, fnMap map[NodeType]func(*Node)) {
 		return
 	}
 	p.Node.FindAndDo(nodeId, fnMap)
+}
+
+func (p *Process) FromDB(content []byte) error {
+	if p == nil {
+		*p = Process{}
+	}
+	return json.Unmarshal(content, p)
+}
+
+func (p *Process) ToDB() ([]byte, error) {
+	return json.Marshal(p)
 }
 
 func findByNodeId(node *Node, nodeId int) *Node {

@@ -6,11 +6,11 @@ import (
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
-func IsAccessTokenAccountValid(account string) bool {
+func IsRepoTokenAccountValid(account string) bool {
 	return len(account) == 16
 }
 
-func IsAccessTokenTokenValid(token string) bool {
+func IsRepoTokenTokenValid(token string) bool {
 	return len(token) == 16
 }
 
@@ -57,7 +57,7 @@ func ListAllRepo(ctx context.Context, teamId int64) ([]Repo, error) {
 	return ret, err
 }
 
-func ListRepoByIdList(ctx context.Context, repoIdList []int64) ([]Repo, error) {
+func GetRepoByIdList(ctx context.Context, repoIdList []int64) ([]Repo, error) {
 	ret := make([]Repo, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		In("id", repoIdList).
@@ -95,8 +95,8 @@ func CountByTeamId(ctx context.Context, teamId int64) (int64, error) {
 		Count(new(Repo))
 }
 
-func GetAccessToken(ctx context.Context, reqDTO GetAccessTokenReqDTO) (AccessToken, bool, error) {
-	var ret AccessToken
+func GetRepoToken(ctx context.Context, reqDTO GetRepoTokenReqDTO) (RepoToken, bool, error) {
+	var ret RepoToken
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("repo_id = ?", reqDTO.RepoId).
 		And("account = ?", reqDTO.Account).
@@ -104,15 +104,15 @@ func GetAccessToken(ctx context.Context, reqDTO GetAccessTokenReqDTO) (AccessTok
 	return ret, b, err
 }
 
-func DeleteAccessToken(ctx context.Context, id int64) (bool, error) {
+func DeleteRepoToken(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
-		Delete(new(AccessToken))
+		Delete(new(RepoToken))
 	return rows == 1, err
 }
 
-func InsertAccessToken(ctx context.Context, reqDTO InsertAccessTokenReqDTO) (AccessToken, error) {
-	ret := AccessToken{
+func InsertRepoToken(ctx context.Context, reqDTO InsertRepoTokenReqDTO) (RepoToken, error) {
+	ret := RepoToken{
 		RepoId:  reqDTO.RepoId,
 		Account: reqDTO.Account,
 		Token:   reqDTO.Token,
@@ -121,16 +121,16 @@ func InsertAccessToken(ctx context.Context, reqDTO InsertAccessTokenReqDTO) (Acc
 	return ret, err
 }
 
-func GetByTid(ctx context.Context, tid int64) (AccessToken, bool, error) {
-	var ret AccessToken
+func GetByTokenId(ctx context.Context, id int64) (RepoToken, bool, error) {
+	var ret RepoToken
 	b, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", tid).
+		Where("id = ?", id).
 		Get(&ret)
 	return ret, b, err
 }
 
-func ListAccessToken(ctx context.Context, repoId int64) ([]AccessToken, error) {
-	ret := make([]AccessToken, 0)
+func ListRepoToken(ctx context.Context, repoId int64) ([]RepoToken, error) {
+	ret := make([]RepoToken, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("repo_id = ?", repoId).
 		Find(&ret)

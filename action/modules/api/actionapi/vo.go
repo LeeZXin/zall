@@ -3,7 +3,8 @@ package actionapi
 type InsertActionReqVO struct {
 	Name          string `json:"name"`
 	TeamId        int64  `json:"teamId"`
-	NodeId        int64  `json:"nodeId"`
+	AgentUrl      string `json:"agentUrl"`
+	AgentToken    string `json:"agentToken"`
 	ActionContent string `json:"actionContent"`
 }
 
@@ -17,49 +18,23 @@ type ListActionReqVO struct {
 
 type UpdateActionReqVO struct {
 	Id            int64  `json:"id"`
-	NodeId        int64  `json:"nodeId"`
+	Name          string `json:"name"`
+	AgentUrl      string `json:"agentUrl"`
+	AgentToken    string `json:"agentToken"`
 	ActionContent string `json:"actionContent"`
 }
 
 type ActionVO struct {
 	Id            int64  `json:"id"`
 	Aid           string `json:"aid"`
-	NodeId        int64  `json:"nodeId"`
+	AgentUrl      string `json:"agentUrl"`
+	AgentToken    string `json:"agentToken"`
 	ActionContent string `json:"actionContent"`
 	Created       string `json:"created"`
 }
 
 type TriggerActionReqVO struct {
 	Id int64 `json:"id"`
-}
-
-type InsertNodeReqVO struct {
-	Name     string `json:"name"`
-	HttpHost string `json:"httpHost"`
-	Token    string `json:"token"`
-}
-
-type UpdateNodeReqVO struct {
-	Id       int64  `json:"id"`
-	Name     string `json:"name"`
-	HttpHost string `json:"httpHost"`
-	Token    string `json:"token"`
-}
-
-type DeleteNodeReqVO struct {
-	Id int64 `json:"id"`
-}
-
-type NodeVO struct {
-	Id       int64  `json:"id"`
-	Name     string `json:"name"`
-	HttpHost string `json:"httpHost"`
-	Token    string `json:"token"`
-}
-
-type SimpleNodeVO struct {
-	Id   int64  `json:"id"`
-	Name string `json:"name"`
 }
 
 type ListTaskReqVO struct {

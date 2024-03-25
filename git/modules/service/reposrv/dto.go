@@ -414,60 +414,60 @@ func validateFileName(name string) bool {
 	return len(name) <= 255 && len(name) > 0
 }
 
-type InsertAccessTokenReqDTO struct {
+type InsertRepoTokenReqDTO struct {
 	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertAccessTokenReqDTO) IsValid() error {
+func (r *InsertRepoTokenReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type DeleteAccessTokenReqDTO struct {
+type DeleteRepoTokenReqDTO struct {
 	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeleteAccessTokenReqDTO) IsValid() error {
+func (r *DeleteRepoTokenReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type ListAccessTokenReqDTO struct {
+type ListRepoTokenReqDTO struct {
 	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListAccessTokenReqDTO) IsValid() error {
+func (r *ListRepoTokenReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type AccessTokenDTO struct {
+type RepoTokenDTO struct {
 	Id      int64     `json:"id"`
 	Account string    `json:"account"`
 	Token   string    `json:"token"`
 	Created time.Time `json:"created"`
 }
 
-type CheckAccessTokenReqDTO struct {
+type CheckRepoTokenReqDTO struct {
 	Id      int64  `json:"id"`
 	Account string `json:"account"`
 	Token   string `json:"token"`
 }
 
-func (r *CheckAccessTokenReqDTO) IsValid() error {
-	if !repomd.IsAccessTokenAccountValid(r.Account) {
+func (r *CheckRepoTokenReqDTO) IsValid() error {
+	if !repomd.IsRepoTokenAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
-	if !repomd.IsAccessTokenTokenValid(r.Token) {
+	if !repomd.IsRepoTokenTokenValid(r.Token) {
 		return util.InvalidArgsError()
 	}
 	return nil

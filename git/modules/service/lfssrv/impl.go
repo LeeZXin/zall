@@ -10,11 +10,15 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+)
+
+const (
+	accessRepo = iota
+	updateRepo
 )
 
 type outerImpl struct {
@@ -27,12 +31,9 @@ func (*outerImpl) Lock(ctx context.Context, reqDTO LockReqDTO) (LockRespDTO, err
 	// 检查仓库访问权限
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
+	err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, updateRepo)
 	if err != nil {
 		return LockRespDTO{}, err
-	}
-	if !p.GetRepoPerm(reqDTO.Repo.Id).CanUpdateRepo {
-		return LockRespDTO{}, util.UnauthorizedError()
 	}
 	lock, err := lfsmd.InsertLock(ctx, lfsmd.InsertLockReqDTO{
 		RepoId:  reqDTO.Repo.Id,
@@ -70,12 +71,9 @@ func (*outerImpl) ListLock(ctx context.Context, reqDTO ListLockReqDTO) (ListLock
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if !reqDTO.FromAccessToken {
-		p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
+		err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
 		if err != nil {
 			return ListLockRespDTO{}, err
-		}
-		if !p.GetRepoPerm(reqDTO.Repo.Id).CanAccessRepo {
-			return ListLockRespDTO{}, util.UnauthorizedError()
 		}
 	}
 	if reqDTO.Limit <= 0 || reqDTO.Limit > 1000 {
@@ -110,12 +108,9 @@ func (*outerImpl) Unlock(ctx context.Context, reqDTO UnlockReqDTO) (LfsLockDTO, 
 	// 检查仓库访问权限
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
+	err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, updateRepo)
 	if err != nil {
 		return LfsLockDTO{}, err
-	}
-	if !p.GetRepoPerm(reqDTO.Repo.Id).CanUpdateRepo {
-		return LfsLockDTO{}, util.UnauthorizedError()
 	}
 	// 查找lock是否存在
 	lock, b, err := lfsmd.GetLockById(ctx, reqDTO.LockId)
@@ -146,12 +141,9 @@ func (s *outerImpl) Verify(ctx context.Context, reqDTO VerifyReqDTO) (bool, bool
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if !reqDTO.FromAccessToken {
-		p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
+		err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
 		if err != nil {
 			return false, false, err
-		}
-		if !p.GetRepoPerm(reqDTO.Repo.Id).CanAccessRepo {
-			return false, false, util.UnauthorizedError()
 		}
 	}
 	stat, err := client.LfsStat(ctx, reqvo.LfsStatReq{
@@ -187,13 +179,8 @@ func (s *outerImpl) Download(ctx context.Context, reqDTO DownloadReqDTO) (err er
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if !reqDTO.FromAccessToken {
-		var p perm.Detail
-		p, err = getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
+		err = checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
 		if err != nil {
-			return
-		}
-		if !p.GetRepoPerm(reqDTO.Repo.Id).CanAccessRepo {
-			err = util.UnauthorizedError()
 			return
 		}
 	}
@@ -226,12 +213,8 @@ func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error)
 	// 检查仓库访问权限
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	p, err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator)
+	err = checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, updateRepo)
 	if err != nil {
-		return
-	}
-	if !p.GetRepoPerm(reqDTO.Repo.Id).CanUpdateRepo {
-		err = util.UnauthorizedError()
 		return
 	}
 	// 检查oid是否落库
@@ -369,10 +352,26 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 	}, nil
 }
 
-func getPerm(ctx context.Context, repo repomd.RepoInfo, operator usermd.UserInfo) (perm.Detail, error) {
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, repo.TeamId, operator.Account)
-	if !b {
-		return perm.Detail{}, util.UnauthorizedError()
+func checkPerm(ctx context.Context, repo repomd.RepoInfo, operator usermd.UserInfo, permCode int) error {
+	if operator.IsAdmin {
+		return nil
 	}
-	return p.PermDetail, nil
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if !b {
+		return util.UnauthorizedError()
+	}
+	if p.IsAdmin {
+		return nil
+	}
+	pass := false
+	switch permCode {
+	case accessRepo:
+		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo
+	case updateRepo:
+		pass = p.PermDetail.GetRepoPerm(repo.Id).CanUpdateRepo
+	}
+	if !pass {
+		return util.UnauthorizedError()
+	}
+	return nil
 }

@@ -47,7 +47,6 @@ func (t TaskStatus) Readable() string {
 const (
 	TaskTableName   = "zgit_action_task"
 	StepTableName   = "zgit_action_step"
-	NodeTableName   = "zgit_action_node"
 	ActionTableName = "zgit_action"
 )
 
@@ -57,6 +56,8 @@ type Task struct {
 	TaskStatus    TaskStatus  `json:"taskStatus"`
 	TriggerType   TriggerType `json:"triggerType"`
 	ActionContent string      `json:"actionContent"`
+	AgentUrl      string      `json:"agentUrl"`
+	AgentToken    string      `json:"agentToken"`
 	Operator      string      `json:"operator"`
 	Created       time.Time   `json:"created" xorm:"created"`
 }
@@ -105,28 +106,16 @@ func (*Step) TableName() string {
 	return StepTableName
 }
 
-type Node struct {
-	Id       int64     `json:"id" xorm:"pk autoincr"`
-	Name     string    `json:"name"`
-	HttpHost string    `json:"httpHost"`
-	Token    string    `json:"token"`
-	Created  time.Time `json:"created" xorm:"created"`
-	Updated  time.Time `json:"updated" xorm:"updated"`
-}
-
-func (*Node) TableName() string {
-	return NodeTableName
-}
-
 type Action struct {
-	Id      int64     `json:"id" xorm:"pk autoincr"`
-	Aid     string    `json:"aid"`
-	Name    string    `json:"name"`
-	TeamId  int64     `json:"teamId"`
-	Content string    `json:"content"`
-	NodeId  int64     `json:"nodeId"`
-	Created time.Time `json:"created" xorm:"created"`
-	Updated time.Time `json:"updated" xorm:"updated"`
+	Id         int64     `json:"id" xorm:"pk autoincr"`
+	Aid        string    `json:"aid"`
+	Name       string    `json:"name"`
+	TeamId     int64     `json:"teamId"`
+	Content    string    `json:"content"`
+	AgentUrl   string    `json:"agentUrl"`
+	AgentToken string    `json:"agentToken"`
+	Created    time.Time `json:"created" xorm:"created"`
+	Updated    time.Time `json:"updated" xorm:"updated"`
 }
 
 func (*Action) TableName() string {

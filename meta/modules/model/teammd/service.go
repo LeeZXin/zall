@@ -2,12 +2,11 @@ package teammd
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
-func IsGroupNameValid(name string) bool {
+func IsRoleNameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 64
 }
 
@@ -42,56 +41,56 @@ func UpdateTeam(ctx context.Context, reqDTO UpdateTeamReqDTO) (bool, error) {
 	return rows == 1, err
 }
 
-func GetTeamUserPermDetail(ctx context.Context, teamId int64, account string) (TeamUserPermDetailDTO, bool, error) {
+func GetUserPermDetail(ctx context.Context, teamId int64, account string) (UserPermDetailDTO, bool, error) {
 	pu, b, err := GetTeamUser(ctx, teamId, account)
 	if err != nil || !b {
-		return TeamUserPermDetailDTO{}, b, err
+		return UserPermDetailDTO{}, b, err
 	}
-	if pu.GroupId == 0 {
-		return TeamUserPermDetailDTO{}, true, nil
+	if pu.RoleId == 0 {
+		return UserPermDetailDTO{}, true, nil
 	}
-	group, b, err := GetByGroupId(ctx, pu.GroupId)
+	group, b, err := GetByRoleId(ctx, pu.RoleId)
 	if err != nil || !b {
-		return TeamUserPermDetailDTO{}, b, err
+		return UserPermDetailDTO{}, b, err
 	}
-	return TeamUserPermDetailDTO{
-		GroupId:    group.Id,
+	return UserPermDetailDTO{
+		RoleId:     group.Id,
 		IsAdmin:    group.IsAdmin,
-		PermDetail: group.GetPermDetail(),
+		PermDetail: *group.Perm,
 	}, true, nil
 }
 
-func InsertTeamUser(ctx context.Context, reqDTO InsertTeamUserReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&TeamUser{
+func InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&User{
 		TeamId:  reqDTO.TeamId,
 		Account: reqDTO.Account,
-		GroupId: reqDTO.GroupId,
+		RoleId:  reqDTO.RoleId,
 	})
 	return err
 }
 
-func UpdateTeamUser(ctx context.Context, reqDTO UpdateTeamUserReqDTO) (bool, error) {
+func UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", reqDTO.TeamId).
 		And("account = ?", reqDTO.Account).
 		Cols("group_id").
 		Limit(1).
-		Update(&TeamUser{
-			GroupId: reqDTO.GroupId,
+		Update(&User{
+			RoleId: reqDTO.RoleId,
 		})
 	return rows == 1, err
 }
 
-func DeleteTeamUser(ctx context.Context, teamId int64, account string) (bool, error) {
+func DeleteUser(ctx context.Context, teamId int64, account string) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
 		And("account = ?", account).
 		Limit(1).
-		Delete(new(TeamUser))
+		Delete(new(User))
 	return rows == 1, err
 }
 
-func ListTeamUser(ctx context.Context, reqDTO ListTeamUserReqDTO) ([]TeamUser, error) {
+func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]User, error) {
 	session := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", reqDTO.TeamId)
 	if reqDTO.Account != "" {
@@ -100,7 +99,7 @@ func ListTeamUser(ctx context.Context, reqDTO ListTeamUserReqDTO) ([]TeamUser, e
 	if reqDTO.Cursor > 0 {
 		session.And("id > ?", reqDTO.Cursor)
 	}
-	ret := make([]TeamUser, 0)
+	ret := make([]User, 0)
 	err := session.Limit(reqDTO.Limit).OrderBy("id asc").Find(&ret)
 	return ret, err
 }
@@ -108,11 +107,11 @@ func ListTeamUser(ctx context.Context, reqDTO ListTeamUserReqDTO) ([]TeamUser, e
 func DeleteAllTeamUserByAccount(ctx context.Context, account string) (int64, error) {
 	return xormutil.MustGetXormSession(ctx).
 		And("account = ?", account).
-		Delete(new(TeamUser))
+		Delete(new(User))
 }
 
-func GetTeamUser(ctx context.Context, teamId int64, account string) (TeamUser, bool, error) {
-	ret := TeamUser{}
+func GetTeamUser(ctx context.Context, teamId int64, account string) (User, bool, error) {
+	ret := User{}
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
 		And("account = ?", account).
@@ -120,66 +119,64 @@ func GetTeamUser(ctx context.Context, teamId int64, account string) (TeamUser, b
 	return ret, b, err
 }
 
-func InsertTeamUserGroup(ctx context.Context, reqDTO InsertTeamUserGroupReqDTO) (TeamUserGroup, error) {
-	m, _ := json.Marshal(reqDTO.PermDetail)
-	ret := TeamUserGroup{
+func InsertRole(ctx context.Context, reqDTO InsertRoleReqDTO) (Role, error) {
+	ret := Role{
 		TeamId:  reqDTO.TeamId,
 		Name:    reqDTO.Name,
-		Perm:    string(m),
+		Perm:    &reqDTO.PermDetail,
 		IsAdmin: reqDTO.IsAdmin,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
 }
 
-func GetByGroupId(ctx context.Context, id int64) (TeamUserGroup, bool, error) {
-	ret := TeamUserGroup{}
+func GetByRoleId(ctx context.Context, id int64) (Role, bool, error) {
+	ret := Role{}
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		Get(&ret)
 	return ret, b, err
 }
 
-func UpdateTeamUserGroupName(ctx context.Context, id int64, name string) (bool, error) {
+func UpdateRoleName(ctx context.Context, id int64, name string) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		Cols("name").
 		Limit(1).
-		Update(&TeamUserGroup{
+		Update(&Role{
 			Name: name,
 		})
 	return rows == 1, err
 }
 
-func UpdateTeamUserGroupPerm(ctx context.Context, id int64, detail perm.Detail) (bool, error) {
-	m, _ := json.Marshal(detail)
+func UpdateRolePerm(ctx context.Context, id int64, detail perm.Detail) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		Cols("perm").
 		Limit(1).
-		Update(&TeamUserGroup{
-			Perm: string(m),
+		Update(&Role{
+			Perm: &detail,
 		})
 	return rows == 1, err
 }
 
-func DeleteTeamUserGroup(ctx context.Context, id int64) (bool, error) {
+func DeleteRole(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		Limit(1).
-		Delete(new(TeamUserGroup))
+		Delete(new(Role))
 	return rows == 1, err
 }
 
-func ExistTeamUser(ctx context.Context, teamId, groupId int64) (bool, error) {
+func ExistRole(ctx context.Context, teamId, roleId int64) (bool, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
-		And("group_id = ?", groupId).
-		Exist(new(TeamUser))
+		And("role_id = ?", roleId).
+		Exist(new(User))
 }
 
-func ListTeamUserGroup(ctx context.Context, teamId int64) ([]TeamUserGroup, error) {
-	ret := make([]TeamUserGroup, 0)
+func ListRole(ctx context.Context, teamId int64) ([]Role, error) {
+	ret := make([]Role, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
 		Find(&ret)
@@ -194,27 +191,27 @@ func DeleteTeam(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
-func DeleteAllTeamUserGroupByTeamId(ctx context.Context, teamId int64) (int64, error) {
+func DeleteAllRoleByTeamId(ctx context.Context, teamId int64) (int64, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
-		Delete(new(TeamUserGroup))
+		Delete(new(Role))
 }
 
-func DeleteAllTeamUserByTeamId(ctx context.Context, teamId int64) (int64, error) {
+func DeleteAllUserByTeamId(ctx context.Context, teamId int64) (int64, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
-		Delete(new(TeamUser))
+		Delete(new(User))
 }
 
-func ListTeamUserByAccount(ctx context.Context, account string) ([]TeamUser, error) {
-	ret := make([]TeamUser, 0)
+func ListUserByAccount(ctx context.Context, account string) ([]User, error) {
+	ret := make([]User, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("account = ?", account).
 		Find(&ret)
 	return ret, err
 }
 
-func GetTeamByTeamIdList(ctx context.Context, teamIdList []int64) ([]Team, error) {
+func GetByTeamIdList(ctx context.Context, teamIdList []int64) ([]Team, error) {
 	ret := make([]Team, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		In("id", teamIdList).
@@ -222,11 +219,10 @@ func GetTeamByTeamIdList(ctx context.Context, teamIdList []int64) ([]Team, error
 	return ret, err
 }
 
-func GetByGroupIdList(ctx context.Context, teamId int64, groupIdList []int64) ([]TeamUserGroup, error) {
-	ret := make([]TeamUserGroup, 0)
+func GetByRoleIdList(ctx context.Context, roleIdList []int64) ([]Role, error) {
+	ret := make([]Role, 0)
 	err := xormutil.MustGetXormSession(ctx).
-		Where("team_id = ?", teamId).
-		In("group_id", groupIdList).
+		In("role_id", roleIdList).
 		Find(&ret)
 	return ret, err
 }

@@ -111,10 +111,10 @@ func updateTeam(c *gin.Context) {
 func upsertTeamUser(c *gin.Context) {
 	var req UpsertTeamUserReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.UpsertTeamUser(c, teamsrv.UpsertTeamUserReqDTO{
+		err := teamsrv.Outer.UpsertUser(c, teamsrv.UpsertUserReqDTO{
 			TeamId:   req.TeamId,
 			Account:  req.Account,
-			GroupId:  req.GroupId,
+			RoleId:   req.GroupId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -128,7 +128,7 @@ func upsertTeamUser(c *gin.Context) {
 func listTeamUser(c *gin.Context) {
 	var req ListTeamUserReqVO
 	if util.ShouldBindJSON(&req, c) {
-		users, next, err := teamsrv.Outer.ListTeamUser(c, teamsrv.ListTeamUserReqDTO{
+		users, next, err := teamsrv.Outer.ListUser(c, teamsrv.ListUserReqDTO{
 			TeamId:   req.TeamId,
 			Account:  req.Account,
 			Cursor:   req.Cursor,
@@ -139,12 +139,12 @@ func listTeamUser(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(users, func(t teamsrv.TeamUserDTO) (TeamUserVO, error) {
+		data, _ := listutil.Map(users, func(t teamsrv.UserDTO) (TeamUserVO, error) {
 			return TeamUserVO{
 				TeamId:    t.TeamId,
 				Account:   t.Account,
-				GroupId:   t.GroupId,
-				GroupName: t.GroupName,
+				GroupId:   t.RoleId,
+				GroupName: t.RoleName,
 				Created:   t.Created.Format(time.DateTime),
 			}, nil
 		})
@@ -161,7 +161,7 @@ func listTeamUser(c *gin.Context) {
 func deleteTeamUser(c *gin.Context) {
 	var req DeleteTeamUserReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.DeleteTeamUser(c, teamsrv.DeleteTeamUserReqDTO{
+		err := teamsrv.Outer.DeleteUser(c, teamsrv.DeleteUserReqDTO{
 			TeamId:   req.TeamId,
 			Account:  req.Account,
 			Operator: apisession.MustGetLoginUser(c),
@@ -177,7 +177,7 @@ func deleteTeamUser(c *gin.Context) {
 func insertTeamUserGroup(c *gin.Context) {
 	var req InsertTeamUserGroupReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.InsertTeamUserGroup(c, teamsrv.InsertTeamUserGroupReqDTO{
+		err := teamsrv.Outer.InsertRole(c, teamsrv.InsertRoleReqDTO{
 			TeamId:   req.TeamId,
 			Name:     req.Name,
 			Perm:     req.Perm,
@@ -194,8 +194,8 @@ func insertTeamUserGroup(c *gin.Context) {
 func updateTeamUserGroupName(c *gin.Context) {
 	var req UpdateTeamUserGroupNameReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.UpdateTeamUserGroupName(c, teamsrv.UpdateTeamUserGroupNameReqDTO{
-			GroupId:  req.GroupId,
+		err := teamsrv.Outer.UpdateRoleName(c, teamsrv.UpdateRoleNameReqDTO{
+			RoleId:   req.GroupId,
 			Name:     req.Name,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -210,8 +210,8 @@ func updateTeamUserGroupName(c *gin.Context) {
 func updateTeamUserGroupPerm(c *gin.Context) {
 	var req UpdateTeamUserGroupPermReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.UpdateTeamUserGroupPerm(c, teamsrv.UpdateTeamUserGroupPermReqDTO{
-			GroupId:  req.GroupId,
+		err := teamsrv.Outer.UpdateRolePerm(c, teamsrv.UpdateRolePermReqDTO{
+			RoleId:   req.GroupId,
 			Perm:     req.Perm,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -226,8 +226,8 @@ func updateTeamUserGroupPerm(c *gin.Context) {
 func deleteTeamUserGroup(c *gin.Context) {
 	var req DeleteTeamUserGroupReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.DeleteTeamUserGroup(c, teamsrv.DeleteTeamUserGroupReqDTO{
-			GroupId:  req.GroupId,
+		err := teamsrv.Outer.DeleteRole(c, teamsrv.DeleteRoleReqDTO{
+			RoleId:   req.GroupId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -241,7 +241,7 @@ func deleteTeamUserGroup(c *gin.Context) {
 func listTeamUserGroup(c *gin.Context) {
 	var req ListTeamUserGroupReqVO
 	if util.ShouldBindJSON(&req, c) {
-		groups, err := teamsrv.Outer.ListTeamUserGroup(c, teamsrv.ListTeamUserGroupReqDTO{
+		groups, err := teamsrv.Outer.ListRole(c, teamsrv.ListRoleReqDTO{
 			TeamId:   req.TeamId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -249,9 +249,9 @@ func listTeamUserGroup(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		ret, _ := listutil.Map(groups, func(t teamsrv.TeamUserGroupDTO) (TeamUserGroupVO, error) {
+		ret, _ := listutil.Map(groups, func(t teamsrv.RoleDTO) (TeamUserGroupVO, error) {
 			return TeamUserGroupVO{
-				GroupId: t.GroupId,
+				GroupId: t.RoleId,
 				TeamId:  t.TeamId,
 				Name:    t.Name,
 				Perm:    t.Perm,

@@ -36,7 +36,7 @@ type InsertFlowReqDTO struct {
 	FlowStatus  FlowStatus
 	Creator     string
 	BizId       string
-	Kvs         []approval.Kv
+	Kvs         approval.Kvs
 }
 
 type InsertNotifyReqDTO struct {

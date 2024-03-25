@@ -7,10 +7,8 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
-	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/prop/modules/service/propsrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -49,16 +47,6 @@ func (*outerImpl) InsertApp(ctx context.Context, reqDTO InsertAppReqDTO) (err er
 		err = util.AlreadyExistsError()
 		return
 	}
-	err = appmd.InsertApp(ctx, appmd.InsertAppReqDTO{
-		AppId:  reqDTO.AppId,
-		Name:   reqDTO.Name,
-		TeamId: reqDTO.TeamId,
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
 	go func() {
 		envs, b := cfgsrv.Inner.GetEnvCfg(ctx)
 		if b {
@@ -95,35 +83,37 @@ func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err er
 		err = util.InternalError(err)
 		return
 	}
+	// todo 删除其他附加东西
 	return
 }
 
-func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, int64, error) {
+func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	appIdList, err := checkPerm(ctx, reqDTO.Operator, reqDTO.TeamId)
+	appIdList, isAdmin, err := checkAppList(ctx, reqDTO.Operator, reqDTO.TeamId)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	var (
 		apps []appmd.App
 	)
 	if len(appIdList) > 0 {
 		apps, err = appmd.GetByAppIdList(ctx, appIdList)
-	} else {
+	} else if isAdmin {
+		// 管理员可访问所有app
 		apps, err = appmd.ListApp(ctx, appmd.ListAppReqDTO{
 			AppId:  reqDTO.AppId,
 			TeamId: reqDTO.TeamId,
-			Cursor: reqDTO.Cursor,
-			Limit:  reqDTO.Limit,
 		})
+	} else {
+		apps = make([]appmd.App, 0)
 	}
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, 0, util.InternalError(err)
+		return nil, util.InternalError(err)
 	}
 	ret, _ := listutil.Map(apps, func(t appmd.App) (AppDTO, error) {
 		return AppDTO{
@@ -131,10 +121,21 @@ func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, 
 			Name:  t.Name,
 		}, nil
 	})
-	if reqDTO.Limit > 0 && len(apps) == reqDTO.Limit {
-		return ret, apps[len(apps)-1].Id, nil
+	return ret, nil
+}
+
+func checkAppList(ctx context.Context, operator apisession.UserInfo, teamId int64) ([]string, bool, error) {
+	if operator.IsAdmin {
+		return nil, true, nil
 	}
-	return ret, 0, nil
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
+	if !b {
+		return nil, false, util.UnauthorizedError()
+	}
+	if p.IsAdmin {
+		return nil, true, nil
+	}
+	return p.PermDetail.DevelopAppList, false, nil
 }
 
 func (*outerImpl) UpdateApp(ctx context.Context, reqDTO UpdateAppReqDTO) (err error) {
@@ -199,7 +200,7 @@ func (*outerImpl) TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (
 		err = util.InvalidArgsError()
 		return
 	}
-	app, b, err := appmd.GetByAppId(ctx, reqDTO.AppId)
+	_, b, err = appmd.GetByAppId(ctx, reqDTO.AppId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -209,22 +210,6 @@ func (*outerImpl) TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (
 		err = util.InvalidArgsError()
 		return
 	}
-	// 查询team角色是否包含该Id
-	groups, err := teammd.ListTeamUserGroup(ctx, app.TeamId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	// 项目组仍有该仓库的特殊配置
-	for _, group := range groups {
-		for _, repoPerm := range group.GetPermDetail().AppPermList {
-			if repoPerm.AppId == reqDTO.AppId {
-				err = util.NewBizErr(apicode.OperationFailedErrCode, i18n.AppPermsContainerTargetAppId)
-				return
-			}
-		}
-	}
 	_, err = appmd.TransferTeam(ctx, reqDTO.AppId, reqDTO.TeamId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -232,19 +217,6 @@ func (*outerImpl) TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (
 		return
 	}
 	return
-}
-
-func checkPerm(ctx context.Context, operator apisession.UserInfo, teamId int64) ([]string, error) {
-	if operator.IsAdmin {
-		return nil, nil
-	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, teamId, operator.Account)
-	if !b {
-		return nil, util.UnauthorizedError()
-	}
-	return listutil.Map(p.PermDetail.AppPermList, func(t perm.AppPermWithAppId) (string, error) {
-		return t.AppId, nil
-	})
 }
 
 func checkPermAdmin(ctx context.Context, operator apisession.UserInfo, teamId int64) error {
@@ -258,7 +230,7 @@ func checkPermAdmin(ctx context.Context, operator apisession.UserInfo, teamId in
 			return util.InvalidArgsError()
 		}
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, teamId, operator.Account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
 	if !b || !p.IsAdmin {
 		return util.UnauthorizedError()
 	}
@@ -277,7 +249,7 @@ func checkPermByAppId(ctx context.Context, operator apisession.UserInfo, appId s
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 	if !b || !p.IsAdmin {
 		return util.UnauthorizedError()
 	}

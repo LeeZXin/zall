@@ -1,8 +1,8 @@
 package actionapi
 
 import (
-	"github.com/LeeZXin/zall/git/modules/model/actionmd"
-	"github.com/LeeZXin/zall/git/modules/service/actionsrv"
+	"github.com/LeeZXin/zall/action/modules/model/actionmd"
+	"github.com/LeeZXin/zall/action/modules/service/actionsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
@@ -33,16 +33,10 @@ func InitApi() {
 		}
 		group = e.Group("/api/actionTask", apisession.CheckLogin)
 		{
+			// 获取执行任务列表
 			group.POST("/list", listTask)
+			// 获取执行任务详情
 			group.POST("/steps", getTaskSteps)
-		}
-		group = e.Group("/api/actionNode", apisession.CheckLogin)
-		{
-			group.POST("/insert", insertNode)
-			group.POST("/update", updateNode)
-			group.Any("/list", listNode)
-			group.Any("/all", allNode)
-			group.POST("/delete", deleteNode)
 		}
 	})
 }
@@ -64,7 +58,8 @@ func insertAction(c *gin.Context) {
 			Name:          req.Name,
 			TeamId:        req.TeamId,
 			ActionContent: req.ActionContent,
-			NodeId:        req.NodeId,
+			AgentUrl:      req.AgentUrl,
+			AgentToken:    req.AgentToken,
 			Operator:      apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -89,10 +84,11 @@ func listAction(c *gin.Context) {
 		data, _ := listutil.Map(actions, func(t actionmd.Action) (ActionVO, error) {
 			return ActionVO{
 				Id:            t.Id,
+				Aid:           t.Aid,
+				AgentUrl:      t.AgentUrl,
+				AgentToken:    t.AgentToken,
 				ActionContent: t.Content,
 				Created:       t.Created.Format(time.DateTime),
-				NodeId:        t.NodeId,
-				Aid:           t.Aid,
 			}, nil
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[[]ActionVO]{
@@ -122,8 +118,10 @@ func updateAction(c *gin.Context) {
 	if util.ShouldBindJSON(&req, c) {
 		err := actionsrv.Outer.UpdateAction(c, actionsrv.UpdateActionReqDTO{
 			Id:            req.Id,
+			Name:          req.Name,
 			ActionContent: req.ActionContent,
-			NodeId:        req.NodeId,
+			AgentUrl:      req.AgentUrl,
+			AgentToken:    req.AgentToken,
 			Operator:      apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -147,98 +145,6 @@ func triggerAction(c *gin.Context) {
 		}
 		util.DefaultOkResponse(c)
 	}
-}
-
-func insertNode(c *gin.Context) {
-	var req InsertNodeReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := actionsrv.Outer.InsertNode(c, actionsrv.InsertNodeReqDTO{
-			Name:     req.Name,
-			HttpHost: req.HttpHost,
-			Token:    req.Token,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func updateNode(c *gin.Context) {
-	var req UpdateNodeReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := actionsrv.Outer.UpdateNode(c, actionsrv.UpdateNodeReqDTO{
-			Id:       req.Id,
-			Name:     req.Name,
-			HttpHost: req.HttpHost,
-			Token:    req.Token,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func deleteNode(c *gin.Context) {
-	var req DeleteNodeReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := actionsrv.Outer.DeleteNode(c, actionsrv.DeleteNodeReqDTO{
-			Id:       req.Id,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func listNode(c *gin.Context) {
-	nodes, err := actionsrv.Outer.ListNode(c, actionsrv.ListNodeReqDTO{
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	data, _ := listutil.Map(nodes, func(t actionsrv.NodeDTO) (NodeVO, error) {
-		return NodeVO{
-			Id:       t.Id,
-			Name:     t.Name,
-			HttpHost: t.HttpHost,
-			Token:    t.Token,
-		}, nil
-	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]NodeVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
-	})
-}
-
-func allNode(c *gin.Context) {
-	nodes, err := actionsrv.Outer.AllNode(c, actionsrv.AllNodeReqDTO{
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	data, _ := listutil.Map(nodes, func(t actionsrv.SimpleNodeDTO) (SimpleNodeVO, error) {
-		return SimpleNodeVO{
-			Id:   t.Id,
-			Name: t.Name,
-		}, nil
-	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleNodeVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
-	})
 }
 
 func listTask(c *gin.Context) {

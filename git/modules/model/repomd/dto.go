@@ -53,13 +53,13 @@ func (s RepoStatus) Readable() string {
 	}
 }
 
-type InsertAccessTokenReqDTO struct {
+type InsertRepoTokenReqDTO struct {
 	RepoId  int64
 	Account string
 	Token   string
 }
 
-type GetAccessTokenReqDTO struct {
+type GetRepoTokenReqDTO struct {
 	RepoId  int64
 	Account string
 }

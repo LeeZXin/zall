@@ -75,11 +75,9 @@ func deleteApp(c *gin.Context) {
 func listApp(c *gin.Context) {
 	var req ListAppReqVO
 	if util.ShouldBindJSON(&req, c) {
-		apps, cursor, err := appsrv.Outer.ListApp(c, appsrv.ListAppReqDTO{
+		apps, err := appsrv.Outer.ListApp(c, appsrv.ListAppReqDTO{
 			AppId:    req.AppId,
 			TeamId:   req.TeamId,
-			Cursor:   req.Cursor,
-			Limit:    req.Limit,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -92,12 +90,9 @@ func listApp(c *gin.Context) {
 				Name:  t.Name,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]AppVO]{
-			DataResp: ginutil.DataResp[[]AppVO]{
-				BaseResp: ginutil.DefaultSuccessResp,
-				Data:     data,
-			},
-			Next: cursor,
+		c.JSON(http.StatusOK, ginutil.DataResp[[]AppVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
 		})
 	}
 }

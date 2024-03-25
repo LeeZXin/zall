@@ -16,6 +16,8 @@ func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 		TaskStatus:    reqDTO.TaskStatus,
 		TriggerType:   reqDTO.TriggerType,
 		ActionContent: reqDTO.ActionContent,
+		AgentUrl:      reqDTO.AgentUrl,
+		AgentToken:    reqDTO.AgentToken,
 		Operator:      reqDTO.Operator,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
@@ -80,70 +82,14 @@ func UpdateStepLogContent(ctx context.Context, taskId int64, jobName string, ste
 	return rows == 1, err
 }
 
-func IsNodeNameValid(name string) bool {
-	return len(name) > 0 && len(name) <= 32
-}
-
-func IsNodeTokenValid(token string) bool {
-	return len(token) >= 0 && len(token) <= 32
-}
-
-func InsertNode(ctx context.Context, reqDTO InsertNodeReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&Node{
-			Name:     reqDTO.Name,
-			HttpHost: reqDTO.HttpHost,
-			Token:    reqDTO.Token,
-		})
-	return err
-}
-
-func GetNodeById(ctx context.Context, id int64) (Node, bool, error) {
-	var ret Node
-	b, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", id).
-		Get(&ret)
-	return ret, b, err
-}
-
-func DeleteNode(ctx context.Context, id int64) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", id).
-		Limit(1).
-		Delete(new(Node))
-	return rows == 1, err
-}
-
-func UpdateNode(ctx context.Context, reqDTO UpdateNodeReqDTO) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", reqDTO.Id).
-		Cols("name", "http_host", "token").
-		Limit(1).
-		Update(Node{
-			HttpHost: reqDTO.HttpHost,
-			Name:     reqDTO.Name,
-			Token:    reqDTO.Token,
-		})
-	return rows == 1, err
-}
-
-func GetAllNodes(ctx context.Context) ([]Node, error) {
-	ret := make([]Node, 0)
-	session := xormutil.MustGetXormSession(ctx)
-	err := session.OrderBy("id asc").Find(&ret)
-	if err != nil {
-		return nil, err
-	}
-	return ret, err
-}
-
 func InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) error {
 	ret := Action{
-		Aid:     reqDTO.Aid,
-		TeamId:  reqDTO.TeamId,
-		Content: reqDTO.Content,
-		NodeId:  reqDTO.NodeId,
-		Name:    reqDTO.Name,
+		Aid:        reqDTO.Aid,
+		TeamId:     reqDTO.TeamId,
+		Content:    reqDTO.Content,
+		AgentUrl:   reqDTO.AgentUrl,
+		AgentToken: reqDTO.AgentToken,
+		Name:       reqDTO.Name,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return err
@@ -152,11 +98,12 @@ func InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) error {
 func UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("content", "node_id", "push_branch", "name").
+		Cols("content", "agent_url", "agent_token", "name").
 		Update(&Action{
-			Content: reqDTO.Content,
-			NodeId:  reqDTO.NodeId,
-			Name:    reqDTO.Name,
+			Content:    reqDTO.Content,
+			AgentUrl:   reqDTO.AgentUrl,
+			AgentToken: reqDTO.AgentToken,
+			Name:       reqDTO.Name,
 		})
 	return rows == 1, err
 }

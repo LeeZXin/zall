@@ -302,12 +302,12 @@ func (*outerImpl) ReviewPullRequest(ctx context.Context, reqDTO ReviewPullReques
 		err = util.InvalidArgsError()
 		return
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, repo.TeamId, reqDTO.Operator.Account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, reqDTO.Operator.Account)
 	if !b {
 		err = util.UnauthorizedError()
 		return
 	}
-	if !p.PermDetail.GetRepoPerm(pr.Id).CanAccessRepo {
+	if !p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo {
 		err = util.UnauthorizedError()
 		return
 	}
@@ -366,7 +366,7 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 	if !b {
 		return repomd.RepoInfo{}, util.InvalidArgsError()
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, repo.TeamId, operator.Account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if !b {
 		return repo, util.UnauthorizedError()
 	}
@@ -397,7 +397,7 @@ func triggerWebhook(repo repomd.RepoInfo, operator apisession.UserInfo, pr pullr
 				},
 			}
 			for _, hook := range hookList {
-				webhook.TriggerPrHook(hook.HookUrl, hook.GetHttpHeaders(), req)
+				webhook.TriggerPrHook(hook.HookUrl, hook.HttpHeaders, req)
 			}
 		} else {
 			logger.Logger.Error(err)

@@ -2,23 +2,17 @@ package webhookmd
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
 func InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) error {
 	hook := Webhook{
-		RepoId:     reqDTO.RepoId,
-		HookUrl:    reqDTO.HookUrl,
-		HookType:   reqDTO.HookType,
-		WildBranch: reqDTO.WildBranch,
-		WildTag:    reqDTO.WildTag,
-	}
-	if reqDTO.HttpHeaders != nil {
-		m, err := json.Marshal(reqDTO.HttpHeaders)
-		if err == nil {
-			hook.HttpHeaders = string(m)
-		}
+		RepoId:      reqDTO.RepoId,
+		HookUrl:     reqDTO.HookUrl,
+		HookType:    reqDTO.HookType,
+		WildBranch:  reqDTO.WildBranch,
+		WildTag:     reqDTO.WildTag,
+		HttpHeaders: reqDTO.HttpHeaders,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&hook)
 	return err
@@ -26,15 +20,10 @@ func InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) error {
 
 func UpdateWebhook(ctx context.Context, reqDTO UpdateWebhookReqDTO) (bool, error) {
 	hook := &Webhook{
-		HookUrl:    reqDTO.HookUrl,
-		WildTag:    reqDTO.WildTag,
-		WildBranch: reqDTO.WildBranch,
-	}
-	if reqDTO.HttpHeaders != nil {
-		m, err := json.Marshal(reqDTO.HttpHeaders)
-		if err == nil {
-			hook.HttpHeaders = string(m)
-		}
+		HookUrl:     reqDTO.HookUrl,
+		WildTag:     reqDTO.WildTag,
+		WildBranch:  reqDTO.WildBranch,
+		HttpHeaders: reqDTO.HttpHeaders,
 	}
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).

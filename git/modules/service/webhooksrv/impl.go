@@ -131,7 +131,7 @@ func (*outerImpl) ListWebhook(ctx context.Context, reqDTO ListWebhookReqDTO) ([]
 			Id:          t.Id,
 			RepoId:      t.RepoId,
 			HookUrl:     t.HookUrl,
-			HttpHeaders: t.GetHttpHeaders(),
+			HttpHeaders: t.HttpHeaders,
 			HookType:    t.HookType,
 			WildBranch:  t.WildBranch,
 			WildTag:     t.WildTag,
@@ -144,8 +144,8 @@ func checkPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) 
 	if !b {
 		return util.InvalidArgsError()
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, repo.TeamId, operator.Account)
-	if !b || !p.PermDetail.GetRepoPerm(repoId).CanHandleWebhook {
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if !b || !p.PermDetail.GetRepoPerm(repo.Id).CanHandleWebhook {
 		return util.UnauthorizedError()
 	}
 	return nil

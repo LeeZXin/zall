@@ -31,11 +31,10 @@ func (*innerImpl) InsertFlow(ctx context.Context, reqDTO InsertFlowReqDTO) error
 	if !b {
 		return fmt.Errorf("process not found: %s", reqDTO.Pid)
 	}
-	up, _ := process.GetUnmarshalProcess()
 	flow, err := approvalmd.InsertFlow(ctx, approvalmd.InsertFlowReqDTO{
 		ProcessId:   process.Id,
 		ProcessName: process.Name,
-		Process:     up,
+		Process:     *process.Content,
 		CurrIndex:   1,
 		FlowStatus:  approvalmd.PendingFlowStatus,
 		Creator:     reqDTO.Account,
@@ -96,20 +95,14 @@ func (*innerImpl) DeleteAttachedProcess(ctx context.Context, pid string) error {
 
 func executeFlow(flow approvalmd.Flow) {
 	go func() {
-		process, err := flow.GetProcess()
-		if err != nil {
-			logger.Logger.Error(err)
-			return
-		}
-		kvs, _ := flow.GetKvs()
 		flowCtx := &approval.FlowContext{
 			Context: context.Background(),
 			FlowId:  flow.Id,
 			BizId:   flow.BizId,
-			Kvs:     kvs,
-			Process: &process,
+			Kvs:     flow.Kvs,
+			Process: flow.ProcessContent,
 		}
-		runFlow(flowCtx, &flow, process.Node)
+		runFlow(flowCtx, &flow, flow.ProcessContent.Node)
 	}()
 }
 
@@ -326,11 +319,7 @@ func (*outerImpl) Agree(ctx context.Context, reqDTO AgreeFlowReqDTO) error {
 	if flow.CurrIndex != notify.FlowIndex {
 		return util.InvalidArgsError()
 	}
-	process, err := flow.GetProcess()
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
+	process := flow.ProcessContent
 	node := process.Find(notify.FlowIndex)
 	if node == nil {
 		return util.InvalidArgsError()
@@ -362,13 +351,13 @@ func (*outerImpl) Agree(ctx context.Context, reqDTO AgreeFlowReqDTO) error {
 		if int(count) >= node.AtLeastNum {
 			// 其他人被迫同意
 			_ = approvalmd.UpdateNotifyDoneWithOldDoneByFlowIdAndIndex(ctx, true, false, approvalmd.AutoAgreeOp, flow.Id, flow.CurrIndex)
-			kvs, _ := flow.GetKvs()
+			kvs := flow.Kvs
 			flowCtx := &approval.FlowContext{
 				Context: context.Background(),
 				FlowId:  flow.Id,
 				BizId:   flow.BizId,
 				Kvs:     kvs,
-				Process: &process,
+				Process: process,
 			}
 			go runNext(flowCtx, &flow, node, map[string]any{
 				"agree": "y",
@@ -406,7 +395,7 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 	if flow.CurrIndex != notify.FlowIndex {
 		return util.InvalidArgsError()
 	}
-	process, err := flow.GetProcess()
+	process := flow.ProcessContent
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -442,13 +431,12 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 		if int(count)+node.AtLeastNum > len(node.Accounts) {
 			// 其他人被迫不同意
 			_ = approvalmd.UpdateNotifyDoneWithOldDoneByFlowIdAndIndex(ctx, true, false, approvalmd.AutoDisagreeOp, flow.Id, flow.CurrIndex)
-			kvs, _ := flow.GetKvs()
 			flowCtx := &approval.FlowContext{
 				Context: context.Background(),
 				FlowId:  flow.Id,
 				BizId:   flow.BizId,
-				Kvs:     kvs,
-				Process: &process,
+				Kvs:     flow.Kvs,
+				Process: process,
 			}
 			go runNext(flowCtx, &flow, node, map[string]any{
 				"agree": "n",
@@ -574,15 +562,14 @@ func (*outerImpl) InsertCustomFlow(ctx context.Context, reqDTO InsertCustomFlowR
 	if !b {
 		return nil, util.InvalidArgsError()
 	}
-	up, _ := process.GetUnmarshalProcess()
-	errKeys := up.CheckKvCfgs(reqDTO.Kvs)
+	errKeys := process.Content.CheckKvCfgs(reqDTO.Kvs)
 	if len(errKeys) > 0 {
 		return errKeys, nil
 	}
 	flow, err := approvalmd.InsertFlow(ctx, approvalmd.InsertFlowReqDTO{
 		ProcessId:   process.Id,
 		ProcessName: process.Name,
-		Process:     up,
+		Process:     *process.Content,
 		CurrIndex:   1,
 		FlowStatus:  approvalmd.PendingFlowStatus,
 		Kvs:         reqDTO.Kvs,
@@ -790,8 +777,8 @@ func (*outerImpl) GetFlowDetail(ctx context.Context, reqDTO GetFlowDetailReqDTO)
 			return FlowDetailDTO{}, util.UnauthorizedError()
 		}
 	}
-	process, _ := flow.GetProcess()
-	kvs, _ := flow.GetKvs()
+	process := flow.ProcessContent
+	kvs := flow.Kvs
 	notifies, err := approvalmd.GetNotifyByFlowId(ctx, flow.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -804,7 +791,7 @@ func (*outerImpl) GetFlowDetail(ctx context.Context, reqDTO GetFlowDetailReqDTO)
 		Creator:     flow.Creator,
 		Created:     flow.Created,
 		Kvs:         kvs,
-		Process:     process,
+		Process:     *process,
 	}
 	ret.NotifyList, _ = listutil.Map(notifies, func(t approvalmd.Notify) (NotifyDTO, error) {
 		return NotifyDTO{
@@ -834,13 +821,12 @@ func (*outerImpl) ListCustomProcess(ctx context.Context, reqDTO ListCustomProces
 		return nil, util.InternalError(err)
 	}
 	return listutil.Map(processes, func(t approvalmd.Process) (ProcessDTO, error) {
-		up, _ := t.GetUnmarshalProcess()
 		return ProcessDTO{
 			Id:      t.Id,
 			Pid:     t.Pid,
 			GroupId: t.GroupId,
 			Name:    t.Name,
-			Content: up,
+			Content: *t.Content,
 			IconUrl: t.IconUrl,
 			Created: t.Created,
 		}, nil

@@ -14,15 +14,10 @@ type AppDTO struct {
 type ListAppReqDTO struct {
 	AppId    string              `json:"appId"`
 	TeamId   int64               `json:"teamId"`
-	Cursor   int64               `json:"cursor"`
-	Limit    int                 `json:"limit"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListAppReqDTO) IsValid() error {
-	if r.Cursor < 0 || r.Limit < 0 {
-		return util.InvalidArgsError()
-	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}

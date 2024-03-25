@@ -25,15 +25,6 @@ import (
 	"time"
 )
 
-const (
-	readPropContentPerm = iota
-	writePropContentPerm
-	deployPropContentPerm
-	readPropAuthPerm
-	grantPropAuthPerm
-	handlePropApprovalPerm
-)
-
 type outerImpl struct {
 }
 
@@ -203,7 +194,7 @@ func (*outerImpl) GrantAuth(ctx context.Context, reqDTO GrantAuthReqDTO) (err er
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId, grantPropAuthPerm); err != nil {
+	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return
 	}
 	if err = grantAuth(ctx, reqDTO.AppId, reqDTO.Env); err != nil {
@@ -219,7 +210,7 @@ func (*outerImpl) GetAuth(ctx context.Context, reqDTO GetAuthReqDTO) (string, st
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId, readPropAuthPerm); err != nil {
+	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return "", "", err
 	}
 	auth, b, err := propmd.GetAuthByAppId(ctx, reqDTO.AppId, reqDTO.Env)
@@ -248,7 +239,7 @@ func (*outerImpl) InsertPropContent(ctx context.Context, reqDTO InsertPropConten
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId, writePropContentPerm); err != nil {
+	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return
 	}
 	var b bool
@@ -302,7 +293,7 @@ func (*outerImpl) UpdatePropContent(ctx context.Context, reqDTO UpdatePropConten
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env, writePropContentPerm); err != nil {
+	if _, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env); err != nil {
 		return
 	}
 	err = propmd.InsertHistory(ctx, propmd.InsertHistoryReqDTO{
@@ -336,7 +327,7 @@ func (*outerImpl) DeletePropContent(ctx context.Context, reqDTO DeletePropConten
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var content propmd.PropContent
-	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env, writePropContentPerm); err != nil {
+	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env); err != nil {
 		return
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
@@ -368,7 +359,7 @@ func (*outerImpl) ListPropContent(ctx context.Context, reqDTO ListPropContentReq
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId, readPropContentPerm); err != nil {
+	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return nil, err
 	}
 	contents, err := propmd.ListPropContent(ctx, reqDTO.AppId, reqDTO.Env)
@@ -401,7 +392,7 @@ func (*outerImpl) DeployPropContent(ctx context.Context, reqDTO DeployPropConten
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var content propmd.PropContent
-	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env, deployPropContentPerm); err != nil {
+	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env); err != nil {
 		return
 	}
 	nodes, err := propmd.BatchGetEtcdNodes(ctx, reqDTO.EtcdNodeList, reqDTO.Env)
@@ -442,7 +433,7 @@ func (*outerImpl) ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId, reqDTO.Env, readPropContentPerm); err != nil {
+	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId, reqDTO.Env); err != nil {
 		return nil, 0, err
 	}
 	histories, err := propmd.ListHistory(ctx, propmd.ListHistoryReqDTO{
@@ -478,7 +469,7 @@ func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]De
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId, reqDTO.Env, readPropContentPerm); err != nil {
+	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId, reqDTO.Env); err != nil {
 		return nil, 0, err
 	}
 	deploys, err := propmd.ListDeploy(ctx, propmd.ListDeployReqDTO{
@@ -671,7 +662,7 @@ func genVersion() string {
 	return now.Format("20060102150405") + rint
 }
 
-func checkPerm(ctx context.Context, operator apisession.UserInfo, id int64, env string, permCode int) (propmd.PropContent, error) {
+func checkPerm(ctx context.Context, operator apisession.UserInfo, id int64, env string) (propmd.PropContent, error) {
 	content, b, err := propmd.GetPropContentById(ctx, id, env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -680,10 +671,10 @@ func checkPerm(ctx context.Context, operator apisession.UserInfo, id int64, env 
 	if !b {
 		return propmd.PropContent{}, util.InvalidArgsError()
 	}
-	return content, checkPermByAppId(ctx, operator, content.AppId, permCode)
+	return content, checkPermByAppId(ctx, operator, content.AppId)
 }
 
-func checkPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string, permCode int) error {
+func checkPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -695,32 +686,20 @@ func checkPermByAppId(ctx context.Context, operator apisession.UserInfo, appId s
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 	if !b {
 		return util.UnauthorizedError()
 	}
 	if p.IsAdmin {
 		return nil
 	}
-	pass := false
-	switch permCode {
-	case readPropContentPerm:
-		pass = p.PermDetail.GetAppPerm(appId).CanReadPropContent
-	case writePropContentPerm:
-		pass = p.PermDetail.GetAppPerm(appId).CanWritePropContent
-	case deployPropContentPerm:
-		pass = p.PermDetail.GetAppPerm(appId).CanDeployPropContent
-	case readPropAuthPerm:
-		pass = p.PermDetail.GetAppPerm(appId).CanReadPropAuth
-	case grantPropAuthPerm:
-		pass = p.PermDetail.GetAppPerm(appId).CanGrantPropAuth
-	case handlePropApprovalPerm:
-		pass = p.PermDetail.GetAppPerm(appId).CanHandlePropApproval
+	contains, _ := listutil.Contains(p.PermDetail.DevelopAppList, func(s string) (bool, error) {
+		return s == appId, nil
+	})
+	if contains {
+		return nil
 	}
-	if !pass {
-		return util.UnauthorizedError()
-	}
-	return nil
+	return util.UnauthorizedError()
 }
 
 type innerImpl struct{}

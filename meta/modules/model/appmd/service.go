@@ -47,12 +47,6 @@ func ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]App, error) {
 	if reqDTO.AppId != "" {
 		session.And("app_id like ?", reqDTO.AppId+"%")
 	}
-	if reqDTO.Cursor > 0 {
-		session.And("id > ?", reqDTO.Cursor)
-	}
-	if reqDTO.Limit > 0 {
-		session.Limit(reqDTO.Limit)
-	}
 	ret := make([]App, 0)
 	return ret, session.OrderBy("id asc").Find(&ret)
 }

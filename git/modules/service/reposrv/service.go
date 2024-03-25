@@ -17,7 +17,7 @@ var (
 type InnerService interface {
 	GetByRepoPath(context.Context, string) (repomd.RepoInfo, bool)
 	GetByRepoId(context.Context, int64) (repomd.RepoInfo, bool)
-	CheckAccessToken(context.Context, CheckAccessTokenReqDTO) bool
+	CheckRepoToken(context.Context, CheckRepoTokenReqDTO) bool
 }
 
 type OuterService interface {
@@ -35,9 +35,9 @@ type OuterService interface {
 	DiffFile(context.Context, DiffFileReqDTO) (DiffFileRespDTO, error)
 	ShowDiffTextContent(context.Context, ShowDiffTextContentReqDTO) ([]DiffLineDTO, error)
 	HistoryCommits(context.Context, HistoryCommitsReqDTO) (HistoryCommitsRespDTO, error)
-	InsertAccessToken(context.Context, InsertAccessTokenReqDTO) error
-	DeleteAccessToken(context.Context, DeleteAccessTokenReqDTO) error
-	ListAccessToken(context.Context, ListAccessTokenReqDTO) ([]AccessTokenDTO, error)
+	InsertRepoToken(context.Context, InsertRepoTokenReqDTO) error
+	DeleteRepoToken(context.Context, DeleteRepoTokenReqDTO) error
+	ListRepoToken(context.Context, ListRepoTokenReqDTO) ([]RepoTokenDTO, error)
 	RefreshAllGitHooks(context.Context, RefreshAllGitHooksReqDTO) error
 	TransferTeam(context.Context, TransferTeamReqDTO) error
 }

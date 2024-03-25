@@ -15,27 +15,27 @@ var (
 			DefaultRet: "编辑项目组",
 		},
 		DeleteTeamUser: KeyItem{
-			Id:         "teamSrv.DeleteTeamUser",
+			Id:         "teamSrv.DeleteUser",
 			DefaultRet: "删除项目组用户",
 		},
 		UpsertTeamUser: KeyItem{
-			Id:         "teamSrv.UpsertTeamUser",
+			Id:         "teamSrv.UpsertUser",
 			DefaultRet: "新增或编辑项目组用户",
 		},
 		InsertTeamUserGroup: KeyItem{
-			Id:         "teamSrv.InsertTeamUserGroup",
+			Id:         "teamSrv.InsertRole",
 			DefaultRet: "添加项目组用户组",
 		},
 		UpdateTeamUserGroupName: KeyItem{
-			Id:         "teamSrv.UpdateTeamUserGroupName",
+			Id:         "teamSrv.UpdateRoleName",
 			DefaultRet: "编辑项目组用户组名称",
 		},
 		UpdateTeamUserGroupPerm: KeyItem{
-			Id:         "teamSrv.UpdateTeamUserGroupPerm",
+			Id:         "teamSrv.UpdateRolePerm",
 			DefaultRet: "编辑项目组用户组权限",
 		},
 		DeleteTeamUserGroup: KeyItem{
-			Id:         "teamSrv.DeleteTeamUserGroup",
+			Id:         "teamSrv.DeleteRole",
 			DefaultRet: "删除项目组用户组",
 		},
 	}
@@ -99,20 +99,20 @@ var (
 			Id:         "repoSrv.DeleteRepo",
 			DefaultRet: "删除仓库",
 		},
-		InsertAccessToken: KeyItem{
-			Id:         "repoSrv.InsertAccessToken",
+		InsertRepoToken: KeyItem{
+			Id:         "repoSrv.InsertRepoToken",
 			DefaultRet: "创建访问令牌",
 		},
-		DeleteAccessToken: KeyItem{
-			Id:         "repoSrv.DeleteAccessToken",
+		DeleteRepoToken: KeyItem{
+			Id:         "repoSrv.DeleteRepoToken",
 			DefaultRet: "删除访问令牌",
 		},
-		AccessCode: KeyItem{
-			Id:         "repoSrv.AccessCode",
+		AccessRepo: KeyItem{
+			Id:         "repoSrv.AccessRepo",
 			DefaultRet: "拉取代码",
 		},
-		PushCode: KeyItem{
-			Id:         "repoSrv.PushCode",
+		PushRepo: KeyItem{
+			Id:         "repoSrv.PushRepo",
 			DefaultRet: "提交代码",
 		},
 		RefreshAllGitHooks: KeyItem{
@@ -125,7 +125,7 @@ var (
 		},
 	}
 
-	GitActionSrvKeysVO = GitActionSrvKeys{
+	ActionSrvKeysVO = ActionSrvKeys{
 		InsertAction: KeyItem{
 			Id:         "repoSrv.InsertAction",
 			DefaultRet: "新增action",
@@ -141,18 +141,6 @@ var (
 		TriggerAction: KeyItem{
 			Id:         "repoSrv.TriggerAction",
 			DefaultRet: "手动触发action",
-		},
-		InsertNode: KeyItem{
-			Id:         "actionNodeSrv.InsertNode",
-			DefaultRet: "新增action节点信息",
-		},
-		DeleteNode: KeyItem{
-			Id:         "actionNodeSrv.DeleteNode",
-			DefaultRet: "删除action节点信息",
-		},
-		UpdateNode: KeyItem{
-			Id:         "actionNodeSrv.UpdateNode",
-			DefaultRet: "编辑action节点信息",
 		},
 	}
 
@@ -386,6 +374,13 @@ var (
 			DefaultRet: "编辑git节点信息",
 		},
 	}
+
+	DeploySrvKeysVO = DeploySrvKeys{
+		UpdateDeploy: KeyItem{
+			Id:         "deploySrv.UpdateDeploy",
+			DefaultRet: "编辑部署配置",
+		},
+	}
 )
 
 type KeyItem struct {
@@ -426,22 +421,19 @@ type SshKeySrvKeys struct {
 type RepoSrvKeys struct {
 	InitRepo           KeyItem
 	DeleteRepo         KeyItem
-	InsertAccessToken  KeyItem
-	DeleteAccessToken  KeyItem
-	AccessCode         KeyItem
-	PushCode           KeyItem
+	InsertRepoToken    KeyItem
+	DeleteRepoToken    KeyItem
+	AccessRepo         KeyItem
+	PushRepo           KeyItem
 	RefreshAllGitHooks KeyItem
 	TransferTeam       KeyItem
 }
 
-type GitActionSrvKeys struct {
+type ActionSrvKeys struct {
 	InsertAction  KeyItem
 	DeleteAction  KeyItem
 	UpdateAction  KeyItem
 	TriggerAction KeyItem
-	InsertNode    KeyItem
-	DeleteNode    KeyItem
-	UpdateNode    KeyItem
 }
 
 type PullRequestSrvKeys struct {
@@ -529,4 +521,8 @@ type GitNodeSrvKeys struct {
 	InsertNode KeyItem
 	DeleteNode KeyItem
 	UpdateNode KeyItem
+}
+
+type DeploySrvKeys struct {
+	UpdateDeploy KeyItem
 }

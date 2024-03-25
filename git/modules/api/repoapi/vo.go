@@ -205,22 +205,22 @@ type HistoryCommitsRespVO struct {
 	Cursor int        `json:"cursor"`
 }
 
-type AccessTokenVO struct {
+type RepoTokenVO struct {
 	Id      int64  `json:"id"`
 	Account string `json:"account"`
 	Token   string `json:"token"`
 	Created string `json:"created"`
 }
 
-type CreateAccessTokenReqVO struct {
+type CreateRepoTokenReqVO struct {
 	Id int64 `json:"id"`
 }
 
-type DeleteAccessTokenReqVO struct {
+type DeleteRepoTokenReqVO struct {
 	Id int64 `json:"id"`
 }
 
-type ListAccessTokenReqVO struct {
+type ListRepoTokenReqVO struct {
 	Id int64 `json:"id"`
 }
 

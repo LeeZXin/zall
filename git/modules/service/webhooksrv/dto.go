@@ -74,7 +74,7 @@ type WebhookDTO struct {
 	Id          int64
 	RepoId      int64
 	HookUrl     string
-	HttpHeaders map[string]string
+	HttpHeaders webhookmd.HttpHeaders
 	HookType    webhookmd.HookType
 	WildBranch  string
 	WildTag     string

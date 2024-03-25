@@ -25,16 +25,16 @@ type innerImpl struct {
 	permCache *cache.Cache
 }
 
-func (s *innerImpl) GetTeamUserPermDetail(ctx context.Context, teamId int64, account string) (teammd.TeamUserPermDetailDTO, bool) {
+func (s *innerImpl) GetUserPermDetail(ctx context.Context, teamId int64, account string) (teammd.UserPermDetailDTO, bool) {
 	key := strconv.FormatInt(teamId, 10) + "_" + account
 	v, b := s.permCache.Get(key)
 	if b {
-		r := v.(teammd.TeamUserPermDetailDTO)
-		return r, r.GroupId != 0
+		r := v.(teammd.UserPermDetailDTO)
+		return r, r.RoleId != 0
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	r, b, err := teammd.GetTeamUserPermDetail(ctx, teamId, account)
+	r, b, err := teammd.GetUserPermDetail(ctx, teamId, account)
 	if err != nil || !b {
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -81,7 +81,7 @@ func (*outerImpl) InsertTeam(ctx context.Context, reqDTO InsertTeamReqDTO) (err 
 			return err
 		}
 		// 创建管理员组
-		group, err := teammd.InsertTeamUserGroup(ctx, teammd.InsertTeamUserGroupReqDTO{
+		group, err := teammd.InsertRole(ctx, teammd.InsertRoleReqDTO{
 			Name:       i18n.GetByKey(i18n.TeamAdminUserGroupName),
 			TeamId:     pu.Id,
 			PermDetail: perm.DefaultPermDetail,
@@ -91,10 +91,10 @@ func (*outerImpl) InsertTeam(ctx context.Context, reqDTO InsertTeamReqDTO) (err 
 			return err
 		}
 		// 创建关联关系
-		return teammd.InsertTeamUser(ctx, teammd.InsertTeamUserReqDTO{
+		return teammd.InsertUser(ctx, teammd.InsertUserReqDTO{
 			TeamId:  pu.Id,
 			Account: reqDTO.Operator.Account,
-			GroupId: group.Id,
+			RoleId:  group.Id,
 		})
 	})
 	if err != nil {
@@ -133,7 +133,7 @@ func (*outerImpl) UpdateTeam(ctx context.Context, reqDTO UpdateTeamReqDTO) (err 
 	return
 }
 
-func (*outerImpl) ListTeamUser(ctx context.Context, reqDTO ListTeamUserReqDTO) ([]TeamUserDTO, int64, error) {
+func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
@@ -142,7 +142,7 @@ func (*outerImpl) ListTeamUser(ctx context.Context, reqDTO ListTeamUserReqDTO) (
 	if err := checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
 		return nil, 0, err
 	}
-	users, err := teammd.ListTeamUser(ctx, teammd.ListTeamUserReqDTO{
+	users, err := teammd.ListUser(ctx, teammd.ListUserReqDTO{
 		TeamId:  reqDTO.TeamId,
 		Account: reqDTO.Account,
 		Cursor:  reqDTO.Cursor,
@@ -156,33 +156,33 @@ func (*outerImpl) ListTeamUser(ctx context.Context, reqDTO ListTeamUserReqDTO) (
 	if len(users) == reqDTO.Limit {
 		next = users[len(users)-1].Id
 	}
-	groupIdList, _ := listutil.Map(users, func(t teammd.TeamUser) (int64, error) {
-		return t.GroupId, nil
+	groupIdList, _ := listutil.Map(users, func(t teammd.User) (int64, error) {
+		return t.RoleId, nil
 	})
 	groupIdList = listutil.Distinct(groupIdList...)
-	groups, err := teammd.GetByGroupIdList(ctx, reqDTO.TeamId, groupIdList)
+	groups, err := teammd.GetByRoleIdList(ctx, groupIdList)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	groupIdNameMap, _ := listutil.CollectToMap(groups, func(t teammd.TeamUserGroup) (int64, error) {
+	groupIdNameMap, _ := listutil.CollectToMap(groups, func(t teammd.Role) (int64, error) {
 		return t.Id, nil
-	}, func(t teammd.TeamUserGroup) (string, error) {
+	}, func(t teammd.Role) (string, error) {
 		return t.Name, nil
 	})
-	ret, _ := listutil.Map(users, func(t teammd.TeamUser) (TeamUserDTO, error) {
-		return TeamUserDTO{
-			TeamId:    t.TeamId,
-			Account:   t.Account,
-			GroupId:   t.GroupId,
-			GroupName: groupIdNameMap[t.GroupId],
-			Created:   t.Created,
+	ret, _ := listutil.Map(users, func(t teammd.User) (UserDTO, error) {
+		return UserDTO{
+			TeamId:   t.TeamId,
+			Account:  t.Account,
+			RoleId:   t.RoleId,
+			RoleName: groupIdNameMap[t.RoleId],
+			Created:  t.Created,
 		}, nil
 	})
 	return ret, next, nil
 }
 
-func (*outerImpl) DeleteTeamUser(ctx context.Context, reqDTO DeleteTeamUserReqDTO) (err error) {
+func (*outerImpl) DeleteUser(ctx context.Context, reqDTO DeleteUserReqDTO) (err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -209,7 +209,7 @@ func (*outerImpl) DeleteTeamUser(ctx context.Context, reqDTO DeleteTeamUserReqDT
 	if !b {
 		return util.InvalidArgsError()
 	}
-	_, err = teammd.DeleteTeamUser(ctx, reqDTO.TeamId, reqDTO.Account)
+	_, err = teammd.DeleteUser(ctx, reqDTO.TeamId, reqDTO.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -217,7 +217,7 @@ func (*outerImpl) DeleteTeamUser(ctx context.Context, reqDTO DeleteTeamUserReqDT
 	return nil
 }
 
-func (*outerImpl) UpsertTeamUser(ctx context.Context, reqDTO UpsertTeamUserReqDTO) (err error) {
+func (*outerImpl) UpsertUser(ctx context.Context, reqDTO UpsertUserReqDTO) (err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -236,7 +236,7 @@ func (*outerImpl) UpsertTeamUser(ctx context.Context, reqDTO UpsertTeamUserReqDT
 		return
 	}
 	// 校验groupId是否正确
-	group, b, err := teammd.GetByGroupId(ctx, reqDTO.GroupId)
+	group, b, err := teammd.GetByRoleId(ctx, reqDTO.RoleId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -265,10 +265,10 @@ func (*outerImpl) UpsertTeamUser(ctx context.Context, reqDTO UpsertTeamUserReqDT
 	}
 	if !b {
 		// 不存在则插入
-		err = teammd.InsertTeamUser(ctx, teammd.InsertTeamUserReqDTO{
+		err = teammd.InsertUser(ctx, teammd.InsertUserReqDTO{
 			TeamId:  reqDTO.TeamId,
 			Account: reqDTO.Account,
-			GroupId: reqDTO.GroupId,
+			RoleId:  reqDTO.RoleId,
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -276,10 +276,10 @@ func (*outerImpl) UpsertTeamUser(ctx context.Context, reqDTO UpsertTeamUserReqDT
 			return
 		}
 	} else {
-		_, err = teammd.UpdateTeamUser(ctx, teammd.UpdateTeamUserReqDTO{
+		_, err = teammd.UpdateUser(ctx, teammd.UpdateUserReqDTO{
 			TeamId:  reqDTO.TeamId,
 			Account: reqDTO.Account,
-			GroupId: reqDTO.GroupId,
+			RoleId:  reqDTO.RoleId,
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -304,7 +304,7 @@ func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo) 
 		return nil
 	}
 	// 判断权限
-	pu, b, err := teammd.GetTeamUserPermDetail(ctx, teamId, operator.Account)
+	pu, b, err := teammd.GetUserPermDetail(ctx, teamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -316,21 +316,21 @@ func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo) 
 	return nil
 }
 
-func checkTeamUserPermByGroupId(ctx context.Context, operator apisession.UserInfo, groupId int64) (teammd.TeamUserGroup, error) {
+func checkTeamUserPermByGroupId(ctx context.Context, operator apisession.UserInfo, groupId int64) (teammd.Role, error) {
 	// 检查权限
-	group, b, err := teammd.GetByGroupId(ctx, groupId)
+	group, b, err := teammd.GetByRoleId(ctx, groupId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return teammd.TeamUserGroup{}, util.InternalError(err)
+		return teammd.Role{}, util.InternalError(err)
 	}
 	if !b {
-		return teammd.TeamUserGroup{}, util.InvalidArgsError()
+		return teammd.Role{}, util.InvalidArgsError()
 	}
 	if operator.IsAdmin {
 		return group, nil
 	}
 	// 检查项目管理员权限
-	pu, b, err := teammd.GetTeamUserPermDetail(ctx, group.TeamId, operator.Account)
+	pu, b, err := teammd.GetUserPermDetail(ctx, group.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return group, util.InternalError(err)
@@ -342,7 +342,7 @@ func checkTeamUserPermByGroupId(ctx context.Context, operator apisession.UserInf
 	return group, nil
 }
 
-func (*outerImpl) InsertTeamUserGroup(ctx context.Context, reqDTO InsertTeamUserGroupReqDTO) (err error) {
+func (*outerImpl) InsertRole(ctx context.Context, reqDTO InsertRoleReqDTO) (err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -361,7 +361,7 @@ func (*outerImpl) InsertTeamUserGroup(ctx context.Context, reqDTO InsertTeamUser
 	if err = checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
 		return
 	}
-	if _, err = teammd.InsertTeamUserGroup(ctx, teammd.InsertTeamUserGroupReqDTO{
+	if _, err = teammd.InsertRole(ctx, teammd.InsertRoleReqDTO{
 		Name:       reqDTO.Name,
 		TeamId:     reqDTO.TeamId,
 		PermDetail: reqDTO.Perm,
@@ -372,7 +372,7 @@ func (*outerImpl) InsertTeamUserGroup(ctx context.Context, reqDTO InsertTeamUser
 	return
 }
 
-func (*outerImpl) UpdateTeamUserGroupName(ctx context.Context, reqDTO UpdateTeamUserGroupNameReqDTO) (err error) {
+func (*outerImpl) UpdateRoleName(ctx context.Context, reqDTO UpdateRoleNameReqDTO) (err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -388,11 +388,11 @@ func (*outerImpl) UpdateTeamUserGroupName(ctx context.Context, reqDTO UpdateTeam
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	_, err = checkTeamUserPermByGroupId(ctx, reqDTO.Operator, reqDTO.GroupId)
+	_, err = checkTeamUserPermByGroupId(ctx, reqDTO.Operator, reqDTO.RoleId)
 	if err != nil {
 		return
 	}
-	_, err = teammd.UpdateTeamUserGroupName(ctx, reqDTO.GroupId, reqDTO.Name)
+	_, err = teammd.UpdateRoleName(ctx, reqDTO.RoleId, reqDTO.Name)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -400,7 +400,7 @@ func (*outerImpl) UpdateTeamUserGroupName(ctx context.Context, reqDTO UpdateTeam
 	return
 }
 
-func (*outerImpl) UpdateTeamUserGroupPerm(ctx context.Context, reqDTO UpdateTeamUserGroupPermReqDTO) (err error) {
+func (*outerImpl) UpdateRolePerm(ctx context.Context, reqDTO UpdateRolePermReqDTO) (err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -416,7 +416,7 @@ func (*outerImpl) UpdateTeamUserGroupPerm(ctx context.Context, reqDTO UpdateTeam
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	group, err := checkTeamUserPermByGroupId(ctx, reqDTO.Operator, reqDTO.GroupId)
+	group, err := checkTeamUserPermByGroupId(ctx, reqDTO.Operator, reqDTO.RoleId)
 	if err != nil {
 		return
 	}
@@ -431,7 +431,7 @@ func (*outerImpl) UpdateTeamUserGroupPerm(ctx context.Context, reqDTO UpdateTeam
 			return t.RepoId, nil
 		})
 		var repos []repomd.Repo
-		repos, err = repomd.ListRepoByIdList(ctx, idList)
+		repos, err = repomd.GetRepoByIdList(ctx, idList)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			err = util.InternalError(err)
@@ -444,38 +444,14 @@ func (*outerImpl) UpdateTeamUserGroupPerm(ctx context.Context, reqDTO UpdateTeam
 			}
 		}
 	}
-	// 检查app配置
-	if len(reqDTO.Perm.AppPermList) > 0 {
-		var appIdList []string
-		appIdList, err = listutil.Map(reqDTO.Perm.AppPermList, func(t perm.AppPermWithAppId) (string, error) {
-			return t.AppId, nil
-		})
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-		var apps []appmd.App
-		apps, err = appmd.GetByAppIdList(ctx, appIdList)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-		for _, app := range apps {
-			if app.TeamId != group.TeamId {
-				return util.InvalidArgsError()
-			}
-		}
-	}
-	if _, err = teammd.UpdateTeamUserGroupPerm(ctx, reqDTO.GroupId, reqDTO.Perm); err != nil {
+	if _, err = teammd.UpdateRolePerm(ctx, reqDTO.RoleId, reqDTO.Perm); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 	}
 	return nil
 }
 
-func (*outerImpl) DeleteTeamUserGroup(ctx context.Context, reqDTO DeleteTeamUserGroupReqDTO) (err error) {
+func (*outerImpl) DeleteRole(ctx context.Context, reqDTO DeleteRoleReqDTO) (err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -491,11 +467,11 @@ func (*outerImpl) DeleteTeamUserGroup(ctx context.Context, reqDTO DeleteTeamUser
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	group, err := checkTeamUserPermByGroupId(ctx, reqDTO.Operator, reqDTO.GroupId)
+	group, err := checkTeamUserPermByGroupId(ctx, reqDTO.Operator, reqDTO.RoleId)
 	if err != nil {
 		return
 	}
-	b, err := teammd.ExistTeamUser(ctx, group.TeamId, reqDTO.GroupId)
+	b, err := teammd.ExistRole(ctx, group.TeamId, reqDTO.RoleId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -506,14 +482,14 @@ func (*outerImpl) DeleteTeamUserGroup(ctx context.Context, reqDTO DeleteTeamUser
 		err = util.NewBizErr(apicode.TeamUserGroupHasUserWhenDelCode, i18n.TeamUserGroupHasUserWhenDel)
 		return
 	}
-	if _, err = teammd.DeleteTeamUserGroup(ctx, reqDTO.GroupId); err != nil {
+	if _, err = teammd.DeleteRole(ctx, reqDTO.RoleId); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 	}
 	return nil
 }
 
-func (*outerImpl) ListTeamUserGroup(ctx context.Context, reqDTO ListTeamUserGroupReqDTO) ([]TeamUserGroupDTO, error) {
+func (*outerImpl) ListRole(ctx context.Context, reqDTO ListRoleReqDTO) ([]RoleDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
@@ -522,17 +498,18 @@ func (*outerImpl) ListTeamUserGroup(ctx context.Context, reqDTO ListTeamUserGrou
 	if err := checkPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
 		return nil, err
 	}
-	groups, err := teammd.ListTeamUserGroup(ctx, reqDTO.TeamId)
+	groups, err := teammd.ListRole(ctx, reqDTO.TeamId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(groups, func(t teammd.TeamUserGroup) (TeamUserGroupDTO, error) {
-		return TeamUserGroupDTO{
-			GroupId: t.Id,
-			TeamId:  t.TeamId,
-			Name:    t.Name,
-			Perm:    t.GetPermDetail(),
+	return listutil.Map(groups, func(t teammd.Role) (RoleDTO, error) {
+		perm := t.Perm
+		return RoleDTO{
+			RoleId: t.Id,
+			TeamId: t.TeamId,
+			Name:   t.Name,
+			Perm:   *perm,
 		}, nil
 	})
 }
@@ -543,15 +520,15 @@ func (*outerImpl) ListTeam(ctx context.Context, reqDTO ListTeamReqDTO) ([]TeamDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	puList, err := teammd.ListTeamUserByAccount(ctx, reqDTO.Operator.Account)
+	puList, err := teammd.ListUserByAccount(ctx, reqDTO.Operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	teamIdList, _ := listutil.Map(puList, func(t teammd.TeamUser) (int64, error) {
+	teamIdList, _ := listutil.Map(puList, func(t teammd.User) (int64, error) {
 		return t.TeamId, nil
 	})
-	teamList, err := teammd.GetTeamByTeamIdList(ctx, teamIdList)
+	teamList, err := teammd.GetByTeamIdList(ctx, teamIdList)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -616,12 +593,12 @@ func (*outerImpl) DeleteTeam(ctx context.Context, reqDTO DeleteTeamReqDTO) (err 
 			return err
 		}
 		// 项目用户组
-		_, err = teammd.DeleteAllTeamUserGroupByTeamId(ctx, reqDTO.TeamId)
+		_, err = teammd.DeleteAllRoleByTeamId(ctx, reqDTO.TeamId)
 		if err != nil {
 			return err
 		}
 		// 项目用户
-		_, err = teammd.DeleteAllTeamUserByTeamId(ctx, reqDTO.TeamId)
+		_, err = teammd.DeleteAllUserByTeamId(ctx, reqDTO.TeamId)
 		if err != nil {
 			return err
 		}

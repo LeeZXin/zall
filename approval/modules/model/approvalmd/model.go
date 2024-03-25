@@ -1,7 +1,6 @@
 package approvalmd
 
 import (
-	"encoding/json"
 	"github.com/LeeZXin/zall/pkg/approval"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
@@ -88,15 +87,15 @@ const (
 )
 
 type Process struct {
-	Id         int64      `json:"id" xorm:"pk autoincr"`
-	Pid        string     `json:"pid"`
-	GroupId    int64      `json:"groupId"`
-	Name       string     `json:"name"`
-	Content    string     `json:"content"`
-	IconUrl    string     `json:"iconUrl"`
-	SourceType SourceType `json:"sourceType"`
-	Created    time.Time  `json:"created" xorm:"created"`
-	Updated    time.Time  `json:"updated" xorm:"updated"`
+	Id         int64             `json:"id" xorm:"pk autoincr"`
+	Pid        string            `json:"pid"`
+	GroupId    int64             `json:"groupId"`
+	Name       string            `json:"name"`
+	Content    *approval.Process `json:"content"`
+	IconUrl    string            `json:"iconUrl"`
+	SourceType SourceType        `json:"sourceType"`
+	Created    time.Time         `json:"created" xorm:"created"`
+	Updated    time.Time         `json:"updated" xorm:"updated"`
 }
 
 func (*Process) TableName() string {
@@ -115,37 +114,19 @@ func (*SimpleProcess) TableName() string {
 	return ProcessTableName
 }
 
-func (p *Process) GetUnmarshalProcess() (approval.Process, error) {
-	var ret approval.Process
-	err := json.Unmarshal([]byte(p.Content), &ret)
-	return ret, err
-}
-
 type Flow struct {
-	Id             int64      `json:"id" xorm:"pk autoincr"`
-	ProcessId      int64      `json:"processId"`
-	ProcessName    string     `json:"processName"`
-	ProcessContent string     `json:"processContent"`
-	CurrIndex      int        `json:"currIndex"`
-	FlowStatus     FlowStatus `json:"flowStatus"`
-	ErrMsg         string     `json:"errMsg"`
-	Creator        string     `json:"creator"`
-	BizId          string     `json:"bizId"`
-	Kvs            string     `json:"kvs"`
-	Created        time.Time  `json:"created" xorm:"created"`
-	Updated        time.Time  `json:"updated" xorm:"updated"`
-}
-
-func (f *Flow) GetProcess() (approval.Process, error) {
-	var ret approval.Process
-	err := json.Unmarshal([]byte(f.ProcessContent), &ret)
-	return ret, err
-}
-
-func (f *Flow) GetKvs() ([]approval.Kv, error) {
-	ret := make([]approval.Kv, 0)
-	err := json.Unmarshal([]byte(f.Kvs), &ret)
-	return ret, err
+	Id             int64             `json:"id" xorm:"pk autoincr"`
+	ProcessId      int64             `json:"processId"`
+	ProcessName    string            `json:"processName"`
+	ProcessContent *approval.Process `json:"processContent"`
+	CurrIndex      int               `json:"currIndex"`
+	FlowStatus     FlowStatus        `json:"flowStatus"`
+	ErrMsg         string            `json:"errMsg"`
+	Creator        string            `json:"creator"`
+	BizId          string            `json:"bizId"`
+	Kvs            approval.Kvs      `json:"kvs"`
+	Created        time.Time         `json:"created" xorm:"created"`
+	Updated        time.Time         `json:"updated" xorm:"updated"`
 }
 
 func (*Flow) TableName() string {

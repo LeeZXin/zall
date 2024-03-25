@@ -1,6 +1,8 @@
 package appmd
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	AppTableName = "zall_app"

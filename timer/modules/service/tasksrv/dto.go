@@ -1,9 +1,12 @@
 package tasksrv
 
 import (
+	"context"
+	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"time"
 )
 
@@ -37,7 +40,11 @@ func (r *InsertTaskReqDTO) IsValid() error {
 	default:
 		return util.InvalidArgsError()
 	}
-	if r.Env == "" {
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -65,7 +72,11 @@ func (r *ListTaskReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if r.Env == "" {
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -78,7 +89,11 @@ type EnableTaskReqDTO struct {
 }
 
 func (r *EnableTaskReqDTO) IsValid() error {
-	if r.Env == "" {
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
 		return util.InvalidArgsError()
 	}
 	if r.Id <= 0 {
@@ -97,7 +112,11 @@ type DisableTaskReqDTO struct {
 }
 
 func (r *DisableTaskReqDTO) IsValid() error {
-	if r.Env == "" {
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
 		return util.InvalidArgsError()
 	}
 	if r.Id <= 0 {
@@ -116,7 +135,11 @@ type DeleteTaskReqDTO struct {
 }
 
 func (r *DeleteTaskReqDTO) IsValid() error {
-	if r.Env == "" {
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
 		return util.InvalidArgsError()
 	}
 	if r.Id <= 0 {
@@ -148,7 +171,11 @@ type ListTaskLogReqDTO struct {
 }
 
 func (r *ListTaskLogReqDTO) IsValid() error {
-	if r.Env == "" {
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
 		return util.InvalidArgsError()
 	}
 	if r.Id <= 0 || r.Cursor < 0 || r.Limit < 0 {
@@ -177,7 +204,11 @@ type TriggerTaskReqDTO struct {
 }
 
 func (r *TriggerTaskReqDTO) IsValid() error {
-	if r.Env == "" {
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
 		return util.InvalidArgsError()
 	}
 	if r.Id <= 0 {
@@ -200,7 +231,11 @@ type UpdateTaskReqDTO struct {
 }
 
 func (r *UpdateTaskReqDTO) IsValid() error {
-	if r.Env == "" {
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
 		return util.InvalidArgsError()
 	}
 	if !taskmd.IsTaskNameValid(r.Name) {

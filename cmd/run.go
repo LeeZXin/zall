@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"github.com/LeeZXin/zall/action/modules/api/actionagentapi"
+	"github.com/LeeZXin/zall/action/modules/api/actionapi"
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/genid/modules/api/idapi"
-	"github.com/LeeZXin/zall/git/modules/api/actionagentapi"
-	"github.com/LeeZXin/zall/git/modules/api/actionapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
 	"github.com/LeeZXin/zall/git/modules/api/gitnodeapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
@@ -25,6 +25,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/prop/modules/api/propapi"
+	"github.com/LeeZXin/zall/services/modules/api/deployapi"
 	"github.com/LeeZXin/zall/tcpdetect/modules/api/detectapi"
 	"github.com/LeeZXin/zall/tcpdetect/modules/service/detectsrv"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
@@ -124,6 +125,10 @@ func runZall(*cli.Context) error {
 			logger.Logger.Info("file server enabled")
 			fileapi.InitApi()
 		}
+	}
+	// for deploy
+	{
+		deployapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer())
 	zsf.Run(

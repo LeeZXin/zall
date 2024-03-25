@@ -6,6 +6,8 @@ type InsertTaskReqDTO struct {
 	TriggerType   TriggerType
 	ActionContent string
 	Operator      string
+	AgentUrl      string
+	AgentToken    string
 }
 
 type InsertStepReqDTO struct {
@@ -16,32 +18,21 @@ type InsertStepReqDTO struct {
 	StepStatus StepStatus
 }
 
-type InsertNodeReqDTO struct {
-	Name     string
-	HttpHost string
-	Token    string
-}
-
-type UpdateNodeReqDTO struct {
-	Id       int64
-	Name     string
-	Token    string
-	HttpHost string
-}
-
 type InsertActionReqDTO struct {
-	Aid     string
-	TeamId  int64
-	Name    string
-	Content string
-	NodeId  int64
+	Aid        string
+	TeamId     int64
+	Name       string
+	Content    string
+	AgentUrl   string
+	AgentToken string
 }
 
 type UpdateActionReqDTO struct {
-	Id      int64
-	Name    string
-	Content string
-	NodeId  int64
+	Id         int64
+	Name       string
+	Content    string
+	AgentUrl   string
+	AgentToken string
 }
 
 type GetTaskReqDTO struct {

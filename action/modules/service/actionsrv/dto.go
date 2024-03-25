@@ -1,7 +1,7 @@
 package actionsrv
 
 import (
-	"github.com/LeeZXin/zall/git/modules/model/actionmd"
+	"github.com/LeeZXin/zall/action/modules/model/actionmd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
 	"net/url"
@@ -13,7 +13,8 @@ type InsertActionReqDTO struct {
 	Name          string              `json:"name"`
 	TeamId        int64               `json:"teamId"`
 	ActionContent string              `json:"actionContent"`
-	NodeId        int64               `json:"nodeId"`
+	AgentUrl      string              `json:"agentUrl"`
+	AgentToken    string              `json:"agentToken"`
 	Operator      apisession.UserInfo `json:"operator"`
 }
 
@@ -24,7 +25,11 @@ func (r *InsertActionReqDTO) IsValid() error {
 	if r.ActionContent == "" {
 		return util.InvalidArgsError()
 	}
-	if r.NodeId <= 0 {
+	parsedUrl, err := url.Parse(r.AgentUrl)
+	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
+		return util.InvalidArgsError()
+	}
+	if len(r.AgentToken) > 32 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -59,19 +64,28 @@ func (r *ListActionReqDTO) IsValid() error {
 
 type UpdateActionReqDTO struct {
 	Id            int64               `json:"id"`
+	Name          string              `json:"name"`
 	ActionContent string              `json:"actionContent"`
-	NodeId        int64               `json:"nodeId"`
+	AgentUrl      string              `json:"agentUrl"`
+	AgentToken    string              `json:"agentToken"`
 	Operator      apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdateActionReqDTO) IsValid() error {
+	if !actionmd.IsActionNameValid(r.Name) {
+		return util.InvalidArgsError()
+	}
 	if r.ActionContent == "" {
 		return util.InvalidArgsError()
 	}
-	if r.NodeId <= 0 {
+	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !r.Operator.IsValid() {
+	parsedUrl, err := url.Parse(r.AgentUrl)
+	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
+		return util.InvalidArgsError()
+	}
+	if len(r.AgentToken) > 32 {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -87,107 +101,6 @@ func (r *TriggerActionReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	return nil
-}
-
-type InsertNodeReqDTO struct {
-	Name     string              `json:"name"`
-	HttpHost string              `json:"httpHost"`
-	Token    string              `json:"token"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *InsertNodeReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	if !actionmd.IsNodeNameValid(r.Name) {
-		return util.InvalidArgsError()
-	}
-	if !actionmd.IsNodeTokenValid(r.Token) {
-		return util.InvalidArgsError()
-	}
-	parsedUrl, err := url.Parse(r.HttpHost)
-	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type UpdateNodeReqDTO struct {
-	Id       int64               `json:"id"`
-	Name     string              `json:"name"`
-	HttpHost string              `json:"httpHost"`
-	Token    string              `json:"token"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *UpdateNodeReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	if r.Id <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !actionmd.IsNodeNameValid(r.Name) {
-		return util.InvalidArgsError()
-	}
-	if !actionmd.IsNodeTokenValid(r.Token) {
-		return util.InvalidArgsError()
-	}
-	parsedUrl, err := url.Parse(r.HttpHost)
-	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type DeleteNodeReqDTO struct {
-	Id       int64               `json:"id"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *DeleteNodeReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	if r.Id <= 0 {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type ListNodeReqDTO struct {
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *ListNodeReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type AllNodeReqDTO struct {
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *AllNodeReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type NodeDTO struct {
-	Id       int64
-	Name     string
-	HttpHost string
-	Token    string
-}
-
-type SimpleNodeDTO struct {
-	Id   int64
-	Name string
 }
 
 type ListTaskReqDTO struct {

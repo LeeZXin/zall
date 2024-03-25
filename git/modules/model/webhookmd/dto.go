@@ -3,7 +3,7 @@ package webhookmd
 type InsertWebhookReqDTO struct {
 	RepoId      int64
 	HookUrl     string
-	HttpHeaders map[string]string
+	HttpHeaders HttpHeaders
 	HookType    HookType
 	WildBranch  string
 	WildTag     string
@@ -12,7 +12,7 @@ type InsertWebhookReqDTO struct {
 type UpdateWebhookReqDTO struct {
 	Id          int64
 	HookUrl     string
-	HttpHeaders map[string]string
+	HttpHeaders HttpHeaders
 	WildBranch  string
 	WildTag     string
 }

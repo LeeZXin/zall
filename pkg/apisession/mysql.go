@@ -2,7 +2,6 @@ package apisession
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
@@ -18,7 +17,7 @@ type SessionModel struct {
 	Id        int64     `json:"id" xorm:"pk autoincr"`
 	SessionId string    `json:"sessionId"`
 	Account   string    `json:"account"`
-	UserInfo  string    `json:"userInfo"`
+	UserInfo  *UserInfo `json:"userInfo"`
 	ExpireAt  int64     `json:"expireAt"`
 	Created   time.Time `json:"created" xorm:"created"`
 	Updated   time.Time `json:"updated" xorm:"updated"`
@@ -29,12 +28,11 @@ func (s *SessionModel) TableName() string {
 }
 
 func (s *SessionModel) ToSession() Session {
+	userInfo := s.UserInfo
 	ret := Session{
 		SessionId: s.SessionId,
 		ExpireAt:  s.ExpireAt,
-	}
-	if s.UserInfo != "" {
-		_ = json.Unmarshal([]byte(s.UserInfo), &ret.UserInfo)
+		UserInfo:  *userInfo,
 	}
 	return ret
 }
@@ -66,13 +64,12 @@ func (m *mysqlStore) GetByAccount(account string) (Session, bool, error) {
 }
 
 func (m *mysqlStore) PutSession(session Session) error {
-	userInfoJson, _ := json.Marshal(session.UserInfo)
 	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	_, err := xsess.Insert(&SessionModel{
 		SessionId: session.SessionId,
 		Account:   session.UserInfo.Account,
-		UserInfo:  string(userInfoJson),
+		UserInfo:  &session.UserInfo,
 		ExpireAt:  session.ExpireAt,
 	})
 	return err

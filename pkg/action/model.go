@@ -323,10 +323,9 @@ func (s *Step) Run(opts *RunOpts, ctx context.Context, j *Job, index int) error 
 	}
 	script := s.replaceStr(opts.Args, s.script)
 	if opts.RunWithAgent {
-		agentUrl := opts.AgentUrl + "/api/actionAgent/execute"
 		var resp RunScriptRespVO
 		beginTime := time.Now()
-		err := httputil.Post(ctx, httpClient, agentUrl, map[string]string{
+		err := httputil.Post(ctx, httpClient, opts.AgentUrl+"/api/actionAgent/execute", map[string]string{
 			"Authorization": opts.AgentToken,
 		}, RunScriptReqVO{
 			Workdir: opts.Workdir,

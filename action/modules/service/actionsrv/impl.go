@@ -2,7 +2,7 @@ package actionsrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/git/modules/model/actionmd"
+	"github.com/LeeZXin/zall/action/modules/model/actionmd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/action"
@@ -38,15 +38,6 @@ func (s *innerImpl) ExecuteAction(aid, operator string, triggerType actionmd.Tri
 		logger.Logger.WithContext(ctx).Errorf("%s is not exists", aid)
 		return
 	}
-	node, b, err := actionmd.GetNodeById(ctx, gitAction.NodeId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return
-	}
-	if !b {
-		logger.Logger.WithContext(ctx).Errorf("node %s is not exists", gitAction.NodeId)
-		return
-	}
 	var p action.GraphCfg
 	// 解析yaml
 	err = yaml.Unmarshal([]byte(gitAction.Content), &p)
@@ -60,26 +51,24 @@ func (s *innerImpl) ExecuteAction(aid, operator string, triggerType actionmd.Tri
 		logger.Logger.Errorf("can not convert action graph: %v", err)
 		return
 	}
-	s.execGraph(graph, gitAction.Id, gitAction.Content, operator, triggerType, node.HttpHost, node.Token)
+	s.execGraph(graph, gitAction.Id, gitAction.Content, operator, triggerType, gitAction.AgentUrl, gitAction.AgentToken)
 }
 
-func (s *innerImpl) execGraph(graph *action.Graph, actionId int64, actionYaml, operator string, triggerType actionmd.TriggerType, nodeHost, nodeToken string) {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
+func (s *innerImpl) execGraph(graph *action.Graph, actionId int64, actionYaml, operator string, triggerType actionmd.TriggerType, agentUrl, agentToken string) {
 	// 先插入记录
-	taskId, err := s.insertTaskRecord(ctx, graph, actionId, actionYaml, operator, triggerType)
+	taskId, err := s.insertTaskRecord(graph, actionId, actionYaml, operator, triggerType, agentUrl, agentToken)
 	if err != nil {
 		return
 	}
 	// 执行任务
-	s.runGraph(graph, taskId, nodeHost, nodeToken)
+	s.runGraph(graph, taskId, agentUrl, agentToken)
 }
 
-func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, nodeHost, token string) {
+func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, agentUrl, agentToken string) {
 	err := graph.Run(action.RunOpts{
 		RunWithAgent: true,
-		AgentUrl:     nodeHost,
-		AgentToken:   token,
+		AgentUrl:     agentUrl,
+		AgentToken:   agentToken,
 		StepOutputFunc: func(stat action.StepOutputStat) {
 			defer stat.Output.Close()
 			if _, err := s.updateStepStatusWithOldStatus(
@@ -176,17 +165,21 @@ func (s *innerImpl) updateStepStatusWithOldStatus(taskId int64, jobName string, 
 	return b, err
 }
 
-func (*innerImpl) insertTaskRecord(ctx context.Context, graph *action.Graph, actionId int64, actionYaml, operator string, triggerType actionmd.TriggerType) (int64, error) {
+func (*innerImpl) insertTaskRecord(graph *action.Graph, actionId int64, actionYaml, operator string, triggerType actionmd.TriggerType, agentUrl, agentToken string) (int64, error) {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
 	var taskId int64
 	infos := graph.ListJobInfo()
 	err := xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 插入一条任务记录
 		task, err := actionmd.InsertTask(ctx, actionmd.InsertTaskReqDTO{
 			ActionId:      actionId,
-			TriggerType:   triggerType,
 			TaskStatus:    actionmd.TaskRunningStatus,
+			TriggerType:   triggerType,
 			ActionContent: actionYaml,
 			Operator:      operator,
+			AgentUrl:      agentUrl,
+			AgentToken:    agentToken,
 		})
 		if err != nil {
 			return err
@@ -221,7 +214,7 @@ func (*outerImpl) InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) (
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.GitActionSrvKeysVO.InsertAction),
+			OpDesc:     i18n.GetByKey(i18n.ActionSrvKeysVO.InsertAction),
 			ReqContent: reqDTO,
 			Err:        err,
 		})
@@ -236,16 +229,6 @@ func (*outerImpl) InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) (
 	if err != nil {
 		return
 	}
-	// 检查nodeId
-	_, b, err := actionmd.GetNodeById(ctx, reqDTO.NodeId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
 	var graph action.GraphCfg
 	err = yaml.Unmarshal([]byte(reqDTO.ActionContent), &graph)
 	if err != nil || graph.IsValid() != nil {
@@ -253,13 +236,13 @@ func (*outerImpl) InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) (
 		return
 	}
 	yamlOut, _ := yaml.Marshal(graph)
-
 	err = actionmd.InsertAction(ctx, actionmd.InsertActionReqDTO{
-		Aid:     idutil.RandomUuid(),
-		Name:    reqDTO.Name,
-		TeamId:  reqDTO.TeamId,
-		NodeId:  reqDTO.NodeId,
-		Content: string(yamlOut),
+		Aid:        idutil.RandomUuid(),
+		TeamId:     reqDTO.TeamId,
+		Name:       reqDTO.Name,
+		Content:    string(yamlOut),
+		AgentUrl:   reqDTO.AgentUrl,
+		AgentToken: reqDTO.AgentToken,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -274,7 +257,7 @@ func (*outerImpl) DeleteAction(ctx context.Context, reqDTO DeleteActionReqDTO) (
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.GitActionSrvKeysVO.DeleteAction),
+			OpDesc:     i18n.GetByKey(i18n.ActionSrvKeysVO.DeleteAction),
 			ReqContent: reqDTO,
 			Err:        err,
 		})
@@ -332,7 +315,7 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.GitActionSrvKeysVO.UpdateAction),
+			OpDesc:     i18n.GetByKey(i18n.ActionSrvKeysVO.UpdateAction),
 			ReqContent: reqDTO,
 			Err:        err,
 		})
@@ -357,16 +340,6 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 	if err != nil {
 		return
 	}
-	// 检查nodeId
-	_, b, err = actionmd.GetNodeById(ctx, reqDTO.NodeId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
 	var graph action.GraphCfg
 	err = yaml.Unmarshal([]byte(reqDTO.ActionContent), &graph)
 	if err != nil || graph.IsValid() != nil {
@@ -375,9 +348,11 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 	}
 	yamlOut, _ := yaml.Marshal(graph)
 	_, err = actionmd.UpdateAction(ctx, actionmd.UpdateActionReqDTO{
-		Id:      reqDTO.Id,
-		Content: string(yamlOut),
-		NodeId:  reqDTO.NodeId,
+		Id:         reqDTO.Id,
+		Name:       reqDTO.Name,
+		Content:    string(yamlOut),
+		AgentUrl:   reqDTO.AgentUrl,
+		AgentToken: reqDTO.AgentToken,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -406,15 +381,7 @@ func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO)
 	if err != nil {
 		return err
 	}
-	node, b, err := actionmd.GetNodeById(ctx, gitAction.NodeId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.ThereHasBugErr()
-	}
-	action.TriggerAction(node.HttpHost, gitAction.Aid, reqDTO.Operator.Account)
+	go Inner.ExecuteAction(gitAction.Aid, reqDTO.Operator.Account, actionmd.ManualTriggerType)
 	return nil
 }
 
@@ -422,7 +389,7 @@ func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo, 
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, teamId, operator.Account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
 	if !b {
 		return util.UnauthorizedError()
 	}
@@ -442,142 +409,6 @@ func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo, 
 		return util.UnauthorizedError()
 	}
 	return nil
-}
-
-func (*outerImpl) InsertNode(ctx context.Context, reqDTO InsertNodeReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.GitActionSrvKeysVO.InsertNode),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
-	}
-	if !reqDTO.Operator.IsAdmin {
-		err = util.UnauthorizedError()
-		return
-	}
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	err = actionmd.InsertNode(ctx, actionmd.InsertNodeReqDTO{
-		Name:     reqDTO.Name,
-		HttpHost: reqDTO.HttpHost,
-		Token:    reqDTO.Token,
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
-func (*outerImpl) DeleteNode(ctx context.Context, reqDTO DeleteNodeReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.GitActionSrvKeysVO.DeleteNode),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
-	}
-	if !reqDTO.Operator.IsAdmin {
-		err = util.UnauthorizedError()
-		return
-	}
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	_, err = actionmd.DeleteNode(ctx, reqDTO.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
-func (*outerImpl) UpdateNode(ctx context.Context, reqDTO UpdateNodeReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.GitActionSrvKeysVO.UpdateNode),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
-	}
-	if !reqDTO.Operator.IsAdmin {
-		err = util.UnauthorizedError()
-		return
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	_, err = actionmd.UpdateNode(ctx, actionmd.UpdateNodeReqDTO{
-		Id:       reqDTO.Id,
-		Name:     reqDTO.Name,
-		HttpHost: reqDTO.HttpHost,
-		Token:    reqDTO.Token,
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
-func (*outerImpl) ListNode(ctx context.Context, reqDTO ListNodeReqDTO) ([]NodeDTO, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
-	}
-	if !reqDTO.Operator.IsAdmin {
-		return nil, util.UnauthorizedError()
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	all, err := actionmd.GetAllNodes(ctx)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	return listutil.Map(all, func(t actionmd.Node) (NodeDTO, error) {
-		return NodeDTO{
-			Id:       t.Id,
-			Name:     t.Name,
-			HttpHost: t.HttpHost,
-			Token:    t.Token,
-		}, nil
-	})
-}
-
-func (*outerImpl) AllNode(ctx context.Context, reqDTO AllNodeReqDTO) ([]SimpleNodeDTO, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	all, err := actionmd.GetAllNodes(ctx)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	return listutil.Map(all, func(t actionmd.Node) (SimpleNodeDTO, error) {
-		return SimpleNodeDTO{
-			Id:   t.Id,
-			Name: t.Name,
-		}, nil
-	})
 }
 
 func (*outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]TaskDTO, int64, error) {

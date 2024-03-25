@@ -43,24 +43,31 @@ func (t HookType) Readable() string {
 	}
 }
 
+type HttpHeaders map[string]string
+
+func (h *HttpHeaders) FromDB(content []byte) error {
+	if h == nil {
+		*h = make(map[string]string)
+	}
+	return json.Unmarshal(content, h)
+}
+
+func (h *HttpHeaders) ToDB() ([]byte, error) {
+	return json.Marshal(h)
+}
+
 type Webhook struct {
-	Id          int64     `json:"id" xorm:"pk autoincr"`
-	RepoId      int64     `json:"repoId"`
-	HookUrl     string    `json:"hookUrl"`
-	HttpHeaders string    `json:"httpHeaders"`
-	HookType    HookType  `json:"hookType"`
-	WildBranch  string    `json:"wildBranch"`
-	WildTag     string    `json:"wildTag"`
-	Created     time.Time `json:"created" xorm:"created"`
-	Updated     time.Time `json:"updated" xorm:"updated"`
+	Id          int64       `json:"id" xorm:"pk autoincr"`
+	RepoId      int64       `json:"repoId"`
+	HookUrl     string      `json:"hookUrl"`
+	HttpHeaders HttpHeaders `json:"httpHeaders"`
+	HookType    HookType    `json:"hookType"`
+	WildBranch  string      `json:"wildBranch"`
+	WildTag     string      `json:"wildTag"`
+	Created     time.Time   `json:"created" xorm:"created"`
+	Updated     time.Time   `json:"updated" xorm:"updated"`
 }
 
 func (*Webhook) TableName() string {
 	return WebhookTableName
-}
-
-func (h *Webhook) GetHttpHeaders() map[string]string {
-	headers := make(map[string]string)
-	_ = json.Unmarshal([]byte(h.HttpHeaders), &headers)
-	return headers
 }

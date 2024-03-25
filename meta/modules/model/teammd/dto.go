@@ -6,34 +6,34 @@ type InsertTeamReqDTO struct {
 	Name string
 }
 
-type InsertTeamUserReqDTO struct {
+type InsertUserReqDTO struct {
 	TeamId  int64
 	Account string
-	GroupId int64
+	RoleId  int64
 }
 
-type UpdateTeamUserReqDTO struct {
+type UpdateUserReqDTO struct {
 	TeamId  int64
 	Account string
-	GroupId int64
+	RoleId  int64
 }
 
-type ListTeamUserReqDTO struct {
+type ListUserReqDTO struct {
 	TeamId  int64
 	Account string
 	Cursor  int64
 	Limit   int
 }
 
-type InsertTeamUserGroupReqDTO struct {
+type InsertRoleReqDTO struct {
 	Name       string
 	TeamId     int64
 	PermDetail perm.Detail
 	IsAdmin    bool
 }
 
-type TeamUserPermDetailDTO struct {
-	GroupId    int64
+type UserPermDetailDTO struct {
+	RoleId     int64
 	IsAdmin    bool
 	PermDetail perm.Detail
 }

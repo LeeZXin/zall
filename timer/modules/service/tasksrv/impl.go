@@ -387,7 +387,7 @@ func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (er
 }
 
 func checkPerm(ctx context.Context, operator apisession.UserInfo, teamId int64) error {
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, teamId, operator.Account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
 	if !b {
 		return util.UnauthorizedError()
 	}
@@ -406,7 +406,7 @@ func checkPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId
 	if !b {
 		return taskmd.Task{}, util.InvalidArgsError()
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, task.TeamId, operator.Account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, task.TeamId, operator.Account)
 	if !b {
 		return task, util.UnauthorizedError()
 	}

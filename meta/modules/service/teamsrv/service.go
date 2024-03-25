@@ -14,20 +14,20 @@ var (
 )
 
 type InnerService interface {
-	GetTeamUserPermDetail(context.Context, int64, string) (teammd.TeamUserPermDetailDTO, bool)
+	GetUserPermDetail(context.Context, int64, string) (teammd.UserPermDetailDTO, bool)
 }
 
 type OuterService interface {
 	InsertTeam(context.Context, InsertTeamReqDTO) error
 	UpdateTeam(context.Context, UpdateTeamReqDTO) error
 	DeleteTeam(context.Context, DeleteTeamReqDTO) error
-	ListTeamUser(context.Context, ListTeamUserReqDTO) ([]TeamUserDTO, int64, error)
-	DeleteTeamUser(context.Context, DeleteTeamUserReqDTO) error
-	UpsertTeamUser(context.Context, UpsertTeamUserReqDTO) error
-	InsertTeamUserGroup(context.Context, InsertTeamUserGroupReqDTO) error
-	UpdateTeamUserGroupName(context.Context, UpdateTeamUserGroupNameReqDTO) error
-	UpdateTeamUserGroupPerm(context.Context, UpdateTeamUserGroupPermReqDTO) error
-	DeleteTeamUserGroup(context.Context, DeleteTeamUserGroupReqDTO) error
-	ListTeamUserGroup(context.Context, ListTeamUserGroupReqDTO) ([]TeamUserGroupDTO, error)
+	ListUser(context.Context, ListUserReqDTO) ([]UserDTO, int64, error)
+	DeleteUser(context.Context, DeleteUserReqDTO) error
+	UpsertUser(context.Context, UpsertUserReqDTO) error
+	InsertRole(context.Context, InsertRoleReqDTO) error
+	UpdateRoleName(context.Context, UpdateRoleNameReqDTO) error
+	UpdateRolePerm(context.Context, UpdateRolePermReqDTO) error
+	DeleteRole(context.Context, DeleteRoleReqDTO) error
+	ListRole(context.Context, ListRoleReqDTO) ([]RoleDTO, error)
 	ListTeam(context.Context, ListTeamReqDTO) ([]TeamDTO, error)
 }

@@ -48,11 +48,11 @@ func InitApi() {
 			// 历史提交
 			group.POST("/historyCommits", historyCommits)
 			// 获取令牌列表
-			group.POST("/listAccessToken", listAccessToken)
+			group.POST("/listRepoToken", listRepoToken)
 			// 删除访问令牌
-			group.POST("/deleteAccessToken", deleteAccessToken)
+			group.POST("/deleteRepoToken", deleteRepoToken)
 			// 创建访问令牌
-			group.POST("/insertAccessToken", insertAccessToken)
+			group.POST("/insertRepoToken", insertRepoToken)
 			// 刷新hook
 			group.Any("/refreshAllGitHooks", refreshAllGitHooks)
 			// 迁移项目组
@@ -429,10 +429,10 @@ func historyCommits(c *gin.Context) {
 	}
 }
 
-func listAccessToken(c *gin.Context) {
-	var req ListAccessTokenReqVO
+func listRepoToken(c *gin.Context) {
+	var req ListRepoTokenReqVO
 	if util.ShouldBindJSON(&req, c) {
-		tokens, err := reposrv.Outer.ListAccessToken(c, reposrv.ListAccessTokenReqDTO{
+		tokens, err := reposrv.Outer.ListRepoToken(c, reposrv.ListRepoTokenReqDTO{
 			Id:       req.Id,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -440,25 +440,25 @@ func listAccessToken(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(tokens, func(t reposrv.AccessTokenDTO) (AccessTokenVO, error) {
-			return AccessTokenVO{
+		data, _ := listutil.Map(tokens, func(t reposrv.RepoTokenDTO) (RepoTokenVO, error) {
+			return RepoTokenVO{
 				Id:      t.Id,
 				Account: t.Account,
 				Token:   t.Token,
 				Created: t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]AccessTokenVO]{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]RepoTokenVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     data,
 		})
 	}
 }
 
-func insertAccessToken(c *gin.Context) {
-	var req CreateAccessTokenReqVO
+func insertRepoToken(c *gin.Context) {
+	var req CreateRepoTokenReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.InsertAccessToken(c, reposrv.InsertAccessTokenReqDTO{
+		err := reposrv.Outer.InsertRepoToken(c, reposrv.InsertRepoTokenReqDTO{
 			Id:       req.Id,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -470,10 +470,10 @@ func insertAccessToken(c *gin.Context) {
 	}
 }
 
-func deleteAccessToken(c *gin.Context) {
-	var req DeleteAccessTokenReqVO
+func deleteRepoToken(c *gin.Context) {
+	var req DeleteRepoTokenReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.DeleteAccessToken(c, reposrv.DeleteAccessTokenReqDTO{
+		err := reposrv.Outer.DeleteRepoToken(c, reposrv.DeleteRepoTokenReqDTO{
 			Id:       req.Id,
 			Operator: apisession.MustGetLoginUser(c),
 		})

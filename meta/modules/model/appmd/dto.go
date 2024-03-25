@@ -14,6 +14,4 @@ type UpdateAppReqDTO struct {
 type ListAppReqDTO struct {
 	AppId  string
 	TeamId int64
-	Cursor int64
-	Limit  int
 }

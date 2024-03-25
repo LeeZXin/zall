@@ -50,9 +50,18 @@ func checkAccessProductPerm(ctx context.Context, appId string, operator apisessi
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetTeamUserPermDetail(ctx, app.TeamId, operator.Account)
-	if !b || !p.PermDetail.GetAppPerm(appId).CanDeployProduct {
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if !b {
 		return util.UnauthorizedError()
+	}
+	if p.IsAdmin {
+		return nil
+	}
+	contains, _ := listutil.Contains(p.PermDetail.DevelopAppList, func(s string) (bool, error) {
+		return s == appId, nil
+	})
+	if contains {
+		return nil
 	}
 	return nil
 }
