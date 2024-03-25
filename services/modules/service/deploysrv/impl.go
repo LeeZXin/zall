@@ -10,7 +10,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
@@ -32,7 +31,7 @@ func (*outerImpl) GetDeploy(ctx context.Context, reqDTO GetDeployReqDTO) (deploy
 		return deploy.Config{}, util.InvalidArgsError()
 	}
 	// 校验权限
-	err = checkPerm(ctx, app.AppId, app.TeamId, reqDTO.Operator)
+	err = checkPerm(ctx, app.TeamId, reqDTO.Operator)
 	if err != nil {
 		return deploy.Config{}, err
 	}
@@ -81,7 +80,7 @@ func (*outerImpl) UpdateDeploy(ctx context.Context, reqDTO UpdateDeployReqDTO) (
 		return
 	}
 	// 校验权限
-	err = checkPerm(ctx, app.AppId, app.TeamId, reqDTO.Operator)
+	err = checkPerm(ctx, app.TeamId, reqDTO.Operator)
 	if err != nil {
 		return
 	}
@@ -98,7 +97,7 @@ func (*outerImpl) UpdateDeploy(ctx context.Context, reqDTO UpdateDeployReqDTO) (
 	return
 }
 
-func checkPerm(ctx context.Context, appId string, teamId int64, operator apisession.UserInfo) error {
+func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo) error {
 	if operator.IsAdmin {
 		return nil
 	}
@@ -107,12 +106,6 @@ func checkPerm(ctx context.Context, appId string, teamId int64, operator apisess
 		return util.UnauthorizedError()
 	}
 	if p.IsAdmin {
-		return nil
-	}
-	contains, _ := listutil.Contains(p.PermDetail.DevelopAppList, func(s string) (bool, error) {
-		return s == appId, nil
-	})
-	if contains {
 		return nil
 	}
 	return util.UnauthorizedError()
