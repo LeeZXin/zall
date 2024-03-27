@@ -2,10 +2,10 @@ package ssh
 
 import (
 	"errors"
+	"github.com/LeeZXin/zall/util"
 	"github.com/gliderlabs/ssh"
 	gossh "golang.org/x/crypto/ssh"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -54,35 +54,42 @@ func (d *Dialer) ProxySession(sshHost string, src ssh.Session, opts *ProxyOpts) 
 	target.Stdin = src
 	target.Stdout = src
 	target.Stderr = src.Stderr()
-	target.Run(src.RawCommand())
-	return nil
+	return target.Run(src.RawCommand())
 }
 
 func NewDialer(opts *DialerOpts) (*Dialer, error) {
 	if opts.UserName == "" {
 		return nil, errors.New("empty username")
 	}
-	if opts.HostKey == "" || !filepath.IsAbs(opts.HostKey) {
-		return nil, errors.New("wrong hostKey")
+	hostKey, err := util.ReadOrGenRsaKey(opts.HostKey)
+	if err != nil {
+		return nil, err
 	}
-	privateKey, err := os.ReadFile(opts.HostKey)
+	privateKey, err := os.ReadFile(hostKey)
 	if err != nil {
 		return nil, err
 	}
 	keySigner, err := gossh.ParsePrivateKey(privateKey)
-	cfg := &gossh.ClientConfig{
+	if err != nil {
+		return nil, err
+	}
+	cfg := NewCommonClientConfig(opts.UserName, keySigner)
+	return &Dialer{
+		cfg: cfg,
+	}, nil
+}
+
+func NewCommonClientConfig(username string, signer gossh.Signer) *gossh.ClientConfig {
+	return &gossh.ClientConfig{
 		Config: gossh.Config{
 			KeyExchanges: keyExchanges,
 			Ciphers:      ciphers,
 			MACs:         macs,
 		},
-		User: opts.UserName,
+		User: username,
 		Auth: []gossh.AuthMethod{
-			gossh.PublicKeys(keySigner),
+			gossh.PublicKeys(signer),
 		},
 		HostKeyCallback: gossh.InsecureIgnoreHostKey(),
 	}
-	return &Dialer{
-		cfg: cfg,
-	}, nil
 }

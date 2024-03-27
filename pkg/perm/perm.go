@@ -4,12 +4,14 @@ import "encoding/json"
 
 var (
 	DefaultTeamPerm = TeamPerm{
-		CanInitRepo:      true,
-		CanDeleteRepo:    true,
-		CanHandleTimer:   true,
-		CanAccessAction:  true,
-		CanUpdateAction:  true,
-		CanTriggerAction: true,
+		CanInitRepo:           true,
+		CanDeleteRepo:         true,
+		CanHandleTimer:        true,
+		CanAccessAction:       true,
+		CanUpdateAction:       true,
+		CanTriggerAction:      true,
+		CanHandleDeployConfig: true,
+		CanHandleDeployPlan:   true,
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:            true,
@@ -102,4 +104,8 @@ type TeamPerm struct {
 	CanUpdateAction bool `json:"canUpdateAction"`
 	// 是否可手动触发action
 	CanTriggerAction bool `json:"canTriggerAction"`
+	// 是否可编辑部署配置
+	CanHandleDeployConfig bool `json:"canHandleDeployConfig"`
+	// 是否可直接创建发布计划
+	CanHandleDeployPlan bool `json:"canHandleDeployPlan"`
 }

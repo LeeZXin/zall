@@ -58,7 +58,7 @@ func insertAction(c *gin.Context) {
 			Name:          req.Name,
 			TeamId:        req.TeamId,
 			ActionContent: req.ActionContent,
-			AgentUrl:      req.AgentUrl,
+			AgentHost:     req.AgentHost,
 			AgentToken:    req.AgentToken,
 			Operator:      apisession.MustGetLoginUser(c),
 		})
@@ -85,7 +85,7 @@ func listAction(c *gin.Context) {
 			return ActionVO{
 				Id:            t.Id,
 				Aid:           t.Aid,
-				AgentUrl:      t.AgentUrl,
+				AgentUrl:      t.AgentHost,
 				AgentToken:    t.AgentToken,
 				ActionContent: t.Content,
 				Created:       t.Created.Format(time.DateTime),
@@ -120,7 +120,7 @@ func updateAction(c *gin.Context) {
 			Id:            req.Id,
 			Name:          req.Name,
 			ActionContent: req.ActionContent,
-			AgentUrl:      req.AgentUrl,
+			AgentHost:     req.AgentHost,
 			AgentToken:    req.AgentToken,
 			Operator:      apisession.MustGetLoginUser(c),
 		})

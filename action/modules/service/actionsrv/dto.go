@@ -4,8 +4,6 @@ import (
 	"github.com/LeeZXin/zall/action/modules/model/actionmd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
-	"net/url"
-	"strings"
 	"time"
 )
 
@@ -13,7 +11,7 @@ type InsertActionReqDTO struct {
 	Name          string              `json:"name"`
 	TeamId        int64               `json:"teamId"`
 	ActionContent string              `json:"actionContent"`
-	AgentUrl      string              `json:"agentUrl"`
+	AgentHost     string              `json:"agentHost"`
 	AgentToken    string              `json:"agentToken"`
 	Operator      apisession.UserInfo `json:"operator"`
 }
@@ -25,8 +23,7 @@ func (r *InsertActionReqDTO) IsValid() error {
 	if r.ActionContent == "" {
 		return util.InvalidArgsError()
 	}
-	parsedUrl, err := url.Parse(r.AgentUrl)
-	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
+	if !util.IpPortPattern.MatchString(r.AgentHost) {
 		return util.InvalidArgsError()
 	}
 	if len(r.AgentToken) > 32 {
@@ -66,7 +63,7 @@ type UpdateActionReqDTO struct {
 	Id            int64               `json:"id"`
 	Name          string              `json:"name"`
 	ActionContent string              `json:"actionContent"`
-	AgentUrl      string              `json:"agentUrl"`
+	AgentHost     string              `json:"agentHost"`
 	AgentToken    string              `json:"agentToken"`
 	Operator      apisession.UserInfo `json:"operator"`
 }
@@ -81,8 +78,7 @@ func (r *UpdateActionReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	parsedUrl, err := url.Parse(r.AgentUrl)
-	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
+	if !util.IpPortPattern.MatchString(r.AgentHost) {
 		return util.InvalidArgsError()
 	}
 	if len(r.AgentToken) > 32 {

@@ -1,14 +1,50 @@
 package deployapi
 
-import "github.com/LeeZXin/zall/pkg/deploy"
+import (
+	"github.com/LeeZXin/zall/pkg/deploy"
+)
 
-type GetDeployReqVO struct {
+type ListConfigReqVO struct {
 	AppId string `json:"appId"`
 	Env   string `json:"env"`
 }
 
-type UpdateDeployReqVO struct {
-	AppId  string        `json:"appId"`
-	Env    string        `json:"env"`
-	Config deploy.Config `json:"config"`
+type UpdateConfigReqVO struct {
+	ConfigId      int64                 `json:"configId"`
+	Name          string                `json:"name"`
+	Env           string                `json:"env"`
+	ProcessConfig *deploy.ProcessConfig `json:"processConfig"`
+	K8sConfig     *deploy.K8sConfig     `json:"k8sConfig"`
+}
+
+type ConfigVO struct {
+	Id            int64                 `json:"id"`
+	AppId         string                `json:"appId"`
+	Name          string                `json:"name"`
+	ServiceType   string                `json:"serviceType"`
+	ProcessConfig *deploy.ProcessConfig `json:"processConfig,omitempty"`
+	K8sConfig     *deploy.K8sConfig     `json:"k8sConfig,omitempty"`
+	Created       string                `json:"created"`
+}
+
+type InsertConfigReqVO struct {
+	AppId         string                `json:"appId"`
+	Name          string                `json:"name"`
+	ServiceType   deploy.ServiceType    `json:"serviceType"`
+	ProcessConfig *deploy.ProcessConfig `json:"processConfig,omitempty"`
+	K8sConfig     *deploy.K8sConfig     `json:"k8SConfig,omitempty"`
+	Env           string                `json:"env"`
+}
+
+type InsertPlanReqVO struct {
+	Name   string `json:"name"`
+	TeamId int64  `json:"teamId"`
+	Env    string `json:"env"`
+}
+
+type DeployServiceWithoutPlanReqVO struct {
+	ConfigId       int64  `json:"configId"`
+	Env            string `json:"env"`
+	ProductVersion string `json:"productVersion"`
+	Operator       string `json:"operator"`
 }

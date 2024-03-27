@@ -264,7 +264,7 @@ func batch(c *gin.Context) {
 			}, nil
 		}
 	})
-	c.Header("Content-Type", MediaType)
+	c.Header("Config-Type", MediaType)
 	c.JSON(http.StatusOK, resp)
 }
 

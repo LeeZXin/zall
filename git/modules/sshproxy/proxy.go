@@ -35,7 +35,7 @@ func InitProxy() zsf.LifeCycle {
 	hostKey := filepath.Join(git.DataDir(), "ssh", "proxy.rsa")
 	server, err := zssh.NewServer(&zssh.ServerOpts{
 		Port:    static.GetInt("git.proxy.server.port"),
-		HostKey: filepath.Join(git.DataDir(), "ssh", "proxy.rsa"),
+		HostKey: hostKey,
 		PublicKeyHandler: func(ctx ssh.Context, key ssh.PublicKey) bool {
 			if ctx.User() != "git" {
 				return false

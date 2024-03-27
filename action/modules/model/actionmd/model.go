@@ -45,9 +45,9 @@ func (t TaskStatus) Readable() string {
 }
 
 const (
-	TaskTableName   = "zgit_action_task"
-	StepTableName   = "zgit_action_step"
-	ActionTableName = "zgit_action"
+	TaskTableName   = "zaction_task"
+	StepTableName   = "zaction_step"
+	ActionTableName = "zaction_config"
 )
 
 type Task struct {
@@ -112,7 +112,7 @@ type Action struct {
 	Name       string    `json:"name"`
 	TeamId     int64     `json:"teamId"`
 	Content    string    `json:"content"`
-	AgentUrl   string    `json:"agentUrl"`
+	AgentHost  string    `json:"agentHost"`
 	AgentToken string    `json:"agentToken"`
 	Created    time.Time `json:"created" xorm:"created"`
 	Updated    time.Time `json:"updated" xorm:"updated"`

@@ -5,15 +5,17 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"github.com/gliderlabs/ssh"
 	gossh "golang.org/x/crypto/ssh"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 func ExitWithErrMsg(session ssh.Session, msg string) {
-	fmt.Fprintf(session.Stderr(), msg+"\n")
+	fmt.Fprint(session.Stderr(), msg+"\n")
 	session.Exit(1)
 }
 
@@ -54,4 +56,31 @@ func CutEnv(envs []string) map[string]string {
 		}
 	}
 	return ret
+}
+
+func ReadOrGenRsaKey(hostKey string) (string, error) {
+	if hostKey == "" {
+		return "", errors.New("empty hostKey")
+	}
+	var err error
+	if !filepath.IsAbs(hostKey) {
+		hostKey, err = filepath.Abs(hostKey)
+		if err != nil {
+			return "", err
+		}
+	}
+	if err = os.MkdirAll(filepath.Dir(hostKey), os.ModePerm); err != nil {
+		return "", fmt.Errorf("failed to create dir %s: %v", filepath.Dir(hostKey), err)
+	}
+	exist, err := IsExist(hostKey)
+	if err != nil {
+		return "", fmt.Errorf("check host key failed %s: %v", hostKey, err)
+	}
+	if !exist {
+		err = GenRsaKeyPair(hostKey)
+		if err != nil {
+			return "", fmt.Errorf("gen host key pair failed %s: %v", hostKey, err)
+		}
+	}
+	return hostKey, nil
 }

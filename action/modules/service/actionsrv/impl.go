@@ -3,6 +3,7 @@ package actionsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/action/modules/model/actionmd"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/action"
@@ -35,7 +36,7 @@ func (s *innerImpl) ExecuteAction(aid, operator string, triggerType actionmd.Tri
 		return
 	}
 	if !b {
-		logger.Logger.WithContext(ctx).Errorf("%s is not exists", aid)
+		logger.Logger.WithContext(ctx).Errorf("%s does not exist", aid)
 		return
 	}
 	var p action.GraphCfg
@@ -51,24 +52,24 @@ func (s *innerImpl) ExecuteAction(aid, operator string, triggerType actionmd.Tri
 		logger.Logger.Errorf("can not convert action graph: %v", err)
 		return
 	}
-	s.execGraph(graph, gitAction.Id, gitAction.Content, operator, triggerType, gitAction.AgentUrl, gitAction.AgentToken)
+	s.execGraph(graph, gitAction.Id, gitAction.Content, operator, triggerType, gitAction.AgentHost, gitAction.AgentToken)
 }
 
-func (s *innerImpl) execGraph(graph *action.Graph, actionId int64, actionYaml, operator string, triggerType actionmd.TriggerType, agentUrl, agentToken string) {
+func (s *innerImpl) execGraph(graph *action.Graph, actionId int64, actionYaml, operator string, triggerType actionmd.TriggerType, agentHost, agentToken string) {
 	// 先插入记录
-	taskId, err := s.insertTaskRecord(graph, actionId, actionYaml, operator, triggerType, agentUrl, agentToken)
+	taskId, err := s.insertTaskRecord(graph, actionId, actionYaml, operator, triggerType, agentHost, agentToken)
 	if err != nil {
 		return
 	}
 	// 执行任务
-	s.runGraph(graph, taskId, agentUrl, agentToken)
+	s.runGraph(graph, taskId, agentHost, agentToken)
 }
 
-func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, agentUrl, agentToken string) {
+func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, agentHost, agentToken string) {
 	err := graph.Run(action.RunOpts{
-		RunWithAgent: true,
-		AgentUrl:     agentUrl,
-		AgentToken:   agentToken,
+		AgentHost:  agentHost,
+		AgentToken: agentToken,
+
 		StepOutputFunc: func(stat action.StepOutputStat) {
 			defer stat.Output.Close()
 			if _, err := s.updateStepStatusWithOldStatus(
@@ -241,7 +242,7 @@ func (*outerImpl) InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) (
 		TeamId:     reqDTO.TeamId,
 		Name:       reqDTO.Name,
 		Content:    string(yamlOut),
-		AgentUrl:   reqDTO.AgentUrl,
+		AgentHost:  reqDTO.AgentHost,
 		AgentToken: reqDTO.AgentToken,
 	})
 	if err != nil {
@@ -351,7 +352,7 @@ func (*outerImpl) UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (
 		Id:         reqDTO.Id,
 		Name:       reqDTO.Name,
 		Content:    string(yamlOut),
-		AgentUrl:   reqDTO.AgentUrl,
+		AgentHost:  reqDTO.AgentHost,
 		AgentToken: reqDTO.AgentToken,
 	})
 	if err != nil {
@@ -387,6 +388,14 @@ func (*outerImpl) TriggerAction(ctx context.Context, reqDTO TriggerActionReqDTO)
 
 func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo, permCode int) error {
 	if operator.IsAdmin {
+		_, b, err := teammd.GetByTeamId(ctx, teamId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		if !b {
+			return util.InvalidArgsError()
+		}
 		return nil
 	}
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)

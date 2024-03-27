@@ -38,9 +38,13 @@ func isSlashRune(r rune) bool { return r == '/' || r == '\\' }
 
 func MkdirAll(dirs ...string) {
 	for _, dir := range dirs {
-		err := os.MkdirAll(dir, os.ModePerm)
+		err := Mkdir(dir)
 		if err != nil {
 			logger.Logger.Error("zgit os.MkdirAll %s err: %v", dir, err)
 		}
 	}
+}
+
+func Mkdir(dir string) error {
+	return os.MkdirAll(dir, os.ModePerm)
 }

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/LeeZXin/zall/action/modules/api/actionagentapi"
 	"github.com/LeeZXin/zall/action/modules/api/actionapi"
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
@@ -23,6 +22,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
+	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/prop/modules/api/propapi"
 	"github.com/LeeZXin/zall/services/modules/api/deployapi"
@@ -81,7 +81,7 @@ func runZall(*cli.Context) error {
 		actionapi.InitApi()
 		if static.GetBool("action.agent.enabled") {
 			logger.Logger.Info("action agent enabled")
-			actionagentapi.InitApi()
+			lifeCycles = append(lifeCycles, action.NewAgentServer())
 		}
 	}
 	// for timer

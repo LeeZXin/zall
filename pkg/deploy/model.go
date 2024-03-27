@@ -2,34 +2,60 @@ package deploy
 
 import (
 	"encoding/json"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
 	"net/url"
 	"strings"
 )
 
-type DetectType int
+type ServiceType int
 
 const (
-	TcpDetectType DetectType = iota
-	HttpDetectType
+	ProcessServiceType ServiceType = iota
+	K8sServiceType
 )
 
-func (t DetectType) IsValid() bool {
+func (t ServiceType) IsValid() bool {
 	switch t {
-	case TcpDetectType, HttpDetectType:
+	case ProcessServiceType, K8sServiceType:
 		return true
 	default:
 		return false
 	}
 }
 
-type HttpDetect struct {
-	Url     string            `json:"url"`
-	Method  string            `json:"method"`
-	Headers map[string]string `json:"headers"`
+func (t ServiceType) Readable() string {
+	switch t {
+	case ProcessServiceType:
+		return i18n.GetByKey(i18n.DeployProcessServiceType)
+	case K8sServiceType:
+		return i18n.GetByKey(i18n.DeployK8sServiceType)
+	default:
+		return i18n.GetByKey(i18n.DeployUnknownServiceType)
+	}
 }
 
-func (c *HttpDetect) IsValid() bool {
+type DetectType int
+
+const (
+	TcpDetectType DetectType = iota
+	HttpGetDetectType
+)
+
+func (t DetectType) IsValid() bool {
+	switch t {
+	case TcpDetectType, HttpGetDetectType:
+		return true
+	default:
+		return false
+	}
+}
+
+type HttpGetDetect struct {
+	Url string `json:"url"`
+}
+
+func (c *HttpGetDetect) IsValid() bool {
 	parsedUrl, err := url.Parse(c.Url)
 	return err == nil && strings.HasPrefix(parsedUrl.Scheme, "http")
 }
@@ -44,27 +70,38 @@ func (c *TcpDetect) IsValid() bool {
 }
 
 type DetectConfig struct {
-	DetectType DetectType  `json:"detectType"`
-	HttpDetect *HttpDetect `json:"httpDetect"`
-	TcpDetect  *TcpDetect  `json:"tcpDetect"`
+	DetectType    DetectType     `json:"detectType"`
+	HttpGetDetect *HttpGetDetect `json:"httpGetDetect,omitempty"`
+	TcpDetect     *TcpDetect     `json:"tcpDetect,omitempty"`
 }
 
 func (c *DetectConfig) IsValid() bool {
 	switch c.DetectType {
 	case TcpDetectType:
 		return c.TcpDetect != nil && c.TcpDetect.IsValid()
-	case HttpDetectType:
-		return c.HttpDetect != nil && c.HttpDetect.IsValid()
+	case HttpGetDetectType:
+		return c.HttpGetDetect != nil && c.HttpGetDetect.IsValid()
 	default:
 		return false
 	}
 }
 
+func (c *DetectConfig) FromDB(content []byte) error {
+	if c == nil {
+		*c = DetectConfig{}
+	}
+	return json.Unmarshal(content, c)
+}
+
+func (c *DetectConfig) ToDB() ([]byte, error) {
+	return json.Marshal(c)
+}
+
 type ProcessConfig struct {
 	Host         string       `json:"host"`
-	AgentUrl     string       `json:"agentUrl"`
+	AgentHost    string       `json:"agentHost"`
 	AgentToken   string       `json:"agentToken"`
-	SshUrl       string       `json:"sshUrl"`
+	SshHost      string       `json:"sshHost"`
 	SshPassword  string       `json:"sshPassword"`
 	DetectConfig DetectConfig `json:"detectConfig"`
 	DeployScript string       `json:"deployScript"`
@@ -75,14 +112,16 @@ func (c *ProcessConfig) IsValid() bool {
 	if !b {
 		return false
 	}
-	parsedUrl, err := url.Parse(c.AgentUrl)
-	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
+	if !util.IpPortPattern.MatchString(c.AgentHost) {
 		return false
 	}
 	if len(c.AgentToken) > 32 {
 		return false
 	}
 	if !c.DetectConfig.IsValid() {
+		return false
+	}
+	if c.DeployScript == "" {
 		return false
 	}
 	return true
@@ -95,35 +134,18 @@ func (c *K8sConfig) IsValid() bool {
 	return true
 }
 
-type Config struct {
-	ProcessConfigList []ProcessConfig `json:"processConfigList"`
-	K8sConfigList     []K8sConfig     `json:"k8SConfigList"`
+type NormalConfig struct {
+	// InsertPlanWithApprovalFlow 创建发布计划走审批流
+	InsertPlanWithApprovalFlow bool `json:"insertPlanWithApprovalFlow"`
 }
 
-func (c *Config) IsValid() bool {
-	if len(c.ProcessConfigList) > 100 || len(c.K8sConfigList) > 100 {
-		return false
-	}
-	for _, cfg := range c.ProcessConfigList {
-		if !cfg.IsValid() {
-			return false
-		}
-	}
-	for _, cfg := range c.K8sConfigList {
-		if !cfg.IsValid() {
-			return false
-		}
-	}
-	return true
-}
-
-func (c *Config) FromDB(content []byte) error {
+func (c *NormalConfig) FromDB(content []byte) error {
 	if c == nil {
-		*c = Config{}
+		*c = NormalConfig{}
 	}
 	return json.Unmarshal(content, c)
 }
 
-func (c *Config) ToDB() ([]byte, error) {
+func (c *NormalConfig) ToDB() ([]byte, error) {
 	return json.Marshal(c)
 }

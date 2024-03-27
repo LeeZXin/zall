@@ -8,8 +8,6 @@ import (
 	"github.com/gliderlabs/ssh"
 	gossh "golang.org/x/crypto/ssh"
 	"net"
-	"os"
-	"path/filepath"
 	"strconv"
 )
 
@@ -38,30 +36,7 @@ func NewServer(opts *ServerOpts) (*Server, error) {
 	if opts.Port <= 0 {
 		return nil, errors.New("wrong port")
 	}
-	hostKey := opts.HostKey
-	if hostKey == "" {
-		return nil, errors.New("empty hostKey")
-	}
-	var err error
-	if !filepath.IsAbs(hostKey) {
-		hostKey, err = filepath.Abs(hostKey)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if err = os.MkdirAll(filepath.Dir(hostKey), os.ModePerm); err != nil {
-		return nil, fmt.Errorf("failed to create dir %s: %v", filepath.Dir(hostKey), err)
-	}
-	exist, err := util.IsExist(hostKey)
-	if err != nil {
-		return nil, fmt.Errorf("check host key failed %s: %v", hostKey, err)
-	}
-	if !exist {
-		err = util.GenRsaKeyPair(hostKey)
-		if err != nil {
-			return nil, fmt.Errorf("gen host key pair failed %s: %v", hostKey, err)
-		}
-	}
+	hostKey, err := util.ReadOrGenRsaKey(opts.HostKey)
 	srv := &ssh.Server{
 		Addr:             net.JoinHostPort("", strconv.Itoa(opts.Port)),
 		PublicKeyHandler: opts.PublicKeyHandler,

@@ -4,23 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/LeeZXin/zall/pkg/git/process"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/executor/completable"
-	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"io"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 )
 
 var (
 	ThereHasBug = errors.New("there has bug")
-	httpClient  = httputil.NewHttpClient()
 )
 
 type GraphCfg struct {
@@ -200,8 +195,7 @@ func (c *JobCfg) convertToJob(jobName string) *Job {
 }
 
 type RunOpts struct {
-	RunWithAgent   bool
-	AgentUrl       string
+	AgentHost      string
 	AgentToken     string
 	Workdir        string
 	StepOutputFunc func(StepOutputStat)
@@ -305,96 +299,19 @@ func (s *Step) replaceStr(args map[string]string, str string) string {
 	return str
 }
 
-type RunScriptReqVO struct {
-	Workdir string   `json:"workdir"`
-	Envs    []string `json:"envs"`
-	Script  string   `json:"script"`
-}
-
-type RunScriptRespVO struct {
-	Stderr string `json:"stderr"`
-	Stdout string `json:"stdout"`
-}
-
-func (s *Step) Run(opts *RunOpts, ctx context.Context, j *Job, index int) error {
-	envs := make([]string, 0, len(s.with))
-	for k, v := range s.with {
-		envs = append(envs, k+"="+v)
-	}
-	script := s.replaceStr(opts.Args, s.script)
-	if opts.RunWithAgent {
-		var resp RunScriptRespVO
-		beginTime := time.Now()
-		err := httputil.Post(ctx, httpClient, opts.AgentUrl+"/api/actionAgent/execute", map[string]string{
-			"Authorization": opts.AgentToken,
-		}, RunScriptReqVO{
-			Workdir: opts.Workdir,
-			Envs:    envs,
-			Script:  script,
-		}, &resp)
-		if err != nil {
-			return err
-		}
-		var outReader io.ReadCloser
-		if resp.Stderr != "" {
-			outReader = io.NopCloser(strings.NewReader(resp.Stderr))
-		} else if resp.Stdout != "" {
-			outReader = io.NopCloser(strings.NewReader(resp.Stdout))
-		} else {
-			outReader = io.NopCloser(strings.NewReader(""))
-		}
-		go opts.StepOutputFunc(StepOutputStat{
-			JobName:   j.name,
-			Index:     index,
-			EventTime: beginTime,
-			Output:    outReader,
-		})
-		endTime := time.Now()
-		if opts.StepAfterFunc != nil {
-			opts.StepAfterFunc(err, StepRunStat{
-				JobName:   j.name,
-				Index:     index,
-				Duration:  endTime.Sub(beginTime),
-				EventTime: beginTime,
-			})
-		}
-	}
-	cmd := exec.CommandContext(ctx, "bash", "-c", script)
-	if len(s.with) > 0 {
-		cmd.Env = append(os.Environ(), envs...)
-	}
-	if opts.Workdir != "" {
-		cmd.Dir = opts.Workdir
-	} else {
-		cmd.Dir = "."
-	}
-	var (
-		stdoutReader *io.PipeReader
-		stdoutWriter *io.PipeWriter
-	)
-	if opts.StepOutputFunc != nil {
-		stdoutReader, stdoutWriter = io.Pipe()
-		defer func() {
-			stdoutWriter.Close()
-		}()
-		cmd.Stderr = stdoutWriter
-		cmd.Stdout = stdoutWriter
-	}
-	process.SetSysProcAttribute(cmd)
+func (s *Step) Run(opts *RunOpts, _ context.Context, j *Job, index int) error {
 	beginTime := time.Now()
-	err := cmd.Start()
+	ac := NewAgentCommand(opts.AgentHost, opts.AgentToken, opts.Workdir)
+	output, err := ac.Execute(strings.NewReader(s.replaceStr(opts.Args, s.script)), s.with)
 	if err != nil {
-		return err
+		output = err.Error()
 	}
-	if opts.StepOutputFunc != nil {
-		go opts.StepOutputFunc(StepOutputStat{
-			JobName:   j.name,
-			Index:     index,
-			EventTime: beginTime,
-			Output:    stdoutReader,
-		})
-	}
-	err = cmd.Wait()
+	go opts.StepOutputFunc(StepOutputStat{
+		JobName:   j.name,
+		Index:     index,
+		EventTime: beginTime,
+		Output:    io.NopCloser(strings.NewReader(output)),
+	})
 	endTime := time.Now()
 	if opts.StepAfterFunc != nil {
 		opts.StepAfterFunc(err, StepRunStat{
@@ -404,7 +321,7 @@ func (s *Step) Run(opts *RunOpts, ctx context.Context, j *Job, index int) error 
 			EventTime: beginTime,
 		})
 	}
-	return err
+	return nil
 }
 
 type Job struct {

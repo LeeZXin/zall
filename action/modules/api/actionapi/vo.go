@@ -3,7 +3,7 @@ package actionapi
 type InsertActionReqVO struct {
 	Name          string `json:"name"`
 	TeamId        int64  `json:"teamId"`
-	AgentUrl      string `json:"agentUrl"`
+	AgentHost     string `json:"agentHost"`
 	AgentToken    string `json:"agentToken"`
 	ActionContent string `json:"actionContent"`
 }
@@ -19,7 +19,7 @@ type ListActionReqVO struct {
 type UpdateActionReqVO struct {
 	Id            int64  `json:"id"`
 	Name          string `json:"name"`
-	AgentUrl      string `json:"agentUrl"`
+	AgentHost     string `json:"agentHost"`
 	AgentToken    string `json:"agentToken"`
 	ActionContent string `json:"actionContent"`
 }

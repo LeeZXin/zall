@@ -440,3 +440,18 @@ var (
 		DefaultRet: "未知状态",
 	}
 )
+
+var (
+	DeployProcessServiceType = KeyItem{
+		Id:         "deploy.processServiceType",
+		DefaultRet: "主机进程服务",
+	}
+	DeployK8sServiceType = KeyItem{
+		Id:         "deploy.k8sServiceType",
+		DefaultRet: "k8s服务",
+	}
+	DeployUnknownServiceType = KeyItem{
+		Id:         "deploy.k8sServiceType",
+		DefaultRet: "未知服务类型",
+	}
+)

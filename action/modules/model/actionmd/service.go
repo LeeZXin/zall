@@ -87,7 +87,7 @@ func InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) error {
 		Aid:        reqDTO.Aid,
 		TeamId:     reqDTO.TeamId,
 		Content:    reqDTO.Content,
-		AgentUrl:   reqDTO.AgentUrl,
+		AgentHost:  reqDTO.AgentHost,
 		AgentToken: reqDTO.AgentToken,
 		Name:       reqDTO.Name,
 	}
@@ -98,10 +98,10 @@ func InsertAction(ctx context.Context, reqDTO InsertActionReqDTO) error {
 func UpdateAction(ctx context.Context, reqDTO UpdateActionReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("content", "agent_url", "agent_token", "name").
+		Cols("content", "agent_host", "agent_token", "name").
 		Update(&Action{
 			Content:    reqDTO.Content,
-			AgentUrl:   reqDTO.AgentUrl,
+			AgentHost:  reqDTO.AgentHost,
 			AgentToken: reqDTO.AgentToken,
 			Name:       reqDTO.Name,
 		})

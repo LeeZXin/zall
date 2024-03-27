@@ -97,13 +97,13 @@ func (s *lfsImpl) Download(ctx context.Context, req reqvo.LfsDownloadReq) {
 		})
 		return
 	}
-	req.C.Header("Content-Type", "application/octet-stream")
+	req.C.Header("Config-Type", "application/octet-stream")
 	filename := req.C.Query("filename")
 	if filename != "" {
 		decodedFilename, err := base64.RawURLEncoding.DecodeString(filename)
 		if err == nil {
-			req.C.Header("Content-Disposition", "attachment; filename=\""+string(decodedFilename)+"\"")
-			req.C.Header("Access-Control-Expose-Headers", "Content-Disposition")
+			req.C.Header("Config-Disposition", "attachment; filename=\""+string(decodedFilename)+"\"")
+			req.C.Header("Access-Control-Expose-Headers", "Config-Disposition")
 		}
 	}
 	downloadPath := filepath.Join(s.lfsStore.StoreDir(), path)

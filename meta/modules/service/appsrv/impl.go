@@ -229,6 +229,7 @@ func checkPermAdmin(ctx context.Context, operator apisession.UserInfo, teamId in
 		if !b {
 			return util.InvalidArgsError()
 		}
+		return nil
 	}
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
 	if !b || !p.IsAdmin {

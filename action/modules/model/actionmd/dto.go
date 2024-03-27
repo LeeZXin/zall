@@ -23,7 +23,7 @@ type InsertActionReqDTO struct {
 	TeamId     int64
 	Name       string
 	Content    string
-	AgentUrl   string
+	AgentHost  string
 	AgentToken string
 }
 
@@ -31,7 +31,7 @@ type UpdateActionReqDTO struct {
 	Id         int64
 	Name       string
 	Content    string
-	AgentUrl   string
+	AgentHost  string
 	AgentToken string
 }
 

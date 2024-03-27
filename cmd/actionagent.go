@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"github.com/LeeZXin/zall/action/modules/api/actionagentapi"
-	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
@@ -10,16 +9,14 @@ import (
 var ActionAgent = &cli.Command{
 	Name:        "actionAgent",
 	Usage:       "This command starts actions server",
-	Description: "zgit actions provides action agent",
+	Description: "actionAgent provides ssh action agent to execute command",
 	Action:      runActionAgent,
 }
 
 func runActionAgent(*cli.Context) error {
-	// action
-	actionagentapi.InitApi()
 	zsf.Run(
 		zsf.WithLifeCycles(
-			httpserver.NewServer(),
+			action.NewAgentServer(),
 		),
 	)
 	return nil

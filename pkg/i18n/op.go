@@ -376,9 +376,17 @@ var (
 	}
 
 	DeploySrvKeysVO = DeploySrvKeys{
-		UpdateDeploy: KeyItem{
-			Id:         "deploySrv.UpdateDeploy",
+		UpdateConfig: KeyItem{
+			Id:         "deploySrv.UpdateConfig",
 			DefaultRet: "编辑部署配置",
+		},
+		InsertConfig: KeyItem{
+			Id:         "deploySrv.InsertConfig",
+			DefaultRet: "新增部署配置",
+		},
+		InsertPlan: KeyItem{
+			Id:         "deploySrv.InsertPlan",
+			DefaultRet: "创建发布计划",
 		},
 	}
 )
@@ -524,5 +532,7 @@ type GitNodeSrvKeys struct {
 }
 
 type DeploySrvKeys struct {
-	UpdateDeploy KeyItem
+	UpdateConfig KeyItem
+	InsertConfig KeyItem
+	InsertPlan   KeyItem
 }

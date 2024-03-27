@@ -96,6 +96,9 @@ func handleGitCommand(ctx context.Context, user *usermd.UserInfo, session ssh.Se
 		return errors.New(i18n.GetByKey(i18n.SystemInternalError))
 	}
 	words, err := shellquote.Split(session.RawCommand())
+	if err != nil {
+		return err
+	}
 	verb := words[0]
 	repoPath := strings.TrimPrefix(words[1], "/")
 	// 校验 repoPath
