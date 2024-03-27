@@ -23,6 +23,7 @@ type InsertServiceReqDTO struct {
 	ServiceType        deploy.ServiceType
 	ServiceConfig      string
 	Env                string
+	ActiveStatus       ActiveStatus
 }
 
 type UpdateServiceReqDTO struct {

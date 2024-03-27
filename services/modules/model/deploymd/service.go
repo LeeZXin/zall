@@ -72,6 +72,7 @@ func InsertService(ctx context.Context, reqDTO InsertServiceReqDTO) error {
 			ConfigId:           reqDTO.ConfigId,
 			ServiceType:        reqDTO.ServiceType,
 			ServiceConfig:      reqDTO.ServiceConfig,
+			ActiveStatus:       reqDTO.ActiveStatus,
 			CurrProductVersion: reqDTO.CurrProductVersion,
 		})
 	return err

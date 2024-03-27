@@ -363,6 +363,7 @@ func deployProcessService(config *deploymd.Config, p *deploy.ProcessConfig, prod
 			ServiceType:        config.ServiceType,
 			ServiceConfig:      config.Content,
 			Env:                env,
+			ActiveStatus:       deploymd.OnlineStatus,
 		})
 		if err != nil {
 			logger.Logger.Error(err)

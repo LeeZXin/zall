@@ -28,6 +28,14 @@ func (*Config) TableName() string {
 	return ConfigTableName
 }
 
+type ActiveStatus int
+
+const (
+	OfflineStatus ActiveStatus = iota
+	OnlineStatus
+	ShutdownStatus
+)
+
 // Service 部署服务
 type Service struct {
 	Id       int64 `json:"id" xorm:"pk autoincr"`
@@ -38,6 +46,7 @@ type Service struct {
 	LastProductVersion string             `json:"lastProductVersion"`
 	ServiceType        deploy.ServiceType `json:"serviceType"`
 	ServiceConfig      string             `json:"serviceConfig"`
+	ActiveStatus       ActiveStatus       `json:"activeStatus"`
 	Created            time.Time          `json:"created" xorm:"created"`
 	Updated            time.Time          `json:"updated" xorm:"updated"`
 }
