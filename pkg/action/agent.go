@@ -150,7 +150,6 @@ func NewAgentServer() zsf.LifeCycle {
 				fn(session, cmd.Args, workdir, tempDir)
 			} else {
 				// 没有配置工作目录就用当前agent目录作为工作目录
-				// 创建工作目录
 				workdir := pwdDir
 				// 创建临时目录
 				tempDir := filepath.Join(workdir, "temp")
