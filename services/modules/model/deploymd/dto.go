@@ -24,6 +24,7 @@ type InsertServiceReqDTO struct {
 	ServiceConfig      string
 	Env                string
 	ActiveStatus       ActiveStatus
+	StartTime          int64
 }
 
 type UpdateServiceReqDTO struct {
@@ -32,6 +33,9 @@ type UpdateServiceReqDTO struct {
 	LastProductVersion string
 	ServiceConfig      string
 	Env                string
+	ActiveStatus       ActiveStatus
+	StartTime          int64
+	ProbeTime          int64
 }
 
 type InsertPlanReqDTO struct {
@@ -42,7 +46,7 @@ type InsertPlanReqDTO struct {
 	Env        string
 }
 
-type InsertLogReqDTO struct {
+type InsertDeployLogReqDTO struct {
 	ConfigId       int64
 	AppId          string
 	ServiceType    deploy.ServiceType
@@ -51,4 +55,13 @@ type InsertLogReqDTO struct {
 	Env            string
 	DeployOutput   string
 	Operator       string
+}
+
+type InsertOpLogReqDTO struct {
+	ConfigId       int64
+	Operator       string
+	ScriptOutput   string
+	Env            string
+	Op             Op
+	ProductVersion string
 }

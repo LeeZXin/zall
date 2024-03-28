@@ -52,3 +52,7 @@ files:
 action:
   agent:
     enabled: true
+
+probe:
+  enabled: true
+  env: sit

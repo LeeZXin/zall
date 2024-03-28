@@ -27,7 +27,7 @@ var (
 func InitTask(env string) {
 	taskEnv = env
 	if taskEnv == "" {
-		logger.Logger.Fatal("empty timer task env")
+		logger.Logger.Fatal("timer task started with empty env")
 	}
 	logger.Logger.Infof("start timer task service with env: %s", taskEnv)
 	taskExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)

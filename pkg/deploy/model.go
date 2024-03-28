@@ -11,7 +11,7 @@ import (
 type ServiceType int
 
 const (
-	ProcessServiceType ServiceType = iota
+	ProcessServiceType ServiceType = iota + 1
 	K8sServiceType
 )
 
@@ -38,7 +38,7 @@ func (t ServiceType) Readable() string {
 type DetectType int
 
 const (
-	TcpDetectType DetectType = iota
+	TcpDetectType DetectType = iota + 1
 	HttpGetDetectType
 )
 
@@ -98,14 +98,15 @@ func (c *DetectConfig) ToDB() ([]byte, error) {
 }
 
 type ProcessConfig struct {
-	Host           string       `json:"host"`
-	AgentHost      string       `json:"agentHost"`
-	AgentToken     string       `json:"agentToken"`
-	SshHost        string       `json:"sshHost"`
-	SshPassword    string       `json:"sshPassword"`
-	DetectConfig   DetectConfig `json:"detectConfig"`
-	DeployScript   string       `json:"deployScript"`
-	ShutdownScript string       `json:"shutdownScript"`
+	Host          string       `json:"host"`
+	AgentHost     string       `json:"agentHost"`
+	AgentToken    string       `json:"agentToken"`
+	SshHost       string       `json:"sshHost"`
+	SshPassword   string       `json:"sshPassword"`
+	DetectConfig  DetectConfig `json:"detectConfig"`
+	DeployScript  string       `json:"deployScript"`
+	StopScript    string       `json:"stopScript"`
+	RestartScript string       `json:"restartScript"`
 }
 
 func (c *ProcessConfig) IsValid() bool {
@@ -125,7 +126,10 @@ func (c *ProcessConfig) IsValid() bool {
 	if c.DeployScript == "" {
 		return false
 	}
-	if c.ShutdownScript == "" {
+	if c.StopScript == "" {
+		return false
+	}
+	if c.RestartScript == "" {
 		return false
 	}
 	return true

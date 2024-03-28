@@ -3,6 +3,7 @@ package deploymd
 import (
 	"context"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
+	"time"
 )
 
 func IsConfigNameValid(name string) bool {
@@ -73,20 +74,61 @@ func InsertService(ctx context.Context, reqDTO InsertServiceReqDTO) error {
 			ServiceType:        reqDTO.ServiceType,
 			ServiceConfig:      reqDTO.ServiceConfig,
 			ActiveStatus:       reqDTO.ActiveStatus,
+			StartTime:          reqDTO.StartTime,
 			CurrProductVersion: reqDTO.CurrProductVersion,
 		})
 	return err
 }
 
-func UpdateService(ctx context.Context, reqDTO UpdateServiceReqDTO) (bool, error) {
+func UpdateServiceWithOldStatus(ctx context.Context, oldStatus ActiveStatus, reqDTO UpdateServiceReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Table("zservice_deploy_service_"+reqDTO.Env).
 		Where("config_id = ?", reqDTO.ConfigId).
-		Cols("service_config", "curr_product_version", "last_product_version").
+		And("active_status = ?", oldStatus).
+		Cols("service_config", "curr_product_version", "last_product_version", "active_status", "probe_time", "start_time").
 		Update(&Service{
 			ServiceConfig:      reqDTO.ServiceConfig,
 			CurrProductVersion: reqDTO.CurrProductVersion,
 			LastProductVersion: reqDTO.LastProductVersion,
+			ActiveStatus:       reqDTO.ActiveStatus,
+			StartTime:          reqDTO.StartTime,
+			ProbeTime:          reqDTO.ProbeTime,
+		})
+	return rows == 1, err
+}
+
+func UpdateServiceActiveStatus(ctx context.Context, configId int64, env string, status ActiveStatus) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_service_"+env).
+		Where("config_id = ?", configId).
+		Cols("active_status").
+		Update(&Service{
+			ActiveStatus: status,
+		})
+	return rows == 1, err
+}
+
+func UpdateServiceActiveStatusAndProbeTimeWithOldStatus(ctx context.Context, configId int64, env string, newStatus, oldStatus ActiveStatus, probeTime int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_service_"+env).
+		Where("config_id = ?", configId).
+		And("active_status = ?", oldStatus).
+		Cols("active_status", "probe_time").
+		Update(&Service{
+			ActiveStatus: newStatus,
+			ProbeTime:    probeTime,
+		})
+	return rows == 1, err
+}
+
+func UpdateServiceActiveStatusWithOldStatus(ctx context.Context, configId int64, env string, newStatus, oldStatus ActiveStatus) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_service_"+env).
+		Where("config_id = ?", configId).
+		And("active_status = ?", oldStatus).
+		Cols("active_status").
+		Update(&Service{
+			ActiveStatus: newStatus,
 		})
 	return rows == 1, err
 }
@@ -98,6 +140,15 @@ func DeleteServiceByConfigId(ctx context.Context, configId int64, env string) er
 		Limit(1).
 		Delete(new(Service))
 	return err
+}
+
+func ListServiceByConfigIdList(ctx context.Context, configIdList []int64, env string) ([]Service, error) {
+	ret := make([]Service, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_service_"+env).
+		In("config_id", configIdList).
+		Find(&ret)
+	return ret, err
 }
 
 func GetServiceByConfigId(ctx context.Context, configId int64, env string) (Service, bool, error) {
@@ -121,10 +172,10 @@ func InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) error {
 	return err
 }
 
-func InsertLog(ctx context.Context, reqDTO InsertLogReqDTO) error {
+func InsertDeployLog(ctx context.Context, reqDTO InsertDeployLogReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Table("zservice_deploy_log_" + reqDTO.Env).
-		Insert(&Log{
+		Insert(&DeployLog{
 			ConfigId:       reqDTO.ConfigId,
 			AppId:          reqDTO.AppId,
 			ServiceType:    reqDTO.ServiceType,
@@ -143,4 +194,65 @@ func GetTeamConfig(ctx context.Context, teamId int64, env string) (TeamConfig, b
 		Where("team_id = ?", teamId).
 		Get(&ret)
 	return ret, b, err
+}
+
+func InsertProbeInstance(ctx context.Context, instanceId, env string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_probe_instance_" + env).
+		Insert(&ProbeInstance{
+			InstanceId:    instanceId,
+			HeartbeatTime: time.Now().UnixMilli(),
+		})
+	return err
+}
+
+func GetValidProbeInstances(ctx context.Context, env string, after int64) ([]ProbeInstance, error) {
+	ret := make([]ProbeInstance, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_probe_instance_"+env).
+		Where("heartbeat_time > ?", after).
+		OrderBy("id asc").
+		Find(&ret)
+	return ret, err
+}
+
+func DeleteProbeInstance(ctx context.Context, instanceId, env string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_probe_instance_"+env).
+		Where("instance_id = ?", instanceId).
+		Delete(new(ProbeInstance))
+	return err
+}
+
+func UpdateProbeInstanceHeartbeatTime(ctx context.Context, instanceId, env string, heartbeatTime int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_probe_instance_"+env).
+		Where("instance_id = ?", instanceId).
+		Cols("heartbeat_time").
+		Update(&ProbeInstance{
+			HeartbeatTime: heartbeatTime,
+		})
+	return rows == 1, err
+}
+
+func IterateService(ctx context.Context, env string, statusList []ActiveStatus, fn func(*Service) error) error {
+	return xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_service_"+env).
+		In("active_status", statusList).
+		Iterate(new(Service), func(_ int, bean interface{}) error {
+			return fn(bean.(*Service))
+		})
+}
+
+func InsertOpLog(ctx context.Context, reqDTO InsertOpLogReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_op_log_" + reqDTO.Env).
+		Insert(&OpLog{
+			Op:             reqDTO.Op,
+			ConfigId:       reqDTO.ConfigId,
+			Operator:       reqDTO.Operator,
+			ScriptOutput:   reqDTO.ScriptOutput,
+			ProductVersion: reqDTO.ProductVersion,
+		})
+	return err
 }

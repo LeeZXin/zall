@@ -388,6 +388,18 @@ var (
 			Id:         "deploySrv.InsertPlan",
 			DefaultRet: "创建发布计划",
 		},
+		ReDeployService: KeyItem{
+			Id:         "deploySrv.ReDeployService",
+			DefaultRet: "重建服务",
+		},
+		StopService: KeyItem{
+			Id:         "deploySrv.StopService",
+			DefaultRet: "下线服务",
+		},
+		RestartService: KeyItem{
+			Id:         "deploySrv.RestartService",
+			DefaultRet: "重启服务",
+		},
 	}
 )
 
@@ -532,7 +544,10 @@ type GitNodeSrvKeys struct {
 }
 
 type DeploySrvKeys struct {
-	UpdateConfig KeyItem
-	InsertConfig KeyItem
-	InsertPlan   KeyItem
+	UpdateConfig    KeyItem
+	InsertConfig    KeyItem
+	InsertPlan      KeyItem
+	ReDeployService KeyItem
+	StopService     KeyItem
+	RestartService  KeyItem
 }

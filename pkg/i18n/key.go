@@ -455,3 +455,30 @@ var (
 		DefaultRet: "未知服务类型",
 	}
 )
+
+var (
+	ServiceAbnormalStatus = KeyItem{
+		Id:         "service.abnormalStatus",
+		DefaultRet: "异常",
+	}
+	ServiceStartingStatus = KeyItem{
+		Id:         "service.startingStatus",
+		DefaultRet: "启动中",
+	}
+	ServiceStartedStatus = KeyItem{
+		Id:         "service.startedStatus",
+		DefaultRet: "正常",
+	}
+	ServiceStoppingStatus = KeyItem{
+		Id:         "service.stoppingStatus",
+		DefaultRet: "下线中",
+	}
+	ServiceStoppedStatus = KeyItem{
+		Id:         "service.stoppedStatus",
+		DefaultRet: "已下线",
+	}
+	ServiceUnknownStatus = KeyItem{
+		Id:         "service.unknownStatus",
+		DefaultRet: "未知状态",
+	}
+)

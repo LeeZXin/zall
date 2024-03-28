@@ -15,9 +15,7 @@ var Timer = &cli.Command{
 }
 
 func runTimer(*cli.Context) error {
-	{
-		tasksrv.InitTask(static.GetString("timer.env"))
-	}
+	tasksrv.InitTask(static.GetString("timer.env"))
 	zsf.Run()
 	return nil
 }

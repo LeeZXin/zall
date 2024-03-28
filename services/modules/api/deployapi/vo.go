@@ -47,4 +47,37 @@ type DeployServiceWithoutPlanReqVO struct {
 	Env            string `json:"env"`
 	ProductVersion string `json:"productVersion"`
 	Operator       string `json:"operator"`
+	AppId          string `json:"appId"`
+}
+
+type ReDeployServiceReqVO struct {
+	ConfigId int64  `json:"configId"`
+	Env      string `json:"env"`
+}
+
+type StopServiceReqVO struct {
+	ConfigId int64  `json:"configId"`
+	Env      string `json:"env"`
+}
+
+type RestartServiceReqVO struct {
+	ConfigId int64  `json:"configId"`
+	Env      string `json:"env"`
+}
+
+type ListServiceReqVO struct {
+	AppId string `json:"appId"`
+	Env   string `json:"env"`
+}
+
+type ServiceVO struct {
+	CurrProductVersion string                `json:"currProductVersion"`
+	LastProductVersion string                `json:"lastProductVersion"`
+	ServiceType        string                `json:"serviceType"`
+	ProcessConfig      *deploy.ProcessConfig `json:"processConfig,omitempty"`
+	K8sConfig          *deploy.K8sConfig     `json:"k8SConfig,omitempty"`
+	ActiveStatus       string                `json:"activeStatus"`
+	StartTime          string                `json:"startTime"`
+	ProbeTime          string                `json:"probeTime"`
+	Created            string                `json:"created"`
 }

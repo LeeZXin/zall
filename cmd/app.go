@@ -16,6 +16,8 @@ var (
 		PropServer,
 		TcpDetect,
 		FileServer,
+		Probe,
+		DeployServer,
 	}
 )
 

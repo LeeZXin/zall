@@ -2,15 +2,18 @@ package deploymd
 
 import (
 	"github.com/LeeZXin/zall/pkg/deploy"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
 )
 
 const (
-	TeamConfigTableName = "zservice_team_config"
-	ConfigTableName     = "zservice_deploy_config"
-	ServiceTableName    = "zservice_deploy_service"
-	LogTableName        = "zservice_deploy_log"
-	PlanTableName       = "zservice_deploy_plan"
+	TeamConfigTableName    = "zservice_team_config"
+	ConfigTableName        = "zservice_deploy_config"
+	ServiceTableName       = "zservice_deploy_service"
+	DeployLogTableName     = "zservice_deploy_log"
+	PlanTableName          = "zservice_deploy_plan"
+	ProbeInstanceTableName = "zservice_probe_instance"
+	OpLogTableName         = "zservice_op_log"
 )
 
 // Config 部署配置
@@ -31,10 +34,29 @@ func (*Config) TableName() string {
 type ActiveStatus int
 
 const (
-	OfflineStatus ActiveStatus = iota
-	OnlineStatus
-	ShutdownStatus
+	AbnormalStatus ActiveStatus = iota + 1
+	StartingStatus
+	StartedStatus
+	StoppingStatus
+	StoppedStatus
 )
+
+func (s ActiveStatus) Readable() string {
+	switch s {
+	case AbnormalStatus:
+		return i18n.GetByKey(i18n.ServiceAbnormalStatus)
+	case StartingStatus:
+		return i18n.GetByKey(i18n.ServiceStartingStatus)
+	case StartedStatus:
+		return i18n.GetByKey(i18n.ServiceStartedStatus)
+	case StoppingStatus:
+		return i18n.GetByKey(i18n.ServiceStoppingStatus)
+	case StoppedStatus:
+		return i18n.GetByKey(i18n.ServiceStoppedStatus)
+	default:
+		return i18n.GetByKey(i18n.ServiceUnknownStatus)
+	}
+}
 
 // Service 部署服务
 type Service struct {
@@ -47,6 +69,8 @@ type Service struct {
 	ServiceType        deploy.ServiceType `json:"serviceType"`
 	ServiceConfig      string             `json:"serviceConfig"`
 	ActiveStatus       ActiveStatus       `json:"activeStatus"`
+	StartTime          int64              `json:"startTime"`
+	ProbeTime          int64              `json:"probeTime"`
 	Created            time.Time          `json:"created" xorm:"created"`
 	Updated            time.Time          `json:"updated" xorm:"updated"`
 }
@@ -55,8 +79,8 @@ func (*Service) TableName() string {
 	return ServiceTableName
 }
 
-// Log 部署日志
-type Log struct {
+// DeployLog 部署日志
+type DeployLog struct {
 	Id             int64              `json:"id" xorm:"pk autoincr"`
 	ConfigId       int64              `json:"configId"`
 	AppId          string             `json:"appId"`
@@ -68,14 +92,14 @@ type Log struct {
 	Created        time.Time          `json:"created" xorm:"created"`
 }
 
-func (*Log) TableName() string {
-	return LogTableName
+func (*DeployLog) TableName() string {
+	return DeployLogTableName
 }
 
 type PlanStatus int
 
 const (
-	Created PlanStatus = iota
+	Created PlanStatus = iota + 1
 	Running
 	Canceled
 )
@@ -105,4 +129,36 @@ type TeamConfig struct {
 
 func (*TeamConfig) TableName() string {
 	return TeamConfigTableName
+}
+
+type ProbeInstance struct {
+	Id            int64     `json:"id" xorm:"pk autoincr"`
+	InstanceId    string    `json:"instanceId"`
+	HeartbeatTime int64     `json:"heartbeatTime"`
+	Created       time.Time `json:"created" xorm:"created"`
+}
+
+func (*ProbeInstance) TableName() string {
+	return ProbeInstanceTableName
+}
+
+type Op int
+
+const (
+	RestartServiceOp Op = iota + 1
+	StopServiceOp
+)
+
+type OpLog struct {
+	Id             int64     `json:"id" xorm:"pk autoincr"`
+	ConfigId       int64     `json:"configId"`
+	Op             Op        `json:"op"`
+	Operator       string    `json:"operator"`
+	ScriptOutput   string    `json:"scriptOutput"`
+	ProductVersion string    `json:"productVersion"`
+	Created        time.Time `json:"created" xorm:"created"`
+}
+
+func (*OpLog) TableName() string {
+	return OpLogTableName
 }

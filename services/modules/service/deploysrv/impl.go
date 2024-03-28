@@ -3,27 +3,15 @@ package deploysrv
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/LeeZXin/zall/fileserv/modules/model/productmd"
-	"github.com/LeeZXin/zall/meta/modules/model/appmd"
-	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
-	"github.com/LeeZXin/zall/pkg/action"
-	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"strings"
-)
-
-var (
-	httpClient = httputil.NewRetryableHttpClient()
 )
 
 type outerImpl struct{}
@@ -34,16 +22,8 @@ func (*outerImpl) ListConfig(ctx context.Context, reqDTO ListConfigReqDTO) ([]Co
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	app, b, err := appmd.GetByAppId(ctx, reqDTO.AppId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	if !b {
-		return nil, util.InvalidArgsError()
-	}
 	// 校验权限
-	err = checkDeployConfigPerm(ctx, app.TeamId, reqDTO.Operator)
+	err := checkDeployConfigPerm(ctx, reqDTO.AppId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -97,19 +77,8 @@ func (*outerImpl) UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) (
 	if !b {
 		err = util.InvalidArgsError()
 	}
-	app, b, err := appmd.GetByAppId(ctx, cfg.AppId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		logger.Logger.WithContext(ctx).Errorf("configId: %v 's appId: %v does not exists", reqDTO.ConfigId, cfg.AppId)
-		err = util.ThereHasBugErr()
-		return
-	}
 	// 校验权限
-	err = checkDeployConfigPerm(ctx, app.TeamId, reqDTO.Operator)
+	err = checkDeployConfigPerm(ctx, cfg.AppId, reqDTO.Operator)
 	if err != nil {
 		return
 	}
@@ -162,18 +131,8 @@ func (*outerImpl) InsertConfig(ctx context.Context, reqDTO InsertConfigReqDTO) (
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	app, b, err := appmd.GetByAppId(ctx, reqDTO.AppId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
 	// 校验权限
-	err = checkDeployConfigPerm(ctx, app.TeamId, reqDTO.Operator)
+	err = checkDeployConfigPerm(ctx, reqDTO.AppId, reqDTO.Operator)
 	if err != nil {
 		return
 	}
@@ -253,48 +212,216 @@ func (*outerImpl) InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (err 
 	return
 }
 
-func checkDeployConfigPerm(ctx context.Context, teamId int64, operator apisession.UserInfo) error {
-	if operator.IsAdmin {
-		_, b, err := teammd.GetByTeamId(ctx, teamId)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
-		}
-		if !b {
-			return util.InvalidArgsError()
-		}
-		return nil
+// ReDeployService 重建服务
+func (*outerImpl) ReDeployService(ctx context.Context, reqDTO ReDeployServiceReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.ReDeployService),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 检查参数
+	var (
+		config  deploymd.Config
+		b       bool
+		service deploymd.Service
+	)
+	config, b, err = deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
 	if !b {
-		return util.UnauthorizedError()
+		err = util.InvalidArgsError()
+		return
 	}
-	if p.IsAdmin || p.PermDetail.TeamPerm.CanHandleDeployConfig {
-		return nil
+	// 检查权限
+	if err = checkAppDevelopPerm(ctx, config.AppId, reqDTO.Operator); err != nil {
+		return
 	}
-	return util.UnauthorizedError()
+	service, b, err = deploymd.GetServiceByConfigId(ctx, reqDTO.ConfigId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
+	err = deployService(&config, service.CurrProductVersion, reqDTO.Env, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
 }
 
-func checkDeployPlanPerm(ctx context.Context, teamId int64, operator apisession.UserInfo) error {
-	if operator.IsAdmin {
-		_, b, err := teammd.GetByTeamId(ctx, teamId)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
-		}
-		if !b {
-			return util.InvalidArgsError()
-		}
-		return nil
+// StopService 下线服务
+func (*outerImpl) StopService(ctx context.Context, reqDTO StopServiceReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.StopService),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 检查参数
+	var (
+		config  deploymd.Config
+		b       bool
+		service deploymd.Service
+	)
+	config, b, err = deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
 	if !b {
-		return util.UnauthorizedError()
+		err = util.InvalidArgsError()
+		return
 	}
-	if p.IsAdmin || p.PermDetail.TeamPerm.CanHandleDeployPlan {
-		return nil
+	// 检查权限
+	if err = checkAppDevelopPerm(ctx, config.AppId, reqDTO.Operator); err != nil {
+		return
 	}
-	return util.UnauthorizedError()
+	service, b, err = deploymd.GetServiceByConfigId(ctx, reqDTO.ConfigId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
+	err = stopService(&config, &service, reqDTO.Env, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// RestartService 重启服务
+func (*outerImpl) RestartService(ctx context.Context, reqDTO RestartServiceReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.RestartService),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 检查参数
+	var (
+		config  deploymd.Config
+		b       bool
+		service deploymd.Service
+	)
+	config, b, err = deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
+	// 检查权限
+	if err = checkAppDevelopPerm(ctx, config.AppId, reqDTO.Operator); err != nil {
+		return
+	}
+	service, b, err = deploymd.GetServiceByConfigId(ctx, reqDTO.ConfigId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
+	err = restartService(&config, &service, reqDTO.Env, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// ListService 服务列表
+func (*outerImpl) ListService(ctx context.Context, reqDTO ListServiceReqDTO) ([]ServiceDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 检查权限
+	if err := checkAppDevelopPerm(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+		return nil, err
+	}
+	// 获取所有配置
+	configs, err := deploymd.ListConfigByAppId(ctx, reqDTO.AppId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	configIdList, _ := listutil.Map(configs, func(t deploymd.Config) (int64, error) {
+		return t.Id, nil
+	})
+	services, err := deploymd.ListServiceByConfigIdList(ctx, configIdList, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(services, func(t deploymd.Service) (ServiceDTO, error) {
+		ret := ServiceDTO{
+			CurrProductVersion: t.CurrProductVersion,
+			LastProductVersion: t.LastProductVersion,
+			ServiceType:        t.ServiceType,
+			ActiveStatus:       t.ActiveStatus,
+			StartTime:          t.StartTime,
+			ProbeTime:          t.ProbeTime,
+			Created:            t.Created,
+		}
+		switch t.ServiceType {
+		case deploy.ProcessServiceType:
+			ret.ProcessConfig = new(deploy.ProcessConfig)
+			json.Unmarshal([]byte(t.ServiceConfig), ret.ProcessConfig)
+		case deploy.K8sServiceType:
+			ret.K8sConfig = new(deploy.K8sConfig)
+			json.Unmarshal([]byte(t.ServiceConfig), ret.K8sConfig)
+		}
+		return ret, nil
+	})
 }
 
 type innerImpl struct{}
@@ -306,111 +433,64 @@ func (*innerImpl) DeployServiceWithoutPlan(ctx context.Context, reqDTO DeploySer
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	// 检查配置
-	config, b, err := deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	// 检查制品
-	_, b, err = productmd.GetProduct(ctx, productmd.GetProductReqDTO{
-		AppId: config.AppId,
-		Name:  reqDTO.ProductVersion,
-		Env:   reqDTO.Env,
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	return deployService(&config, reqDTO.ProductVersion, reqDTO.Env, reqDTO.Operator)
-}
-
-func deployService(config *deploymd.Config, productVersion, env, operator string) error {
-	switch config.ServiceType {
-	case deploy.ProcessServiceType:
-		var p deploy.ProcessConfig
-		err := json.Unmarshal([]byte(config.Content), &p)
+	// 如果有configId 优先configId 否则通过appId获取全部的部署配置
+	if reqDTO.ConfigId > 0 {
+		// 检查配置
+		config, b, err := deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
 		if err != nil {
-			logger.Logger.Errorf("configId: %v unmarshal processConfig err: %v", config.Id, err)
-			return err
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
 		}
-		return deployProcessService(config, &p, productVersion, env, operator)
-	case deploy.K8sServiceType:
-		return nil
-	}
-	return fmt.Errorf("configId: %v, unknown service type: %v ", config.Id, config.ServiceType)
-}
-
-func deployProcessService(config *deploymd.Config, p *deploy.ProcessConfig, productVersion, env, operator string) error {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	service, b, err := deploymd.GetServiceByConfigId(ctx, config.Id, env)
-	if err != nil {
-		logger.Logger.Error(err)
-		return err
-	}
-	if !b {
-		// 插入服务列表
-		err = deploymd.InsertService(ctx, deploymd.InsertServiceReqDTO{
-			ConfigId:           config.Id,
-			CurrProductVersion: productVersion,
-			ServiceType:        config.ServiceType,
-			ServiceConfig:      config.Content,
-			Env:                env,
-			ActiveStatus:       deploymd.OnlineStatus,
+		if !b {
+			return util.InvalidArgsError()
+		}
+		// 检查制品
+		_, b, err = productmd.GetProduct(ctx, productmd.GetProductReqDTO{
+			AppId: config.AppId,
+			Name:  reqDTO.ProductVersion,
+			Env:   reqDTO.Env,
 		})
 		if err != nil {
-			logger.Logger.Error(err)
-			return err
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		if !b {
+			return util.InvalidArgsError()
+		}
+		err = deployService(&config, reqDTO.ProductVersion, reqDTO.Env, reqDTO.Operator)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+	} else if reqDTO.AppId != "" {
+		// 检查制品
+		_, b, err := productmd.GetProduct(ctx, productmd.GetProductReqDTO{
+			AppId: reqDTO.AppId,
+			Name:  reqDTO.ProductVersion,
+			Env:   reqDTO.Env,
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		if !b {
+			return util.InvalidArgsError()
+		}
+		// 获取所有部署配置
+		configs, err := deploymd.ListConfigByAppId(ctx, reqDTO.AppId, reqDTO.Env)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		for i := range configs {
+			err = deployService(&configs[i], reqDTO.ProductVersion, reqDTO.Env, reqDTO.Operator)
+			if err != nil {
+				logger.Logger.WithContext(ctx).Error(err)
+				return util.InternalError(err)
+			}
 		}
 	} else {
-		// 更新服务列表
-		_, err = deploymd.UpdateService(ctx, deploymd.UpdateServiceReqDTO{
-			ConfigId:           config.Id,
-			CurrProductVersion: productVersion,
-			LastProductVersion: service.CurrProductVersion,
-			ServiceConfig:      config.Content,
-			Env:                env,
-		})
-		if err != nil {
-			logger.Logger.Error(err)
-			return err
-		}
+		return util.InvalidArgsError()
 	}
-	// 执行部署脚本
-	go func() {
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		script := p.DeployScript
-		script = strings.ReplaceAll(script, "{{productVersion}}", productVersion)
-		command := action.NewServiceCommand(p.AgentHost, p.AgentToken, config.AppId)
-		result, err := command.Execute(strings.NewReader(script), nil)
-		var deployOutput string
-		if err != nil {
-			deployOutput = err.Error()
-		} else {
-			deployOutput = result
-		}
-		// 插入日志
-		err = deploymd.InsertLog(ctx, deploymd.InsertLogReqDTO{
-			ConfigId:       config.Id,
-			AppId:          config.AppId,
-			ServiceType:    config.ServiceType,
-			ServiceConfig:  config.Content,
-			ProductVersion: productVersion,
-			Env:            env,
-			DeployOutput:   deployOutput,
-			Operator:       operator,
-		})
-		if err != nil {
-			logger.Logger.Error(err)
-		}
-	}()
 	return nil
 }

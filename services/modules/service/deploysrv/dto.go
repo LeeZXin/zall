@@ -145,15 +145,13 @@ func (r *InsertPlanReqDTO) IsValid() error {
 
 type DeployServiceWithoutPlanReqDTO struct {
 	ConfigId       int64  `json:"configId"`
+	AppId          string `json:"appId"`
 	Env            string `json:"env"`
 	ProductVersion string `json:"productVersion"`
 	Operator       string `json:"operator"`
 }
 
 func (r *DeployServiceWithoutPlanReqDTO) IsValid() error {
-	if r.ConfigId <= 0 {
-		return util.InvalidArgsError()
-	}
 	if r.ProductVersion == "" {
 		return util.InvalidArgsError()
 	}
@@ -168,4 +166,108 @@ func (r *DeployServiceWithoutPlanReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	return nil
+}
+
+type ReDeployServiceReqDTO struct {
+	ConfigId int64               `json:"configId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ReDeployServiceReqDTO) IsValid() error {
+	if r.ConfigId <= 0 {
+		return util.InvalidArgsError()
+	}
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type StopServiceReqDTO struct {
+	ConfigId int64               `json:"configId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *StopServiceReqDTO) IsValid() error {
+	if r.ConfigId <= 0 {
+		return util.InvalidArgsError()
+	}
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type RestartServiceReqDTO struct {
+	ConfigId int64               `json:"configId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *RestartServiceReqDTO) IsValid() error {
+	if r.ConfigId <= 0 {
+		return util.InvalidArgsError()
+	}
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListServiceReqDTO struct {
+	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListServiceReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ServiceDTO struct {
+	CurrProductVersion string
+	LastProductVersion string
+	ServiceType        deploy.ServiceType
+	ProcessConfig      *deploy.ProcessConfig
+	K8sConfig          *deploy.K8sConfig
+	ActiveStatus       deploymd.ActiveStatus
+	StartTime          int64
+	ProbeTime          int64
+	Created            time.Time
 }
