@@ -183,6 +183,7 @@ func InsertDeployLog(ctx context.Context, reqDTO InsertDeployLogReqDTO) error {
 			ProductVersion: reqDTO.ProductVersion,
 			DeployOutput:   reqDTO.DeployOutput,
 			Operator:       reqDTO.Operator,
+			PlanId:         reqDTO.PlanId,
 		})
 	return err
 }
@@ -255,4 +256,34 @@ func InsertOpLog(ctx context.Context, reqDTO InsertOpLogReqDTO) error {
 			ProductVersion: reqDTO.ProductVersion,
 		})
 	return err
+}
+
+func ListDeployLog(ctx context.Context, reqDTO ListDeployLogReqDTO) ([]DeployLog, error) {
+	session := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_log_"+reqDTO.Env).
+		Where("config_id = ?", reqDTO.ConfigId)
+	if reqDTO.Cursor > 0 {
+		session.And("id < ?", reqDTO.Cursor)
+	}
+	if reqDTO.Limit > 0 {
+		session.Limit(reqDTO.Limit)
+	}
+	ret := make([]DeployLog, 0)
+	err := session.OrderBy("id desc").Find(&ret)
+	return ret, err
+}
+
+func ListOpLog(ctx context.Context, reqDTO ListOpLogReqDTO) ([]OpLog, error) {
+	session := xormutil.MustGetXormSession(ctx).
+		Table("zservice_op_log_"+reqDTO.Env).
+		Where("config_id = ?", reqDTO.ConfigId)
+	if reqDTO.Cursor > 0 {
+		session.And("id < ?", reqDTO.Cursor)
+	}
+	if reqDTO.Limit > 0 {
+		session.Limit(reqDTO.Limit)
+	}
+	ret := make([]OpLog, 0)
+	err := session.OrderBy("id desc").Find(&ret)
+	return ret, err
 }

@@ -49,6 +49,7 @@ type InsertPlanReqDTO struct {
 type InsertDeployLogReqDTO struct {
 	ConfigId       int64
 	AppId          string
+	PlanId         int64
 	ServiceType    deploy.ServiceType
 	ServiceConfig  string
 	ProductVersion string
@@ -64,4 +65,18 @@ type InsertOpLogReqDTO struct {
 	Env            string
 	Op             Op
 	ProductVersion string
+}
+
+type ListDeployLogReqDTO struct {
+	ConfigId int64
+	Cursor   int64
+	Limit    int
+	Env      string
+}
+
+type ListOpLogReqDTO struct {
+	ConfigId int64
+	Cursor   int64
+	Limit    int
+	Env      string
 }

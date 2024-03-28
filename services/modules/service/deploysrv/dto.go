@@ -168,13 +168,14 @@ func (r *DeployServiceWithoutPlanReqDTO) IsValid() error {
 	return nil
 }
 
-type ReDeployServiceReqDTO struct {
-	ConfigId int64               `json:"configId"`
-	Env      string              `json:"env"`
-	Operator apisession.UserInfo `json:"operator"`
+type DeployServiceReqDTO struct {
+	ConfigId       int64               `json:"configId"`
+	Env            string              `json:"env"`
+	ProductVersion string              `json:"productVersion"`
+	Operator       apisession.UserInfo `json:"operator"`
 }
 
-func (r *ReDeployServiceReqDTO) IsValid() error {
+func (r *DeployServiceReqDTO) IsValid() error {
 	if r.ConfigId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -186,6 +187,9 @@ func (r *ReDeployServiceReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.ProductVersion == "" {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -270,4 +274,78 @@ type ServiceDTO struct {
 	StartTime          int64
 	ProbeTime          int64
 	Created            time.Time
+}
+
+type ListDeployLogReqDTO struct {
+	ConfigId int64               `json:"configId"`
+	Env      string              `json:"env"`
+	Cursor   int64               `json:"cursor"`
+	Limit    int                 `json:"limit"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListDeployLogReqDTO) IsValid() error {
+	if r.ConfigId <= 0 {
+		return util.InvalidArgsError()
+	}
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DeployLogDTO struct {
+	ServiceType    deploy.ServiceType
+	ServiceConfig  string
+	ProductVersion string
+	Operator       string
+	DeployOutput   string
+	PlanId         int64
+	Created        time.Time
+}
+
+type ListOpLogReqDTO struct {
+	ConfigId int64               `json:"configId"`
+	Env      string              `json:"env"`
+	Cursor   int64               `json:"cursor"`
+	Limit    int                 `json:"limit"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListOpLogReqDTO) IsValid() error {
+	if r.ConfigId <= 0 {
+		return util.InvalidArgsError()
+	}
+	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == r.Env, nil
+	})
+	if !contains {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type OpLogDTO struct {
+	Op             deploymd.Op
+	Operator       string
+	ScriptOutput   string
+	ProductVersion string
+	Created        time.Time
 }

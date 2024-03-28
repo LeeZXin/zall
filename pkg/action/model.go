@@ -321,7 +321,7 @@ func (s *Step) Run(opts *RunOpts, _ context.Context, j *Job, index int) error {
 			EventTime: beginTime,
 		})
 	}
-	return nil
+	return err
 }
 
 type Job struct {

@@ -37,6 +37,7 @@ func InitApi() {
 			group.POST("/update", updateConfig)
 			group.POST("/insert", insertConfig)
 		}
+
 		group = e.Group("/api/deployPlan")
 		{
 			group.POST("/insert", insertPlan)
@@ -47,10 +48,21 @@ func InitApi() {
 			group.POST("/list", listService)
 			group.POST("/deployWithPlan")
 			group.POST("/stop", stopService)
-			group.POST("/reDeploy", reDeployService)
+			group.POST("/deploy", deployService)
 			group.POST("/restart", restartService)
 		}
 
+		group = e.Group("/api/deployLog", apisession.CheckLogin)
+		{
+			// 部署日志
+			group.POST("/list", listDeployLog)
+		}
+
+		group = e.Group("/api/deployOp", apisession.CheckLogin)
+		{
+			// 操作日志
+			group.POST("/list", listOpLog)
+		}
 	})
 }
 
@@ -168,13 +180,14 @@ func deployWithoutPlan(c *gin.Context) {
 	}
 }
 
-func reDeployService(c *gin.Context) {
-	var req ReDeployServiceReqVO
+func deployService(c *gin.Context) {
+	var req DeployServiceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.ReDeployService(c, deploysrv.ReDeployServiceReqDTO{
-			ConfigId: req.ConfigId,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
+		err := deploysrv.Outer.DeployService(c, deploysrv.DeployServiceReqDTO{
+			ConfigId:       req.ConfigId,
+			Env:            req.Env,
+			ProductVersion: req.ProductVersion,
+			Operator:       apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -244,6 +257,74 @@ func listService(c *gin.Context) {
 		c.JSON(http.StatusOK, ginutil.DataResp[[]ServiceVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     data,
+		})
+	}
+}
+
+func listDeployLog(c *gin.Context) {
+	var req ListDeployLogReqVO
+	if util.ShouldBindJSON(&req, c) {
+		logs, next, err := deploysrv.Outer.ListDeployLog(c, deploysrv.ListDeployLogReqDTO{
+			ConfigId: req.ConfigId,
+			Env:      req.Env,
+			Cursor:   req.Cursor,
+			Limit:    req.Limit,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(logs, func(t deploysrv.DeployLogDTO) (DeployLogVO, error) {
+			return DeployLogVO{
+				ServiceType:    t.ServiceType.Readable(),
+				ServiceConfig:  t.ServiceConfig,
+				ProductVersion: t.ProductVersion,
+				Operator:       t.Operator,
+				DeployOutput:   t.DeployOutput,
+				Created:        t.Created.Format(time.DateTime),
+				PlanId:         t.PlanId,
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.PageResp[[]DeployLogVO]{
+			DataResp: ginutil.DataResp[[]DeployLogVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: next,
+		})
+	}
+}
+
+func listOpLog(c *gin.Context) {
+	var req ListOpLogReqVO
+	if util.ShouldBindJSON(&req, c) {
+		logs, next, err := deploysrv.Outer.ListOpLog(c, deploysrv.ListOpLogReqDTO{
+			ConfigId: req.ConfigId,
+			Env:      req.Env,
+			Cursor:   req.Cursor,
+			Limit:    req.Limit,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(logs, func(t deploysrv.OpLogDTO) (OpLogVO, error) {
+			return OpLogVO{
+				Op:             t.Op.Readable(),
+				Operator:       t.Operator,
+				ScriptOutput:   t.ScriptOutput,
+				ProductVersion: t.ProductVersion,
+				Created:        t.Created.Format(time.DateTime),
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.PageResp[[]OpLogVO]{
+			DataResp: ginutil.DataResp[[]OpLogVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: next,
 		})
 	}
 }

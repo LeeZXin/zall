@@ -81,8 +81,10 @@ func (*Service) TableName() string {
 
 // DeployLog 部署日志
 type DeployLog struct {
-	Id             int64              `json:"id" xorm:"pk autoincr"`
-	ConfigId       int64              `json:"configId"`
+	Id       int64 `json:"id" xorm:"pk autoincr"`
+	ConfigId int64 `json:"configId"`
+	// 发布计划id
+	PlanId         int64              `json:"planId"`
 	AppId          string             `json:"appId"`
 	ServiceType    deploy.ServiceType `json:"serviceType"`
 	ServiceConfig  string             `json:"serviceConfig"`
@@ -99,9 +101,9 @@ func (*DeployLog) TableName() string {
 type PlanStatus int
 
 const (
-	Created PlanStatus = iota + 1
-	Running
-	Canceled
+	CreatedPlanStatus PlanStatus = iota + 1
+	RunningPlanStatus
+	CanceledPlanStatus
 )
 
 // Plan 发布计划
@@ -148,6 +150,17 @@ const (
 	RestartServiceOp Op = iota + 1
 	StopServiceOp
 )
+
+func (o Op) Readable() string {
+	switch o {
+	case RestartServiceOp:
+		return i18n.GetByKey(i18n.ServiceRestartOp)
+	case StopServiceOp:
+		return i18n.GetByKey(i18n.ServiceStopOp)
+	default:
+		return i18n.GetByKey(i18n.ServiceUnknownOp)
+	}
+}
 
 type OpLog struct {
 	Id             int64     `json:"id" xorm:"pk autoincr"`

@@ -31,6 +31,7 @@ import (
 	"github.com/LeeZXin/zall/tcpdetect/modules/service/detectsrv"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
 	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
+	"github.com/LeeZXin/zsf/actuator"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
@@ -135,7 +136,7 @@ func runZall(*cli.Context) error {
 			deploysrv.InitProbeTask(static.GetString("probe.env"))
 		}
 	}
-	lifeCycles = append(lifeCycles, httpserver.NewServer())
+	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer())
 	zsf.Run(
 		zsf.WithLifeCycles(lifeCycles...),
 	)

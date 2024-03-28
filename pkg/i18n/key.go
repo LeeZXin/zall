@@ -481,4 +481,16 @@ var (
 		Id:         "service.unknownStatus",
 		DefaultRet: "未知状态",
 	}
+	ServiceRestartOp = KeyItem{
+		Id:         "service.restartOp",
+		DefaultRet: "重启服务",
+	}
+	ServiceStopOp = KeyItem{
+		Id:         "service.stopOp",
+		DefaultRet: "下线服务",
+	}
+	ServiceUnknownOp = KeyItem{
+		Id:         "service.unknownOp",
+		DefaultRet: "未知类型",
+	}
 )

@@ -389,7 +389,7 @@ var (
 			DefaultRet: "创建发布计划",
 		},
 		ReDeployService: KeyItem{
-			Id:         "deploySrv.ReDeployService",
+			Id:         "deploySrv.DeployService",
 			DefaultRet: "重建服务",
 		},
 		StopService: KeyItem{

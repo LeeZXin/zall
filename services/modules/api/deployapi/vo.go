@@ -50,9 +50,10 @@ type DeployServiceWithoutPlanReqVO struct {
 	AppId          string `json:"appId"`
 }
 
-type ReDeployServiceReqVO struct {
-	ConfigId int64  `json:"configId"`
-	Env      string `json:"env"`
+type DeployServiceReqVO struct {
+	ConfigId       int64  `json:"configId"`
+	Env            string `json:"env"`
+	ProductVersion string `json:"productVersion"`
 }
 
 type StopServiceReqVO struct {
@@ -80,4 +81,36 @@ type ServiceVO struct {
 	StartTime          string                `json:"startTime"`
 	ProbeTime          string                `json:"probeTime"`
 	Created            string                `json:"created"`
+}
+
+type ListDeployLogReqVO struct {
+	ConfigId int64  `json:"configId"`
+	Cursor   int64  `json:"cursor"`
+	Limit    int    `json:"limit"`
+	Env      string `json:"env"`
+}
+
+type DeployLogVO struct {
+	ServiceType    string `json:"serviceType"`
+	ServiceConfig  string `json:"serviceConfig"`
+	ProductVersion string `json:"productVersion"`
+	Operator       string `json:"operator"`
+	DeployOutput   string `json:"deployOutput"`
+	Created        string `json:"created"`
+	PlanId         int64  `json:"planId"`
+}
+
+type ListOpLogReqVO struct {
+	ConfigId int64  `json:"configId"`
+	Cursor   int64  `json:"cursor"`
+	Limit    int    `json:"limit"`
+	Env      string `json:"env"`
+}
+
+type OpLogVO struct {
+	Op             string `json:"op"`
+	Operator       string `json:"operator"`
+	ScriptOutput   string `json:"scriptOutput"`
+	ProductVersion string `json:"productVersion"`
+	Created        string `json:"created"`
 }

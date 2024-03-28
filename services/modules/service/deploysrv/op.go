@@ -92,7 +92,7 @@ func checkDeployPlanPerm(ctx context.Context, teamId int64, operator apisession.
 	return util.UnauthorizedError()
 }
 
-func deployService(config *deploymd.Config, productVersion, env, operator string) error {
+func deployService(config *deploymd.Config, productVersion, env, operator string, planId int64) error {
 	switch config.ServiceType {
 	case deploy.ProcessServiceType:
 		var p deploy.ProcessConfig
@@ -103,14 +103,14 @@ func deployService(config *deploymd.Config, productVersion, env, operator string
 		if !p.IsValid() {
 			return fmt.Errorf("configId: %v invalid processConfig", config.Id)
 		}
-		return deployProcessService(config, &p, productVersion, env, operator)
+		return deployProcessService(config, &p, productVersion, env, operator, planId)
 	case deploy.K8sServiceType:
 		return nil
 	}
 	return fmt.Errorf("configId: %v, unknown service type: %v ", config.Id, config.ServiceType)
 }
 
-func deployProcessService(config *deploymd.Config, p *deploy.ProcessConfig, productVersion, env, operator string) error {
+func deployProcessService(config *deploymd.Config, p *deploy.ProcessConfig, productVersion, env, operator string, planId int64) error {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	service, b, err := deploymd.GetServiceByConfigId(ctx, config.Id, env)
@@ -187,6 +187,7 @@ func deployProcessService(config *deploymd.Config, p *deploy.ProcessConfig, prod
 			Env:            env,
 			DeployOutput:   deployOutput,
 			Operator:       operator,
+			PlanId:         planId,
 		})
 		if err != nil {
 			logger.Logger.Error(err)
