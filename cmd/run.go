@@ -5,7 +5,6 @@ import (
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
-	"github.com/LeeZXin/zall/genid/modules/api/idapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
 	"github.com/LeeZXin/zall/git/modules/api/gitnodeapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
@@ -24,6 +23,8 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/git"
+	"github.com/LeeZXin/zall/promagent/agent"
+	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/prop/modules/api/propapi"
 	"github.com/LeeZXin/zall/services/modules/api/deployapi"
 	"github.com/LeeZXin/zall/services/modules/service/deploysrv"
@@ -34,6 +35,7 @@ import (
 	"github.com/LeeZXin/zsf/actuator"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/prom"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
@@ -91,14 +93,7 @@ func runZall(*cli.Context) error {
 		taskapi.InitApi()
 		if static.GetBool("timer.enabled") {
 			logger.Logger.Info("timer executor enabled")
-			tasksrv.InitTask(static.GetString("timer.env"))
-		}
-	}
-	// for idserver
-	{
-		if static.GetBool("idserver.enabled") {
-			logger.Logger.Info("id server enabled")
-			idapi.InitApi()
+			tasksrv.InitTask()
 		}
 	}
 	// for prop
@@ -133,10 +128,17 @@ func runZall(*cli.Context) error {
 		deployapi.InitApi()
 		if static.GetBool("probe.enabled") {
 			logger.Logger.Info("service probe enabled")
-			deploysrv.InitProbeTask(static.GetString("probe.env"))
+			deploysrv.InitProbeTask()
 		}
 	}
-	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer())
+	// prom
+	{
+		promapi.InitApi()
+		if static.GetBool("prom.agent.enabled") {
+			agent.StartAgent()
+		}
+	}
+	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer(), prom.NewServer())
 	zsf.Run(
 		zsf.WithLifeCycles(lifeCycles...),
 	)

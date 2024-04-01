@@ -4,14 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/LeeZXin/zall/fileserv/modules/model/productmd"
+	"github.com/LeeZXin/zall/meta/modules/model/appmd"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"time"
 )
 
 type outerImpl struct{}
@@ -177,39 +181,341 @@ func (*outerImpl) InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (err 
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
+	// 检查deployItems
+	if reqDTO.PlanType == deploymd.AddServiceBeforePlanCreatingType {
+		if err = checkDeployItems(ctx, reqDTO.TeamId, reqDTO.DeployItems, reqDTO.Operator, reqDTO.Env); err != nil {
+			return
+		}
+	}
 	// 检查权限
-	hasPerm := checkDeployPlanPerm(ctx, reqDTO.TeamId, reqDTO.Operator)
-	if hasPerm != nil {
-		var (
-			teamConfig deploymd.TeamConfig
-			b          bool
-		)
-		teamConfig, b, err = deploymd.GetTeamConfig(ctx, reqDTO.TeamId, reqDTO.Env)
+	if err = checkDeployPlanPerm(ctx, reqDTO.TeamId, reqDTO.Operator); err != nil {
+		// 检查用户是否归属在项目组下
+		var b bool
+		_, b, err = teammd.GetTeamUser(ctx, reqDTO.TeamId, reqDTO.Operator.Account)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			err = util.InternalError(err)
 			return
 		}
-		if b && teamConfig.Content.InsertPlanWithApprovalFlow {
-			// todo 创建审批流
+		if !b {
+			err = util.UnauthorizedError()
 			return
 		}
-		err = hasPerm
+		if reqDTO.PlanType == deploymd.AddServiceBeforePlanCreatingType {
+			var cfg deploymd.TeamConfig
+			cfg, b, err = deploymd.GetTeamConfig(ctx, reqDTO.TeamId, reqDTO.Env)
+			if err != nil {
+				err = util.InternalError(err)
+				return
+			}
+			if !b {
+				err = util.UnauthorizedError()
+				return
+			}
+			if len(cfg.Content.DeployPlanApprovers) == 0 {
+				err = util.UnauthorizedError()
+				return
+			}
+			err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+				approval, err := deploymd.InsertPlanApproval(ctx, deploymd.InsertPlanApprovalReqDTO{
+					Name:        reqDTO.Name,
+					TeamId:      reqDTO.TeamId,
+					Env:         reqDTO.Env,
+					DeployItems: reqDTO.DeployItems,
+					Creator:     reqDTO.Operator.Account,
+				})
+				if err != nil {
+					return err
+				}
+				reqs, _ := listutil.Map(cfg.Content.DeployPlanApprovers, func(t string) (deploymd.InsertApprovalNotifyReqDTO, error) {
+					return deploymd.InsertApprovalNotifyReqDTO{
+						Aid:          approval.Id,
+						Account:      t,
+						NotifyStatus: deploymd.WaitStatus,
+					}, nil
+				})
+				return deploymd.BatchInsertApprovalNotify(ctx, reqDTO.Env, reqs...)
+			})
+			if err != nil {
+				logger.Logger.WithContext(ctx).Error(err)
+				err = util.InternalError(err)
+				return
+			}
+			return
+		}
+	}
+	switch reqDTO.PlanType {
+	case deploymd.AddServiceAfterPlanCreatingType:
+		_, err = deploymd.InsertPlan(ctx, deploymd.InsertPlanReqDTO{
+			Name:       reqDTO.Name,
+			PlanStatus: deploymd.RunningPlanStatus,
+			PlanType:   reqDTO.PlanType,
+			TeamId:     reqDTO.TeamId,
+			Creator:    reqDTO.Operator.Account,
+			Env:        reqDTO.Env,
+			Expired:    time.Now().Add(time.Duration(reqDTO.ExpireHours) * time.Hour),
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			err = util.InternalError(err)
+			return
+		}
+	case deploymd.AddServiceBeforePlanCreatingType:
+		err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+			plan, err := deploymd.InsertPlan(ctx, deploymd.InsertPlanReqDTO{
+				Name:       reqDTO.Name,
+				PlanStatus: deploymd.RunningPlanStatus,
+				PlanType:   reqDTO.PlanType,
+				TeamId:     reqDTO.TeamId,
+				Creator:    reqDTO.Operator.Account,
+				Env:        reqDTO.Env,
+				Expired:    time.Now().Add(time.Duration(reqDTO.ExpireHours) * time.Hour),
+			})
+			if err != nil {
+				return err
+			}
+			reqs, _ := listutil.Map(reqDTO.DeployItems, func(t deploymd.DeployItem) (deploymd.InsertPlanItemReqDTO, error) {
+				return deploymd.InsertPlanItemReqDTO{
+					PlanId:         plan.Id,
+					ConfigId:       t.ConfigId,
+					ProductVersion: t.ProductVersion,
+					ItemStatus:     deploymd.WaitItemStatus,
+				}, nil
+			})
+			return deploymd.BatchInsertPlanItem(ctx, reqDTO.Env, reqs...)
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			err = util.InternalError(err)
+			return
+		}
+	}
+	return
+}
+
+// ClosePlan 关闭发布计划
+func (*outerImpl) ClosePlan(ctx context.Context, reqDTO ClosePlanReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.ClosePlan),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	err = deploymd.InsertPlan(ctx, deploymd.InsertPlanReqDTO{
-		Name:       reqDTO.Name,
-		PlanStatus: deploymd.CreatedPlanStatus,
-		TeamId:     reqDTO.TeamId,
-		Creator:    reqDTO.Operator.Account,
-		Env:        reqDTO.Env,
-	})
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var (
+		plan deploymd.Plan
+		b    bool
+	)
+	plan, b, err = deploymd.GetPlanById(ctx, reqDTO.PlanId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b || plan.IsExpired() || plan.PlanStatus != deploymd.RunningPlanStatus {
+		err = util.InvalidArgsError()
+		return
+	}
+	err = checkDeployPlanPerm(ctx, plan.TeamId, reqDTO.Operator)
+	// 发布计划创建人和管理员有权限关闭
+	if err != nil && plan.Creator != reqDTO.Operator.Account {
+		return
+	}
+	_, err = deploymd.UpdatePlanStatusById(ctx, reqDTO.PlanId, reqDTO.Env, deploymd.ClosedPlanStatus)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 		return
 	}
 	return
+}
+
+// InsertPlanItem 添加发布计划部署服务
+func (*outerImpl) InsertPlanItem(ctx context.Context, reqDTO InsertPlanItemReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.InsertPlanItem),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var (
+		plan deploymd.Plan
+		b    bool
+		reqs []deploymd.InsertPlanItemReqDTO
+	)
+	plan, b, err = deploymd.GetPlanById(ctx, reqDTO.PlanId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b || plan.PlanType != deploymd.AddServiceAfterPlanCreatingType || plan.IsClosed() {
+		err = util.InvalidArgsError()
+		return
+	}
+	if err = checkDeployItems(ctx, plan.TeamId, reqDTO.DeployItems, reqDTO.Operator, reqDTO.Env); err != nil {
+		return
+	}
+	var items []deploymd.PlanItem
+	items, err = deploymd.ListPlanItemByPlanId(ctx, reqDTO.PlanId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	existsConfigIdList, _ := listutil.Map(items, func(t deploymd.PlanItem) (int64, error) {
+		return t.ConfigId, nil
+	})
+	addConfigIdList, _ := listutil.Map(reqDTO.DeployItems, func(t deploymd.DeployItem) (int64, error) {
+		return t.ConfigId, nil
+	})
+	if hashset.NewHashSet(existsConfigIdList...).
+		Intersect(hashset.NewHashSet(addConfigIdList...)).
+		Size() > 0 {
+		err = util.AlreadyExistsError()
+		return
+	}
+	reqs, err = listutil.Map(reqDTO.DeployItems, func(t deploymd.DeployItem) (deploymd.InsertPlanItemReqDTO, error) {
+		service, b, err := deploymd.GetServiceByConfigId(ctx, t.ConfigId, reqDTO.Env)
+		if err != nil {
+			return deploymd.InsertPlanItemReqDTO{}, err
+		}
+		var lastProductVersion string
+		if b {
+			lastProductVersion = service.CurrProductVersion
+		}
+		return deploymd.InsertPlanItemReqDTO{
+			PlanId:             reqDTO.PlanId,
+			ConfigId:           t.ConfigId,
+			ProductVersion:     t.ProductVersion,
+			ItemStatus:         deploymd.WaitItemStatus,
+			LastProductVersion: lastProductVersion,
+		}, nil
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	err = deploymd.BatchInsertPlanItem(ctx, reqDTO.Env, reqs...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// ClosePlanItem 关闭发布计划单项服务
+func (*outerImpl) ClosePlanItem(ctx context.Context, reqDTO ClosePlanItemReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.ClosePlanItem),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var (
+		planItem deploymd.PlanItem
+		b        bool
+	)
+	planItem, b, err = deploymd.GetPlanItemById(ctx, reqDTO.ItemId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b || planItem.ItemStatus == deploymd.ClosedItemStatus {
+		err = util.InvalidArgsError()
+		return
+	}
+	// 校验权限
+	_, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, planItem.ConfigId, reqDTO.Env)
+	if err != nil {
+		return
+	}
+	_, err = deploymd.UpdateItemStatusWithOldStatus(ctx, reqDTO.ItemId, reqDTO.Env, deploymd.ClosedItemStatus, planItem.ItemStatus)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// ListPlanItem 展示发布计划的服务
+func (*outerImpl) ListPlanItem(ctx context.Context, reqDTO ListPlanItemReqDTO) ([]PlanItemDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	plan, b, err := deploymd.GetPlanById(ctx, reqDTO.PlanId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
+	// 校验权限
+	_, b, err = teammd.GetTeamUser(ctx, plan.TeamId, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.UnauthorizedError()
+	}
+	items, err := deploymd.ListPlanItemByPlanId(ctx, reqDTO.PlanId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	configIdList, _ := listutil.Map(items, func(t deploymd.PlanItem) (int64, error) {
+		return t.ConfigId, nil
+	})
+	configs, err := deploymd.BatchGetSimpleConfigById(ctx, configIdList, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	configMap, _ := listutil.CollectToMap(configs, func(t deploymd.Config) (int64, error) {
+		return t.Id, nil
+	}, func(t deploymd.Config) (deploymd.Config, error) {
+		return t, nil
+	})
+	return listutil.Map(items, func(t deploymd.PlanItem) (PlanItemDTO, error) {
+		return PlanItemDTO{
+			Id:                 t.Id,
+			AppId:              configMap[t.ConfigId].AppId,
+			ConfigId:           t.ConfigId,
+			ConfigName:         configMap[t.ConfigId].Name,
+			ProductVersion:     t.ProductVersion,
+			LastProductVersion: t.LastProductVersion,
+			ItemStatus:         t.ItemStatus,
+			Created:            t.Created,
+		}, nil
+	})
 }
 
 // DeployService 部署服务
@@ -230,21 +536,23 @@ func (*outerImpl) DeployService(ctx context.Context, reqDTO DeployServiceReqDTO)
 	defer closer.Close()
 	// 检查参数
 	var (
-		config deploymd.Config
-		b      bool
+		config  deploymd.Config
+		b       bool
+		teamCfg deploymd.TeamConfig
+		teamId  int64
 	)
-	config, b, err = deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
+	// 检查权限
+	config, teamId, err = checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env)
 	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
+		return
+	}
+	teamCfg, b, err = deploymd.GetTeamConfig(ctx, teamId, reqDTO.Env)
+	if err != nil {
 		err = util.InternalError(err)
 		return
 	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	// 检查权限
-	if err = checkAppDevelopPerm(ctx, config.AppId, reqDTO.Operator); err != nil {
+	if !b || teamCfg.Content.DisallowDeployServiceWithoutPlan {
+		err = util.UnauthorizedError()
 		return
 	}
 	// 检查制品
@@ -291,18 +599,8 @@ func (*outerImpl) StopService(ctx context.Context, reqDTO StopServiceReqDTO) (er
 		b       bool
 		service deploymd.Service
 	)
-	config, b, err = deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
+	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env)
 	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	// 检查权限
-	if err = checkAppDevelopPerm(ctx, config.AppId, reqDTO.Operator); err != nil {
 		return
 	}
 	service, b, err = deploymd.GetServiceByConfigId(ctx, reqDTO.ConfigId, reqDTO.Env)
@@ -346,18 +644,8 @@ func (*outerImpl) RestartService(ctx context.Context, reqDTO RestartServiceReqDT
 		b       bool
 		service deploymd.Service
 	)
-	config, b, err = deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
+	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env)
 	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	// 检查权限
-	if err = checkAppDevelopPerm(ctx, config.AppId, reqDTO.Operator); err != nil {
 		return
 	}
 	service, b, err = deploymd.GetServiceByConfigId(ctx, reqDTO.ConfigId, reqDTO.Env)
@@ -386,8 +674,16 @@ func (*outerImpl) ListService(ctx context.Context, reqDTO ListServiceReqDTO) ([]
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
+	app, b, err := appmd.GetByAppId(ctx, reqDTO.AppId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
 	// 检查权限
-	if err := checkAppDevelopPerm(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+	if err = checkAppDevelopPerm(ctx, reqDTO.Operator, app); err != nil {
 		return nil, err
 	}
 	// 获取所有配置
@@ -433,16 +729,8 @@ func (*outerImpl) ListDeployLog(ctx context.Context, reqDTO ListDeployLogReqDTO)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	config, b, err := deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, 0, util.InternalError(err)
-	}
-	if !b {
-		return nil, 0, util.InvalidArgsError()
-	}
 	// 检查权限
-	if err = checkAppDevelopPerm(ctx, config.AppId, reqDTO.Operator); err != nil {
+	if _, _, err := checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env); err != nil {
 		return nil, 0, err
 	}
 	logs, err := deploymd.ListDeployLog(ctx, deploymd.ListDeployLogReqDTO{
@@ -451,6 +739,10 @@ func (*outerImpl) ListDeployLog(ctx context.Context, reqDTO ListDeployLogReqDTO)
 		Limit:    reqDTO.Limit,
 		Env:      reqDTO.Env,
 	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	ret, _ := listutil.Map(logs, func(t deploymd.DeployLog) (DeployLogDTO, error) {
 		return DeployLogDTO{
 			ServiceType:    t.ServiceType,
@@ -475,16 +767,8 @@ func (*outerImpl) ListOpLog(ctx context.Context, reqDTO ListOpLogReqDTO) ([]OpLo
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	config, b, err := deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, 0, util.InternalError(err)
-	}
-	if !b {
-		return nil, 0, util.InvalidArgsError()
-	}
 	// 检查权限
-	if err = checkAppDevelopPerm(ctx, config.AppId, reqDTO.Operator); err != nil {
+	if _, _, err := checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env); err != nil {
 		return nil, 0, err
 	}
 	logs, err := deploymd.ListOpLog(ctx, deploymd.ListOpLogReqDTO{
@@ -493,6 +777,10 @@ func (*outerImpl) ListOpLog(ctx context.Context, reqDTO ListOpLogReqDTO) ([]OpLo
 		Limit:    reqDTO.Limit,
 		Env:      reqDTO.Env,
 	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	ret, _ := listutil.Map(logs, func(t deploymd.OpLog) (OpLogDTO, error) {
 		return OpLogDTO{
 			Op:             t.Op,
@@ -506,6 +794,199 @@ func (*outerImpl) ListOpLog(ctx context.Context, reqDTO ListOpLogReqDTO) ([]OpLo
 		return ret, logs[len(logs)-1].Id, nil
 	}
 	return ret, 0, nil
+}
+
+// DeployServiceWithPlan 通过发布计划部署服务
+func (*outerImpl) DeployServiceWithPlan(ctx context.Context, reqDTO DeployServiceWithPlanReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.DeployServiceWithPlan),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var (
+		plan   deploymd.Plan
+		config deploymd.Config
+		item   deploymd.PlanItem
+		b      bool
+	)
+	item, b, err = deploymd.GetPlanItemById(ctx, reqDTO.ItemId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b || (item.ItemStatus != deploymd.WaitItemStatus && item.ItemStatus != deploymd.RollbackItemStatus) {
+		err = util.InvalidArgsError()
+		return
+	}
+	plan, b, err = deploymd.GetPlanById(ctx, item.PlanId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.ThereHasBugErr()
+		return
+	}
+	if plan.PlanStatus != deploymd.RunningPlanStatus || plan.IsClosed() {
+		err = util.InvalidArgsError()
+		return
+	}
+	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, item.ConfigId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	b, err = deploymd.UpdateItemStatusWithOldStatus(ctx,
+		reqDTO.ItemId, reqDTO.Env,
+		deploymd.DeployedItemStatus, deploymd.WaitItemStatus)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if b {
+		err = deployService(&config, item.ProductVersion, reqDTO.Env, reqDTO.Operator.Account, item.PlanId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			err = util.InternalError(err)
+			return
+		}
+	}
+	return
+}
+
+// RollbackServiceWithPlan 通过发布计划回滚服务
+func (*outerImpl) RollbackServiceWithPlan(ctx context.Context, reqDTO RollbackServiceWithPlanReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.RollbackServiceWithPlan),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var (
+		plan   deploymd.Plan
+		config deploymd.Config
+		item   deploymd.PlanItem
+		b      bool
+	)
+	item, b, err = deploymd.GetPlanItemById(ctx, reqDTO.ItemId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b || item.ItemStatus != deploymd.DeployedItemStatus {
+		err = util.InvalidArgsError()
+		return
+	}
+	plan, b, err = deploymd.GetPlanById(ctx, item.PlanId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.ThereHasBugErr()
+		return
+	}
+	if plan.PlanStatus != deploymd.RunningPlanStatus || plan.IsClosed() {
+		err = util.InvalidArgsError()
+		return
+	}
+	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, item.ConfigId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	b, err = deploymd.UpdateItemStatusWithOldStatus(ctx,
+		reqDTO.ItemId, reqDTO.Env,
+		deploymd.RollbackItemStatus, deploymd.DeployedItemStatus)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if b {
+		err = deployService(&config, item.LastProductVersion, reqDTO.Env, reqDTO.Operator.Account, item.PlanId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			err = util.InternalError(err)
+			return
+		}
+	}
+	return
+}
+
+// ListPlan 发布计划列表
+func (*outerImpl) ListPlan(ctx context.Context, reqDTO ListPlanReqDTO) ([]PlanDTO, int64, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, 0, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	if !reqDTO.Operator.IsAdmin {
+		_, b, err := teammd.GetTeamUser(ctx, reqDTO.TeamId, reqDTO.Operator.Account)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, 0, util.InternalError(err)
+		}
+		if !b {
+			return nil, 0, util.UnauthorizedError()
+		}
+	}
+	plans, err := deploymd.ListPlan(ctx, deploymd.ListPlanReqDTO{
+		TeamId: reqDTO.TeamId,
+		Cursor: reqDTO.Cursor,
+		Limit:  reqDTO.Limit,
+		Env:    reqDTO.Env,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	var next int64 = 0
+	if len(plans) == reqDTO.Limit {
+		next = plans[len(plans)-1].Id
+	}
+	data, _ := listutil.Map(plans, func(t deploymd.Plan) (PlanDTO, error) {
+		planStatus := t.PlanStatus
+		if planStatus == deploymd.RunningPlanStatus && t.IsExpired() {
+			planStatus = deploymd.ClosedPlanStatus
+			deploymd.UpdatePlanStatusById(ctx, t.Id, reqDTO.Env, deploymd.ClosedPlanStatus)
+		}
+		return PlanDTO{
+			Id:         t.Id,
+			Name:       t.Name,
+			PlanType:   t.PlanType,
+			PlanStatus: planStatus,
+			TeamId:     t.TeamId,
+			Creator:    t.Creator,
+			Expired:    t.Expired,
+			Created:    t.Created,
+		}, nil
+	})
+	return data, next, nil
 }
 
 type innerImpl struct{}

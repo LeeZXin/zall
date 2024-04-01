@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/LeeZXin/zall/fileserv/modules/model/productmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
-	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
@@ -42,27 +43,41 @@ func checkDeployConfigPerm(ctx context.Context, appId string, operator apisessio
 	return util.UnauthorizedError()
 }
 
-func checkAppDevelopPerm(ctx context.Context, appId string, operator apisession.UserInfo) error {
-	app, b, err := appmd.GetByAppId(ctx, appId)
+func checkAccessConfigPerm(ctx context.Context, operator apisession.UserInfo, configId int64, env string) (deploymd.Config, int64, error) {
+	config, b, err := deploymd.GetConfigById(ctx, configId, env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return deploymd.Config{}, 0, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return deploymd.Config{}, 0, util.InvalidArgsError()
 	}
+	app, b, err := appmd.GetByAppId(ctx, config.AppId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return deploymd.Config{}, 0, util.InternalError(err)
+	}
+	if !b {
+		return deploymd.Config{}, 0, util.ThereHasBugErr()
+	}
+	return config, app.TeamId, checkAppDevelopPerm(ctx, operator, app)
+}
+
+func checkAppDevelopPerm(ctx context.Context, operator apisession.UserInfo, apps ...appmd.App) error {
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, apps[0].TeamId, operator.Account)
 	if !b {
 		return util.UnauthorizedError()
 	}
 	if p.IsAdmin {
 		return nil
 	}
-	contains, _ := listutil.Contains(p.PermDetail.DevelopAppList, func(s string) (bool, error) {
-		return s == appId, nil
+	contains, _ := listutil.Contains(p.PermDetail.DevelopAppList, func(developAppId string) (bool, error) {
+		return listutil.Contains(apps, func(app appmd.App) (bool, error) {
+			return app.AppId == developAppId, nil
+		})
 	})
 	if contains {
 		return nil
@@ -72,14 +87,6 @@ func checkAppDevelopPerm(ctx context.Context, appId string, operator apisession.
 
 func checkDeployPlanPerm(ctx context.Context, teamId int64, operator apisession.UserInfo) error {
 	if operator.IsAdmin {
-		_, b, err := teammd.GetByTeamId(ctx, teamId)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
-		}
-		if !b {
-			return util.InvalidArgsError()
-		}
 		return nil
 	}
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
@@ -90,6 +97,67 @@ func checkDeployPlanPerm(ctx context.Context, teamId int64, operator apisession.
 		return nil
 	}
 	return util.UnauthorizedError()
+}
+
+func checkDeployItems(ctx context.Context, teamId int64, items deploymd.DeployItems, operator apisession.UserInfo, env string) error {
+	prdVerMap := make(map[int64]string)
+	for _, item := range items {
+		prdVerMap[item.ConfigId] = item.ProductVersion
+	}
+	// 检查重复的configId
+	configIdList, _ := listutil.Map(items, func(t deploymd.DeployItem) (int64, error) {
+		return t.ConfigId, nil
+	})
+	if hashset.NewHashSet(configIdList...).Size() != len(items) {
+		return util.InvalidArgsError()
+	}
+	configs, err := deploymd.BatchGetConfigById(ctx, configIdList, env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if len(configs) != len(configIdList) {
+		return util.InvalidArgsError()
+	}
+	appIdList, _ := listutil.Map(configs, func(t deploymd.Config) (string, error) {
+		return t.AppId, nil
+	})
+	appIdList = listutil.Distinct(appIdList...)
+	var apps []appmd.App
+	apps, err = appmd.GetByAppIdList(ctx, appIdList)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if len(apps) != len(appIdList) {
+		return util.ThereHasBugErr()
+	}
+	for _, app := range apps {
+		if app.TeamId != teamId {
+			return util.InvalidArgsError()
+		}
+	}
+	// configId -> productVersion ===> appId -> productVersion
+	appIdMap := make(map[string]string)
+	for _, config := range configs {
+		appIdMap[config.AppId] = prdVerMap[config.Id]
+	}
+	// 检查制品
+	for appId, productVersion := range appIdMap {
+		_, b, err := productmd.GetProduct(ctx, productmd.GetProductReqDTO{
+			AppId: appId,
+			Name:  productVersion,
+			Env:   env,
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		if !b {
+			return util.InvalidArgsError()
+		}
+	}
+	return checkAppDevelopPerm(ctx, operator, apps...)
 }
 
 func deployService(config *deploymd.Config, productVersion, env, operator string, planId int64) error {

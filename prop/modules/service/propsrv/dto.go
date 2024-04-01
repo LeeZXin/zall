@@ -1,13 +1,11 @@
 package propsrv
 
 import (
-	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/prop/modules/model/propmd"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/listutil"
 	"time"
 )
 
@@ -24,11 +22,7 @@ type ListEtcdNodeReqDTO struct {
 }
 
 func (r *ListEtcdNodeReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -47,11 +41,7 @@ type InsertEtcdNodeReqDTO struct {
 }
 
 func (r *InsertEtcdNodeReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !propmd.IsNodeIdValid(r.NodeId) {
@@ -73,11 +63,7 @@ type DeleteEtcdNodeReqDTO struct {
 }
 
 func (r *DeleteEtcdNodeReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !propmd.IsNodeIdValid(r.NodeId) {
@@ -99,11 +85,7 @@ type UpdateEtcdNodeReqDTO struct {
 }
 
 func (r *UpdateEtcdNodeReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !propmd.IsNodeIdValid(r.NodeId) {
@@ -125,11 +107,7 @@ type GrantAuthReqDTO struct {
 }
 
 func (r *GrantAuthReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !appmd.IsAppIdValid(r.AppId) {
@@ -148,11 +126,7 @@ type GetAuthReqDTO struct {
 }
 
 func (r *GetAuthReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !appmd.IsAppIdValid(r.AppId) {
@@ -173,11 +147,7 @@ type InsertPropContentReqDTO struct {
 }
 
 func (r *InsertPropContentReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !appmd.IsAppIdValid(r.AppId) {
@@ -200,11 +170,7 @@ type UpdatePropContentReqDTO struct {
 }
 
 func (r *UpdatePropContentReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if r.Id <= 0 {
@@ -223,11 +189,7 @@ type DeletePropContentReqDTO struct {
 }
 
 func (r *DeletePropContentReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if r.Id <= 0 {
@@ -246,11 +208,7 @@ type ListPropContentReqDTO struct {
 }
 
 func (r *ListPropContentReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !appmd.IsAppIdValid(r.AppId) {
@@ -277,11 +235,7 @@ type DeployPropContentReqDTO struct {
 }
 
 func (r *DeployPropContentReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if r.Id <= 0 {
@@ -309,11 +263,7 @@ type ListHistoryReqDTO struct {
 }
 
 func (r *ListHistoryReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if r.ContentId <= 0 {
@@ -342,11 +292,7 @@ type ListDeployReqDTO struct {
 }
 
 func (r *ListDeployReqDTO) IsValid() error {
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Version) > 32 {

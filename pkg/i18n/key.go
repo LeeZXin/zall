@@ -493,4 +493,63 @@ var (
 		Id:         "service.unknownOp",
 		DefaultRet: "未知类型",
 	}
+	ServiceAddServiceAfterPlanCreatingType = KeyItem{
+		Id:         "service.addServiceAfterPlanCreatingType",
+		DefaultRet: "常规发布",
+	}
+	ServiceAddServiceBeforePlanCreatingType = KeyItem{
+		Id:         "service.addServiceBeforePlanCreatingType",
+		DefaultRet: "临时发布",
+	}
+	ServiceUnknownPlanType = KeyItem{
+		Id:         "service.unknownPlanType",
+		DefaultRet: "未知类型",
+	}
+	ServiceRunningPlanStatus = KeyItem{
+		Id:         "service.runningPlanStatus",
+		DefaultRet: "发布中",
+	}
+	ServiceClosedPlanStatus = KeyItem{
+		Id:         "service.closedPlanStatus",
+		DefaultRet: "已关闭",
+	}
+	ServiceUnknownPlanStatus = KeyItem{
+		Id:         "service.unknownPlanStatus",
+		DefaultRet: "已关闭",
+	}
+	ServiceWaitPlanItemStatus = KeyItem{
+		Id:         "service.waitPlanItemStatus",
+		DefaultRet: "等待部署",
+	}
+	ServiceDeployedPlanItemStatus = KeyItem{
+		Id:         "service.deployedPlanItemStatus",
+		DefaultRet: "已部署",
+	}
+	ServiceRollbackPlanItemStatus = KeyItem{
+		Id:         "service.rollbackPlanItemStatus",
+		DefaultRet: "已回滚",
+	}
+	ServiceClosedPlanItemStatus = KeyItem{
+		Id:         "service.closedPlanItemStatus",
+		DefaultRet: "未知状态",
+	}
+	ServiceUnknownPlanItemStatus = KeyItem{
+		Id:         "service.unknownPlanItemStatus",
+		DefaultRet: "未知状态",
+	}
+)
+
+var (
+	PromScrapeDiscoveryTargetType = KeyItem{
+		Id:         "promScrape.discoveryTargetType",
+		DefaultRet: "服务发现类型",
+	}
+	PromScrapeHostTargetType = KeyItem{
+		Id:         "promScrape.hostTargetType",
+		DefaultRet: "主机服务类型",
+	}
+	PromScrapeUnknownTargetType = KeyItem{
+		Id:         "promScrape.unknownTargetType",
+		DefaultRet: "未知类型",
+	}
 )

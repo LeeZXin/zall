@@ -388,6 +388,18 @@ var (
 			Id:         "deploySrv.InsertPlan",
 			DefaultRet: "创建发布计划",
 		},
+		ClosePlan: KeyItem{
+			Id:         "deploySrv.ClosePlan",
+			DefaultRet: "关闭发布计划",
+		},
+		InsertPlanItem: KeyItem{
+			Id:         "deploySrv.InsertPlanItem",
+			DefaultRet: "添加计划服务",
+		},
+		ClosePlanItem: KeyItem{
+			Id:         "deploySrv.ClosePlanItem",
+			DefaultRet: "关闭计划服务",
+		},
 		ReDeployService: KeyItem{
 			Id:         "deploySrv.DeployService",
 			DefaultRet: "重建服务",
@@ -399,6 +411,29 @@ var (
 		RestartService: KeyItem{
 			Id:         "deploySrv.RestartService",
 			DefaultRet: "重启服务",
+		},
+		DeployServiceWithPlan: KeyItem{
+			Id:         "deploySrv.DeployServiceWithPlan",
+			DefaultRet: "通过发布计划部署服务",
+		},
+		RollbackServiceWithPlan: KeyItem{
+			Id:         "deploySrv.RollbackServiceWithPlan",
+			DefaultRet: "通过发布计划回滚服务",
+		},
+	}
+
+	PromSrvKeysVO = PromSrvKeys{
+		InsertScrape: KeyItem{
+			Id:         "promSrv.InsertScrape",
+			DefaultRet: "新增prometheus抓取任务",
+		},
+		UpdateScrape: KeyItem{
+			Id:         "promSrv.UpdateScrape",
+			DefaultRet: "编辑prometheus抓取任务",
+		},
+		DeleteScrape: KeyItem{
+			Id:         "promSrv.DeleteScrape",
+			DefaultRet: "删除prometheus抓取任务",
 		},
 	}
 )
@@ -544,10 +579,21 @@ type GitNodeSrvKeys struct {
 }
 
 type DeploySrvKeys struct {
-	UpdateConfig    KeyItem
-	InsertConfig    KeyItem
-	InsertPlan      KeyItem
-	ReDeployService KeyItem
-	StopService     KeyItem
-	RestartService  KeyItem
+	UpdateConfig            KeyItem
+	InsertConfig            KeyItem
+	InsertPlan              KeyItem
+	ClosePlan               KeyItem
+	InsertPlanItem          KeyItem
+	ClosePlanItem           KeyItem
+	ReDeployService         KeyItem
+	StopService             KeyItem
+	RestartService          KeyItem
+	DeployServiceWithPlan   KeyItem
+	RollbackServiceWithPlan KeyItem
+}
+
+type PromSrvKeys struct {
+	InsertScrape KeyItem
+	UpdateScrape KeyItem
+	DeleteScrape KeyItem
 }

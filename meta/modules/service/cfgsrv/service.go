@@ -19,6 +19,7 @@ type InnerService interface {
 	InitGitCfg()
 	GetEnvCfg(context.Context) ([]string, bool)
 	InitEnvCfg()
+	ContainsEnv(string) bool
 }
 
 type OuterService interface {

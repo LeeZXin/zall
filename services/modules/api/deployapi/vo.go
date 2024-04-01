@@ -2,6 +2,7 @@ package deployapi
 
 import (
 	"github.com/LeeZXin/zall/pkg/deploy"
+	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 )
 
 type ListConfigReqVO struct {
@@ -37,8 +38,32 @@ type InsertConfigReqVO struct {
 }
 
 type InsertPlanReqVO struct {
-	Name   string `json:"name"`
-	TeamId int64  `json:"teamId"`
+	Name        string                `json:"name"`
+	TeamId      int64                 `json:"teamId"`
+	Env         string                `json:"env"`
+	PlanType    deploymd.PlanType     `json:"planType"`
+	DeployItems []deploymd.DeployItem `json:"deployItems"`
+	ExpireHours int                   `json:"expireHours"`
+}
+
+type ClosePlanReqVO struct {
+	PlanId int64  `json:"planId"`
+	Env    string `json:"env"`
+}
+
+type InsertPlanItemReqVO struct {
+	PlanId      int64                 `json:"planId"`
+	DeployItems []deploymd.DeployItem `json:"deployItems"`
+	Env         string                `json:"env"`
+}
+
+type ClosePlanItemReqVO struct {
+	ItemId int64  `json:"itemId"`
+	Env    string `json:"env"`
+}
+
+type ListPlanItemReqVO struct {
+	PlanId int64  `json:"planId"`
 	Env    string `json:"env"`
 }
 
@@ -54,6 +79,16 @@ type DeployServiceReqVO struct {
 	ConfigId       int64  `json:"configId"`
 	Env            string `json:"env"`
 	ProductVersion string `json:"productVersion"`
+}
+
+type DeployServiceWithPlanReqVO struct {
+	ItemId int64  `json:"itemId"`
+	Env    string `json:"env"`
+}
+
+type RollbackServiceWithPlanReqVO struct {
+	ItemId int64  `json:"itemId"`
+	Env    string `json:"env"`
 }
 
 type StopServiceReqVO struct {
@@ -113,4 +148,33 @@ type OpLogVO struct {
 	ScriptOutput   string `json:"scriptOutput"`
 	ProductVersion string `json:"productVersion"`
 	Created        string `json:"created"`
+}
+
+type ListPlanReqVO struct {
+	TeamId int64  `json:"teamId"`
+	Cursor int64  `json:"cursor"`
+	Limit  int    `json:"limit"`
+	Env    string `json:"env"`
+}
+
+type PlanVO struct {
+	Id         int64  `json:"id"`
+	Name       string `json:"name"`
+	PlanType   string `json:"planType"`
+	PlanStatus string `json:"planStatus"`
+	TeamId     int64  `json:"teamId"`
+	Creator    string `json:"creator"`
+	Expired    string `json:"expired"`
+	Created    string `json:"created"`
+}
+
+type PlanItemVO struct {
+	Id                 int64  `json:"id"`
+	AppId              string `json:"appId"`
+	ConfigId           int64  `json:"configId"`
+	ConfigName         string `json:"configName"`
+	ProductVersion     string `json:"productVersion"`
+	LastProductVersion string `json:"lastProductVersion"`
+	ItemStatus         string `json:"itemStatus"`
+	Created            string `json:"created"`
 }

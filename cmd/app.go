@@ -12,7 +12,6 @@ var (
 		GitHook,
 		ActionAgent,
 		Timer,
-		IdServer,
 		PropServer,
 		TcpDetect,
 		FileServer,

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/services/modules/service/deploysrv"
-	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
@@ -15,7 +14,7 @@ var Probe = &cli.Command{
 }
 
 func runProbe(*cli.Context) error {
-	deploysrv.InitProbeTask(static.GetString("probe.env"))
+	deploysrv.InitProbeTask()
 	zsf.Run()
 	return nil
 }

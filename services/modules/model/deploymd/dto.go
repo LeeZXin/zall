@@ -1,6 +1,9 @@
 package deploymd
 
-import "github.com/LeeZXin/zall/pkg/deploy"
+import (
+	"github.com/LeeZXin/zall/pkg/deploy"
+	"time"
+)
 
 type InsertConfigReqDTO struct {
 	AppId       string
@@ -41,9 +44,11 @@ type UpdateServiceReqDTO struct {
 type InsertPlanReqDTO struct {
 	Name       string
 	PlanStatus PlanStatus
+	PlanType   PlanType
 	TeamId     int64
 	Creator    string
 	Env        string
+	Expired    time.Time
 }
 
 type InsertDeployLogReqDTO struct {
@@ -79,4 +84,33 @@ type ListOpLogReqDTO struct {
 	Cursor   int64
 	Limit    int
 	Env      string
+}
+
+type InsertPlanApprovalReqDTO struct {
+	Name        string
+	TeamId      int64
+	Env         string
+	DeployItems DeployItems
+	Creator     string
+}
+
+type InsertApprovalNotifyReqDTO struct {
+	Aid          int64
+	Account      string
+	NotifyStatus NotifyStatus
+}
+
+type InsertPlanItemReqDTO struct {
+	PlanId             int64
+	ConfigId           int64
+	LastProductVersion string
+	ProductVersion     string
+	ItemStatus         PlanItemStatus
+}
+
+type ListPlanReqDTO struct {
+	TeamId int64
+	Cursor int64
+	Limit  int
+	Env    string
 }

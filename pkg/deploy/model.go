@@ -143,8 +143,10 @@ func (c *K8sConfig) IsValid() bool {
 }
 
 type NormalConfig struct {
-	// InsertPlanWithApprovalFlow 创建发布计划走审批流
-	InsertPlanWithApprovalFlow bool `json:"insertPlanWithApprovalFlow"`
+	// DeployPlanApprovers 发布计划审批人
+	DeployPlanApprovers []string `json:"deployPlanApprovers"`
+	// DisallowDeployServiceWithoutPlan  禁止不通过发布计划部署服务
+	DisallowDeployServiceWithoutPlan bool `json:"disallowDeployServiceWithoutPlan"`
 }
 
 func (c *NormalConfig) FromDB(content []byte) error {

@@ -2,6 +2,7 @@ package deploymd
 
 import (
 	"context"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
 )
@@ -160,16 +161,19 @@ func GetServiceByConfigId(ctx context.Context, configId int64, env string) (Serv
 	return ret, b, err
 }
 
-func InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) error {
+func InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (Plan, error) {
+	ret := Plan{
+		Name:       reqDTO.Name,
+		PlanStatus: reqDTO.PlanStatus,
+		PlanType:   reqDTO.PlanType,
+		TeamId:     reqDTO.TeamId,
+		Creator:    reqDTO.Creator,
+		Expired:    reqDTO.Expired,
+	}
 	_, err := xormutil.MustGetXormSession(ctx).
 		Table("zservice_deploy_plan_" + reqDTO.Env).
-		Insert(&Plan{
-			Name:       reqDTO.Name,
-			PlanStatus: reqDTO.PlanStatus,
-			TeamId:     reqDTO.TeamId,
-			Creator:    reqDTO.Creator,
-		})
-	return err
+		Insert(&ret)
+	return ret, err
 }
 
 func InsertDeployLog(ctx context.Context, reqDTO InsertDeployLogReqDTO) error {
@@ -284,6 +288,131 @@ func ListOpLog(ctx context.Context, reqDTO ListOpLogReqDTO) ([]OpLog, error) {
 		session.Limit(reqDTO.Limit)
 	}
 	ret := make([]OpLog, 0)
+	err := session.OrderBy("id desc").Find(&ret)
+	return ret, err
+}
+
+func BatchGetConfigById(ctx context.Context, idList []int64, env string) ([]Config, error) {
+	ret := make([]Config, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_config_"+env).
+		In("id", idList).
+		Find(&ret)
+	return ret, err
+}
+
+func BatchGetSimpleConfigById(ctx context.Context, idList []int64, env string) ([]Config, error) {
+	ret := make([]Config, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_config_"+env).
+		Cols("id", "app_id", "name").
+		In("id", idList).
+		Find(&ret)
+	return ret, err
+}
+
+func InsertPlanApproval(ctx context.Context, reqDTO InsertPlanApprovalReqDTO) (PlanApproval, error) {
+	ret := PlanApproval{
+		Name:        reqDTO.Name,
+		TeamId:      reqDTO.TeamId,
+		DeployItems: reqDTO.DeployItems,
+		Creator:     reqDTO.Creator,
+	}
+	_, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_approval_" + reqDTO.Env).
+		Insert(&ret)
+	return ret, err
+}
+
+func BatchInsertApprovalNotify(ctx context.Context, env string, reqDTOs ...InsertApprovalNotifyReqDTO) error {
+	notifyList, _ := listutil.Map(reqDTOs, func(t InsertApprovalNotifyReqDTO) (ApprovalNotify, error) {
+		return ApprovalNotify{
+			Aid:          t.Aid,
+			Account:      t.Account,
+			NotifyStatus: t.NotifyStatus,
+		}, nil
+	})
+	_, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_approval_notify_" + env).
+		Insert(notifyList)
+	return err
+}
+
+func BatchInsertPlanItem(ctx context.Context, env string, reqDTOs ...InsertPlanItemReqDTO) error {
+	itemList, _ := listutil.Map(reqDTOs, func(t InsertPlanItemReqDTO) (PlanItem, error) {
+		return PlanItem{
+			PlanId:             t.PlanId,
+			ConfigId:           t.ConfigId,
+			ProductVersion:     t.ProductVersion,
+			LastProductVersion: t.LastProductVersion,
+			ItemStatus:         t.ItemStatus,
+		}, nil
+	})
+	_, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_plan_item_" + env).
+		Insert(itemList)
+	return err
+}
+
+func ListPlanItemByPlanId(ctx context.Context, planId int64, env string) ([]PlanItem, error) {
+	ret := make([]PlanItem, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_plan_item_"+env).
+		Where("plan_id = ?", planId).
+		Find(&ret)
+	return ret, err
+}
+
+func GetPlanById(ctx context.Context, id int64, env string) (Plan, bool, error) {
+	var ret Plan
+	b, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_plan_"+env).
+		Where("id = ?", id).
+		Get(&ret)
+	return ret, b, err
+}
+
+func GetPlanItemById(ctx context.Context, id int64, env string) (PlanItem, bool, error) {
+	var ret PlanItem
+	b, err := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_plan_item_"+env).
+		Where("id = ?", id).
+		Get(&ret)
+	return ret, b, err
+}
+
+func UpdateItemStatusWithOldStatus(ctx context.Context, id int64, env string, newStatus, oldStatus PlanItemStatus) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).Table("zservice_deploy_plan_item_"+env).
+		Where("id = ?", id).
+		And("item_status = ?", oldStatus).
+		Cols("item_status").
+		Update(&PlanItem{
+			ItemStatus: newStatus,
+		})
+	return rows == 1, err
+}
+
+func UpdatePlanStatusById(ctx context.Context, id int64, env string, newStatus PlanStatus) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).Table("zservice_deploy_plan_"+env).
+		Where("id = ?", id).
+		Cols("plan_status").
+		Update(&Plan{
+			PlanStatus: newStatus,
+		})
+	return rows == 1, err
+}
+
+func ListPlan(ctx context.Context, reqDTO ListPlanReqDTO) ([]Plan, error) {
+	session := xormutil.MustGetXormSession(ctx).
+		Table("zservice_deploy_plan_"+reqDTO.Env).
+		Where("team_id = ?", reqDTO.TeamId)
+	if reqDTO.Cursor > 0 {
+		session.And("id < ?", reqDTO.Cursor)
+	}
+	if reqDTO.Limit > 0 {
+		session.Limit(reqDTO.Limit)
+	}
+	ret := make([]Plan, 0)
 	err := session.OrderBy("id desc").Find(&ret)
 	return ret, err
 }

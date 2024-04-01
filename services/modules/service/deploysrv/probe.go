@@ -12,6 +12,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"net/http"
 	"time"
@@ -24,9 +25,9 @@ var (
 	probeExecutor            *executor.Executor
 )
 
-func InitProbeTask(env string) {
+func InitProbeTask() {
 	probeExecutor, _ = executor.NewExecutor(20, 10, time.Minute, executor.CallerRunsStrategy)
-	probeEnv = env
+	probeEnv = static.GetString("probe.env")
 	if probeEnv == "" {
 		logger.Logger.Fatal("probe task started with empty env")
 	}

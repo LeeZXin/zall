@@ -56,3 +56,10 @@ action:
 probe:
   enabled: true
   env: sit
+
+prom:
+  agent:
+    enabled: true
+    env: sit
+    filePath: /Users/lizexin/Desktop/prometheus/prometheus-2.51.1.darwin-amd64/target.json
+    serverUrl: http://127.0.0.1:9090

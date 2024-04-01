@@ -6,6 +6,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/patrickmn/go-cache"
@@ -104,6 +105,14 @@ func (s *innerImpl) InitEnvCfg() {
 			logger.Logger.WithContext(ctx).Fatalf("init env config with err: %v", err)
 		}
 	}
+}
+
+func (s *innerImpl) ContainsEnv(env string) bool {
+	envs, _ := s.GetEnvCfg(context.Background())
+	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
+		return t == env, nil
+	})
+	return contains
 }
 
 func getFromDB(ctx context.Context, cfg util.KeyVal) bool {

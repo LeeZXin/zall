@@ -38,15 +38,25 @@ func InitApi() {
 			group.POST("/insert", insertConfig)
 		}
 
-		group = e.Group("/api/deployPlan")
+		group = e.Group("/api/deployPlan", apisession.CheckLogin)
 		{
 			group.POST("/insert", insertPlan)
+			group.POST("/close", closePlan)
+			group.POST("/list", listPlan)
+		}
+
+		group = e.Group("/api/deployPlanItem", apisession.CheckLogin)
+		{
+			group.POST("/insert", insertPlanItem)
+			group.POST("/close", closePlanItem)
+			group.POST("/list", listPlanItem)
 		}
 
 		group = e.Group("/api/deployService", apisession.CheckLogin)
 		{
 			group.POST("/list", listService)
-			group.POST("/deployWithPlan")
+			group.POST("/deployWithPlan", deployWithPlan)
+			group.POST("/rollbackWithPlan", rollbackWithPlan)
 			group.POST("/stop", stopService)
 			group.POST("/deploy", deployService)
 			group.POST("/restart", restartService)
@@ -149,8 +159,27 @@ func insertPlan(c *gin.Context) {
 	var req InsertPlanReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.Outer.InsertPlan(c, deploysrv.InsertPlanReqDTO{
-			Name:     req.Name,
-			TeamId:   req.TeamId,
+			Name:        req.Name,
+			TeamId:      req.TeamId,
+			Env:         req.Env,
+			PlanType:    req.PlanType,
+			DeployItems: req.DeployItems,
+			ExpireHours: req.ExpireHours,
+			Operator:    apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func closePlan(c *gin.Context) {
+	var req ClosePlanReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.ClosePlan(c, deploysrv.ClosePlanReqDTO{
+			PlanId:   req.PlanId,
 			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -159,6 +188,70 @@ func insertPlan(c *gin.Context) {
 			return
 		}
 		util.DefaultOkResponse(c)
+	}
+}
+
+func insertPlanItem(c *gin.Context) {
+	var req InsertPlanItemReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.InsertPlanItem(c, deploysrv.InsertPlanItemReqDTO{
+			PlanId:      req.PlanId,
+			DeployItems: req.DeployItems,
+			Env:         req.Env,
+			Operator:    apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func closePlanItem(c *gin.Context) {
+	var req ClosePlanItemReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.ClosePlanItem(c, deploysrv.ClosePlanItemReqDTO{
+			ItemId:   req.ItemId,
+			Env:      req.Env,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func listPlanItem(c *gin.Context) {
+	var req ListPlanItemReqVO
+	if util.ShouldBindJSON(&req, c) {
+		items, err := deploysrv.Outer.ListPlanItem(c, deploysrv.ListPlanItemReqDTO{
+			PlanId:   req.PlanId,
+			Env:      req.Env,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(items, func(t deploysrv.PlanItemDTO) (PlanItemVO, error) {
+			return PlanItemVO{
+				Id:                 t.Id,
+				AppId:              t.AppId,
+				ConfigId:           t.ConfigId,
+				ConfigName:         t.ConfigName,
+				ProductVersion:     t.ProductVersion,
+				LastProductVersion: t.LastProductVersion,
+				ItemStatus:         t.ItemStatus.Readable(),
+				Created:            t.Created.Format(time.DateTime),
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.DataResp[[]PlanItemVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
+		})
 	}
 }
 
@@ -188,6 +281,38 @@ func deployService(c *gin.Context) {
 			Env:            req.Env,
 			ProductVersion: req.ProductVersion,
 			Operator:       apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func deployWithPlan(c *gin.Context) {
+	var req DeployServiceWithPlanReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.DeployServiceWithPlan(c, deploysrv.DeployServiceWithPlanReqDTO{
+			ItemId:   req.ItemId,
+			Env:      req.Env,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func rollbackWithPlan(c *gin.Context) {
+	var req RollbackServiceWithPlanReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.RollbackServiceWithPlan(c, deploysrv.RollbackServiceWithPlanReqDTO{
+			ItemId:   req.ItemId,
+			Env:      req.Env,
+			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -321,6 +446,42 @@ func listOpLog(c *gin.Context) {
 		})
 		c.JSON(http.StatusOK, ginutil.PageResp[[]OpLogVO]{
 			DataResp: ginutil.DataResp[[]OpLogVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: next,
+		})
+	}
+}
+
+func listPlan(c *gin.Context) {
+	var req ListPlanReqVO
+	if util.ShouldBindJSON(&req, c) {
+		plans, next, err := deploysrv.Outer.ListPlan(c, deploysrv.ListPlanReqDTO{
+			TeamId:   req.TeamId,
+			Env:      req.Env,
+			Cursor:   req.Cursor,
+			Limit:    req.Limit,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(plans, func(t deploysrv.PlanDTO) (PlanVO, error) {
+			return PlanVO{
+				Id:         t.Id,
+				Name:       t.Name,
+				PlanType:   t.PlanType.Readable(),
+				PlanStatus: t.PlanStatus.Readable(),
+				TeamId:     t.TeamId,
+				Creator:    t.Creator,
+				Expired:    t.Expired.Format(time.DateTime),
+				Created:    t.Created.Format(time.DateTime),
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.PageResp[[]PlanVO]{
+			DataResp: ginutil.DataResp[[]PlanVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},

@@ -1,14 +1,12 @@
 package deploysrv
 
 import (
-	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/listutil"
 	"time"
 )
 
@@ -22,11 +20,7 @@ func (r *ListConfigReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -51,11 +45,7 @@ func (r *UpdateConfigReqDTO) IsValid() error {
 	if r.ConfigId <= 0 {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -88,11 +78,7 @@ func (r *InsertConfigReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -117,10 +103,13 @@ func (r *InsertConfigReqDTO) IsValid() error {
 }
 
 type InsertPlanReqDTO struct {
-	Name     string              `json:"name"`
-	TeamId   int64               `json:"teamId"`
-	Env      string              `json:"env"`
-	Operator apisession.UserInfo `json:"operator"`
+	Name        string                `json:"name"`
+	TeamId      int64                 `json:"teamId"`
+	Env         string                `json:"env"`
+	PlanType    deploymd.PlanType     `json:"planType"`
+	DeployItems []deploymd.DeployItem `json:"deployItems"`
+	ExpireHours int                   `json:"expireHours"`
+	Operator    apisession.UserInfo   `json:"operator"`
 }
 
 func (r *InsertPlanReqDTO) IsValid() error {
@@ -130,17 +119,121 @@ func (r *InsertPlanReqDTO) IsValid() error {
 	if !deploymd.IsPlanNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	switch r.PlanType {
+	case deploymd.AddServiceBeforePlanCreatingType:
+		if len(r.DeployItems) == 0 || len(r.DeployItems) > 1000 {
+			return util.InvalidArgsError()
+		}
+		for _, item := range r.DeployItems {
+			if !item.IsValid() {
+				return util.InvalidArgsError()
+			}
+		}
+	case deploymd.AddServiceAfterPlanCreatingType:
+	default:
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.ExpireHours <= 0 || r.ExpireHours > 240 {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ClosePlanReqDTO struct {
+	PlanId   int64               `json:"planId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ClosePlanReqDTO) IsValid() error {
+	if r.PlanId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
+}
+
+type InsertPlanItemReqDTO struct {
+	PlanId      int64                 `json:"planId"`
+	DeployItems []deploymd.DeployItem `json:"deployItems"`
+	Env         string                `json:"env"`
+	Operator    apisession.UserInfo   `json:"operator"`
+}
+
+func (r *InsertPlanItemReqDTO) IsValid() error {
+	if r.PlanId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if len(r.DeployItems) == 0 || len(r.DeployItems) > 1000 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ClosePlanItemReqDTO struct {
+	ItemId   int64               `json:"itemId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ClosePlanItemReqDTO) IsValid() error {
+	if r.ItemId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListPlanItemReqDTO struct {
+	PlanId   int64               `json:"planId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListPlanItemReqDTO) IsValid() error {
+	if r.PlanId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type PlanItemDTO struct {
+	Id                 int64
+	AppId              string
+	ConfigId           int64
+	ConfigName         string
+	ProductVersion     string
+	LastProductVersion string
+	ItemStatus         deploymd.PlanItemStatus
+	Created            time.Time
 }
 
 type DeployServiceWithoutPlanReqDTO struct {
@@ -155,11 +248,7 @@ func (r *DeployServiceWithoutPlanReqDTO) IsValid() error {
 	if r.ProductVersion == "" {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if r.Operator == "" {
@@ -179,11 +268,7 @@ func (r *DeployServiceReqDTO) IsValid() error {
 	if r.ConfigId <= 0 {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -205,11 +290,7 @@ func (r *StopServiceReqDTO) IsValid() error {
 	if r.ConfigId <= 0 {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -228,11 +309,7 @@ func (r *RestartServiceReqDTO) IsValid() error {
 	if r.ConfigId <= 0 {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -251,11 +328,7 @@ func (r *ListServiceReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -288,11 +361,7 @@ func (r *ListDeployLogReqDTO) IsValid() error {
 	if r.ConfigId <= 0 {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -326,11 +395,7 @@ func (r *ListOpLogReqDTO) IsValid() error {
 	if r.ConfigId <= 0 {
 		return util.InvalidArgsError()
 	}
-	envs, _ := cfgsrv.Inner.GetEnvCfg(context.Background())
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == r.Env, nil
-	})
-	if !contains {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -348,4 +413,77 @@ type OpLogDTO struct {
 	ScriptOutput   string
 	ProductVersion string
 	Created        time.Time
+}
+
+type DeployServiceWithPlanReqDTO struct {
+	ItemId   int64               `json:"itemId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *DeployServiceWithPlanReqDTO) IsValid() error {
+	if r.ItemId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type RollbackServiceWithPlanReqDTO struct {
+	ItemId   int64               `json:"itemId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *RollbackServiceWithPlanReqDTO) IsValid() error {
+	if r.ItemId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListPlanReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	Env      string              `json:"env"`
+	Cursor   int64               `json:"cursor"`
+	Limit    int                 `json:"limit"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListPlanReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type PlanDTO struct {
+	Id         int64
+	Name       string
+	PlanType   deploymd.PlanType
+	PlanStatus deploymd.PlanStatus
+	TeamId     int64
+	Creator    string
+	Expired    time.Time
+	Created    time.Time
 }

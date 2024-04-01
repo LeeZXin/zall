@@ -11,6 +11,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"time"
 )
@@ -24,8 +25,8 @@ var (
 	taskEnv string
 )
 
-func InitTask(env string) {
-	taskEnv = env
+func InitTask() {
+	taskEnv = static.GetString("timer.env")
 	if taskEnv == "" {
 		logger.Logger.Fatal("timer task started with empty env")
 	}

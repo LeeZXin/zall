@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
-	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
@@ -15,7 +14,7 @@ var Timer = &cli.Command{
 }
 
 func runTimer(*cli.Context) error {
-	tasksrv.InitTask(static.GetString("timer.env"))
+	tasksrv.InitTask()
 	zsf.Run()
 	return nil
 }

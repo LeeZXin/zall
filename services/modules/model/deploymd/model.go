@@ -1,19 +1,23 @@
 package deploymd
 
 import (
+	"encoding/json"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
 )
 
 const (
-	TeamConfigTableName    = "zservice_team_config"
-	ConfigTableName        = "zservice_deploy_config"
-	ServiceTableName       = "zservice_deploy_service"
-	DeployLogTableName     = "zservice_deploy_log"
-	PlanTableName          = "zservice_deploy_plan"
-	ProbeInstanceTableName = "zservice_probe_instance"
-	OpLogTableName         = "zservice_op_log"
+	TeamConfigTableName     = "zservice_team_config"
+	ConfigTableName         = "zservice_deploy_config"
+	ServiceTableName        = "zservice_deploy_service"
+	DeployLogTableName      = "zservice_deploy_log"
+	PlanTableName           = "zservice_deploy_plan"
+	PlanItemTableName       = "zservice_deploy_plan_item"
+	ApprovalTableName       = "zservice_deploy_approval"
+	ApprovalNotifyTableName = "zservice_deploy_approval_notify"
+	ProbeInstanceTableName  = "zservice_probe_instance"
+	OpLogTableName          = "zservice_op_log"
 )
 
 // Config 部署配置
@@ -101,24 +105,110 @@ func (*DeployLog) TableName() string {
 type PlanStatus int
 
 const (
-	CreatedPlanStatus PlanStatus = iota + 1
-	RunningPlanStatus
-	CanceledPlanStatus
+	RunningPlanStatus PlanStatus = iota + 1
+	ClosedPlanStatus
 )
+
+func (t PlanStatus) Readable() string {
+	switch t {
+	case RunningPlanStatus:
+		return i18n.GetByKey(i18n.ServiceRunningPlanStatus)
+	case ClosedPlanStatus:
+		return i18n.GetByKey(i18n.ServiceClosedPlanStatus)
+	default:
+		return i18n.GetByKey(i18n.ServiceUnknownPlanStatus)
+	}
+}
+
+type PlanType int
+
+const (
+	AddServiceAfterPlanCreatingType PlanType = iota + 1
+	AddServiceBeforePlanCreatingType
+)
+
+func (t PlanType) IsValid() bool {
+	switch t {
+	case AddServiceAfterPlanCreatingType, AddServiceBeforePlanCreatingType:
+		return true
+	default:
+		return false
+	}
+}
+
+func (t PlanType) Readable() string {
+	switch t {
+	case AddServiceAfterPlanCreatingType:
+		return i18n.GetByKey(i18n.ServiceAddServiceAfterPlanCreatingType)
+	case AddServiceBeforePlanCreatingType:
+		return i18n.GetByKey(i18n.ServiceAddServiceBeforePlanCreatingType)
+	default:
+		return i18n.GetByKey(i18n.ServiceUnknownPlanType)
+	}
+}
 
 // Plan 发布计划
 type Plan struct {
 	Id         int64      `json:"id" xorm:"pk autoincr"`
 	Name       string     `json:"name"`
+	PlanType   PlanType   `json:"planType"`
 	PlanStatus PlanStatus `json:"planStatus"`
 	TeamId     int64      `json:"teamId"`
 	Creator    string     `json:"creator"`
+	Expired    time.Time  `json:"expired"`
 	Created    time.Time  `json:"created" xorm:"created"`
 	Updated    time.Time  `json:"updated" xorm:"updated"`
 }
 
 func (*Plan) TableName() string {
 	return PlanTableName
+}
+
+func (p *Plan) IsExpired() bool {
+	return p.Expired.Before(time.Now())
+}
+
+func (p *Plan) IsClosed() bool {
+	return p.PlanStatus == ClosedPlanStatus || p.IsExpired()
+}
+
+type PlanItemStatus int
+
+const (
+	WaitItemStatus PlanItemStatus = iota + 1
+	DeployedItemStatus
+	RollbackItemStatus
+	ClosedItemStatus
+)
+
+func (s PlanItemStatus) Readable() string {
+	switch s {
+	case WaitItemStatus:
+		return i18n.GetByKey(i18n.ServiceWaitPlanItemStatus)
+	case DeployedItemStatus:
+		return i18n.GetByKey(i18n.ServiceDeployedPlanItemStatus)
+	case RollbackItemStatus:
+		return i18n.GetByKey(i18n.ServiceRollbackPlanItemStatus)
+	case ClosedItemStatus:
+		return i18n.GetByKey(i18n.ServiceClosedPlanItemStatus)
+	default:
+		return i18n.GetByKey(i18n.ServiceUnknownPlanItemStatus)
+	}
+}
+
+type PlanItem struct {
+	Id                 int64          `json:"id" xorm:"pk autoincr"`
+	PlanId             int64          `json:"planId"`
+	ConfigId           int64          `json:"configId"`
+	ProductVersion     string         `json:"productVersion"`
+	LastProductVersion string         `json:"lastProductVersion"`
+	ItemStatus         PlanItemStatus `json:"itemStatus"`
+	Created            time.Time      `json:"created" xorm:"created"`
+	Updated            time.Time      `json:"updated" xorm:"updated"`
+}
+
+func (*PlanItem) TableName() string {
+	return PlanItemTableName
 }
 
 type TeamConfig struct {
@@ -174,4 +264,61 @@ type OpLog struct {
 
 func (*OpLog) TableName() string {
 	return OpLogTableName
+}
+
+type DeployItem struct {
+	ConfigId       int64  `json:"configId"`
+	ProductVersion string `json:"productVersion"`
+}
+
+func (r *DeployItem) IsValid() bool {
+	return r.ConfigId > 0 && len(r.ProductVersion) > 0 && len(r.ProductVersion) <= 64
+}
+
+type DeployItems []DeployItem
+
+func (r *DeployItems) FromDB(content []byte) error {
+	if r == nil {
+		*r = make([]DeployItem, 0)
+	}
+	return json.Unmarshal(content, r)
+}
+
+func (r *DeployItems) ToDB() ([]byte, error) {
+	return json.Marshal(r)
+}
+
+type PlanApproval struct {
+	Id          int64       `json:"id" xorm:"pk autoincr"`
+	Name        string      `json:"name"`
+	TeamId      int64       `json:"teamId"`
+	DeployItems DeployItems `json:"deployItems"`
+	Creator     string      `json:"creator"`
+	Created     time.Time   `json:"created" xorm:"created"`
+	Updated     time.Time   `json:"updated" xorm:"updated"`
+}
+
+func (*PlanApproval) TableName() string {
+	return ApprovalTableName
+}
+
+type NotifyStatus int
+
+const (
+	WaitStatus NotifyStatus = iota + 1
+	AgreeStatus
+	DisagreeStatus
+)
+
+type ApprovalNotify struct {
+	Id           int64        `json:"id" xorm:"pk autoincr"`
+	Aid          int64        `json:"aid"`
+	Account      string       `json:"account"`
+	NotifyStatus NotifyStatus `json:"notifyStatus"`
+	Created      time.Time    `json:"created" xorm:"created"`
+	Updated      time.Time    `json:"updated" xorm:"updated"`
+}
+
+func (*ApprovalNotify) TableName() string {
+	return ApprovalNotifyTableName
 }

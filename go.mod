@@ -5,9 +5,8 @@ go 1.20
 require (
 	github.com/42wim/sshsig v0.0.0-20211121163825-841cf5bbc121
 	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
-	github.com/LeeZXin/zsf v1.1.48
+	github.com/LeeZXin/zsf v1.1.49
 	github.com/LeeZXin/zsf-utils v1.0.46
-	github.com/bwmarrin/snowflake v0.3.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gliderlabs/ssh v0.3.5
 	github.com/golang-jwt/jwt/v5 v5.2.0
@@ -41,6 +40,7 @@ require (
 	github.com/blevesearch/zap/v13 v13.0.6 // indirect
 	github.com/blevesearch/zap/v14 v14.0.5 // indirect
 	github.com/blevesearch/zap/v15 v15.0.3 // indirect
+	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
