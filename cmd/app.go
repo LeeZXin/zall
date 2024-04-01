@@ -17,6 +17,7 @@ var (
 		FileServer,
 		Probe,
 		DeployServer,
+		PromAgent,
 	}
 )
 
