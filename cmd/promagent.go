@@ -7,7 +7,7 @@ import (
 )
 
 var PromAgent = &cli.Command{
-	Name:        "actionAgent",
+	Name:        "promAgent",
 	Usage:       "This command starts prom agent",
 	Description: "promAgent provides etcd discovery for prometheus",
 	Action:      runPromAgent,
