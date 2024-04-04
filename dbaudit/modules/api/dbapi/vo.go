@@ -60,6 +60,21 @@ type CancelDbPermReqVO struct {
 	OrderId int64 `json:"orderId"`
 }
 
+type ListDbPermReqVO struct {
+	Cursor int64 `json:"cursor"`
+	Limit  int   `json:"limit"`
+}
+
+type ListDbPermByAccountReqVO struct {
+	Cursor  int64  `json:"cursor"`
+	Limit   int    `json:"limit"`
+	Account string `json:"account"`
+}
+
+type DeleteDbPermReqVO struct {
+	PermId int64 `json:"permId"`
+}
+
 type ListApprovalOrderReqVO struct {
 	Cursor      int64            `json:"cursor"`
 	Limit       int              `json:"limit"`
@@ -79,4 +94,16 @@ type ApprovalOrderVO struct {
 	ExpireDay   int    `json:"expireDay"`
 	Reason      string `json:"reason"`
 	Created     string `json:"created"`
+}
+
+type PermVO struct {
+	Id          int64  `json:"id"`
+	Account     string `json:"account"`
+	DbId        int64  `json:"dbId"`
+	DbHost      string `json:"dbHost"`
+	DbName      string `json:"dbName"`
+	AccessTable string `json:"accessTable"`
+	PermType    string `json:"permType"`
+	Created     string `json:"created"`
+	Expired     string `json:"expired"`
 }

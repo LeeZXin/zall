@@ -22,4 +22,10 @@ type OuterService interface {
 	DisagreeDbPerm(context.Context, DisagreeDbPermReqDTO) error
 	// CancelDbPerm 取消申请
 	CancelDbPerm(context.Context, CancelDbPermReqDTO) error
+	// ListDbPerm 权限列表
+	ListDbPerm(context.Context, ListDbPermReqDTO) ([]PermDTO, int64, error)
+	// DeleteDbPerm 删除权限
+	DeleteDbPerm(context.Context, DeleteDbPermReqDTO) error
+	// ListDbPermByAccount 权限列表
+	ListDbPermByAccount(context.Context, ListDbPermByAccountReqDTO) ([]PermDTO, int64, error)
 }

@@ -156,7 +156,7 @@ func (*outerImpl) ListSimpleDb(ctx context.Context, reqDTO ListSimpleDbReqDTO) (
 	})
 }
 
-// ApplyDbTablePerm 申请库表权限
+// ApplyDbPerm 申请库表权限
 func (*outerImpl) ApplyDbPerm(ctx context.Context, reqDTO ApplyDbPermReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
@@ -213,15 +213,9 @@ func (*outerImpl) ListPermApprovalOrder(ctx context.Context, reqDTO ListPermAppr
 	dbIdList, _ := listutil.Map(orders, func(t dbmd.ApprovalOrder) (int64, error) {
 		return t.DbId, nil
 	})
-	dbIdList = hashset.NewHashSet(dbIdList...).AllKeys()
-	dbList, err := dbmd.BatchGetDbByIdList(ctx, dbIdList)
+	dbMap, err := getDbMap(ctx, dbIdList)
 	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, 0, util.InternalError(err)
-	}
-	dbMap := make(map[int64]dbmd.Db)
-	for _, db := range dbList {
-		dbMap[db.Id] = db
+		return nil, 0, err
 	}
 	data, _ := listutil.Map(orders, func(t dbmd.ApprovalOrder) (ApprovalOrderDTO, error) {
 		return ApprovalOrderDTO{
@@ -349,6 +343,137 @@ func (*outerImpl) CancelDbPerm(ctx context.Context, reqDTO CancelDbPermReqDTO) e
 		return util.InternalError(err)
 	}
 	return nil
+}
+
+// ListDbPerm 权限列表
+func (*outerImpl) ListDbPerm(ctx context.Context, reqDTO ListDbPermReqDTO) ([]PermDTO, int64, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, 0, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	perms, err := dbmd.ListPerm(ctx, dbmd.ListPermReqDTO{
+		Cursor:  reqDTO.Cursor,
+		Limit:   reqDTO.Limit,
+		Account: reqDTO.Operator.Account,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	var next int64 = 0
+	if len(perms) == reqDTO.Limit {
+		next = perms[len(perms)-1].Id
+	}
+	dbIdList, _ := listutil.Map(perms, func(t dbmd.Perm) (int64, error) {
+		return t.DbId, nil
+	})
+	dbMap, err := getDbMap(ctx, dbIdList)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, _ := listutil.Map(perms, func(t dbmd.Perm) (PermDTO, error) {
+		return PermDTO{
+			Id:          t.Id,
+			Account:     t.Account,
+			DbId:        t.DbId,
+			DbHost:      dbMap[t.DbId].DbHost,
+			DbName:      dbMap[t.DbId].Name,
+			AccessTable: t.AccessTable,
+			PermType:    t.PermType,
+			Created:     t.Created,
+			Expired:     t.Expired,
+		}, nil
+	})
+	return data, next, nil
+}
+
+// DeleteDbPerm 删除权限
+func (*outerImpl) DeleteDbPerm(ctx context.Context, reqDTO DeleteDbPermReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DbSrvKeysVO.DeleteDb),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	if err = checkPerm(reqDTO.Operator); err != nil {
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err = dbmd.DeletePerm(ctx, reqDTO.PermId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// ListDbPermByAccount 权限列表
+func (*outerImpl) ListDbPermByAccount(ctx context.Context, reqDTO ListDbPermByAccountReqDTO) ([]PermDTO, int64, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, 0, err
+	}
+	if err := checkPerm(reqDTO.Operator); err != nil {
+		return nil, 0, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	perms, err := dbmd.ListPerm(ctx, dbmd.ListPermReqDTO{
+		Cursor:  reqDTO.Cursor,
+		Limit:   reqDTO.Limit,
+		Account: reqDTO.Account,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	var next int64 = 0
+	if len(perms) == reqDTO.Limit {
+		next = perms[len(perms)-1].Id
+	}
+	dbIdList, _ := listutil.Map(perms, func(t dbmd.Perm) (int64, error) {
+		return t.DbId, nil
+	})
+	dbMap, err := getDbMap(ctx, dbIdList)
+	if err != nil {
+		return nil, 0, err
+	}
+	data, _ := listutil.Map(perms, func(t dbmd.Perm) (PermDTO, error) {
+		return PermDTO{
+			Id:          t.Id,
+			Account:     t.Account,
+			DbId:        t.DbId,
+			DbHost:      dbMap[t.DbId].DbHost,
+			DbName:      dbMap[t.DbId].Name,
+			AccessTable: t.AccessTable,
+			PermType:    t.PermType,
+			Created:     t.Created,
+			Expired:     t.Expired,
+		}, nil
+	})
+	return data, next, nil
+}
+
+func getDbMap(ctx context.Context, dbIdList []int64) (map[int64]dbmd.Db, error) {
+	dbIdList = hashset.NewHashSet(dbIdList...).AllKeys()
+	dbList, err := dbmd.BatchGetDbByIdList(ctx, dbIdList)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	dbMap := make(map[int64]dbmd.Db)
+	for _, db := range dbList {
+		dbMap[db.Id] = db
+	}
+	return dbMap, nil
 }
 
 func checkPerm(operator apisession.UserInfo) error {

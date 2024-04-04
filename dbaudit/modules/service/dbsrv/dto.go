@@ -2,6 +2,7 @@ package dbsrv
 
 import (
 	"github.com/LeeZXin/zall/dbaudit/modules/model/dbmd"
+	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
 	"time"
@@ -218,6 +219,57 @@ func (r *CancelDbPermReqDTO) IsValid() error {
 	return nil
 }
 
+type DeleteDbPermReqDTO struct {
+	PermId   int64               `json:"permId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *DeleteDbPermReqDTO) IsValid() error {
+	if r.PermId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListDbPermReqDTO struct {
+	Cursor   int64               `json:"cursor"`
+	Limit    int                 `json:"limit"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListDbPermReqDTO) IsValid() error {
+	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListDbPermByAccountReqDTO struct {
+	Cursor   int64               `json:"cursor"`
+	Limit    int                 `json:"limit"`
+	Account  string              `json:"account"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListDbPermByAccountReqDTO) IsValid() error {
+	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+		return util.InvalidArgsError()
+	}
+	if !usermd.IsAccountValid(r.Account) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type ApprovalOrderDTO struct {
 	Id          int64
 	Account     string
@@ -231,4 +283,16 @@ type ApprovalOrderDTO struct {
 	ExpireDay   int
 	Reason      string
 	Created     time.Time
+}
+
+type PermDTO struct {
+	Id          int64
+	Account     string
+	DbId        int64
+	DbHost      string
+	DbName      string
+	AccessTable string
+	PermType    dbmd.PermType
+	Created     time.Time
+	Expired     time.Time
 }

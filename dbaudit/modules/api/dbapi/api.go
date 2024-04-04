@@ -32,8 +32,9 @@ func InitApi() {
 		}
 		group = e.Group("/api/dbPerm", apisession.CheckLogin)
 		{
-			group.POST("/list")
-			group.POST("/delete")
+			group.POST("/list", listDbPerm)
+			group.POST("/delete", deleteDbPerm)
+			group.POST("/listByAccount", listDbPermByAccount)
 		}
 	})
 }
@@ -232,6 +233,92 @@ func listApprovalOrder(c *gin.Context) {
 		})
 		c.JSON(http.StatusOK, ginutil.PageResp[[]ApprovalOrderVO]{
 			DataResp: ginutil.DataResp[[]ApprovalOrderVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: next,
+		})
+	}
+}
+
+func listDbPerm(c *gin.Context) {
+	var req ListDbPermReqVO
+	if util.ShouldBindJSON(&req, c) {
+		perms, next, err := dbsrv.Outer.ListDbPerm(c, dbsrv.ListDbPermReqDTO{
+			Cursor:   req.Cursor,
+			Limit:    req.Limit,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(perms, func(t dbsrv.PermDTO) (PermVO, error) {
+			return PermVO{
+				Id:          t.Id,
+				Account:     t.Account,
+				DbId:        t.DbId,
+				DbHost:      t.DbHost,
+				DbName:      t.DbName,
+				AccessTable: t.AccessTable,
+				PermType:    t.PermType.Readable(),
+				Created:     t.Created.Format(time.DateTime),
+				Expired:     t.Expired.Format(time.DateTime),
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.PageResp[[]PermVO]{
+			DataResp: ginutil.DataResp[[]PermVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			Next: next,
+		})
+	}
+}
+
+func deleteDbPerm(c *gin.Context) {
+	var req CancelDbPermReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := dbsrv.Outer.CancelDbPerm(c, dbsrv.CancelDbPermReqDTO{
+			OrderId:  req.OrderId,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func listDbPermByAccount(c *gin.Context) {
+	var req ListDbPermByAccountReqVO
+	if util.ShouldBindJSON(&req, c) {
+		perms, next, err := dbsrv.Outer.ListDbPermByAccount(c, dbsrv.ListDbPermByAccountReqDTO{
+			Cursor:   req.Cursor,
+			Limit:    req.Limit,
+			Account:  req.Account,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(perms, func(t dbsrv.PermDTO) (PermVO, error) {
+			return PermVO{
+				Id:          t.Id,
+				Account:     t.Account,
+				DbId:        t.DbId,
+				DbHost:      t.DbHost,
+				DbName:      t.DbName,
+				AccessTable: t.AccessTable,
+				PermType:    t.PermType.Readable(),
+				Created:     t.Created.Format(time.DateTime),
+				Expired:     t.Expired.Format(time.DateTime),
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.PageResp[[]PermVO]{
+			DataResp: ginutil.DataResp[[]PermVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},

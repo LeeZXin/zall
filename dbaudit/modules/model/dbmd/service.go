@@ -129,3 +129,21 @@ func InsertPerm(ctx context.Context, reqDTO InsertPermReqDTO) error {
 		})
 	return err
 }
+
+func DeletePerm(ctx context.Context, id int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Delete(new(Perm))
+	return err
+}
+
+func ListPerm(ctx context.Context, reqDTO ListPermReqDTO) ([]Perm, error) {
+	ret := make([]Perm, 0)
+	session := xormutil.MustGetXormSession(ctx).Where("account = ?", reqDTO.Account)
+	if reqDTO.Cursor > 0 {
+		session.And("id < ?", reqDTO.Cursor)
+	}
+	if reqDTO.Limit > 0 {
+		session.Limit(reqDTO.Limit)
+	}
+	err := session.OrderBy("id desc").Find(&ret)
+	return ret, err
+}

@@ -94,6 +94,10 @@ func (*Perm) TableName() string {
 	return PermTableName
 }
 
+func (p *Perm) IsExpired() bool {
+	return p.Expired.Before(time.Now())
+}
+
 type OrderStatus int
 
 const (

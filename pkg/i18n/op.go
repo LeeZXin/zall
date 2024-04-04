@@ -450,6 +450,10 @@ var (
 			Id:         "dbSrv.UpdateDb",
 			DefaultRet: "编辑数据库",
 		},
+		DeletePerm: KeyItem{
+			Id:         "dbSrv.DeletePerm",
+			DefaultRet: "删除数据库权限",
+		},
 	}
 )
 
@@ -614,7 +618,8 @@ type PromSrvKeys struct {
 }
 
 type DbSrvKeys struct {
-	InsertDb KeyItem
-	DeleteDb KeyItem
-	UpdateDb KeyItem
+	InsertDb   KeyItem
+	DeleteDb   KeyItem
+	UpdateDb   KeyItem
+	DeletePerm KeyItem
 }

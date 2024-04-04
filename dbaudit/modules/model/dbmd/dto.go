@@ -48,3 +48,9 @@ type UpdateApprovalOrderStatusReqDTO struct {
 	OldStatus OrderStatus
 	Auditor   string
 }
+
+type ListPermReqDTO struct {
+	Cursor  int64
+	Limit   int
+	Account string
+}
