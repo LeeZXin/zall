@@ -13,11 +13,12 @@ type ServiceType int
 const (
 	ProcessServiceType ServiceType = iota + 1
 	K8sServiceType
+	DockerSwarmType
 )
 
 func (t ServiceType) IsValid() bool {
 	switch t {
-	case ProcessServiceType, K8sServiceType:
+	case ProcessServiceType, K8sServiceType, DockerSwarmType:
 		return true
 	default:
 		return false
@@ -30,6 +31,8 @@ func (t ServiceType) Readable() string {
 		return i18n.GetByKey(i18n.DeployProcessServiceType)
 	case K8sServiceType:
 		return i18n.GetByKey(i18n.DeployK8sServiceType)
+	case DockerSwarmType:
+		return i18n.GetByKey(i18n.DeployDockerSwarmType)
 	default:
 		return i18n.GetByKey(i18n.DeployUnknownServiceType)
 	}

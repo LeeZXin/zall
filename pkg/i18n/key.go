@@ -450,6 +450,10 @@ var (
 		Id:         "deploy.k8sServiceType",
 		DefaultRet: "k8s服务",
 	}
+	DeployDockerSwarmType = KeyItem{
+		Id:         "deploy.dockerSwarmType",
+		DefaultRet: "dockerSwarm服务",
+	}
 	DeployUnknownServiceType = KeyItem{
 		Id:         "deploy.k8sServiceType",
 		DefaultRet: "未知服务类型",
@@ -551,5 +555,36 @@ var (
 	PromScrapeUnknownTargetType = KeyItem{
 		Id:         "promScrape.unknownTargetType",
 		DefaultRet: "未知类型",
+	}
+)
+
+var (
+	DbReadPermType = KeyItem{
+		Id:         "db.readPermType",
+		DefaultRet: "读权限",
+	}
+	DbUnknownPermType = KeyItem{
+		Id:         "db.unknownPermType",
+		DefaultRet: "未知类型",
+	}
+	DbPendingApprovalOrderStatus = KeyItem{
+		Id:         "db.pendingApprovalOrderStatus",
+		DefaultRet: "审批中",
+	}
+	DbAgreeApprovalOrderStatus = KeyItem{
+		Id:         "db.agreeApprovalOrderStatus",
+		DefaultRet: "同意",
+	}
+	DbCanceledApprovalOrderStatus = KeyItem{
+		Id:         "db.canceledApprovalOrderStatus",
+		DefaultRet: "已取消",
+	}
+	DbDisagreeApprovalOrderStatus = KeyItem{
+		Id:         "db.disagreeApprovalOrderStatus",
+		DefaultRet: "不同意",
+	}
+	DbUnknownApprovalOrderStatus = KeyItem{
+		Id:         "db.unknownApprovalOrderStatus",
+		DefaultRet: "未知状态",
 	}
 )

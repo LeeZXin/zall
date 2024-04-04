@@ -436,6 +436,21 @@ var (
 			DefaultRet: "删除prometheus抓取任务",
 		},
 	}
+
+	DbSrvKeysVO = DbSrvKeys{
+		InsertDb: KeyItem{
+			Id:         "dbSrv.InsertDb",
+			DefaultRet: "新增数据库",
+		},
+		DeleteDb: KeyItem{
+			Id:         "dbSrv.DeleteDb",
+			DefaultRet: "删除数据库",
+		},
+		UpdateDb: KeyItem{
+			Id:         "dbSrv.UpdateDb",
+			DefaultRet: "编辑数据库",
+		},
+	}
 )
 
 type KeyItem struct {
@@ -596,4 +611,10 @@ type PromSrvKeys struct {
 	InsertScrape KeyItem
 	UpdateScrape KeyItem
 	DeleteScrape KeyItem
+}
+
+type DbSrvKeys struct {
+	InsertDb KeyItem
+	DeleteDb KeyItem
+	UpdateDb KeyItem
 }

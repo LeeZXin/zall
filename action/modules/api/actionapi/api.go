@@ -16,20 +16,18 @@ import (
 
 func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/api/action")
+		group := e.Group("/api/action", apisession.CheckLogin)
 		{
 			// 创建action
-			group.POST("/insert", apisession.CheckLogin, insertAction)
+			group.POST("/insert", insertAction)
 			// 编辑action
-			group.POST("/update", apisession.CheckLogin, updateAction)
+			group.POST("/update", updateAction)
 			// 删除action
-			group.POST("/delete", apisession.CheckLogin, deleteAction)
+			group.POST("/delete", deleteAction)
 			// 展示action列表
-			group.POST("/list", apisession.CheckLogin, listAction)
+			group.POST("/list", listAction)
 			// 手动触发action
-			group.POST("/trigger", apisession.CheckLogin, triggerAction)
-			// webhook使用
-			group.Any("/execute/:aid", executeAction)
+			group.POST("/trigger", triggerAction)
 		}
 		group = e.Group("/api/actionTask", apisession.CheckLogin)
 		{
@@ -37,6 +35,11 @@ func InitApi() {
 			group.POST("/list", listTask)
 			// 获取执行任务详情
 			group.POST("/steps", getTaskSteps)
+		}
+		group = e.Group("/api/actionExecute")
+		{
+			// webhook使用
+			group.Any("/execute/:aid", executeAction)
 		}
 	})
 }

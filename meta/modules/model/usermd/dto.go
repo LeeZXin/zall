@@ -1,29 +1,17 @@
 package usermd
 
-import "github.com/LeeZXin/zall/pkg/apisession"
-
 type UserInfo struct {
-	Account      string `json:"account"`
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	IsProhibited bool   `json:"isProhibited"`
-	AvatarUrl    string `json:"avatarUrl"`
-	IsAdmin      bool   `json:"isAdmin"`
+	Account      string   `json:"account"`
+	Name         string   `json:"name"`
+	Email        string   `json:"email"`
+	IsProhibited bool     `json:"isProhibited"`
+	AvatarUrl    string   `json:"avatarUrl"`
+	IsAdmin      bool     `json:"isAdmin"`
+	RoleType     RoleType `json:"roleType"`
 }
 
 func (i *UserInfo) IsValid() bool {
 	return i.Account != ""
-}
-
-func (i *UserInfo) ToApiSessionUser() apisession.UserInfo {
-	return apisession.UserInfo{
-		Account:      i.Account,
-		Name:         i.Name,
-		Email:        i.Email,
-		IsProhibited: i.IsProhibited,
-		AvatarUrl:    i.AvatarUrl,
-		IsAdmin:      i.IsAdmin,
-	}
 }
 
 type InsertUserReqDTO struct {

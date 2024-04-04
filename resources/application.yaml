@@ -63,3 +63,9 @@ prom:
     env: sit
     filePath: /Users/lizexin/Desktop/prometheus/prometheus-2.51.1.darwin-amd64/target.json
     serverUrl: http://127.0.0.1:9090
+
+logger:
+  loki:
+    enabled: true
+    orgId: local
+    pushUrl: http://127.0.0.1:3100/loki/api/v1/push

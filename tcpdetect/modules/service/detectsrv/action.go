@@ -2,7 +2,7 @@ package detectsrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/tcpdetect/detecttool"
+	"github.com/LeeZXin/zall/pkg/detecttool"
 	"github.com/LeeZXin/zall/tcpdetect/modules/model/detectmd"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/quit"
