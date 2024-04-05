@@ -3,9 +3,9 @@ package command
 import (
 	"database/sql"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	"github.com/LeeZXin/zall/pkg/sqlparse"
-	"github.com/LeeZXin/zall/pkg/sqlparse/parser"
-	"github.com/LeeZXin/zall/pkg/sqlparse/parser/ast"
+	"github.com/LeeZXin/zall/pkg/mysqltool"
+	"github.com/LeeZXin/zall/pkg/mysqltool/parser"
+	"github.com/LeeZXin/zall/pkg/mysqltool/parser/ast"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap/errors"
 )
@@ -23,7 +23,7 @@ func ValidateMysqlSelectSql(sql string) (string, string, error) {
 	if stmt.Limit != nil {
 		return "", "", errors.New(i18n.GetByKey(i18n.SqlNotAllowHasLimitMsg))
 	}
-	checker := new(sqlparse.Checker)
+	checker := new(mysqltool.Checker)
 	stmt.Accept(checker)
 	tableNames := checker.GetTableNames()
 	if len(tableNames) != 1 {
