@@ -588,3 +588,18 @@ var (
 		DefaultRet: "未知状态",
 	}
 )
+
+var (
+	SqlWrongSyntaxMsg = KeyItem{
+		Id:         "sql.wrongSyntaxMsg",
+		DefaultRet: "sql语法错误",
+	}
+	SqlUnsupportedMsg = KeyItem{
+		Id:         "sql.unsupportedMsg",
+		DefaultRet: "不支持该sql",
+	}
+	SqlNotAllowHasLimitMsg = KeyItem{
+		Id:         "sql.notAllowHasLimit",
+		DefaultRet: "sql不允许带limit",
+	}
+)
