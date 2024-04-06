@@ -454,6 +454,10 @@ var (
 			Id:         "dbSrv.DeletePerm",
 			DefaultRet: "删除数据库权限",
 		},
+		SearchDb: KeyItem{
+			Id:         "dbSrv.SearchDb",
+			DefaultRet: "搜索数据库",
+		},
 	}
 )
 
@@ -622,4 +626,5 @@ type DbSrvKeys struct {
 	DeleteDb   KeyItem
 	UpdateDb   KeyItem
 	DeletePerm KeyItem
+	SearchDb   KeyItem
 }

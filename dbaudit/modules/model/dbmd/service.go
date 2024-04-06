@@ -2,10 +2,15 @@ package dbmd
 
 import (
 	"context"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
 func IsDbNameValid(name string) bool {
+	return len(name) > 0 && len(name) <= 32
+}
+
+func IsBaseNameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
 }
 
@@ -75,13 +80,14 @@ func UpdateDb(ctx context.Context, reqDTO UpdateDbReqDTO) (bool, error) {
 func InsertApprovalOrder(ctx context.Context, reqDTO InsertApprovalOrderReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&ApprovalOrder{
-			Account:     reqDTO.Account,
-			DbId:        reqDTO.DbId,
-			AccessTable: reqDTO.AccessTable,
-			PermType:    reqDTO.PermType,
-			OrderStatus: reqDTO.OrderStatus,
-			ExpireDay:   reqDTO.ExpireDay,
-			Reason:      reqDTO.Reason,
+			Account:      reqDTO.Account,
+			DbId:         reqDTO.DbId,
+			AccessBase:   reqDTO.AccessBase,
+			AccessTables: reqDTO.AccessTables,
+			PermType:     reqDTO.PermType,
+			OrderStatus:  reqDTO.OrderStatus,
+			ExpireDay:    reqDTO.ExpireDay,
+			Reason:       reqDTO.Reason,
 		})
 	return err
 }
@@ -123,6 +129,7 @@ func InsertPerm(ctx context.Context, reqDTO InsertPermReqDTO) error {
 		Insert(&Perm{
 			Account:     reqDTO.Account,
 			DbId:        reqDTO.DbId,
+			AccessBase:  reqDTO.AccessBase,
 			AccessTable: reqDTO.AccessTable,
 			PermType:    reqDTO.PermType,
 			Expired:     reqDTO.Expired,
@@ -130,8 +137,26 @@ func InsertPerm(ctx context.Context, reqDTO InsertPermReqDTO) error {
 	return err
 }
 
+func BatchInsertPerm(ctx context.Context, reqDTOs []InsertPermReqDTO) error {
+	perms, _ := listutil.Map(reqDTOs, func(reqDTO InsertPermReqDTO) (Perm, error) {
+		return Perm{
+			Account:     reqDTO.Account,
+			DbId:        reqDTO.DbId,
+			AccessBase:  reqDTO.AccessBase,
+			AccessTable: reqDTO.AccessTable,
+			PermType:    reqDTO.PermType,
+			Expired:     reqDTO.Expired,
+		}, nil
+	})
+	_, err := xormutil.MustGetXormSession(ctx).
+		Insert(perms)
+	return err
+}
+
 func DeletePerm(ctx context.Context, id int64) error {
-	_, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Delete(new(Perm))
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Delete(new(Perm))
 	return err
 }
 
@@ -145,5 +170,16 @@ func ListPerm(ctx context.Context, reqDTO ListPermReqDTO) ([]Perm, error) {
 		session.Limit(reqDTO.Limit)
 	}
 	err := session.OrderBy("id desc").Find(&ret)
+	return ret, err
+}
+
+func SearchPerm(ctx context.Context, reqDTO SearchPermReqDTO) ([]Perm, error) {
+	ret := make([]Perm, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("account = ?", reqDTO.Account).
+		And("db_id = ?", reqDTO.DbId).
+		And("access_base = ?", reqDTO.AccessBase).
+		In("access_table", reqDTO.AccessTables).
+		Find(&ret)
 	return ret, err
 }

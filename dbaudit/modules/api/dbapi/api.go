@@ -36,6 +36,12 @@ func InitApi() {
 			group.POST("/delete", deleteDbPerm)
 			group.POST("/listByAccount", listDbPermByAccount)
 		}
+		group = e.Group("/api/dbSearch", apisession.CheckLogin)
+		{
+			group.POST("/allBases", allBases)
+			group.POST("/allTables", allTables)
+			group.POST("/searchDb", searchDb)
+		}
 	})
 }
 
@@ -142,12 +148,13 @@ func applyDbPerm(c *gin.Context) {
 	var req ApplyDbPermReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := dbsrv.Outer.ApplyDbPerm(c, dbsrv.ApplyDbPermReqDTO{
-			DbId:        req.DbId,
-			AccessTable: req.AccessTable,
-			Reason:      req.Reason,
-			ExpireDay:   req.ExpireDay,
-			PermType:    req.PermType,
-			Operator:    apisession.MustGetLoginUser(c),
+			DbId:         req.DbId,
+			AccessBase:   req.AccessBase,
+			AccessTables: req.AccessTables,
+			Reason:       req.Reason,
+			ExpireDay:    req.ExpireDay,
+			PermType:     req.PermType,
+			Operator:     apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -217,18 +224,19 @@ func listApprovalOrder(c *gin.Context) {
 		}
 		data, _ := listutil.Map(orders, func(t dbsrv.ApprovalOrderDTO) (ApprovalOrderVO, error) {
 			return ApprovalOrderVO{
-				Id:          t.Id,
-				Account:     t.Account,
-				DbId:        t.DbId,
-				DbHost:      t.DbHost,
-				DbName:      t.DbName,
-				AccessTable: t.AccessTable,
-				PermType:    t.PermType.Readable(),
-				OrderStatus: t.OrderStatus.Readable(),
-				Auditor:     t.Auditor,
-				ExpireDay:   t.ExpireDay,
-				Reason:      t.Reason,
-				Created:     t.Created.Format(time.DateTime),
+				Id:           t.Id,
+				Account:      t.Account,
+				DbId:         t.DbId,
+				DbHost:       t.DbHost,
+				DbName:       t.DbName,
+				AccessBase:   t.AccessBase,
+				AccessTables: t.AccessTables,
+				PermType:     t.PermType.Readable(),
+				OrderStatus:  t.OrderStatus.Readable(),
+				Auditor:      t.Auditor,
+				ExpireDay:    t.ExpireDay,
+				Reason:       t.Reason,
+				Created:      t.Created.Format(time.DateTime),
 			}, nil
 		})
 		c.JSON(http.StatusOK, ginutil.PageResp[[]ApprovalOrderVO]{
@@ -260,6 +268,7 @@ func listDbPerm(c *gin.Context) {
 				DbId:        t.DbId,
 				DbHost:      t.DbHost,
 				DbName:      t.DbName,
+				AccessBase:  t.AccessBase,
 				AccessTable: t.AccessTable,
 				PermType:    t.PermType.Readable(),
 				Created:     t.Created.Format(time.DateTime),
@@ -323,6 +332,67 @@ func listDbPermByAccount(c *gin.Context) {
 				Data:     data,
 			},
 			Next: next,
+		})
+	}
+}
+
+func allTables(c *gin.Context) {
+	var req AllTablesReqVO
+	if util.ShouldBindJSON(&req, c) {
+		tables, err := dbsrv.Outer.AllTables(c, dbsrv.AllTablesReqDTO{
+			DbId:       req.DbId,
+			AccessBase: req.AccessBase,
+			Operator:   apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     tables,
+		})
+	}
+}
+
+func allBases(c *gin.Context) {
+	var req AllBasesReqVO
+	if util.ShouldBindJSON(&req, c) {
+		tables, err := dbsrv.Outer.AllBases(c, dbsrv.AllBasesReqDTO{
+			DbId:     req.DbId,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     tables,
+		})
+	}
+}
+
+func searchDb(c *gin.Context) {
+	var req SearchDbReqVO
+	if util.ShouldBindJSON(&req, c) {
+		columns, result, err := dbsrv.Outer.SearchDb(c, dbsrv.SearchDbReqDTO{
+			DbId:       req.DbId,
+			AccessBase: req.AccessBase,
+			Cmd:        req.Cmd,
+			Limit:      req.Limit,
+			Operator:   apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[SearchDbResultVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data: SearchDbResultVO{
+				Columns: columns,
+				Result:  result,
+			},
 		})
 	}
 }

@@ -195,6 +195,7 @@ func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (er
 		Email:     reqDTO.Email,
 		Password:  util.EncryptUserPassword(reqDTO.Password),
 		AvatarUrl: reqDTO.AvatarUrl,
+		RoleType:  usermd.DeveloperRole,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -244,6 +245,7 @@ func (*outerImpl) RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (
 		Password:  util.EncryptUserPassword(reqDTO.Password),
 		AvatarUrl: reqDTO.AvatarUrl,
 		IsAdmin:   countUser == 0,
+		RoleType:  usermd.DeveloperRole,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

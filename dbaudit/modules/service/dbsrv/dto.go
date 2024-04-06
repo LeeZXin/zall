@@ -124,20 +124,29 @@ type SimpleDbDTO struct {
 }
 
 type ApplyDbPermReqDTO struct {
-	DbId        int64               `json:"dbId"`
-	AccessTable string              `json:"accessTable"`
-	Reason      string              `json:"reason"`
-	ExpireDay   int                 `json:"expireDay"`
-	PermType    dbmd.PermType       `json:"permType"`
-	Operator    apisession.UserInfo `json:"operator"`
+	DbId         int64               `json:"dbId"`
+	AccessBase   string              `json:"accessBase"`
+	AccessTables dbmd.AccessTables   `json:"accessTables"`
+	Reason       string              `json:"reason"`
+	ExpireDay    int                 `json:"expireDay"`
+	PermType     dbmd.PermType       `json:"permType"`
+	Operator     apisession.UserInfo `json:"operator"`
 }
 
 func (r *ApplyDbPermReqDTO) IsValid() error {
 	if r.DbId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !dbmd.IsTableNameValid(r.AccessTable) {
+	if !dbmd.IsBaseNameValid(r.AccessBase) {
 		return util.InvalidArgsError()
+	}
+	if len(r.AccessTables) == 0 {
+		return util.InvalidArgsError()
+	}
+	for _, table := range r.AccessTables {
+		if !dbmd.IsTableNameValid(table) {
+			return util.InvalidArgsError()
+		}
 	}
 	if !dbmd.IsReasonValid(r.Reason) {
 		return util.InvalidArgsError()
@@ -271,18 +280,19 @@ func (r *ListDbPermByAccountReqDTO) IsValid() error {
 }
 
 type ApprovalOrderDTO struct {
-	Id          int64
-	Account     string
-	DbId        int64
-	DbHost      string
-	DbName      string
-	AccessTable string
-	PermType    dbmd.PermType
-	OrderStatus dbmd.OrderStatus
-	Auditor     string
-	ExpireDay   int
-	Reason      string
-	Created     time.Time
+	Id           int64
+	Account      string
+	DbId         int64
+	DbHost       string
+	DbName       string
+	AccessBase   string
+	AccessTables dbmd.AccessTables
+	PermType     dbmd.PermType
+	OrderStatus  dbmd.OrderStatus
+	Auditor      string
+	ExpireDay    int
+	Reason       string
+	Created      time.Time
 }
 
 type PermDTO struct {
@@ -291,8 +301,70 @@ type PermDTO struct {
 	DbId        int64
 	DbHost      string
 	DbName      string
+	AccessBase  string
 	AccessTable string
 	PermType    dbmd.PermType
 	Created     time.Time
 	Expired     time.Time
+}
+
+type AllBasesReqDTO struct {
+	DbId     int64               `json:"dbId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *AllBasesReqDTO) IsValid() error {
+	if r.DbId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type AllTablesReqDTO struct {
+	DbId       int64               `json:"dbId"`
+	AccessBase string              `json:"accessBase"`
+	Operator   apisession.UserInfo `json:"operator"`
+}
+
+func (r *AllTablesReqDTO) IsValid() error {
+	if r.DbId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !dbmd.IsBaseNameValid(r.AccessBase) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type SearchDbReqDTO struct {
+	DbId       int64               `json:"dbId"`
+	AccessBase string              `json:"accessBase"`
+	Cmd        string              `json:"cmd"`
+	Limit      int                 `json:"limit"`
+	Operator   apisession.UserInfo `json:"operator"`
+}
+
+func (r *SearchDbReqDTO) IsValid() error {
+	if r.DbId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !dbmd.IsBaseNameValid(r.AccessBase) {
+		return util.InvalidArgsError()
+	}
+	if len(r.Cmd) == 0 || len(r.Cmd) > 2048 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.Limit < 0 || r.Limit > 1000 {
+		return util.InvalidArgsError()
+	}
+	return nil
 }

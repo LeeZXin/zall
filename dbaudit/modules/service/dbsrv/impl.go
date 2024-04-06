@@ -2,8 +2,11 @@ package dbsrv
 
 import (
 	"context"
+	"fmt"
 	"github.com/LeeZXin/zall/dbaudit/modules/model/dbmd"
+	"github.com/LeeZXin/zall/dbaudit/modules/service/dbsrv/command"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
+	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
@@ -11,6 +14,9 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -172,13 +178,14 @@ func (*outerImpl) ApplyDbPerm(ctx context.Context, reqDTO ApplyDbPermReqDTO) err
 		return util.InvalidArgsError()
 	}
 	err = dbmd.InsertApprovalOrder(ctx, dbmd.InsertApprovalOrderReqDTO{
-		Account:     reqDTO.Operator.Account,
-		DbId:        reqDTO.DbId,
-		AccessTable: reqDTO.AccessTable,
-		PermType:    reqDTO.PermType,
-		OrderStatus: dbmd.PendingOrderStatus,
-		ExpireDay:   reqDTO.ExpireDay,
-		Reason:      reqDTO.Reason,
+		Account:      reqDTO.Operator.Account,
+		DbId:         reqDTO.DbId,
+		AccessBase:   reqDTO.AccessBase,
+		AccessTables: reqDTO.AccessTables,
+		PermType:     reqDTO.PermType,
+		OrderStatus:  dbmd.PendingOrderStatus,
+		ExpireDay:    reqDTO.ExpireDay,
+		Reason:       reqDTO.Reason,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -219,18 +226,19 @@ func (*outerImpl) ListPermApprovalOrder(ctx context.Context, reqDTO ListPermAppr
 	}
 	data, _ := listutil.Map(orders, func(t dbmd.ApprovalOrder) (ApprovalOrderDTO, error) {
 		return ApprovalOrderDTO{
-			Id:          t.Id,
-			Account:     t.Account,
-			DbId:        t.DbId,
-			DbHost:      dbMap[t.DbId].DbHost,
-			DbName:      dbMap[t.DbId].Name,
-			AccessTable: t.AccessTable,
-			PermType:    t.PermType,
-			OrderStatus: t.OrderStatus,
-			Auditor:     t.Auditor,
-			ExpireDay:   t.ExpireDay,
-			Reason:      t.Reason,
-			Created:     t.Created,
+			Id:           t.Id,
+			Account:      t.Account,
+			DbId:         t.DbId,
+			DbHost:       dbMap[t.DbId].DbHost,
+			DbName:       dbMap[t.DbId].Name,
+			AccessBase:   t.AccessBase,
+			AccessTables: t.AccessTables,
+			PermType:     t.PermType,
+			OrderStatus:  t.OrderStatus,
+			Auditor:      t.Auditor,
+			ExpireDay:    t.ExpireDay,
+			Reason:       t.Reason,
+			Created:      t.Created,
 		}, nil
 	})
 	return data, next, nil
@@ -266,13 +274,18 @@ func (*outerImpl) AgreeDbPerm(ctx context.Context, reqDTO AgreeDbPermReqDTO) err
 		}
 		if b {
 			// 插入权限表
-			return dbmd.InsertPerm(ctx, dbmd.InsertPermReqDTO{
-				Account:     order.Account,
-				DbId:        order.DbId,
-				AccessTable: order.AccessTable,
-				PermType:    order.PermType,
-				Expired:     time.Now().Add(time.Duration(order.ExpireDay) * 24 * time.Hour),
+			expired := time.Now().Add(time.Duration(order.ExpireDay) * 24 * time.Hour)
+			insertReqs, _ := listutil.Map(order.AccessTables, func(table string) (dbmd.InsertPermReqDTO, error) {
+				return dbmd.InsertPermReqDTO{
+					Account:     order.Account,
+					DbId:        order.DbId,
+					AccessBase:  order.AccessBase,
+					AccessTable: table,
+					PermType:    order.PermType,
+					Expired:     expired,
+				}, nil
 			})
+			return dbmd.BatchInsertPerm(ctx, insertReqs)
 		}
 		return nil
 	})
@@ -379,6 +392,7 @@ func (*outerImpl) ListDbPerm(ctx context.Context, reqDTO ListDbPermReqDTO) ([]Pe
 			DbId:        t.DbId,
 			DbHost:      dbMap[t.DbId].DbHost,
 			DbName:      dbMap[t.DbId].Name,
+			AccessBase:  t.AccessBase,
 			AccessTable: t.AccessTable,
 			PermType:    t.PermType,
 			Created:     t.Created,
@@ -460,6 +474,172 @@ func (*outerImpl) ListDbPermByAccount(ctx context.Context, reqDTO ListDbPermByAc
 		}, nil
 	})
 	return data, next, nil
+}
+
+// AllTables 展示单个数据库所有表
+func (*outerImpl) AllTables(ctx context.Context, reqDTO AllTablesReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	db, b, err := dbmd.GetDbById(ctx, reqDTO.DbId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
+	ret := make([]string, 0)
+	switch db.DbType {
+	case dbmd.MysqlDbType:
+		datasourceName := fmt.Sprintf(
+			"%s:%s@tcp(%s)/%s?charset=utf8",
+			url.QueryEscape(db.Username),
+			url.QueryEscape(db.Password),
+			db.DbHost,
+			reqDTO.AccessBase,
+		)
+		_, tables, err := command.MysqlQuery(datasourceName, "show tables")
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		for _, table := range tables {
+			if len(table) > 0 {
+				ret = append(ret, table[0])
+			}
+		}
+	case dbmd.RedisDbType:
+	case dbmd.MongoDbType:
+	}
+	return ret, nil
+}
+
+// AllBases 所有库
+func (*outerImpl) AllBases(ctx context.Context, reqDTO AllBasesReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	db, b, err := dbmd.GetDbById(ctx, reqDTO.DbId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
+	ret := make([]string, 0)
+	switch db.DbType {
+	case dbmd.MysqlDbType:
+		datasourceName := fmt.Sprintf(
+			"%s:%s@tcp(%s)/?charset=utf8",
+			url.QueryEscape(db.Username),
+			url.QueryEscape(db.Password),
+			db.DbHost,
+		)
+		_, tables, err := command.MysqlQuery(datasourceName, "show databases")
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		for _, table := range tables {
+			if len(table) > 0 {
+				ret = append(ret, table[0])
+			}
+		}
+	case dbmd.RedisDbType:
+	case dbmd.MongoDbType:
+	}
+	return ret, nil
+}
+
+// SearchDb 搜索
+func (*outerImpl) SearchDb(ctx context.Context, reqDTO SearchDbReqDTO) (columns []string, ret [][]string, err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.DbSrvKeysVO.SearchDb),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var (
+		db dbmd.Db
+		b  bool
+	)
+	db, b, err = dbmd.GetDbById(ctx, reqDTO.DbId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
+	// 检查权限
+	needCheckPerm := checkPerm(reqDTO.Operator) != nil
+	switch db.DbType {
+	case dbmd.MysqlDbType:
+		var (
+			tableName, sql string
+		)
+		tableName, sql, err = command.ValidateMysqlSelectSql(reqDTO.Cmd)
+		if err != nil {
+			err = util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
+			return
+		}
+		if needCheckPerm {
+			var perms []dbmd.Perm
+			perms, err = dbmd.SearchPerm(ctx, dbmd.SearchPermReqDTO{
+				Account:      reqDTO.Operator.Account,
+				DbId:         reqDTO.DbId,
+				AccessBase:   reqDTO.AccessBase,
+				AccessTables: []string{tableName, "*"},
+			})
+			if err != nil {
+				logger.Logger.WithContext(ctx).Error(err)
+				err = util.InternalError(err)
+				return
+			}
+			permPass := false
+			for _, perm := range perms {
+				if perm.PermType.HasReadPermType() {
+					permPass = true
+					break
+				}
+			}
+			if !permPass {
+				err = util.UnauthorizedError()
+				return
+			}
+		}
+		datasourceName := fmt.Sprintf(
+			"%s:%s@tcp(%s)/%s?charset=utf8",
+			url.QueryEscape(db.Username),
+			url.QueryEscape(db.Password),
+			db.DbHost,
+			reqDTO.AccessBase,
+		)
+		columns, ret, err = command.MysqlQuery(datasourceName, strings.TrimSuffix(sql, ";")+" limit "+strconv.Itoa(reqDTO.Limit))
+		if err != nil {
+			err = util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
+			return
+		}
+	case dbmd.RedisDbType:
+	case dbmd.MongoDbType:
+	}
+	return
 }
 
 func getDbMap(ctx context.Context, dbIdList []int64) (map[int64]dbmd.Db, error) {

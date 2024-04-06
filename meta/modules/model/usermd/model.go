@@ -49,5 +49,6 @@ func (u *User) ToUserInfo() UserInfo {
 		IsProhibited: u.IsProhibited,
 		AvatarUrl:    u.AvatarUrl,
 		IsAdmin:      u.IsAdmin,
+		RoleType:     u.RoleType,
 	}
 }

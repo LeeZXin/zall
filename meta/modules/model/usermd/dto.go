@@ -21,6 +21,7 @@ type InsertUserReqDTO struct {
 	Password  string
 	AvatarUrl string
 	IsAdmin   bool
+	RoleType  RoleType
 }
 
 type UpdateUserReqDTO struct {

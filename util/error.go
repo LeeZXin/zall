@@ -48,6 +48,13 @@ func NewBizErr(code apicode.Code, key i18n.KeyItem, msg ...string) *bizerr.Err {
 	return bizerr.NewBizErr(code.Int(), fmt.Sprintf(i18n.GetByKey(key), msg))
 }
 
+func NewBizErrWithMsg(code apicode.Code, msg string) *bizerr.Err {
+	if len(msg) == 0 {
+		return bizerr.NewBizErr(code.Int(), msg)
+	}
+	return bizerr.NewBizErr(code.Int(), msg)
+}
+
 func ThereHasBugErr() error {
 	return NewBizErr(apicode.ThereHasBugErrCode, i18n.SystemInternalError)
 }

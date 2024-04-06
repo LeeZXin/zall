@@ -35,12 +35,8 @@ func ValidateMysqlSelectSql(sql string) (string, string, error) {
 	return tableNames[0].Name.String(), stmt.Text(), nil
 }
 
-type MysqlExecutor struct {
-	DatasourceName string
-}
-
-func (e *MysqlExecutor) Execute(cmd string) ([]string, [][]string, error) {
-	db, err := sql.Open("mysql", e.DatasourceName)
+func MysqlQuery(datasourceName, cmd string) ([]string, [][]string, error) {
+	db, err := sql.Open("mysql", datasourceName)
 	if err != nil {
 		return nil, nil, err
 	}

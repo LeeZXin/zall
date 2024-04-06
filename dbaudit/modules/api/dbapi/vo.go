@@ -41,11 +41,12 @@ type SimpleDbVO struct {
 }
 
 type ApplyDbPermReqVO struct {
-	DbId        int64         `json:"dbId"`
-	AccessTable string        `json:"accessTable"`
-	Reason      string        `json:"reason"`
-	ExpireDay   int           `json:"expireDay"`
-	PermType    dbmd.PermType `json:"permType"`
+	DbId         int64             `json:"dbId"`
+	AccessBase   string            `json:"accessBase"`
+	AccessTables dbmd.AccessTables `json:"accessTables"`
+	Reason       string            `json:"reason"`
+	ExpireDay    int               `json:"expireDay"`
+	PermType     dbmd.PermType     `json:"permType"`
 }
 
 type AgreeDbPermReqVO struct {
@@ -82,18 +83,19 @@ type ListApprovalOrderReqVO struct {
 }
 
 type ApprovalOrderVO struct {
-	Id          int64  `json:"id"`
-	Account     string `json:"account"`
-	DbId        int64  `json:"dbId"`
-	DbHost      string `json:"dbHost"`
-	DbName      string `json:"dbName"`
-	AccessTable string `json:"accessTable"`
-	PermType    string `json:"permType"`
-	OrderStatus string `json:"orderStatus"`
-	Auditor     string `json:"auditor"`
-	ExpireDay   int    `json:"expireDay"`
-	Reason      string `json:"reason"`
-	Created     string `json:"created"`
+	Id           int64             `json:"id"`
+	Account      string            `json:"account"`
+	DbId         int64             `json:"dbId"`
+	DbHost       string            `json:"dbHost"`
+	DbName       string            `json:"dbName"`
+	AccessBase   string            `json:"accessBase"`
+	AccessTables dbmd.AccessTables `json:"accessTables"`
+	PermType     string            `json:"permType"`
+	OrderStatus  string            `json:"orderStatus"`
+	Auditor      string            `json:"auditor"`
+	ExpireDay    int               `json:"expireDay"`
+	Reason       string            `json:"reason"`
+	Created      string            `json:"created"`
 }
 
 type PermVO struct {
@@ -102,8 +104,30 @@ type PermVO struct {
 	DbId        int64  `json:"dbId"`
 	DbHost      string `json:"dbHost"`
 	DbName      string `json:"dbName"`
+	AccessBase  string `json:"accessBase"`
 	AccessTable string `json:"accessTable"`
 	PermType    string `json:"permType"`
 	Created     string `json:"created"`
 	Expired     string `json:"expired"`
+}
+
+type AllTablesReqVO struct {
+	DbId       int64  `json:"dbId"`
+	AccessBase string `json:"accessBase"`
+}
+
+type AllBasesReqVO struct {
+	DbId int64 `json:"dbId"`
+}
+
+type SearchDbReqVO struct {
+	DbId       int64  `json:"dbId"`
+	AccessBase string `json:"accessBase"`
+	Cmd        string `json:"cmd"`
+	Limit      int    `json:"limit"`
+}
+
+type SearchDbResultVO struct {
+	Columns []string   `json:"columns"`
+	Result  [][]string `json:"result"`
 }

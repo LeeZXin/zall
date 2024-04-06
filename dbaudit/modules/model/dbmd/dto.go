@@ -19,13 +19,14 @@ type UpdateDbReqDTO struct {
 }
 
 type InsertApprovalOrderReqDTO struct {
-	Account     string
-	DbId        int64
-	AccessTable string
-	PermType    PermType
-	OrderStatus OrderStatus
-	ExpireDay   int
-	Reason      string
+	Account      string
+	DbId         int64
+	AccessBase   string
+	AccessTables AccessTables
+	PermType     PermType
+	OrderStatus  OrderStatus
+	ExpireDay    int
+	Reason       string
 }
 
 type ListApprovalOrderReqDTO struct {
@@ -37,6 +38,7 @@ type ListApprovalOrderReqDTO struct {
 type InsertPermReqDTO struct {
 	Account     string
 	DbId        int64
+	AccessBase  string
 	AccessTable string
 	PermType    PermType
 	Expired     time.Time
@@ -53,4 +55,11 @@ type ListPermReqDTO struct {
 	Cursor  int64
 	Limit   int
 	Account string
+}
+
+type SearchPermReqDTO struct {
+	Account      string
+	DbId         int64
+	AccessBase   string
+	AccessTables []string
 }

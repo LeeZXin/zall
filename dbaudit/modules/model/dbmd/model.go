@@ -1,6 +1,7 @@
 package dbmd
 
 import (
+	"encoding/json"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
 )
@@ -62,6 +63,10 @@ const (
 	ReadPermType PermType = 1
 )
 
+func (t PermType) HasReadPermType() bool {
+	return t&ReadPermType == ReadPermType
+}
+
 func (t PermType) Readable() string {
 	switch t {
 	case ReadPermType:
@@ -84,6 +89,7 @@ type Perm struct {
 	Id          int64     `json:"id" xorm:"pk autoincr"`
 	Account     string    `json:"account"`
 	DbId        int64     `json:"dbId"`
+	AccessBase  string    `json:"accessBase"`
 	AccessTable string    `json:"accessTable"`
 	PermType    PermType  `json:"permType"`
 	Expired     time.Time `json:"expired"`
@@ -131,18 +137,35 @@ func (s OrderStatus) IsValid() bool {
 	}
 }
 
+type AccessTables []string
+
+func (k *AccessTables) FromDB(content []byte) error {
+	ret := make(AccessTables, 0)
+	err := json.Unmarshal(content, &ret)
+	if err != nil {
+		return err
+	}
+	*k = ret
+	return nil
+}
+
+func (k *AccessTables) ToDB() ([]byte, error) {
+	return json.Marshal(k)
+}
+
 type ApprovalOrder struct {
-	Id          int64       `json:"id" xorm:"pk autoincr"`
-	Account     string      `json:"account"`
-	DbId        int64       `json:"dbId"`
-	AccessTable string      `json:"accessTable"`
-	PermType    PermType    `json:"permType"`
-	OrderStatus OrderStatus `json:"orderStatus"`
-	Auditor     string      `json:"auditor"`
-	ExpireDay   int         `json:"expireDay"`
-	Reason      string      `json:"reason"`
-	Created     time.Time   `json:"created" xorm:"created"`
-	Updated     time.Time   `json:"updated" xorm:"updated"`
+	Id           int64        `json:"id" xorm:"pk autoincr"`
+	Account      string       `json:"account"`
+	DbId         int64        `json:"dbId"`
+	AccessBase   string       `json:"accessBase"`
+	AccessTables AccessTables `json:"accessTables"`
+	PermType     PermType     `json:"permType"`
+	OrderStatus  OrderStatus  `json:"orderStatus"`
+	Auditor      string       `json:"auditor"`
+	ExpireDay    int          `json:"expireDay"`
+	Reason       string       `json:"reason"`
+	Created      time.Time    `json:"created" xorm:"created"`
+	Updated      time.Time    `json:"updated" xorm:"updated"`
 }
 
 func (*ApprovalOrder) TableName() string {

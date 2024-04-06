@@ -28,4 +28,10 @@ type OuterService interface {
 	DeleteDbPerm(context.Context, DeleteDbPermReqDTO) error
 	// ListDbPermByAccount 权限列表
 	ListDbPermByAccount(context.Context, ListDbPermByAccountReqDTO) ([]PermDTO, int64, error)
+	// AllBases 所有库
+	AllBases(context.Context, AllBasesReqDTO) ([]string, error)
+	// AllTables 展示单个数据库所有表
+	AllTables(context.Context, AllTablesReqDTO) ([]string, error)
+	// SearchDb 搜索
+	SearchDb(context.Context, SearchDbReqDTO) ([]string, [][]string, error)
 }

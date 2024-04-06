@@ -22,6 +22,7 @@ func InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (User, error) {
 		Password:  reqDTO.Password,
 		AvatarUrl: reqDTO.AvatarUrl,
 		IsAdmin:   reqDTO.IsAdmin,
+		RoleType:  reqDTO.RoleType,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&u)
 	return u, err
