@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/LeeZXin/zall/action/modules/api/actionapi"
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
-	"github.com/LeeZXin/zall/dbaudit/modules/api/dbapi"
+	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
@@ -141,7 +141,7 @@ func runZall(*cli.Context) error {
 	}
 	// for db
 	{
-		dbapi.InitApi()
+		mysqldbapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer(), prom.NewServer())
 	zsf.Run(

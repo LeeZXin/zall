@@ -563,28 +563,60 @@ var (
 		Id:         "db.readPermType",
 		DefaultRet: "读权限",
 	}
+	DbWritePermType = KeyItem{
+		Id:         "db.writePermType",
+		DefaultRet: "写权限",
+	}
+	DbReadWritePermType = KeyItem{
+		Id:         "db.readPermType",
+		DefaultRet: "读写权限",
+	}
 	DbUnknownPermType = KeyItem{
 		Id:         "db.unknownPermType",
 		DefaultRet: "未知类型",
 	}
-	DbPendingApprovalOrderStatus = KeyItem{
-		Id:         "db.pendingApprovalOrderStatus",
+	DbPendingPermOrderStatus = KeyItem{
+		Id:         "db.pendingPermOrderStatus",
 		DefaultRet: "审批中",
 	}
-	DbAgreeApprovalOrderStatus = KeyItem{
-		Id:         "db.agreeApprovalOrderStatus",
+	DbAgreePermOrderStatus = KeyItem{
+		Id:         "db.agreePermOrderStatus",
 		DefaultRet: "同意",
 	}
-	DbCanceledApprovalOrderStatus = KeyItem{
-		Id:         "db.canceledApprovalOrderStatus",
+	DbCanceledPermOrderStatus = KeyItem{
+		Id:         "db.canceledPermOrderStatus",
 		DefaultRet: "已取消",
 	}
-	DbDisagreeApprovalOrderStatus = KeyItem{
-		Id:         "db.disagreeApprovalOrderStatus",
+	DbDisagreePermOrderStatus = KeyItem{
+		Id:         "db.disagreePermOrderStatus",
 		DefaultRet: "不同意",
 	}
-	DbUnknownApprovalOrderStatus = KeyItem{
-		Id:         "db.unknownApprovalOrderStatus",
+	DbUnknownPermOrderStatus = KeyItem{
+		Id:         "db.unknownPermOrderStatus",
+		DefaultRet: "未知状态",
+	}
+	DbPendingUpdateOrderStatus = KeyItem{
+		Id:         "db.pendingUpdateOrderStatus",
+		DefaultRet: "审批中",
+	}
+	DbAgreeUpdateOrderStatus = KeyItem{
+		Id:         "db.agreeUpdateOrderStatus",
+		DefaultRet: "同意",
+	}
+	DbCanceledUpdateOrderStatus = KeyItem{
+		Id:         "db.canceledUpdateOrderStatus",
+		DefaultRet: "已取消",
+	}
+	DbDisagreeUpdateOrderStatus = KeyItem{
+		Id:         "db.disagreeUpdateOrderStatus",
+		DefaultRet: "不同意",
+	}
+	DbExecutedUpdateOrderStatus = KeyItem{
+		Id:         "db.executedUpdateOrderStatus",
+		DefaultRet: "执行完成",
+	}
+	DbUnknownUpdateOrderStatus = KeyItem{
+		Id:         "db.unknownUpdateOrderStatus",
 		DefaultRet: "未知状态",
 	}
 )
@@ -601,5 +633,9 @@ var (
 	SqlNotAllowHasLimitMsg = KeyItem{
 		Id:         "sql.notAllowHasLimit",
 		DefaultRet: "sql不允许带limit",
+	}
+	SqlNotAllowNoWhereMsg = KeyItem{
+		Id:         "sql.notAllowNoWhere",
+		DefaultRet: "sql没有带where关键词",
 	}
 )

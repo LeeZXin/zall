@@ -1,4 +1,4 @@
-package dbmd
+package mysqldbmd
 
 import (
 	"context"
@@ -11,7 +11,7 @@ func IsDbNameValid(name string) bool {
 }
 
 func IsBaseNameValid(name string) bool {
-	return len(name) > 0 && len(name) <= 32
+	return len(name) > 0 && len(name) <= 64
 }
 
 func IsTableNameValid(name string) bool {
@@ -30,13 +30,16 @@ func IsReasonValid(reason string) bool {
 	return len(reason) <= 255
 }
 
+func IsUpdateOrderNameValid(name string) bool {
+	return len(name) > 0 && len(name) <= 32
+}
+
 func InsertDb(ctx context.Context, reqDTO InsertDbReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&Db{
 		Name:     reqDTO.Name,
 		DbHost:   reqDTO.DbHost,
 		Username: reqDTO.Username,
 		Password: reqDTO.Password,
-		DbType:   reqDTO.DbType,
 	})
 	return err
 }
@@ -77,9 +80,9 @@ func UpdateDb(ctx context.Context, reqDTO UpdateDbReqDTO) (bool, error) {
 	return rows == 1, err
 }
 
-func InsertApprovalOrder(ctx context.Context, reqDTO InsertApprovalOrderReqDTO) error {
+func InsertPermApprovalOrder(ctx context.Context, reqDTO InsertPermApprovalOrderReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&ApprovalOrder{
+		Insert(&PermApprovalOrder{
 			Account:      reqDTO.Account,
 			DbId:         reqDTO.DbId,
 			AccessBase:   reqDTO.AccessBase,
@@ -92,49 +95,90 @@ func InsertApprovalOrder(ctx context.Context, reqDTO InsertApprovalOrderReqDTO) 
 	return err
 }
 
-func ListApprovalOrder(ctx context.Context, reqDTO ListApprovalOrderReqDTO) ([]ApprovalOrder, error) {
-	session := xormutil.MustGetXormSession(ctx).
-		Where("order_status = ?", reqDTO.OrderStatus)
+func ListPermApprovalOrder(ctx context.Context, reqDTO ListPermApprovalOrderReqDTO) ([]PermApprovalOrder, error) {
+	session := xormutil.MustGetXormSession(ctx)
+	if reqDTO.OrderStatus > 0 {
+		session.And("order_status = ?", reqDTO.OrderStatus)
+	}
 	if reqDTO.Cursor > 0 {
 		session.And("id < ?", reqDTO.Cursor)
 	}
 	if reqDTO.Limit > 0 {
 		session.Limit(reqDTO.Limit)
 	}
-	ret := make([]ApprovalOrder, 0)
+	if reqDTO.Account != "" {
+		session.And("account = ?", reqDTO.Account)
+	}
+	ret := make([]PermApprovalOrder, 0)
 	err := session.OrderBy("id desc").Find(&ret)
 	return ret, err
 }
 
-func GetApprovalOrderById(ctx context.Context, id int64) (ApprovalOrder, bool, error) {
-	var ret ApprovalOrder
+func ListUpdateApprovalOrder(ctx context.Context, reqDTO ListUpdateApprovalOrderReqDTO) ([]UpdateApprovalOrder, error) {
+	session := xormutil.MustGetXormSession(ctx)
+	if reqDTO.OrderStatus > 0 {
+		session.And("order_status = ?", reqDTO.OrderStatus)
+	}
+	if reqDTO.Cursor > 0 {
+		session.And("id < ?", reqDTO.Cursor)
+	}
+	if reqDTO.Limit > 0 {
+		session.Limit(reqDTO.Limit)
+	}
+	if reqDTO.Account != "" {
+		session.And("account = ?", reqDTO.Account)
+	}
+	ret := make([]UpdateApprovalOrder, 0)
+	err := session.OrderBy("id desc").Find(&ret)
+	return ret, err
+}
+
+func GetPermApprovalOrderById(ctx context.Context, id int64) (PermApprovalOrder, bool, error) {
+	var ret PermApprovalOrder
 	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
 	return ret, b, err
 }
 
-func UpdateApprovalOrderStatus(ctx context.Context, reqDTO UpdateApprovalOrderStatusReqDTO) (bool, error) {
+func GetUpdateApprovalOrderById(ctx context.Context, id int64) (UpdateApprovalOrder, bool, error) {
+	var ret UpdateApprovalOrder
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	return ret, b, err
+}
+
+func UpdatePermApprovalOrderStatus(ctx context.Context, reqDTO UpdatePermApprovalOrderStatusReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
 		And("order_status = ?", reqDTO.OldStatus).
-		Cols("order_status", "auditor").
-		Update(&ApprovalOrder{
-			OrderStatus: reqDTO.NewStatus,
-			Auditor:     reqDTO.Auditor,
+		Cols("order_status", "auditor", "disagree_reason").
+		Update(&PermApprovalOrder{
+			DisagreeReason: reqDTO.DisagreeReason,
+			OrderStatus:    reqDTO.NewStatus,
+			Auditor:        reqDTO.Auditor,
 		})
 	return rows == 1, err
 }
 
-func InsertPerm(ctx context.Context, reqDTO InsertPermReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&Perm{
-			Account:     reqDTO.Account,
-			DbId:        reqDTO.DbId,
-			AccessBase:  reqDTO.AccessBase,
-			AccessTable: reqDTO.AccessTable,
-			PermType:    reqDTO.PermType,
-			Expired:     reqDTO.Expired,
+func UpdateUpdateApprovalOrderStatus(ctx context.Context, reqDTO UpdateUpdateApprovalOrderStatusReqDTO) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", reqDTO.Id).
+		And("order_status = ?", reqDTO.OldStatus).
+		Cols("order_status", "auditor", "disagree_reason").
+		Update(&UpdateApprovalOrder{
+			DisagreeReason: reqDTO.DisagreeReason,
+			OrderStatus:    reqDTO.NewStatus,
+			Auditor:        reqDTO.Auditor,
 		})
-	return err
+	return rows == 1, err
+}
+
+func UpdateUpdateApprovalOrderExecuteLog(ctx context.Context, id int64, log string) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Cols("execute_log").
+		Update(&UpdateApprovalOrder{
+			ExecuteLog: log,
+		})
+	return rows == 1, err
 }
 
 func BatchInsertPerm(ctx context.Context, reqDTOs []InsertPermReqDTO) error {
@@ -182,4 +226,17 @@ func SearchPerm(ctx context.Context, reqDTO SearchPermReqDTO) ([]Perm, error) {
 		In("access_table", reqDTO.AccessTables).
 		Find(&ret)
 	return ret, err
+}
+
+func InsertUpdateApprovalOrder(ctx context.Context, reqDTO InsertUpdateApprovalOrderReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Insert(&UpdateApprovalOrder{
+			Name:        reqDTO.Name,
+			Account:     reqDTO.Account,
+			DbId:        reqDTO.DbId,
+			AccessBase:  reqDTO.AccessBase,
+			UpdateCmd:   reqDTO.UpdateCmd,
+			OrderStatus: reqDTO.OrderStatus,
+		})
+	return err
 }

@@ -1,7 +1,7 @@
-package dbsrv
+package mysqldbsrv
 
 import (
-	"github.com/LeeZXin/zall/dbaudit/modules/model/dbmd"
+	"github.com/LeeZXin/zall/dbaudit/modules/model/mysqldbmd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
@@ -13,24 +13,20 @@ type InsertDbReqDTO struct {
 	DbHost   string              `json:"dbHost"`
 	Username string              `json:"username"`
 	Password string              `json:"password"`
-	DbType   dbmd.DbType         `json:"dbType"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *InsertDbReqDTO) IsValid() error {
-	if !dbmd.IsDbNameValid(r.Name) {
+	if !mysqldbmd.IsDbNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if !util.IpPortPattern.MatchString(r.DbHost) {
 		return util.InvalidArgsError()
 	}
-	if !dbmd.IsUsernameValid(r.Username) {
+	if !mysqldbmd.IsUsernameValid(r.Username) {
 		return util.InvalidArgsError()
 	}
-	if !dbmd.IsPasswordValid(r.Password) {
-		return util.InvalidArgsError()
-	}
-	if !r.DbType.IsValid() {
+	if !mysqldbmd.IsPasswordValid(r.Password) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -52,16 +48,16 @@ func (r *UpdateDbReqDTO) IsValid() error {
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !dbmd.IsDbNameValid(r.Name) {
+	if !mysqldbmd.IsDbNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if !util.IpPortPattern.MatchString(r.DbHost) {
 		return util.InvalidArgsError()
 	}
-	if !dbmd.IsUsernameValid(r.Username) {
+	if !mysqldbmd.IsUsernameValid(r.Username) {
 		return util.InvalidArgsError()
 	}
-	if !dbmd.IsPasswordValid(r.Password) {
+	if !mysqldbmd.IsPasswordValid(r.Password) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -102,7 +98,6 @@ type DbDTO struct {
 	DbHost   string
 	Username string
 	Password string
-	DbType   dbmd.DbType
 	Created  time.Time
 }
 
@@ -124,31 +119,31 @@ type SimpleDbDTO struct {
 }
 
 type ApplyDbPermReqDTO struct {
-	DbId         int64               `json:"dbId"`
-	AccessBase   string              `json:"accessBase"`
-	AccessTables dbmd.AccessTables   `json:"accessTables"`
-	Reason       string              `json:"reason"`
-	ExpireDay    int                 `json:"expireDay"`
-	PermType     dbmd.PermType       `json:"permType"`
-	Operator     apisession.UserInfo `json:"operator"`
+	DbId         int64                  `json:"dbId"`
+	AccessBase   string                 `json:"accessBase"`
+	AccessTables mysqldbmd.AccessTables `json:"accessTables"`
+	Reason       string                 `json:"reason"`
+	ExpireDay    int                    `json:"expireDay"`
+	PermType     mysqldbmd.PermType     `json:"permType"`
+	Operator     apisession.UserInfo    `json:"operator"`
 }
 
 func (r *ApplyDbPermReqDTO) IsValid() error {
 	if r.DbId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !dbmd.IsBaseNameValid(r.AccessBase) {
+	if !mysqldbmd.IsBaseNameValid(r.AccessBase) {
 		return util.InvalidArgsError()
 	}
 	if len(r.AccessTables) == 0 {
 		return util.InvalidArgsError()
 	}
 	for _, table := range r.AccessTables {
-		if !dbmd.IsTableNameValid(table) {
+		if !mysqldbmd.IsTableNameValid(table) {
 			return util.InvalidArgsError()
 		}
 	}
-	if !dbmd.IsReasonValid(r.Reason) {
+	if !mysqldbmd.IsReasonValid(r.Reason) {
 		return util.InvalidArgsError()
 	}
 	if r.ExpireDay <= 0 {
@@ -166,7 +161,7 @@ func (r *ApplyDbPermReqDTO) IsValid() error {
 type ListPermApprovalOrderReqDTO struct {
 	Cursor      int64               `json:"cursor"`
 	Limit       int                 `json:"limit"`
-	OrderStatus dbmd.OrderStatus    `json:"orderStatus"`
+	OrderStatus int                 `json:"orderStatus"`
 	Operator    apisession.UserInfo `json:"operator"`
 }
 
@@ -174,7 +169,21 @@ func (r *ListPermApprovalOrderReqDTO) IsValid() error {
 	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
 		return util.InvalidArgsError()
 	}
-	if !r.OrderStatus.IsValid() {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListAppliedPermApprovalOrderReqDTO struct {
+	Cursor      int64               `json:"cursor"`
+	Limit       int                 `json:"limit"`
+	OrderStatus int                 `json:"orderStatus"`
+	Operator    apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAppliedPermApprovalOrderReqDTO) IsValid() error {
+	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -199,12 +208,16 @@ func (r *AgreeDbPermReqDTO) IsValid() error {
 }
 
 type DisagreeDbPermReqDTO struct {
-	OrderId  int64               `json:"orderId"`
-	Operator apisession.UserInfo `json:"operator"`
+	OrderId        int64               `json:"orderId"`
+	DisagreeReason string              `json:"disagreeReason"`
+	Operator       apisession.UserInfo `json:"operator"`
 }
 
 func (r *DisagreeDbPermReqDTO) IsValid() error {
 	if r.OrderId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !mysqldbmd.IsReasonValid(r.DisagreeReason) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -279,16 +292,16 @@ func (r *ListDbPermByAccountReqDTO) IsValid() error {
 	return nil
 }
 
-type ApprovalOrderDTO struct {
+type PermApprovalOrderDTO struct {
 	Id           int64
 	Account      string
 	DbId         int64
 	DbHost       string
 	DbName       string
 	AccessBase   string
-	AccessTables dbmd.AccessTables
-	PermType     dbmd.PermType
-	OrderStatus  dbmd.OrderStatus
+	AccessTables mysqldbmd.AccessTables
+	PermType     mysqldbmd.PermType
+	OrderStatus  mysqldbmd.PermOrderStatus
 	Auditor      string
 	ExpireDay    int
 	Reason       string
@@ -303,7 +316,7 @@ type PermDTO struct {
 	DbName      string
 	AccessBase  string
 	AccessTable string
-	PermType    dbmd.PermType
+	PermType    mysqldbmd.PermType
 	Created     time.Time
 	Expired     time.Time
 }
@@ -333,7 +346,7 @@ func (r *AllTablesReqDTO) IsValid() error {
 	if r.DbId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !dbmd.IsBaseNameValid(r.AccessBase) {
+	if !mysqldbmd.IsBaseNameValid(r.AccessBase) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -354,7 +367,7 @@ func (r *SearchDbReqDTO) IsValid() error {
 	if r.DbId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !dbmd.IsBaseNameValid(r.AccessBase) {
+	if !mysqldbmd.IsBaseNameValid(r.AccessBase) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Cmd) == 0 || len(r.Cmd) > 2048 {
@@ -364,6 +377,185 @@ func (r *SearchDbReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if r.Limit < 0 || r.Limit > 1000 {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ExplainDbReqDTO struct {
+	DbId       int64               `json:"dbId"`
+	AccessBase string              `json:"accessBase"`
+	Cmd        string              `json:"cmd"`
+	Operator   apisession.UserInfo `json:"operator"`
+}
+
+func (r *ExplainDbReqDTO) IsValid() error {
+	if r.DbId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !mysqldbmd.IsBaseNameValid(r.AccessBase) {
+		return util.InvalidArgsError()
+	}
+	if len(r.Cmd) == 0 || len(r.Cmd) > 2048 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ApplyDbUpdateReqDTO struct {
+	Name       string              `json:"name"`
+	DbId       int64               `json:"dbId"`
+	AccessBase string              `json:"accessBase"`
+	Cmd        string              `json:"cmd"`
+	Operator   apisession.UserInfo `json:"operator"`
+}
+
+func (r *ApplyDbUpdateReqDTO) IsValid() error {
+	if !mysqldbmd.IsUpdateOrderNameValid(r.Name) {
+		return util.InvalidArgsError()
+	}
+	if r.DbId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !mysqldbmd.IsBaseNameValid(r.AccessBase) {
+		return util.InvalidArgsError()
+	}
+	if len(r.Cmd) == 0 || len(r.Cmd) > 10240 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListUpdateApprovalOrderReqDTO struct {
+	Cursor      int64               `json:"cursor"`
+	Limit       int                 `json:"limit"`
+	OrderStatus int                 `json:"orderStatus"`
+	Operator    apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListUpdateApprovalOrderReqDTO) IsValid() error {
+	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListAppliedUpdateApprovalOrderReqDTO struct {
+	Cursor      int64               `json:"cursor"`
+	Limit       int                 `json:"limit"`
+	OrderStatus int                 `json:"orderStatus"`
+	Operator    apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAppliedUpdateApprovalOrderReqDTO) IsValid() error {
+	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type UpdateApprovalOrderDTO struct {
+	Id             int64
+	Name           string
+	Account        string
+	DbId           int64
+	DbHost         string
+	DbName         string
+	AccessBase     string
+	UpdateCmd      string
+	OrderStatus    mysqldbmd.UpdateOrderStatus
+	Auditor        string
+	DisagreeReason string
+	ExecuteLog     string
+	Created        time.Time
+}
+
+type AgreeDbUpdateReqDTO struct {
+	OrderId  int64               `json:"orderId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *AgreeDbUpdateReqDTO) IsValid() error {
+	if r.OrderId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DisagreeDbUpdateReqDTO struct {
+	OrderId        int64               `json:"orderId"`
+	DisagreeReason string              `json:"disagreeReason"`
+	Operator       apisession.UserInfo `json:"operator"`
+}
+
+func (r *DisagreeDbUpdateReqDTO) IsValid() error {
+	if r.OrderId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !mysqldbmd.IsReasonValid(r.DisagreeReason) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type CancelDbUpdateReqDTO struct {
+	OrderId  int64               `json:"orderId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *CancelDbUpdateReqDTO) IsValid() error {
+	if r.OrderId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ExecuteDbUpdateReqDTO struct {
+	OrderId  int64               `json:"orderId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ExecuteDbUpdateReqDTO) IsValid() error {
+	if r.OrderId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type AskToExecuteDbUpdateReqDTO struct {
+	OrderId  int64               `json:"orderId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *AskToExecuteDbUpdateReqDTO) IsValid() error {
+	if r.OrderId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
