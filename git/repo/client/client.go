@@ -309,7 +309,7 @@ func UploadPack(req reqvo.UploadPackReq, nodeId int64, repoId int64, pusherAccou
 			"Repo-TeamId":    strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
-			"AppId-Url":      appUrl,
+			"AppId-HostUrl":  appUrl,
 		},
 	)
 }
@@ -323,7 +323,7 @@ func ReceivePack(req reqvo.ReceivePackReq, nodeId int64, repoId int64, pusherAcc
 			"Repo-TeamId":    strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
-			"AppId-Url":      appUrl,
+			"AppId-HostUrl":  appUrl,
 		},
 	)
 }

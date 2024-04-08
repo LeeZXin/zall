@@ -4,20 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
-	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/services/discovery"
-	"github.com/LeeZXin/zsf/services/lb"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
 )
 
 var (
-	httpClient = httputil.NewRetryableHttpClient()
 	// methodMap 存储方法
 	methodMap = make(map[string]func(*FlowContext) (map[string]any, error))
 )
@@ -40,87 +33,6 @@ func RegisterMethod(name string, fn func(*FlowContext) (map[string]any, error)) 
 		logger.Logger.Fatalf("duplicated process method name: %s", name)
 	}
 	methodMap[name] = fn
-}
-
-type Api struct {
-	Headers     map[string]string `json:"headers"`
-	Url         string            `json:"url"`
-	Method      string            `json:"method"`
-	ContentType string            `json:"contentType"`
-	BodyStr     string            `json:"bodyStr"`
-}
-
-func (a *Api) IsValid() bool {
-	_, err := url.Parse(a.Url)
-	if err != nil {
-		return false
-	}
-	if a.Method == "" {
-		return false
-	}
-	return true
-}
-
-func (a *Api) replaceStr(kvs []Kv, str string) string {
-	for _, kv := range kvs {
-		str = strings.ReplaceAll(str, "{{"+kv.Key+"}}", kv.Value)
-	}
-	return str
-}
-
-func (a *Api) DoRequest(ctx *FlowContext) (map[string]any, error) {
-	finalUrl := a.Url
-	parseUrl, err := url.Parse(finalUrl)
-	if err != nil {
-		return nil, err
-	}
-	if strings.HasSuffix(parseUrl.Host, "-http") {
-		servers, err := discovery.Discover(context.Background(), parseUrl.Host)
-		if err != nil {
-			return nil, err
-		}
-		if len(servers) == 0 {
-			return nil, lb.ServerNotFound
-		}
-		server := discovery.ChooseRandomServer(servers)
-		finalUrl = parseUrl.Scheme + "://" + fmt.Sprintf("%s:%d", server.Host, server.Port) + parseUrl.RequestURI()
-	}
-	if parseUrl.RawQuery != "" {
-		finalUrl = finalUrl + fmt.Sprintf("&bizId=%s", ctx.BizId)
-	} else {
-		finalUrl = finalUrl + fmt.Sprintf("?bizId=%s", ctx.BizId)
-	}
-	bodyStr := a.replaceStr(ctx.Kvs, a.BodyStr)
-	request, err := http.NewRequest(a.Method, finalUrl, strings.NewReader(bodyStr))
-	if err != nil {
-		return nil, err
-	}
-	if a.ContentType != "" {
-		request.Header.Set("Content-Type", a.ContentType)
-	}
-	for k, v := range a.Headers {
-		request.Header.Set(k, v)
-	}
-	response, err := httpClient.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	if response.StatusCode >= http.StatusBadRequest {
-		return nil, fmt.Errorf("http response return code: %v", response.StatusCode)
-	}
-	// 限制返回字节3MB大小
-	bodyAll, err := io.ReadAll(io.LimitReader(response.Body, 3*1024*1024))
-	if err != nil {
-		return nil, fmt.Errorf("read http response body err: %v", err)
-	}
-	ret := make(map[string]any)
-	// 忽略json异常
-	err = json.Unmarshal(bodyAll, &ret)
-	if err != nil {
-		logger.Logger.Error(err)
-	}
-	return ret, nil
 }
 
 type Method struct {
@@ -177,8 +89,19 @@ func (k *Kvs) FromDB(content []byte) error {
 	return nil
 }
 
-func (k *Kvs) ToDB() ([]byte, error) {
+func (k Kvs) ToDB() ([]byte, error) {
 	return json.Marshal(k)
+}
+
+func (k Kvs) ToMap() map[string]string {
+	if len(k) == 0 {
+		return map[string]string{}
+	}
+	ret := make(map[string]string)
+	for _, kv := range k {
+		ret[kv.Key] = kv.Value
+	}
+	return ret
 }
 
 type Kv struct {
@@ -188,7 +111,7 @@ type Kv struct {
 
 type NodeCfg struct {
 	NodeType   NodeType              `json:"nodeType"`
-	Api        *Api                  `json:"api"`
+	Api        *util.Api             `json:"api"`
 	Method     *Method               `json:"method"`
 	Accounts   []string              `json:"accounts"`
 	AtLeastNum int                   `json:"atLeastNum"`
@@ -273,7 +196,7 @@ func (c *nodeConverter) ConvertConditionalNode(n *ConditionalNodeCfg) *Condition
 type Node struct {
 	NodeId     int                `json:"nodeId"`
 	NodeType   NodeType           `json:"nodeType"`
-	Api        *Api               `json:"api"`
+	Api        *util.Api          `json:"api"`
 	Method     *Method            `json:"method"`
 	Accounts   []string           `json:"accounts"`
 	AtLeastNum int                `json:"atLeastNum"`

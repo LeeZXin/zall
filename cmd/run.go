@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/action/modules/api/actionapi"
+	"github.com/LeeZXin/zall/alert/modules/service/alertsrv"
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
@@ -142,6 +143,13 @@ func runZall(*cli.Context) error {
 	// for db
 	{
 		mysqldbapi.InitApi()
+	}
+	// for alert
+	{
+
+		if static.GetBool("alert.enabled") {
+			alertsrv.InitTask()
+		}
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer(), prom.NewServer())
 	zsf.Run(

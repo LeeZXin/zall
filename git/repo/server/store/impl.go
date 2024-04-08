@@ -343,7 +343,7 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 		gitenv.EnvRepoId, req.C.GetHeader("Repo-TeamId"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
-		gitenv.EnvAppUrl, req.C.GetHeader("AppId-Url"),
+		gitenv.EnvAppUrl, req.C.GetHeader("AppId-HostUrl"),
 		gitenv.EnvHookToken, git.HookToken(),
 	)...)
 	err = git.UploadPack(req.C, repoPath, reqBody, req.C.Writer, env)
@@ -387,7 +387,7 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 		gitenv.EnvRepoId, req.C.GetHeader("Repo-TeamId"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
-		gitenv.EnvAppUrl, req.C.GetHeader("AppId-Url"),
+		gitenv.EnvAppUrl, req.C.GetHeader("AppId-HostUrl"),
 		gitenv.EnvHookToken, git.HookToken(),
 		"--stateless-rpc", repoPath,
 	)...)

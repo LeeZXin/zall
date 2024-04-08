@@ -546,7 +546,7 @@ func (*outerImpl) AllTables(ctx context.Context, reqDTO AllTablesReqDTO) ([]stri
 		db.DbHost,
 		reqDTO.AccessBase,
 	)
-	_, tables, err := command.MysqlQuery(datasourceName, "show tables")
+	_, tables, err := util.MysqlQuery(datasourceName, "show tables")
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -581,7 +581,7 @@ func (*outerImpl) AllBases(ctx context.Context, reqDTO AllBasesReqDTO) ([]string
 		url.QueryEscape(db.Password),
 		db.DbHost,
 	)
-	_, tables, err := command.MysqlQuery(datasourceName, "show databases")
+	_, tables, err := util.MysqlQuery(datasourceName, "show databases")
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -644,7 +644,7 @@ func (*outerImpl) SearchDb(ctx context.Context, reqDTO SearchDbReqDTO) ([]string
 		db.DbHost,
 		reqDTO.AccessBase,
 	)
-	columns, ret, err := command.MysqlQuery(datasourceName, strings.TrimSuffix(sql, ";")+" limit "+strconv.Itoa(reqDTO.Limit))
+	columns, ret, err := util.MysqlQuery(datasourceName, strings.TrimSuffix(sql, ";")+" limit "+strconv.Itoa(reqDTO.Limit))
 	if err != nil {
 		return nil, nil, util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
 	}
@@ -951,7 +951,7 @@ func executeUpdateCmd(order *mysqldbmd.UpdateApprovalOrder, db *mysqldbmd.Db) {
 		db.DbHost,
 		order.AccessBase,
 	)
-	results, err := command.MysqlExecute(datasourceName, order.UpdateCmd)
+	results, err := util.MysqlExecute(datasourceName, order.UpdateCmd)
 	if err != nil {
 		logMsg.WriteString(err.Error())
 	} else {

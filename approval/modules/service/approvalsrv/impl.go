@@ -8,12 +8,17 @@ import (
 	"github.com/LeeZXin/zall/pkg/approval"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/hashicorp/go-bexpr"
 	"sort"
 	"time"
+)
+
+var (
+	httpClient = httputil.NewRetryableHttpClient()
 )
 
 type innerImpl struct{}
@@ -143,7 +148,9 @@ func runFlow(flowCtx *approval.FlowContext, flow *approvalmd.Flow, node *approva
 				}
 				return
 			}
-			response, err := node.Api.DoRequest(flowCtx)
+			response, err := node.Api.DoRequest(httpClient, map[string]string{
+				"bizId": flowCtx.BizId,
+			}, flowCtx.Kvs.ToMap())
 			if err != nil {
 				logger.Logger.Errorf("flowId: %d currIndex: %d its api request err: %v", flow.Id, flow.CurrIndex, err)
 				_, err = approvalmd.UpdateFlowStatusAndErrMsgWithOldStatus(
