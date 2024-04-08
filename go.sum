@@ -46,8 +46,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/IGLOU-EU/go-wildcard/v2 v2.0.2 h1:eQ0nOlEyGfM0NiemevUK55JoNu3IW9R8eRFZMc/apyU=
 github.com/IGLOU-EU/go-wildcard/v2 v2.0.2/go.mod h1:/sUMQ5dk2owR0ZcjRI/4AZ+bUFF5DxGCQrDMNBXUf5o=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
-github.com/LeeZXin/zsf v1.1.53 h1:Nd6iSwkZn96dtnP4u5fmZ8g5IwQ9y5+oAkhOLubwwmY=
-github.com/LeeZXin/zsf v1.1.53/go.mod h1:+g8mfhWlCN8TGTvAMeS9JB6VxFaGg06PyEcGeOeIdOs=
+github.com/LeeZXin/zsf v1.1.54 h1:qpZ9gZms66rgJ35GX3uXdxCl5K4He7hT2iBYKtEPhaw=
+github.com/LeeZXin/zsf v1.1.54/go.mod h1:+g8mfhWlCN8TGTvAMeS9JB6VxFaGg06PyEcGeOeIdOs=
 github.com/LeeZXin/zsf-utils v1.0.49 h1:YvDttUydpU9IyeQrnl5lY2tHqJzkODCFuRhx/nDTBr4=
 github.com/LeeZXin/zsf-utils v1.0.49/go.mod h1:Qx3UQ9RHnvWQNzxk7la92zK1OCVmpNFCxDwwStdDIvc=
 github.com/Masterminds/semver/v3 v3.1.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
