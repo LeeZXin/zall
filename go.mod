@@ -5,8 +5,8 @@ go 1.20
 require (
 	github.com/42wim/sshsig v0.0.0-20211121163825-841cf5bbc121
 	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
-	github.com/LeeZXin/zsf v1.1.52
-	github.com/LeeZXin/zsf-utils v1.0.48
+	github.com/LeeZXin/zsf v1.1.53
+	github.com/LeeZXin/zsf-utils v1.0.49
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gliderlabs/ssh v0.3.5
@@ -17,6 +17,8 @@ require (
 	github.com/keybase/go-crypto v0.0.0-20200123153347-de78d2cb44f4
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pingcap/errors v0.11.5-0.20240311024730-e056997136bb
+	github.com/prometheus/client_golang v1.11.1
+	github.com/prometheus/common v0.26.0
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.7
@@ -72,9 +74,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
