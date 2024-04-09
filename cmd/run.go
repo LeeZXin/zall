@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/action/modules/api/actionapi"
+	"github.com/LeeZXin/zall/alert/modules/api/alertapi"
 	"github.com/LeeZXin/zall/alert/modules/service/alertsrv"
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
@@ -146,7 +147,7 @@ func runZall(*cli.Context) error {
 	}
 	// for alert
 	{
-
+		alertapi.InitApi()
 		if static.GetBool("alert.enabled") {
 			alertsrv.InitTask()
 		}

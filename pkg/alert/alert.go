@@ -78,8 +78,9 @@ func (c *MysqlConfig) Execute() (map[string]string, error) {
 }
 
 type PromConfig struct {
-	HostUrl string `json:"HostUrl"`
-	PromQl  string `json:"promQl"`
+	HostUrl   string `json:"HostUrl"`
+	PromQl    string `json:"promQl"`
+	Condition string `json:"condition"`
 }
 
 func (c *PromConfig) IsValid() bool {
@@ -87,7 +88,7 @@ func (c *PromConfig) IsValid() bool {
 	if err != nil {
 		return false
 	}
-	return strings.HasPrefix(parsedUrl.Scheme, "http") && c.PromQl != ""
+	return strings.HasPrefix(parsedUrl.Scheme, "http") && c.PromQl != "" && c.Condition != ""
 }
 
 func (c *PromConfig) Execute(httpClient *http.Client) (*model.Sample, error) {
@@ -113,11 +114,10 @@ func (c *PromConfig) Execute(httpClient *http.Client) (*model.Sample, error) {
 }
 
 type Alert struct {
-	Source   SourceType   `json:"source"`
-	Mysql    *MysqlConfig `json:"mysql"`
-	Prom     *PromConfig  `json:"prom"`
-	Api      util.Api     `json:"api"`
-	Interval int          `json:"interval"`
+	Source SourceType   `json:"source"`
+	Mysql  *MysqlConfig `json:"mysql"`
+	Prom   *PromConfig  `json:"prom"`
+	Api    util.Api     `json:"api"`
 }
 
 func (a *Alert) FromDB(content []byte) error {
@@ -132,7 +132,7 @@ func (a *Alert) ToDB() ([]byte, error) {
 }
 
 func (a *Alert) IsValid() bool {
-	if !a.Api.IsValid() || a.Interval < 0 {
+	if !a.Api.IsValid() {
 		return false
 	}
 	switch a.Source {

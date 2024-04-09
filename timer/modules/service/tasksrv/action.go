@@ -33,6 +33,7 @@ func InitTask() {
 	logger.Logger.Infof("start timer task service with env: %s", taskEnv)
 	taskExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
 	// 触发心跳任务
+	go doHeartbeat()
 	heartbeatTask, _ = taskutil.NewPeriodicalTask(8*time.Second, doHeartbeat)
 	heartbeatTask.Start()
 	quit.AddShutdownHook(func() {

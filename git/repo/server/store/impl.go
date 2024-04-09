@@ -312,7 +312,7 @@ func (s *storeImpl) TreeRepo(ctx context.Context, req reqvo.TreeRepoReq) (reqvo.
 // UploadPack git-upload-pack
 func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 	// 校验content-type
-	if req.C.GetHeader("Config-Type") != "application/x-git-upload-pack-request" {
+	if req.C.GetHeader("Content-Type") != "application/x-git-upload-pack-request" {
 		req.C.String(http.StatusForbidden, "bad content type")
 		return
 	}
@@ -331,7 +331,7 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
-	req.C.Header("Config-Type", "application/x-git-upload-pack-result")
+	req.C.Header("Content-Type", "application/x-git-upload-pack-result")
 	req.C.Writer.WriteHeaderNow()
 	env := make([]string, 0)
 	protocol := req.C.GetHeader("Git-Protocol")
@@ -356,7 +356,7 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 // ReceivePack git-receive-pack
 func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 	// 校验content-type
-	if req.C.GetHeader("Config-Type") != "application/x-git-receive-pack-request" {
+	if req.C.GetHeader("Content-Type") != "application/x-git-receive-pack-request" {
 		req.C.String(http.StatusForbidden, "bad content type")
 		return
 	}
@@ -374,7 +374,7 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
-	req.C.Header("Config-Type", "application/x-git-receive-pack-result")
+	req.C.Header("Content-Type", "application/x-git-receive-pack-result")
 	req.C.Writer.WriteHeaderNow()
 	env := make([]string, 0)
 	protocol := req.C.GetHeader("Git-Protocol")
@@ -405,7 +405,7 @@ func (s *storeImpl) InfoRefs(ctx context.Context, req reqvo.InfoRefsReq) {
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
-	req.C.Header("Config-Type", fmt.Sprintf("application/x-%s-advertisement", serviceParam))
+	req.C.Header("Content-Type", fmt.Sprintf("application/x-%s-advertisement", serviceParam))
 	req.C.Writer.WriteHeaderNow()
 	env := make([]string, 0)
 	protocol := req.C.GetHeader("Git-Protocol")

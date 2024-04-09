@@ -12,7 +12,8 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"github.com/hashicorp/go-bexpr"
+	"github.com/PaesslerAG/gval"
+	"github.com/spf13/cast"
 	"sort"
 	"time"
 )
@@ -280,20 +281,15 @@ func doCondition(condition string, vars map[string]any) bool {
 	if condition == "" {
 		return true
 	}
-	eval, err := bexpr.CreateEvaluator(condition)
-	if err != nil {
-		logger.Logger.Errorf("condition: %s copmile with err: %v", condition, err)
-		return false
-	}
 	if vars == nil {
 		vars = make(map[string]any)
 	}
-	ret, err := eval.Evaluate(vars)
+	ret, err := gval.Evaluate(condition, vars)
 	if err != nil {
 		logger.Logger.Errorf("condition: %s with vars: %v evaluate with err: %v", condition, vars, err)
 		return false
 	}
-	return ret
+	return cast.ToBool(ret)
 }
 
 type outerImpl struct{}

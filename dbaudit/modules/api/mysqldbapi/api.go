@@ -1,6 +1,8 @@
 package mysqldbapi
 
+import "C"
 import (
+	"encoding/csv"
 	"github.com/LeeZXin/zall/dbaudit/modules/service/mysqldbsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
@@ -9,6 +11,7 @@ import (
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -42,6 +45,7 @@ func InitApi() {
 			group.POST("/allBases", allBases)
 			group.POST("/allTables", allTables)
 			group.POST("/searchDb", searchDb)
+			group.POST("/exportDb", exportDb)
 		}
 		group = e.Group("/api/mysqldbUpdateOrder", apisession.CheckLogin)
 		{
@@ -498,6 +502,36 @@ func searchDb(c *gin.Context) {
 				Result:  result,
 			},
 		})
+	}
+}
+
+func exportDb(c *gin.Context) {
+	var req SearchDbReqVO
+	if util.ShouldBindJSON(&req, c) {
+		columns, result, err := mysqldbsrv.Outer.SearchDb(c, mysqldbsrv.SearchDbReqDTO{
+			DbId:       req.DbId,
+			AccessBase: req.AccessBase,
+			Cmd:        req.Cmd,
+			Limit:      req.Limit,
+			Operator:   apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.Header("Content-Type", "application/octet-stream")
+		c.Header("Content-Disposition", "attachment; filename=\"data-"+strconv.FormatInt(time.Now().Unix(), 10)+".csv\"")
+		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
+		c.Writer.WriteHeader(http.StatusOK)
+		c.Writer.WriteHeaderNow()
+		writer := csv.NewWriter(c.Writer)
+		defer writer.Flush()
+		writer.Write(columns)
+		if len(result) > 0 {
+			for _, item := range result {
+				writer.Write(item)
+			}
+		}
 	}
 }
 

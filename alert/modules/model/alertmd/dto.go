@@ -7,6 +7,7 @@ type InsertConfigReqDTO struct {
 	Alert       alert.Alert
 	AppId       string
 	IntervalSec int
+	SilenceSec  int
 	Enabled     bool
 	NextTime    int64
 }
@@ -16,6 +17,7 @@ type UpdateConfigReqDTO struct {
 	Name        string
 	Alert       alert.Alert
 	IntervalSec int
+	SilenceSec  int
 	Enabled     bool
 	NextTime    int64
 }
@@ -23,5 +25,5 @@ type UpdateConfigReqDTO struct {
 type ListConfigReqDTO struct {
 	Cursor int64
 	Limit  int
-	TeamId int64
+	AppId  string
 }

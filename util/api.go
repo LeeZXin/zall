@@ -21,8 +21,8 @@ type Api struct {
 }
 
 func (a *Api) IsValid() bool {
-	_, err := url.Parse(a.Url)
-	if err != nil {
+	parsedUrl, err := url.Parse(a.Url)
+	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
 		return false
 	}
 	if a.Method == "" {
@@ -103,9 +103,6 @@ func (a *Api) DoRequest(httpClient *http.Client, query, args map[string]string) 
 	}
 	ret := make(map[string]any)
 	// 忽略json异常
-	err = json.Unmarshal(bodyAll, &ret)
-	if err != nil {
-		return nil, fmt.Errorf("url: %v do http request failed with Err: %v", finalUrl, err)
-	}
+	json.Unmarshal(bodyAll, &ret)
 	return ret, nil
 }

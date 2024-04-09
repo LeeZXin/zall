@@ -112,8 +112,8 @@ func getIcon(c *gin.Context) {
 		return
 	}
 	if c.Query("a") == "1" {
-		c.Header("Config-Disposition", "attachment; filename=\""+name+"\"")
-		c.Header("Access-Control-Expose-Headers", "Config-Disposition")
+		c.Header("Content-Disposition", "attachment; filename=\""+name+"\"")
+		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	}
 	c.File(path)
 }
@@ -162,8 +162,8 @@ func getAvatar(c *gin.Context) {
 		return
 	}
 	if c.Query("a") == "1" {
-		c.Header("Config-Disposition", "attachment; filename=\""+name+"\"")
-		c.Header("Access-Control-Expose-Headers", "Config-Disposition")
+		c.Header("Content-Disposition", "attachment; filename=\""+name+"\"")
+		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	}
 	c.File(path)
 }
@@ -210,8 +210,8 @@ func getNormal(c *gin.Context) {
 		return
 	}
 	if c.Query("a") == "1" {
-		c.Header("Config-Disposition", "attachment; filename=\""+name+"\"")
-		c.Header("Access-Control-Expose-Headers", "Config-Disposition")
+		c.Header("Content-Disposition", "attachment; filename=\""+name+"\"")
+		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	}
 	c.File(path)
 }
@@ -262,14 +262,14 @@ func getProduct(c *gin.Context) {
 		return
 	}
 	if c.Query("a") == "1" {
-		c.Header("Config-Disposition", "attachment; filename=\""+name+"\"")
-		c.Header("Access-Control-Expose-Headers", "Config-Disposition")
+		c.Header("Content-Disposition", "attachment; filename=\""+name+"\"")
+		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	}
 	c.File(path)
 }
 
 func getBody(c *gin.Context) (io.ReadCloser, bool, error) {
-	contentType := strings.ToLower(c.GetHeader("Config-Type"))
+	contentType := strings.ToLower(c.GetHeader("Content-Type"))
 	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") || strings.HasPrefix(contentType, "multipart/form-data") {
 		if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
 			return nil, false, err

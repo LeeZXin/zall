@@ -17,6 +17,7 @@ func InsertConfig(ctx context.Context, reqDTO InsertConfigReqDTO) error {
 			Content:     &reqDTO.Alert,
 			AppId:       reqDTO.AppId,
 			IntervalSec: reqDTO.IntervalSec,
+			SilenceSec:  reqDTO.SilenceSec,
 			Enabled:     reqDTO.Enabled,
 			NextTime:    reqDTO.NextTime,
 		})
@@ -26,14 +27,39 @@ func InsertConfig(ctx context.Context, reqDTO InsertConfigReqDTO) error {
 func UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("name", "content", "interval_sec", "enabled", "next_time").
+		Cols("name", "content", "interval_sec", "silence_sec", "enabled", "next_time").
 		Update(&Config{
 			Name:        reqDTO.Name,
 			Content:     &reqDTO.Alert,
 			IntervalSec: reqDTO.IntervalSec,
+			SilenceSec:  reqDTO.SilenceSec,
 			Enabled:     reqDTO.Enabled,
 			NextTime:    reqDTO.NextTime,
 		})
+	return rows == 1, err
+}
+
+func ListConfig(ctx context.Context, reqDTO ListConfigReqDTO) ([]Config, error) {
+	session := xormutil.MustGetXormSession(ctx).Where("app_id = ?", reqDTO.AppId)
+	if reqDTO.Cursor > 0 {
+		session.And("id > ?", reqDTO.Cursor)
+	}
+	if reqDTO.Limit > 0 {
+		session.Limit(reqDTO.Limit)
+	}
+	ret := make([]Config, 0)
+	err := session.OrderBy("id asc").Find(&ret)
+	return ret, err
+}
+
+func GetConfigById(ctx context.Context, id int64) (Config, bool, error) {
+	var ret Config
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	return ret, b, err
+}
+
+func DeleteConfig(ctx context.Context, id int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Delete(new(Config))
 	return rows == 1, err
 }
 

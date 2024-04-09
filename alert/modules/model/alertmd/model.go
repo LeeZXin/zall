@@ -16,6 +16,7 @@ type Config struct {
 	AppId       string       `json:"appId"`
 	Content     *alert.Alert `json:"content"`
 	IntervalSec int          `json:"intervalSec"`
+	SilenceSec  int          `json:"silenceSec"`
 	Enabled     bool         `json:"enabled"`
 	NextTime    int64        `json:"nextTime"`
 	Created     time.Time    `json:"created" xorm:"created"`

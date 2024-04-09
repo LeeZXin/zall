@@ -459,6 +459,21 @@ var (
 			DefaultRet: "搜索数据库",
 		},
 	}
+
+	AlertSrvKeysVO = AlertSrvKeys{
+		InsertConfig: KeyItem{
+			Id:         "alertSrv.InsertConfig",
+			DefaultRet: "新增告警配置",
+		},
+		UpdateConfig: KeyItem{
+			Id:         "alertSrv.UpdateConfig",
+			DefaultRet: "编辑告警配置",
+		},
+		DeleteConfig: KeyItem{
+			Id:         "alertSrv.InsertConfig",
+			DefaultRet: "删除告警配置",
+		},
+	}
 )
 
 type KeyItem struct {
@@ -627,4 +642,10 @@ type DbSrvKeys struct {
 	UpdateDb   KeyItem
 	DeletePerm KeyItem
 	SearchDb   KeyItem
+}
+
+type AlertSrvKeys struct {
+	InsertConfig KeyItem
+	UpdateConfig KeyItem
+	DeleteConfig KeyItem
 }

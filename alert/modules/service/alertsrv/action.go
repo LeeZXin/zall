@@ -11,8 +11,9 @@ import (
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"github.com/hashicorp/go-bexpr"
+	"github.com/PaesslerAG/gval"
 	"github.com/prometheus/common/model"
+	"github.com/spf13/cast"
 	"net/http"
 	"time"
 )
@@ -22,13 +23,16 @@ var (
 	heartbeatTask *taskutil.PeriodicalTask
 	executeTask   *taskutil.PeriodicalTask
 	httpClient    *http.Client
+	limiter       *Limiter
 )
 
 func InitTask() {
 	logger.Logger.Info("start alert task service")
+	limiter = NewLimiter()
 	httpClient = httputil.NewRetryableHttpClient()
 	taskExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
 	// 触发心跳任务
+	go doHeartbeat()
 	heartbeatTask, _ = taskutil.NewPeriodicalTask(8*time.Second, doHeartbeat)
 	heartbeatTask.Start()
 	quit.AddShutdownHook(func() {
@@ -86,7 +90,8 @@ func doExecuteTask() {
 	defer closer.Close()
 	total, index := getInstanceIndex(ctx)
 	if total > 0 && index >= 0 {
-		err := alertmd.IterateConfig(ctx, time.Now().UnixMilli(), true, func(cfg *alertmd.Config) error {
+		// 允许有500ms的误差
+		err := alertmd.IterateConfig(ctx, time.Now().Add(500*time.Millisecond).UnixMilli(), true, func(cfg *alertmd.Config) error {
 			if cfg.Id%total == index {
 				handleConfig(cfg)
 			}
@@ -110,15 +115,12 @@ func handleConfig(cfg *alertmd.Config) {
 			if err != nil {
 				logger.Logger.Errorf("alert cfg: %v execute failed with err: %v", cfg.Id, err)
 			} else if len(result) > 0 {
-				ev, err := bexpr.CreateEvaluator(alertCfg.Mysql.Condition)
+				evaluate, err := gval.Evaluate(alertCfg.Mysql.Condition, result)
 				if err != nil {
 					logger.Logger.Errorf("alert cfg: %v compile condition: %v failed with err: %v", cfg.Id, alertCfg.Mysql.Condition, err)
-				} else {
-					evr, err := ev.Evaluate(result)
-					if err == nil && evr {
-						// 执行webhook
-						executeWebhook(cfg, alertCfg, result)
-					}
+				} else if cast.ToBool(evaluate) {
+					// 执行webhook
+					executeWebhook(cfg, alertCfg, result)
 				}
 			}
 		case alert.PromType:
@@ -126,8 +128,14 @@ func handleConfig(cfg *alertmd.Config) {
 			if err != nil {
 				logger.Logger.Errorf("alert cfg: %v execute failed with err: %v", cfg.Id, err)
 			} else if result != nil {
-				// 执行webhook
-				executeWebhook(cfg, alertCfg, metric2Map(result.Metric))
+				args := metric2Map(result)
+				evaluate, err := gval.Evaluate(alertCfg.Prom.Condition, args)
+				if err != nil {
+					logger.Logger.Errorf("alert cfg: %v compile condition: %v failed with err: %v", cfg.Id, alertCfg.Mysql.Condition, err)
+				} else if cast.ToBool(evaluate) {
+					// 执行webhook
+					executeWebhook(cfg, alertCfg, args)
+				}
 			}
 		}
 		ctx, closer := xormstore.Context(context.Background())
@@ -139,20 +147,21 @@ func handleConfig(cfg *alertmd.Config) {
 	})
 }
 
-func metric2Map(m model.Metric) map[string]string {
+func metric2Map(m *model.Sample) map[string]string {
 	ret := make(map[string]string)
-	for k, v := range m {
+	for k, v := range m.Metric {
 		ret[string(k)] = string(v)
 	}
+	ret["metric_value"] = cast.ToString(int64(m.Value))
 	return ret
 }
 
 func executeWebhook(cfg *alertmd.Config, alertCfg *alert.Alert, result map[string]string) {
-	// todo 告警聚合
-
-	// 执行webhook
-	_, err := alertCfg.Api.DoRequest(httpClient, nil, result)
-	if err != nil {
-		logger.Logger.Errorf("alert cfg: %v webhook: %v failed with err: %v", cfg.Id, alertCfg.Api.Url, err)
+	if limiter.TryPass(cfg.Id, time.Duration(cfg.SilenceSec)*time.Second) {
+		// 执行webhook
+		_, err := alertCfg.Api.DoRequest(httpClient, nil, result)
+		if err != nil {
+			logger.Logger.Errorf("alert cfg: %v webhook: %v failed with err: %v", cfg.Id, alertCfg.Api.Url, err)
+		}
 	}
 }

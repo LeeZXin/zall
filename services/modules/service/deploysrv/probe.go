@@ -34,6 +34,7 @@ func InitProbeTask() {
 	logger.Logger.Infof("start probe service with env: %s", probeEnv)
 	httpClient = httputil.NewRetryableHttpClient()
 	// 心跳任务
+	go doHeartbeat()
 	heartbeatTask, _ = taskutil.NewPeriodicalTask(5*time.Second, doHeartbeat)
 	heartbeatTask.Start()
 	quit.AddShutdownHook(func() {

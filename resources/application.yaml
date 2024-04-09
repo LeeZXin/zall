@@ -69,3 +69,6 @@ logger:
     enabled: true
     orgId: local
     pushUrl: http://127.0.0.1:3100/loki/api/v1/push
+
+alert:
+  enabled: true
