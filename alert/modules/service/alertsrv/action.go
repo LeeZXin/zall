@@ -4,10 +4,9 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/alert/modules/model/alertmd"
 	"github.com/LeeZXin/zall/pkg/alert"
+	"github.com/LeeZXin/zall/pkg/sharding/handler"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/httputil"
-	"github.com/LeeZXin/zsf-utils/quit"
-	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
@@ -19,11 +18,10 @@ import (
 )
 
 var (
-	taskExecutor  *executor.Executor
-	heartbeatTask *taskutil.PeriodicalTask
-	executeTask   *taskutil.PeriodicalTask
-	httpClient    *http.Client
-	limiter       *Limiter
+	taskExecutor *executor.Executor
+	taskHandler  *handler.ShardingPeriodicalHandler
+	httpClient   *http.Client
+	limiter      *Limiter
 )
 
 func InitTask() {
@@ -31,23 +29,14 @@ func InitTask() {
 	limiter = NewLimiter()
 	httpClient = httputil.NewRetryableHttpClient()
 	taskExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
-	// 触发心跳任务
-	go doHeartbeat()
-	heartbeatTask, _ = taskutil.NewPeriodicalTask(8*time.Second, doHeartbeat)
-	heartbeatTask.Start()
-	quit.AddShutdownHook(func() {
-		// 停止心跳任务
-		heartbeatTask.Stop()
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		// 删除数据
-		alertmd.DeleteInstance(ctx, common.GetInstanceId())
-	}, true)
-	time.Sleep(time.Second)
-	// 执行任务
-	executeTask, _ = taskutil.NewPeriodicalTask(5*time.Second, doExecuteTask)
-	executeTask.Start()
-	quit.AddShutdownHook(executeTask.Stop, true)
+	taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
+		HeartbeatInterval:     5 * time.Second,
+		HeartbeatHandler:      doHeartbeat,
+		DeleteInstanceHandler: deleteInstance,
+		TaskInterval:          5 * time.Second,
+		TaskHandler:           doExecuteTask,
+	})
+	taskHandler.Start()
 }
 
 func doHeartbeat() {
@@ -64,6 +53,13 @@ func doHeartbeat() {
 			logger.Logger.Error(err)
 		}
 	}
+}
+
+func deleteInstance() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	// 删除数据
+	alertmd.DeleteInstance(ctx, common.GetInstanceId())
 }
 
 func getInstanceIndex(ctx context.Context) (int64, int64) {

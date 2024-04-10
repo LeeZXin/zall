@@ -3,63 +3,31 @@ package detectsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/pkg/detecttool"
+	"github.com/LeeZXin/zall/pkg/sharding/handler"
 	"github.com/LeeZXin/zall/tcpdetect/modules/model/detectmd"
 	"github.com/LeeZXin/zsf-utils/executor"
-	"github.com/LeeZXin/zsf-utils/quit"
-	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/common"
-	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"net/url"
 	"time"
 )
 
 var (
 	detectExecutor *executor.Executor
-	heartbeatTask  *taskutil.PeriodicalTask
-	executeTask    *taskutil.PeriodicalTask
+	taskHandler    *handler.ShardingPeriodicalHandler
 )
 
 func InitDetect() {
 	logger.Logger.Infof("start tcp detect service")
-	detectExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
-	// 触发心跳任务
-	go doHeartbeat()
-	heartbeatTask, _ = taskutil.NewPeriodicalTask(8*time.Second, doHeartbeat)
-	heartbeatTask.Start()
-	quit.AddShutdownHook(func() {
-		// 停止心跳任务
-		heartbeatTask.Stop()
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		// 删除数据
-		detectmd.DeleteInstance(ctx, common.GetInstanceId())
-	}, true)
-	time.Sleep(time.Second)
-	// 执行任务
-	executeTask, _ = taskutil.NewPeriodicalTask(10*time.Second, doExecuteTask)
-	executeTask.Start()
-	quit.AddShutdownHook(executeTask.Stop, true)
-	// 清除过期实例
-	httptask.AppendHttpTask("clearTcpDetectInvalidInstances", func(_ []byte, _ url.Values) {
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		err := detectmd.DeleteInValidInstances(ctx, time.Now().Add(-30*time.Second).UnixMilli())
-		if err != nil {
-			logger.Logger.Error(err)
-		}
+	detectExecutor, _ = executor.NewExecutor(10, 1024, time.Minute, executor.CallerRunsStrategy)
+	taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
+		HeartbeatInterval:     8 * time.Second,
+		HeartbeatHandler:      doHeartbeat,
+		DeleteInstanceHandler: deleteInstance,
+		TaskInterval:          10 * time.Second,
+		TaskHandler:           doExecuteTask,
 	})
-	// 清除过期日志
-	httptask.AppendHttpTask("clearTcpDetectExpiredLog", func(_ []byte, _ url.Values) {
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		err := detectmd.DeleteLogByTime(ctx, time.Now().Add(-3*24*time.Hour))
-		if err != nil {
-			logger.Logger.Error(err)
-		}
-	})
-
+	taskHandler.Start()
 }
 
 func doHeartbeat() {
@@ -76,6 +44,13 @@ func doHeartbeat() {
 			logger.Logger.Error(err)
 		}
 	}
+}
+
+func deleteInstance() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	// 删除数据
+	detectmd.DeleteInstance(ctx, common.GetInstanceId())
 }
 
 func doExecuteTask() {

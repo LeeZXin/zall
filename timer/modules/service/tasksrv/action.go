@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/LeeZXin/zall/pkg/sharding/handler"
 	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/executor"
@@ -18,11 +19,10 @@ import (
 
 var (
 	taskExecutor   *executor.Executor
-	heartbeatTask  *taskutil.PeriodicalTask
-	executeTask    *taskutil.PeriodicalTask
 	compensateTask *taskutil.PeriodicalTask
 
-	taskEnv string
+	taskEnv     string
+	taskHandler *handler.ShardingPeriodicalHandler
 )
 
 func InitTask() {
@@ -32,27 +32,25 @@ func InitTask() {
 	}
 	logger.Logger.Infof("start timer task service with env: %s", taskEnv)
 	taskExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
-	// 触发心跳任务
-	go doHeartbeat()
-	heartbeatTask, _ = taskutil.NewPeriodicalTask(8*time.Second, doHeartbeat)
-	heartbeatTask.Start()
-	quit.AddShutdownHook(func() {
-		// 停止心跳任务
-		heartbeatTask.Stop()
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		// 删除数据
-		taskmd.DeleteInstance(ctx, common.GetInstanceId(), taskEnv)
-	}, true)
-	time.Sleep(time.Second)
-	// 执行任务
-	executeTask, _ = taskutil.NewPeriodicalTask(10*time.Second, doExecuteTask)
-	executeTask.Start()
-	quit.AddShutdownHook(executeTask.Stop, true)
+	taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
+		HeartbeatInterval:     8 * time.Second,
+		HeartbeatHandler:      doHeartbeat,
+		DeleteInstanceHandler: deleteInstance,
+		TaskInterval:          10 * time.Second,
+		TaskHandler:           doExecuteTask,
+	})
+	taskHandler.Start()
 	// 异常检查任务
 	compensateTask, _ = taskutil.NewPeriodicalTask(5*time.Minute, doCompensateTask)
 	compensateTask.Start()
 	quit.AddShutdownHook(compensateTask.Stop, true)
+}
+
+func deleteInstance() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	// 删除数据
+	taskmd.DeleteInstance(ctx, common.GetInstanceId(), taskEnv)
 }
 
 func getInstanceIndex(ctx context.Context) (int64, int64) {

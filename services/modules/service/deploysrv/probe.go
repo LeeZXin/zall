@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/detecttool"
+	"github.com/LeeZXin/zall/pkg/sharding/handler"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/httputil"
-	"github.com/LeeZXin/zsf-utils/quit"
-	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
@@ -19,10 +18,10 @@ import (
 )
 
 var (
-	probeTask, heartbeatTask *taskutil.PeriodicalTask
-	probeEnv                 string
-	httpClient               *http.Client
-	probeExecutor            *executor.Executor
+	probeEnv      string
+	httpClient    *http.Client
+	probeExecutor *executor.Executor
+	taskHandler   *handler.ShardingPeriodicalHandler
 )
 
 func InitProbeTask() {
@@ -33,22 +32,14 @@ func InitProbeTask() {
 	}
 	logger.Logger.Infof("start probe service with env: %s", probeEnv)
 	httpClient = httputil.NewRetryableHttpClient()
-	// 心跳任务
-	go doHeartbeat()
-	heartbeatTask, _ = taskutil.NewPeriodicalTask(5*time.Second, doHeartbeat)
-	heartbeatTask.Start()
-	quit.AddShutdownHook(func() {
-		probeExecutor.Shutdown()
-		heartbeatTask.Stop()
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		deploymd.DeleteProbeInstance(ctx, common.GetInstanceId(), probeEnv)
-	}, true)
-	time.Sleep(time.Second)
-	// 探针任务
-	probeTask, _ = taskutil.NewPeriodicalTask(10*time.Second, probeAction)
-	probeTask.Start()
-	quit.AddShutdownHook(probeTask.Stop, true)
+	taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
+		HeartbeatInterval:     5 * time.Second,
+		HeartbeatHandler:      doHeartbeat,
+		DeleteInstanceHandler: deleteInstance,
+		TaskInterval:          10 * time.Second,
+		TaskHandler:           probeAction,
+	})
+	taskHandler.Start()
 }
 
 func probeAction() {
@@ -68,6 +59,12 @@ func probeAction() {
 			logger.Logger.Error(err)
 		}
 	}
+}
+
+func deleteInstance() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	deploymd.DeleteProbeInstance(ctx, common.GetInstanceId(), probeEnv)
 }
 
 func doProbe(service *deploymd.Service) {
