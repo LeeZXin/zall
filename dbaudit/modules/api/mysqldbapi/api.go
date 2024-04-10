@@ -44,8 +44,8 @@ func InitApi() {
 		{
 			group.POST("/allBases", allBases)
 			group.POST("/allTables", allTables)
-			group.POST("/searchDb", searchDb)
-			group.POST("/exportDb", exportDb)
+			group.POST("/search", searchDb)
+			group.POST("/export", exportDb)
 		}
 		group = e.Group("/api/mysqldbUpdateOrder", apisession.CheckLogin)
 		{
