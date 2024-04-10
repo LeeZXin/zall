@@ -67,7 +67,7 @@ func (s *innerImpl) CheckAccountAndPassword(ctx context.Context, reqDTO CheckAcc
 
 type outerImpl struct{}
 
-func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (sessionId string, expireAt int64, err error) {
+func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (userRet usermd.UserInfo, sessionId string, expireAt int64, err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -82,7 +82,11 @@ func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (sessionId st
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	user, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
+	var (
+		b    bool
+		user usermd.User
+	)
+	user, b, err = usermd.GetByAccount(ctx, reqDTO.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -127,6 +131,7 @@ func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (sessionId st
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 	}
+	userRet = user.ToUserInfo()
 	return
 }
 

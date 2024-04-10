@@ -1,6 +1,7 @@
 package userapi
 
 import (
+	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
@@ -11,8 +12,9 @@ type LoginReqVO struct {
 
 type LoginRespVO struct {
 	ginutil.BaseResp
-	SessionId string `json:"sessionId"`
-	ExpireAt  int64  `json:"expireAt"`
+	SessionId string          `json:"sessionId"`
+	ExpireAt  int64           `json:"expireAt"`
+	User      usermd.UserInfo `json:"user"`
 }
 
 type RefreshRespVO struct {

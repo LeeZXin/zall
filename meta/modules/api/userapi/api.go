@@ -48,7 +48,7 @@ func InitApi() {
 func login(c *gin.Context) {
 	var req LoginReqVO
 	if util.ShouldBindJSON(&req, c) {
-		sessionId, expireAt, err := usersrv.Outer.Login(c, usersrv.LoginReqDTO{
+		user, sessionId, expireAt, err := usersrv.Outer.Login(c, usersrv.LoginReqDTO{
 			Account:  req.Account,
 			Password: req.Password,
 		})
@@ -61,6 +61,7 @@ func login(c *gin.Context) {
 			BaseResp:  ginutil.DefaultSuccessResp,
 			SessionId: sessionId,
 			ExpireAt:  expireAt,
+			User:      user,
 		})
 	}
 }
