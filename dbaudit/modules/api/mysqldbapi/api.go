@@ -1,6 +1,5 @@
 package mysqldbapi
 
-import "C"
 import (
 	"encoding/csv"
 	"github.com/LeeZXin/zall/dbaudit/modules/service/mysqldbsrv"
