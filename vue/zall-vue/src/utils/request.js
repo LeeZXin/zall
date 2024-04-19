@@ -1,11 +1,10 @@
 import axios from 'axios';
 import { message } from 'ant-design-vue'
-import { userStore } from '@/pinia/UserStore.js'
+import { useUserStore } from '@/pinia/UserStore.js'
 import i18n from "../language/i8n"
-import { useRouter } from "vue-router";
+import router from "../router/router";
 
 const t = i18n.global.t;
-const router = useRouter();
 
 const request = axios.create({
     baseURL: "/",
@@ -21,7 +20,7 @@ request.defaults.transformRequest = [
 
 request.interceptors.request.use(
     (config) => {
-        const user = userStore()
+        const user = useUserStore()
         const now = new Date().getTime();
         if (user.sessionExpireAt > 0 && user.sessionExpireAt < now) {
             console.log("refresh token")
@@ -41,7 +40,7 @@ request.interceptors.response.use(
         if (data.code !== 0) {
             if (data.message) {
                 message.error(data.message)
-                return Promise.reject(new error(data.message))
+                return Promise.reject(new Error(data.message))
             }
         }
         return data

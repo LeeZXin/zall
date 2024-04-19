@@ -14,6 +14,10 @@ func IsAccountValid(account string) bool {
 	return validUserAccountPattern.MatchString(account)
 }
 
+func IsUsernameValid(name string) bool {
+	return len(name) > 0 && len(name) <= 32
+}
+
 func InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (User, error) {
 	u := User{
 		Account:   reqDTO.Account,

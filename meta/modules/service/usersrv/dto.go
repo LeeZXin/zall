@@ -60,7 +60,7 @@ func (r *RegisterUserReqDTO) IsValid() error {
 	if !validPasswordPattern.MatchString(r.Password) {
 		return util.InvalidArgsError()
 	}
-	if !validateUserName(r.Name) {
+	if !usermd.IsUsernameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -183,7 +183,7 @@ func (r *UpdateUserReqDTO) IsValid() error {
 	if !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
-	if !validateUserName(r.Name) {
+	if !usermd.IsUsernameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -269,10 +269,6 @@ func (r *CheckAccountAndPasswordReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	return nil
-}
-
-func validateUserName(name string) bool {
-	return len(name) > 0 && len(name) <= 32
 }
 
 func validateUserEmail(email string) bool {

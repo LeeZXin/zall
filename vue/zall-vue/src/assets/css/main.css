@@ -2,3 +2,84 @@ body {
     padding: 0;
     margin: 0;
 }
+
+ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ant-tabs-nav {
+    margin: 0 !important;
+}
+
+.form-item {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.form-item>.label {
+    line-height: 32px;
+}
+
+.form-item-text {
+    font-size: 14px;
+    line-height: 1.5em;
+    font-weight: bold;
+}
+
+.container {
+    width: 50%;
+    margin-left: 25%;
+}
+
+.form {
+    width: 100%;
+}
+
+.form>.title {
+    font-size: 18px;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+}
+
+.op-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    font-size: 16px;
+    text-align: center;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.op-icon:hover {
+    background-color: #f0f0f0;
+}
+
+.op-icon+.op-icon {
+    margin-left: 4px;
+}
+
+.op-list {
+    width: 80px;
+}
+
+.op-list>li {
+    line-height: 28px;
+    width: 100%;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 6px;
+}
+
+.op-list>li:hover {
+    background-color: #f0f0f0;
+}

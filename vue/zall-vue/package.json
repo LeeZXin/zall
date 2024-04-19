@@ -8,11 +8,22 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.2",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@dagrejs/dagre": "^1.1.2",
+    "@kangc/v-md-editor": "^2.3.18",
+    "@vue-flow/core": "^1.33.5",
     "ant-design-vue": "^4.1.2",
     "axios": "^1.6.8",
+    "codemirror": "^6.0.1",
     "core-js": "^3.8.3",
+    "js-yaml": "^4.1.0",
+    "md-editor-v3": "^4.13.0",
     "pinia": "^2.1.7",
+    "v-code-diff": "^1.11.0",
     "vue": "^3.2.13",
+    "vue-code-diff": "^1.2.0",
+    "vue-codemirror": "^6.1.1",
     "vue-i18n": "^9.11.1",
     "vue-router": "^4.3.0"
   },

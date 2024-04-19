@@ -30,9 +30,9 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import api from "@/api/user/LoginApi";
 import { message } from "ant-design-vue";
-import { userStore } from "@/pinia/UserStore";
+import { useUserStore } from "@/pinia/UserStore";
 
-const user = userStore();
+const user = useUserStore();
 const account = ref("");
 const password = ref("");
 const { t } = useI18n();
@@ -42,7 +42,7 @@ const goToRegister = () => router.push("/login/register");
 // 登录请求
 const login = () => {
   let inputAccount = account.value;
-  if (!inputAccount || inputAccount.length < 4) {
+  if (!inputAccount || inputAccount.length < 4 || inputAccount.length > 32) {
     message.error(t("login.pleaseConfirmAccount"));
     return;
   }
@@ -76,11 +76,12 @@ const login = () => {
   padding: 18px;
   width: 24%;
   overflow: hidden;
-  margin-top: calc(25vh - 32px);
+  margin-top: calc(50vh - 64px);
   margin-left: 38%;
   background-color: white;
   border-radius: 4px;
   box-shadow: 0 0 15px #2f2f2f;
+  transform: translateY(-50%);
 }
 .title {
   font-size: 20px;
@@ -104,6 +105,6 @@ const login = () => {
   cursor: pointer;
 }
 .sub-text:hover {
-  color: #1e90ff;
+  color: #1677ff;
 }
 </style>
