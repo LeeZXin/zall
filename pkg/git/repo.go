@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	WikiDefaultBranch = "master"
-	GitDefaultBranch  = "master"
+	WikiDefaultBranch = "main"
+	GitDefaultBranch  = "main"
 )
 
 var (
