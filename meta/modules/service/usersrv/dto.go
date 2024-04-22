@@ -43,11 +43,10 @@ func (r *InsertUserReqDTO) IsValid() error {
 }
 
 type RegisterUserReqDTO struct {
-	Account   string `json:"account"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	AvatarUrl string `json:"avatarUrl"`
+	Account  string `json:"account"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 func (r *RegisterUserReqDTO) IsValid() error {
@@ -57,7 +56,7 @@ func (r *RegisterUserReqDTO) IsValid() error {
 	if !validateUserEmail(r.Email) {
 		return util.InvalidArgsError()
 	}
-	if !validPasswordPattern.MatchString(r.Password) {
+	if !validatePassword(r.Password) {
 		return util.InvalidArgsError()
 	}
 	if !usermd.IsUsernameValid(r.Name) {
@@ -96,11 +95,11 @@ func (r *RefreshReqDTO) IsValid() error {
 	return nil
 }
 
-type LoginOutReqDTO struct {
+type LogoutReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *LoginOutReqDTO) IsValid() error {
+func (r *LogoutReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}

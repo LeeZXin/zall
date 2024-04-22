@@ -149,7 +149,7 @@ func (s *outerImpl) Verify(ctx context.Context, reqDTO VerifyReqDTO) (bool, bool
 	stat, err := client.LfsStat(ctx, reqvo.LfsStatReq{
 		RepoPath: reqDTO.Repo.Path,
 		Oid:      reqDTO.Oid,
-	}, reqDTO.Repo.NodeId)
+	})
 	if err != nil {
 		return false, false, util.InternalError(err)
 	}
@@ -188,7 +188,7 @@ func (s *outerImpl) Download(ctx context.Context, reqDTO DownloadReqDTO) (err er
 		RepoPath: reqDTO.Repo.Path,
 		Oid:      reqDTO.Oid,
 		C:        reqDTO.C,
-	}, reqDTO.Repo.NodeId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -240,7 +240,7 @@ func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error)
 		RepoPath: reqDTO.Repo.Path,
 		Oid:      reqDTO.Oid,
 		C:        reqDTO.C,
-	}, reqDTO.Repo.NodeId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -284,7 +284,7 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 	existsMap, err := client.LfsBatchExists(ctx, reqvo.LfsBatchExistsReq{
 		RepoPath: reqDTO.Repo.Path,
 		OidList:  oidList,
-	}, reqDTO.Repo.NodeId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return BatchRespDTO{}, util.InternalError(err)

@@ -17,17 +17,6 @@ func (r *UpdateSysCfgReqDTO) IsValid() error {
 	return nil
 }
 
-type GetSysCfgReqDTO struct {
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *GetSysCfgReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
 type UpdateGitCfgReqDTO struct {
 	GitCfg
 	Operator apisession.UserInfo `json:"operator"`
@@ -76,6 +65,35 @@ type GetEnvCfgReqDTO struct {
 }
 
 func (r *GetEnvCfgReqDTO) IsValid() error {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type GetGitRepoServerUrlReqDTO struct {
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetGitRepoServerUrlReqDTO) IsValid() error {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type UpdateGitRepoServerUrlReqDTO struct {
+	GitRepoServerCfg
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *UpdateGitRepoServerUrlReqDTO) IsValid() error {
+	if !util.IpPortPattern.MatchString(r.HttpHost) {
+		return util.InvalidArgsError()
+	}
+	if !util.IpPortPattern.MatchString(r.SshHost) {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}

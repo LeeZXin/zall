@@ -1,32 +1,43 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router';
+import { useUserStore } from "@/pinia/userStore";
+import { useTeamStore } from "@/pinia/teamStore";
+import { getUserInfoRequest } from "@/api/user/loginApi";
+import { getTeamRequest } from '@/api/team/teamApi';
+
 const router = createRouter({
-    history: createWebHashHistory(),
+    history: createWebHistory(),
     routes: [{
             path: "",
-            redirect: "/login/login"
+            redirect: "/index"
         },
         {
             path: "/index",
+            redirect: "/teamList",
             component: () =>
-                import ("../layouts/IndexLayout")
-        },
-        {
-            path: "/createTeam",
-            component: () =>
-                import ("../layouts/CreateTeamLayout"),
+                import ("../layouts/IndexLayout"),
+            children: [{
+                    path: "/teamList",
+                    component: () =>
+                        import ("../pages/team/team/TeamListPage")
+                },
+                {
+                    path: "/createTeam",
+                    component: () =>
+                        import ("../pages/team/team/CreateTeamPage")
+                }
+            ]
         },
         {
             path: "/team",
-            redirect: "/team/gitRepo/list",
             component: () =>
                 import ("../layouts/TeamLayout"),
             children: [{
-                    path: "/team/gitRepo/create",
+                    path: "/team/:teamId(\\d+)/gitRepo/create",
                     component: () =>
                         import ("../pages/team/gitRepo/CreateRepoPage")
                 },
                 {
-                    path: "/team/gitRepo/list",
+                    path: "/team/:teamId(\\d+)/gitRepo/list",
                     component: () =>
                         import ("../pages/team/gitRepo/RepoListPage")
                 },
@@ -77,23 +88,23 @@ const router = createRouter({
             component: () =>
                 import ("../layouts/GitRepoLayout"),
             children: [{
-                path: "/gitRepo/index",
+                path: "/gitRepo/:repoId(\\d+)/index",
                 component: () =>
                     import ("../pages/team/gitRepo/RepoIndexPage")
             }, {
-                path: "/gitRepo/tree/:file+",
+                path: "/gitRepo/:repoId(\\d+)/tree/:file+",
                 component: () =>
                     import ("../pages/team/gitRepo/RepoTreePage")
             }, {
-                path: "/gitRepo/pullRequests/list",
+                path: "/gitRepo/:repoId(\\d+)/pullRequests/list",
                 component: () =>
                     import ("../pages/team/gitRepo/PullRequestsListPage")
             }, {
-                path: "/gitRepo/pullRequests/create",
+                path: "/gitRepo/:repoId(\\d+)/pullRequests/create",
                 component: () =>
                     import ("../pages/team/gitRepo/CreatePullRequestPage")
             }, {
-                path: "/gitRepo/Branches/list",
+                path: "/gitRepo/:repoId(\\d+)/Branches/list",
                 component: () =>
                     import ("../pages/team/gitRepo/BranchesPage")
             }]
@@ -112,6 +123,21 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/appService/CreatePropertyPage")
 
+            }, {
+                path: "/appService/property/update/:id(\\d+)",
+                component: () =>
+                    import ("../pages/team/appService/UpdatePropertyPage")
+
+            }, {
+                path: "/appService/property/deploy/:id(\\d+)",
+                component: () =>
+                    import ("../pages/team/appService/DeployPropertyPage")
+
+            }, {
+                path: "/appService/property/history/:id(\\d+)",
+                component: () =>
+                    import ("../pages/team/appService/PropertyHistoryPage")
+
             }]
         },
         {
@@ -121,18 +147,54 @@ const router = createRouter({
                 import ("../layouts/LoginLayout"),
             children: [{
                 path: "/login/login",
+                name: "login",
                 component: () =>
                     import ("../pages/login/LoginPage")
             }, {
                 path: "/login/register",
+                name: "register",
                 component: () =>
                     import ("../pages/login/RegisterPage")
             }]
-
         }, {
             path: '/:pathMatch(.*)',
             component: import ("../layouts/NotFoundLayout")
         }
     ]
+});
+router.beforeEach((to, from, next) => {
+    // 登录或注册页面无需关注登录用户信息
+    if (to.name === "login" || to.name === "register") {
+        next();
+        return;
+    }
+    // 获取登录人信息
+    const user = useUserStore();
+    if (!user.account) {
+        getUserInfoRequest().then(res => {
+            user.account = res.session.userInfo.account;
+            user.avatarUrl = res.session.userInfo.avatarUrl;
+            user.email = res.session.userInfo.email;
+            user.isAdmin = res.session.userInfo.isAdmin;
+            user.name = res.session.userInfo.name;
+            user.roleType = res.session.userInfo.roleType;
+            user.sessionId = res.session.sessionId;
+            user.sessionExpireAt = res.session.expireAt;
+        });
+    }
+    // 特殊teamId
+    const team = useTeamStore();
+    // 如果有teamId参数 校验store是否有team
+    if (team.teamId === 0 && to.params.teamId) {
+        getTeamRequest({
+            teamId: parseInt(to.params.teamId)
+        }).then(res => {
+            team.teamId = res.data.teamId;
+            team.name = res.data.name;
+            next();
+        })
+    } else {
+        next();
+    }
 })
 export default router;

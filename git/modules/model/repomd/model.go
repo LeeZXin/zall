@@ -22,7 +22,6 @@ type Repo struct {
 	GitSize       int64     `json:"gitSize"`
 	LfsSize       int64     `json:"lfsSize"`
 	Cfg           string    `json:"cfg"`
-	NodeId        int64     `json:"nodeId"`
 	Created       time.Time `json:"created" xorm:"created"`
 	Updated       time.Time `json:"updated" xorm:"updated"`
 }
@@ -60,7 +59,6 @@ func (r *Repo) ToRepoInfo() RepoInfo {
 		LfsSize: r.LfsSize,
 		CfgStr:  r.Cfg,
 		Cfg:     r.GetCfg(),
-		NodeId:  r.NodeId,
 	}
 }
 

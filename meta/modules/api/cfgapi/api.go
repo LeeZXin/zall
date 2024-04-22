@@ -11,12 +11,15 @@ import (
 )
 
 func InitApi() {
-	cfgsrv.Inner.InitSysCfg()
+	{
+		// 初始化全局配置
+		cfgsrv.Inner.InitSysCfg()
+	}
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/api/sysCfg", apisession.CheckLogin)
+		group := e.Group("/api/sysCfg")
 		{
 			group.GET("/get", getSysCfg)
-			group.POST("/update", updateSysCfg)
+			group.POST("/update", apisession.CheckLogin, updateSysCfg)
 		}
 		group = e.Group("/api/gitCfg", apisession.CheckLogin)
 		{
@@ -28,13 +31,18 @@ func InitApi() {
 			group.GET("/get", getEnvCfg)
 			group.POST("/update", updateEnvCfg)
 		}
+		group = e.Group("/api/gitRepoServerCfg", apisession.CheckLogin)
+		{
+			// 获取git仓库服务url
+			group.GET("/get", getGitRepoServerCfg)
+			// 编辑git仓库服务url
+			group.POST("/update", updateGitRepoServerCfg)
+		}
 	})
 }
 
 func getSysCfg(c *gin.Context) {
-	cfg, err := cfgsrv.Outer.GetSysCfg(c, cfgsrv.GetSysCfgReqDTO{
-		Operator: apisession.MustGetLoginUser(c),
-	})
+	cfg, err := cfgsrv.Outer.GetSysCfg(c)
 	if err != nil {
 		util.HandleApiErr(err, c)
 		return
@@ -109,6 +117,35 @@ func updateEnvCfg(c *gin.Context) {
 		err := cfgsrv.Outer.UpdateEnvCfg(c, cfgsrv.UpdateEnvCfgReqDTO{
 			Envs:     req.Envs,
 			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func getGitRepoServerCfg(c *gin.Context) {
+	cfg, err := cfgsrv.Outer.GetGitRepoServerCfg(c, cfgsrv.GetGitRepoServerUrlReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[cfgsrv.GitRepoServerCfg]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     cfg,
+	})
+}
+
+func updateGitRepoServerCfg(c *gin.Context) {
+	var req UpdateGitRepoServerUrlReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := cfgsrv.Outer.UpdateGitRepoServerUrl(c, cfgsrv.UpdateGitRepoServerUrlReqDTO{
+			GitRepoServerCfg: req.GitRepoServerCfg,
+			Operator:         apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)

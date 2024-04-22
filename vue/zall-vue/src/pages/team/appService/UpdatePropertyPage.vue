@@ -3,22 +3,14 @@
     <ZNaviBack url="/appService/property/list" name="配置列表" />
     <div class="container">
       <div class="form">
-        <div class="title">创建配置</div>
+        <div class="title">编辑配置</div>
         <div class="form-item">
           <div class="label">配置名称</div>
-          <a-input type="input" placeholder="请输入" v-model:value="formState.name" />
+          <div class="form-item-text">sentinel-flow</div>
         </div>
         <div class="form-item">
           <div class="label">格式</div>
-          <div>
-            <a-radio-group v-model:value="formState.format" @change="onFormatChange">
-              <a-radio value="json">json</a-radio>
-              <a-radio value="yaml">yaml</a-radio>
-              <a-radio value="xml">xml</a-radio>
-              <a-radio value="properties">properties</a-radio>
-              <a-radio value="text">text</a-radio>
-            </a-radio-group>
-          </div>
+          <div class="form-item-text">{{format}}</div>
         </div>
         <div class="form-item">
           <div class="label">配置内容</div>
@@ -29,7 +21,7 @@
           />
         </div>
         <div class="form-item">
-          <a-button type="primary">创建</a-button>
+          <a-button type="primary">保存</a-button>
         </div>
       </div>
     </div>
@@ -47,13 +39,12 @@ import { StreamLanguage } from "@codemirror/language";
 import { properties } from "@codemirror/legacy-modes/mode/properties";
 const extensions = ref([json(), oneDark]);
 const formState = reactive({
-  name: "",
-  format: "json",
   yamlContent: ""
 });
+const format = ref("json");
 const propertiesLang = StreamLanguage.define(properties);
-const onFormatChange = event => {
-  switch (event.target.value) {
+const changeExtension = format => {
+  switch (format) {
     case "json":
       extensions.value = [json(), oneDark];
       break;
@@ -71,6 +62,7 @@ const onFormatChange = event => {
       break;
   }
 };
+changeExtension(format.value);
 </script>
 <style scoped>
 </style>

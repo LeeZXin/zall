@@ -4,7 +4,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/perm"
 )
 
-type InsertTeamReqVO struct {
+type CreateTeamReqVO struct {
 	Name string `json:"name"`
 }
 
@@ -71,12 +71,22 @@ type TeamUserGroupVO struct {
 }
 
 type TeamVO struct {
-	TeamId  int64  `json:"teamId"`
-	Name    string `json:"name"`
-	Desc    string `json:"desc"`
-	Created string `json:"created"`
+	TeamId int64  `json:"teamId"`
+	Name   string `json:"name"`
 }
 
 type DeleteTeamReqVO struct {
+	TeamId int64 `json:"teamId"`
+}
+
+type IsAdminReqVO struct {
+	TeamId int64 `json:"teamId"`
+}
+
+type GetTeamPermReqVO struct {
+	TeamId int64 `json:"teamId"`
+}
+
+type GetTeamReqVO struct {
 	TeamId int64 `json:"teamId"`
 }

@@ -115,6 +115,20 @@ func (s *innerImpl) ContainsEnv(env string) bool {
 	return contains
 }
 
+// GetGitRepoServerCfg 获取git服务器地址 从缓存中获取
+func (s *innerImpl) GetGitRepoServerCfg(ctx context.Context) (GitRepoServerCfg, bool) {
+	var cfg GitRepoServerCfg
+	v, b := s.cfgCache.Get(cfg.Key())
+	if b {
+		return v.(GitRepoServerCfg), true
+	}
+	b = getFromDB(ctx, &cfg)
+	if b {
+		s.cfgCache.Set(cfg.Key(), cfg, time.Minute)
+	}
+	return cfg, b
+}
+
 func getFromDB(ctx context.Context, cfg util.KeyVal) bool {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
@@ -128,13 +142,8 @@ func getFromDB(ctx context.Context, cfg util.KeyVal) bool {
 
 type outerImpl struct{}
 
-func (s *outerImpl) GetSysCfg(ctx context.Context, reqDTO GetSysCfgReqDTO) (SysCfg, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return SysCfg{}, err
-	}
-	if !reqDTO.Operator.IsAdmin {
-		return SysCfg{}, util.UnauthorizedError()
-	}
+// GetSysCfg 获取系统全局配置
+func (s *outerImpl) GetSysCfg(ctx context.Context) (SysCfg, error) {
 	ret := SysCfg{}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
@@ -265,6 +274,65 @@ func (s *outerImpl) UpdateEnvCfg(ctx context.Context, reqDTO UpdateEnvCfgReqDTO)
 		Envs: reqDTO.Envs,
 	}
 	_, err = cfgmd.UpdateByKey(ctx, &cfg)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// GetGitRepoServerCfg 获取git服务器地址
+func (s *outerImpl) GetGitRepoServerCfg(ctx context.Context, reqDTO GetGitRepoServerUrlReqDTO) (GitRepoServerCfg, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return GitRepoServerCfg{}, err
+	}
+	if !reqDTO.Operator.IsAdmin {
+		return GitRepoServerCfg{}, util.UnauthorizedError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var cfg GitRepoServerCfg
+	_, err := cfgmd.GetByKey(ctx, &cfg)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return GitRepoServerCfg{}, util.InternalError(err)
+	}
+	return cfg, nil
+}
+
+// UpdateGitRepoServerUrl 更新git服务器地址
+func (s *outerImpl) UpdateGitRepoServerUrl(ctx context.Context, reqDTO UpdateGitRepoServerUrlReqDTO) (err error) {
+	// 插入日志
+	defer func() {
+		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+			Account:    reqDTO.Operator.Account,
+			OpDesc:     i18n.GetByKey(i18n.CfgSrvKeysVO.UpdateGitRepoServerUrl),
+			ReqContent: reqDTO,
+			Err:        err,
+		})
+	}()
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var b bool
+	b, err = cfgmd.ExistByKey(ctx, reqDTO.GitRepoServerCfg.Key())
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if b {
+		_, err = cfgmd.UpdateByKey(ctx, &reqDTO.GitRepoServerCfg)
+	} else {
+		err = cfgmd.InsertCfg(ctx, &reqDTO.GitRepoServerCfg)
+	}
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)

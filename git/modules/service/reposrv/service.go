@@ -22,10 +22,12 @@ type InnerService interface {
 
 type OuterService interface {
 	EntriesRepo(context.Context, EntriesRepoReqDTO) (TreeDTO, error)
+	// ListRepo 获取仓库列表
 	ListRepo(context.Context, ListRepoReqDTO) ([]repomd.Repo, error)
 	CatFile(context.Context, CatFileReqDTO) (CatFileRespDTO, error)
 	TreeRepo(context.Context, TreeRepoReqDTO) (TreeRepoRespDTO, error)
-	InitRepo(context.Context, InitRepoReqDTO) error
+	// CreateRepo 创建仓库
+	CreateRepo(context.Context, CreateRepoReqDTO) error
 	AllGitIgnoreTemplateList() []string
 	DeleteRepo(context.Context, DeleteRepoReqDTO) error
 	AllBranches(context.Context, AllBranchesReqDTO) ([]string, error)

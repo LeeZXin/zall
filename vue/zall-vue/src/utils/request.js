@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { message } from 'ant-design-vue'
-import { useUserStore } from '@/pinia/UserStore.js'
+import { useUserStore } from '@/pinia/userStore.js'
 import i18n from "../language/i8n"
 import router from "../router/router";
 
@@ -20,9 +20,9 @@ request.defaults.transformRequest = [
 
 request.interceptors.request.use(
     (config) => {
-        const user = useUserStore()
+        const user = useUserStore();
         const now = new Date().getTime();
-        if (user.sessionExpireAt > 0 && user.sessionExpireAt < now) {
+        if (user && user.sessionExpireAt && user.sessionExpireAt < now && user.sessionExpireAt > (now - 10 * 60 * 1000)) {
             console.log("refresh token")
         }
         return config

@@ -1,7 +1,7 @@
 <template>
   <a-layout>
     <a-layout-header style="font-size:22px;color:white">
-      <span>{{team.teamName}}</span>
+      <span>{{team.name}}</span>
       <span class="switch-team-text" @click="switchTeam">{{t("switchTeam")}}</span>
       <AvatarName style="float:right;" />
       <I18nSelect style="float:right;margin-right: 20px" />
@@ -11,35 +11,35 @@
         <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @select="onselect">
           <a-menu-item key="/team/gitRepo/list">
             <branches-outlined />
-            <span>{{t("menu.gitRepo")}}</span>
+            <span>{{t("teamMenu.gitRepo")}}</span>
           </a-menu-item>
           <a-menu-item key="/team/app/list">
             <appstore-outlined />
-            <span>{{t("menu.app")}}</span>
+            <span>{{t("teamMenu.app")}}</span>
           </a-menu-item>
           <a-menu-item key="/team/action/list">
             <desktop-outlined />
-            <span>{{t("menu.action")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/team/propertyCenter">
-            <file-zip-outlined />
-            <span>{{t("menu.propertyCenter")}}</span>
+            <span>{{t("teamMenu.action")}}</span>
           </a-menu-item>
           <a-menu-item key="/team/timerTask">
             <clock-circle-outlined />
-            <span>{{t("menu.timerTask")}}</span>
+            <span>{{t("teamMenu.timerTask")}}</span>
           </a-menu-item>
           <a-menu-item key="/team/applyApproval">
             <form-outlined />
-            <span>{{t("menu.applyApproval")}}</span>
+            <span>{{t("teamMenu.applyApproval")}}</span>
           </a-menu-item>
           <a-menu-item key="/team/dbAudit">
             <database-outlined />
-            <span>{{t("menu.dbAudit")}}</span>
+            <span>{{t("teamMenu.dbAudit")}}</span>
           </a-menu-item>
           <a-menu-item key="/team/monitorAlert">
             <alert-outlined />
-            <span>{{t("menu.monitorAlert")}}</span>
+            <span>{{t("teamMenu.monitorAlert")}}</span>
+          </a-menu-item>
+          <a-menu-item key="/team/monitorAlert" v-if="isAdmin">
+            <setting-outlined />
+            <span>{{t("teamMenu.teamSettings")}}</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -52,7 +52,7 @@
 <script setup>
 import I18nSelect from "../components/i18n/I18nSelect";
 import AvatarName from "../components/user/AvatarName";
-import { useTeamStore } from "../pinia/TeamStore";
+import { useTeamStore } from "../pinia/teamStore";
 import { useI18n } from "vue-i18n";
 import { ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
@@ -60,21 +60,24 @@ import {
   DesktopOutlined,
   BranchesOutlined,
   AppstoreOutlined,
-  FileZipOutlined,
   ClockCircleOutlined,
   FormOutlined,
   DatabaseOutlined,
-  AlertOutlined
+  AlertOutlined,
+  SettingOutlined
 } from "@ant-design/icons-vue";
+import { isTeamAdminRequest, getTeamRequest } from "@/api/team/teamApi";
+const team = useTeamStore();
+const router = useRouter();
 const { t } = useI18n();
 const collapsed = ref(false);
-const router = useRouter();
+
 const route = useRoute();
 const selectedKeys = ref([]);
-const team = useTeamStore();
 const switchTeam = () => {
   router.push("/index");
 };
+const isAdmin = ref(false);
 const onselect = event => {
   router.push(event.key);
 };
@@ -90,6 +93,27 @@ for (let key in pagesMap) {
     selectedKeys.value = [value];
     break;
   }
+}
+if (team.teamId === 0) {
+  if (route.params.teamId) {
+    getTeamRequest({
+      teamId: parseInt(route.params.teamId)
+    }).then(res => {
+      team.teamId = res.data.teamId;
+      team.name = res.data.name;
+      if (team.teamId === 0) {
+        router.push("/index");
+      }
+    });
+  } else {
+    router.push("/index");
+  }
+} else {
+  isTeamAdminRequest({
+    teamId: team.teamId
+  }).then(res => {
+    isAdmin.value = res.data;
+  });
 }
 </script>
 <style scoped>

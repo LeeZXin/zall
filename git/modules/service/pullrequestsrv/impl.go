@@ -69,7 +69,7 @@ func (s *outerImpl) SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequ
 		RepoPath: repo.Path,
 		Target:   reqDTO.Target,
 		Head:     reqDTO.Head,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
 			return err
@@ -191,7 +191,7 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 		RepoPath: repo.Path,
 		Target:   pr.Target,
 		Head:     pr.Head,
-	}, repo.NodeId)
+	})
 	// 不可合并
 	if !info.CanMerge {
 		err = util.NewBizErr(apicode.PullRequestCannotMergeCode, i18n.PullRequestCannotMerge)
@@ -244,7 +244,7 @@ func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullReques
 				Message:       message,
 				AppUrl:        cfg.AppUrl,
 			},
-		}, repo.NodeId)
+		})
 		if err != nil {
 			if bizerr.IsBizErr(err) {
 				return err

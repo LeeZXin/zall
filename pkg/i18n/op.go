@@ -2,8 +2,8 @@ package i18n
 
 var (
 	TeamSrvKeysVO = teamSrvKeys{
-		InsertTeam: KeyItem{
-			Id:         "teamSrv.InsertTeam",
+		CreateTeam: KeyItem{
+			Id:         "teamSrv.CreateTeam",
 			DefaultRet: "新增项目组",
 		},
 		DeleteTeam: KeyItem{
@@ -46,7 +46,7 @@ var (
 			DefaultRet: "登录",
 		},
 		LoginOut: KeyItem{
-			Id:         "userSrv.LoginOut",
+			Id:         "userSrv.Logout",
 			DefaultRet: "登出",
 		},
 		InsertUser: KeyItem{
@@ -91,8 +91,8 @@ var (
 	}
 
 	RepoSrvKeysVO = RepoSrvKeys{
-		InitRepo: KeyItem{
-			Id:         "repoSrv.InitRepo",
+		CreateRepo: KeyItem{
+			Id:         "repoSrv.CreateRepo",
 			DefaultRet: "新建仓库",
 		},
 		DeleteRepo: KeyItem{
@@ -171,6 +171,10 @@ var (
 		UpdateGitCfg: KeyItem{
 			Id:         "cfgSrv.UpdateGitCfg",
 			DefaultRet: "编辑git配置",
+		},
+		UpdateGitRepoServerUrl: KeyItem{
+			Id:         "cfgSrv.UpdateGitRepoServerUrl",
+			DefaultRet: "编辑git仓库服务器地址",
 		},
 	}
 
@@ -482,7 +486,7 @@ type KeyItem struct {
 }
 
 type teamSrvKeys struct {
-	InsertTeam              KeyItem
+	CreateTeam              KeyItem
 	DeleteTeam              KeyItem
 	UpdateTeam              KeyItem
 	DeleteTeamUser          KeyItem
@@ -512,7 +516,7 @@ type SshKeySrvKeys struct {
 }
 
 type RepoSrvKeys struct {
-	InitRepo           KeyItem
+	CreateRepo         KeyItem
 	DeleteRepo         KeyItem
 	InsertRepoToken    KeyItem
 	DeleteRepoToken    KeyItem
@@ -537,8 +541,9 @@ type PullRequestSrvKeys struct {
 }
 
 type CfgSrvKeys struct {
-	UpdateSysCfg KeyItem
-	UpdateGitCfg KeyItem
+	UpdateSysCfg           KeyItem
+	UpdateGitCfg           KeyItem
+	UpdateGitRepoServerUrl KeyItem
 }
 
 type BranchSrvKeys struct {

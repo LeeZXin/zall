@@ -2,7 +2,11 @@
   <div class="section">
     <div class="title">{{t("register.title")}}</div>
     <div class="text-input">
-      <a-input v-model:value="account" :placeholder="t('register.accountPlaceholder')" allow-clear>
+      <a-input
+        v-model:value="formState.account"
+        :placeholder="t('register.accountPlaceholder')"
+        allow-clear
+      >
         <template #prefix>
           <user-outlined />
         </template>
@@ -10,7 +14,7 @@
     </div>
     <div class="text-input">
       <a-input
-        v-model:value="username"
+        v-model:value="formState.name"
         :placeholder="t('register.usernamePlaceholder')"
         allow-clear
       >
@@ -20,14 +24,21 @@
       </a-input>
     </div>
     <div class="text-input">
-      <a-input v-model:value="email" :placeholder="t('register.emailPlaceholder')" allow-clear>
+      <a-input
+        v-model:value="formState.email"
+        :placeholder="t('register.emailPlaceholder')"
+        allow-clear
+      >
         <template #prefix>
           <mail-outlined />
         </template>
       </a-input>
     </div>
     <div class="text-input">
-      <a-input-password v-model:value="password" :placeholder="t('register.passwordPlaceholder')">
+      <a-input-password
+        v-model:value="formState.password"
+        :placeholder="t('register.passwordPlaceholder')"
+      >
         <template #prefix>
           <key-outlined />
         </template>
@@ -35,7 +46,7 @@
     </div>
     <div class="text-input">
       <a-input-password
-        v-model:value="confirmPassword"
+        v-model:value="formState.confirmPassword"
         :placeholder="t('register.confirmPasswordPlaceholder')"
       >
         <template #prefix>
@@ -62,48 +73,71 @@ import {
   MailOutlined,
   HighlightOutlined
 } from "@ant-design/icons-vue";
-import { ref } from "vue";
+import { reactive } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { message } from "ant-design-vue";
-const username = ref("");
-const email = ref("");
-const account = ref("");
-const password = ref("");
-const confirmPassword = ref("");
+import {
+  accountRegexp,
+  passwordRegexp,
+  usernameRegexp,
+  emailRegexp
+} from "@/utils/regexp";
+import { registerRequest, loginRequest } from "@/api/user/loginApi";
+import { useUserStore } from "@/pinia/userStore";
+const user = useUserStore();
+const formState = reactive({
+  account: "",
+  name: "",
+  email: "",
+  password: "",
+  confirmPassword: ""
+});
 const { t } = useI18n();
 const router = useRouter();
 const backToLogin = () => router.push("/login/login");
 const register = () => {
-  let inputAccount = account.value;
-  if (!inputAccount || inputAccount.length < 4 || inputAccount.length > 32) {
+  if (!accountRegexp.test(formState.account)) {
     message.error(t("register.pleaseConfirmAccount"));
     return;
   }
-  let inputUsername = username.value;
-  if (
-    !inputUsername ||
-    inputUsername.length > 32 ||
-    inputUsername.length === 0
-  ) {
+  if (!usernameRegexp.test(formState.name)) {
     message.error(t("register.pleaseConfirmUsername"));
     return;
   }
-  let inputEmail = email.value;
-  if (!inputEmail || inputEmail.length === 0) {
+  if (!emailRegexp.test(formState.email)) {
     message.error(t("register.pleaseConfirmEmail"));
     return;
   }
-  let inputPassword = password.value;
-  if (!inputPassword || inputPassword.value < 6) {
+  if (!passwordRegexp.test(formState.password)) {
     message.error(t("register.pleaseConfirmPassword"));
     return;
   }
-  let inputConfirmPassword = confirmPassword.value;
-  if (inputConfirmPassword !== inputPassword) {
+  if (formState.confirmPassword !== formState.password) {
     message.error(t("register.pleaseConfirmConfirmPassword"));
     return;
   }
+  registerRequest({
+    account: formState.account,
+    name: formState.name,
+    password: formState.password,
+    email: formState.email
+  }).then(() => {
+    loginRequest({
+      account: formState.account,
+      password: formState.password
+    }).then(res => {
+      user.account = res.session.userInfo.account;
+      user.avatarUrl = res.session.userInfo.avatarUrl;
+      user.email = res.session.userInfo.email;
+      user.isAdmin = res.session.userInfo.isAdmin;
+      user.name = res.session.userInfo.name;
+      user.roleType = res.session.userInfo.roleType;
+      user.sessionId = res.session.sessionId;
+      user.sessionExpireAt = res.session.expireAt;
+      router.push("/index");
+    });
+  });
 };
 </script>
 <style scoped>

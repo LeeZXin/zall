@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	SessionKey          = "session"
 	LoginUser           = "loginUser"
 	LoginCookie         = "zgit-auth"
 	AuthorizationHeader = "Authorization"
@@ -46,7 +47,12 @@ func CheckLogin(c *gin.Context) {
 		return
 	}
 	c.Set(LoginUser, session.UserInfo)
+	c.Set(SessionKey, session)
 	c.Next()
+}
+
+func MustGetSession(c *gin.Context) Session {
+	return c.MustGet(SessionKey).(Session)
 }
 
 func MustGetLoginUser(c *gin.Context) UserInfo {

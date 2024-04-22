@@ -44,6 +44,8 @@ const (
 
 const (
 	lfsAuthenticateVerb = "git-lfs-authenticate"
+
+	hiWords = "Hi there! You've successfully authenticated with the deploy key named %v, but zgit does not provide shell access."
 )
 
 var (
@@ -66,18 +68,16 @@ func InitSshServer() zsf.LifeCycle {
 			return true
 		},
 		SessionHandler: func(session ssh.Session) {
-			ctx, cancel := context.WithCancel(session.Context())
-			defer cancel()
 			envs := util.CutEnv(session.Environ())
 			// 检查proxy的fingerprint
 			fingerprint := envs["ZGIT_SRC_FINGERPRINT"]
-			user := getUserByFingerprint(ctx, fingerprint)
+			user := getUserByFingerprint(session.Context(), fingerprint)
 			if user == nil {
 				// 找不到用户信息
-				util.ExitWithErrMsg(session, "not found")
+				util.ExitWithErrMsg(session, "user not found")
 				return
 			}
-			if err := handleGitCommand(ctx, user, session); err != nil {
+			if err := handleGitCommand(user, session); err != nil {
 				util.ExitWithErrMsg(session, err.Error())
 			} else {
 				session.Exit(0)
@@ -90,14 +90,30 @@ func InitSshServer() zsf.LifeCycle {
 	return ret
 }
 
-func handleGitCommand(ctx context.Context, user *usermd.UserInfo, session ssh.Session) error {
+func handleGitCommand(user *usermd.UserInfo, session ssh.Session) error {
+	ctx := session.Context()
 	gitCfg, b := cfgsrv.Inner.GetGitCfg(ctx)
 	if !b {
 		return errors.New(i18n.GetByKey(i18n.SystemInternalError))
 	}
-	words, err := shellquote.Split(session.RawCommand())
-	if err != nil {
+	cmd := session.RawCommand()
+	// 命令为空
+	if cmd == "" {
+		_, err := fmt.Fprintln(session, fmt.Sprintf(hiWords, user.Name))
 		return err
+	}
+	words, err := shellquote.Split(cmd)
+	if err != nil {
+		return errors.New(i18n.GetByKey(i18n.SystemInvalidArgs))
+	}
+	if len(words) < 2 {
+		if git.CheckGitVersionAtLeast("2.29") == nil {
+			if cmd == "ssh_info" {
+				fmt.Fprintln(session, `{"type":"zgit","version":1}`)
+				return nil
+			}
+		}
+		return errors.New(i18n.GetByKey(i18n.SystemInvalidArgs))
 	}
 	verb := words[0]
 	repoPath := strings.TrimPrefix(words[1], "/")

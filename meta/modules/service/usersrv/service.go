@@ -3,6 +3,7 @@ package usersrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
+	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
 )
 
@@ -19,9 +20,10 @@ type InnerService interface {
 }
 
 type OuterService interface {
-	Login(context.Context, LoginReqDTO) (usermd.UserInfo, string, int64, error)
+	Login(context.Context, LoginReqDTO) (apisession.Session, error)
 	Refresh(context.Context, RefreshReqDTO) (string, int64, error)
-	LoginOut(context.Context, LoginOutReqDTO) error
+	Logout(context.Context, LogoutReqDTO) error
+	// RegisterUser 注册用户
 	RegisterUser(context.Context, RegisterUserReqDTO) error
 	InsertUser(context.Context, InsertUserReqDTO) error
 	DeleteUser(context.Context, DeleteUserReqDTO) error

@@ -16,22 +16,21 @@ const (
 )
 
 var (
-	validRepoNamePattern = regexp.MustCompile("^[\\w\\-]{1,32}$")
-	validBranchPattern   = regexp.MustCompile("^\\w{1,32}$")
+	validRepoNamePattern = regexp.MustCompile(`^[\w-]{1,32}$`)
+	validBranchPattern   = regexp.MustCompile(`^[\w.-]{0,128}$`)
 )
 
-type InitRepoReqDTO struct {
+type CreateRepoReqDTO struct {
 	Operator      apisession.UserInfo `json:"operator"`
 	TeamId        int64               `json:"teamId"`
 	Name          string              `json:"name"`
 	Desc          string              `json:"desc"`
-	NodeId        int64               `json:"nodeId"`
-	CreateReadme  bool                `json:"createReadme"`
+	AddReadme     bool                `json:"addReadme"`
 	GitIgnoreName string              `json:"gitIgnoreName"`
 	DefaultBranch string              `json:"defaultBranch"`
 }
 
-func (r *InitRepoReqDTO) IsValid() error {
+func (r *CreateRepoReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -41,13 +40,10 @@ func (r *InitRepoReqDTO) IsValid() error {
 	if len(r.Desc) > 255 {
 		return util.InvalidArgsError()
 	}
-	if r.DefaultBranch != "" && !validBranchPattern.MatchString(r.DefaultBranch) {
+	if !validBranchPattern.MatchString(r.DefaultBranch) {
 		return util.InvalidArgsError()
 	}
 	if r.GitIgnoreName != "" && !gitignoreSet.Contains(r.GitIgnoreName) {
-		return util.InvalidArgsError()
-	}
-	if r.NodeId <= 0 {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -148,6 +144,9 @@ type ListRepoReqDTO struct {
 }
 
 func (r *ListRepoReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}

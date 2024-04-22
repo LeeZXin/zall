@@ -20,10 +20,12 @@ func InitApi() {
 			group.POST("/login", login)
 			// 注册用户
 			group.POST("/register", register)
+			// 获取登录信息
+			group.Any("/userInfo", apisession.CheckLogin, getUserInfo)
 			// 刷新token
 			group.Any("/refresh", apisession.CheckLogin, refresh)
 			// 退出登录
-			group.Any("/loginOut", apisession.CheckLogin, loginOut)
+			group.Any("/logout", apisession.CheckLogin, logout)
 		}
 		group = e.Group("/api/user", apisession.CheckLogin)
 		{
@@ -48,7 +50,7 @@ func InitApi() {
 func login(c *gin.Context) {
 	var req LoginReqVO
 	if util.ShouldBindJSON(&req, c) {
-		user, sessionId, expireAt, err := usersrv.Outer.Login(c, usersrv.LoginReqDTO{
+		session, err := usersrv.Outer.Login(c, usersrv.LoginReqDTO{
 			Account:  req.Account,
 			Password: req.Password,
 		})
@@ -56,14 +58,20 @@ func login(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.SetCookie(apisession.LoginCookie, sessionId, int(usersrv.LoginSessionExpiry.Seconds()), "/", "", false, true)
+		c.SetCookie(apisession.LoginCookie, session.SessionId, int(usersrv.LoginSessionExpiry.Seconds()), "/", "", false, true)
 		c.JSON(http.StatusOK, LoginRespVO{
-			BaseResp:  ginutil.DefaultSuccessResp,
-			SessionId: sessionId,
-			ExpireAt:  expireAt,
-			User:      user,
+			BaseResp: ginutil.DefaultSuccessResp,
+			Session:  session,
 		})
 	}
+}
+
+func getUserInfo(c *gin.Context) {
+	session := apisession.MustGetSession(c)
+	c.JSON(http.StatusOK, LoginRespVO{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Session:  session,
+	})
 }
 
 func refresh(c *gin.Context) {
@@ -83,8 +91,8 @@ func refresh(c *gin.Context) {
 	})
 }
 
-func loginOut(c *gin.Context) {
-	err := usersrv.Outer.LoginOut(c, usersrv.LoginOutReqDTO{
+func logout(c *gin.Context) {
+	err := usersrv.Outer.Logout(c, usersrv.LogoutReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -200,11 +208,10 @@ func register(c *gin.Context) {
 	var req RegisterUserReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := usersrv.Outer.RegisterUser(c, usersrv.RegisterUserReqDTO{
-			Account:   req.Account,
-			Name:      req.Name,
-			Email:     req.Email,
-			Password:  req.Password,
-			AvatarUrl: req.AvatarUrl,
+			Account:  req.Account,
+			Name:     req.Name,
+			Email:    req.Email,
+			Password: req.Password,
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)

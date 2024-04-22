@@ -15,3 +15,7 @@ type UpdateGitCfgReqVO struct {
 type UpdateEnvCfgReqVO struct {
 	Envs []string `json:"envs"`
 }
+
+type UpdateGitRepoServerUrlReqVO struct {
+	cfgsrv.GitRepoServerCfg
+}

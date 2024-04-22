@@ -4,7 +4,7 @@ import "encoding/json"
 
 var (
 	DefaultTeamPerm = TeamPerm{
-		CanInitRepo:           true,
+		CanCreateRepo:         true,
 		CanDeleteRepo:         true,
 		CanHandleTimer:        true,
 		CanAccessAction:       true,
@@ -93,7 +93,7 @@ type RepoPerm struct {
 
 type TeamPerm struct {
 	// 是否可创建仓库
-	CanInitRepo bool `json:"canInitRepo"`
+	CanCreateRepo bool `json:"canCreateRepo"`
 	// 是否可删除仓库
 	CanDeleteRepo bool `json:"canDeleteRepo"`
 	// 是否可处理定时任务

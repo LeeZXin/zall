@@ -4,13 +4,11 @@ import (
 	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
-type InitRepoReqVO struct {
+type CreateRepoReqVO struct {
 	Name          string `json:"name"`
-	Desc          string `json:"Desc"`
-	RepoType      int    `json:"repoType"`
-	CreateReadme  bool   `json:"createReadme"`
+	Desc          string `json:"desc"`
+	AddReadme     bool   `json:"addReadme"`
 	TeamId        int64  `json:"teamId"`
-	NodeId        int64  `json:"nodeId"`
 	GitIgnoreName string `json:"gitIgnoreName"`
 	DefaultBranch string `json:"defaultBranch"`
 }
@@ -34,13 +32,6 @@ type EntriesRepoReqVO struct {
 
 type ListRepoReqVO struct {
 	TeamId int64 `json:"teamId"`
-}
-
-type ListRepoRespVO struct {
-	ginutil.BaseResp
-	RepoList []RepoVO `json:"repoList"`
-	Cursor   int64    `json:"cursor"`
-	Limit    int      `json:"limit"`
 }
 
 type UserVO struct {
@@ -81,14 +72,15 @@ type TreeRepoRespVO struct {
 }
 
 type RepoVO struct {
-	Id      int64  `json:"id"`
-	Name    string `json:"name"`
-	Path    string `json:"path"`
-	Author  string `json:"author"`
-	TeamId  int64  `json:"teamId"`
-	GitSize int64  `json:"gitSize"`
-	LfsSize int64  `json:"lfsSize"`
-	Created string `json:"created"`
+	Id       int64  `json:"id"`
+	Name     string `json:"name"`
+	Path     string `json:"path"`
+	Author   string `json:"author"`
+	RepoDesc string `json:"repoDesc"`
+	GitSize  int64  `json:"gitSize"`
+	LfsSize  int64  `json:"lfsSize"`
+	Created  string `json:"created"`
+	Updated  string `json:"updated"`
 }
 
 type CatFileReqVO struct {

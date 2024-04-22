@@ -61,7 +61,7 @@
 <script setup>
 import { reactive } from "vue";
 import { ArrowLeftOutlined } from "@ant-design/icons-vue";
-import { useTeamStore } from "@/pinia/TeamStore";
+import { useTeamStore } from "@/pinia/teamStore";
 import { useRouter } from "vue-router";
 import { Codemirror } from "vue-codemirror";
 import { yaml } from "@codemirror/lang-yaml";

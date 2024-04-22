@@ -1,11 +1,11 @@
 <template>
   <div class="avatar-name" :style="props.style" @click="showDrawer">
-    <img v-if="showAvatar" :src="avatar" />
-    <div v-if="!showAvatar" class="avatar-fake">草</div>
-    <span>{{username}}</span>
+    <img v-if="user.avatar" :src="user.avatar" />
+    <div v-if="!user.avatar" class="avatar-fake">{{user.name?.substring(0,1)}}</div>
+    <span>{{user.name}}</span>
   </div>
   <a-drawer
-    :title="username"
+    :title="user.name"
     :closable="false"
     :open="visible"
     :bodyStyle="bodyStyle"
@@ -36,22 +36,24 @@
       <span>cnm</span>
     </div>
     <a-divider style="margin-bottom: 10px" />
-    <div class="loginout-text">{{t("loginoutText")}}</div>
+    <div>
+      <a-button type="primary" danger style="width:100%" @click="logout">{{t("logoutText")}}</a-button>
+    </div>
   </a-drawer>
 </template>
 <script setup>
-import { useUserStore } from "@/pinia/UserStore";
+import { useUserStore } from "@/pinia/userStore";
 import { defineProps, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { UserOutlined, KeyOutlined } from "@ant-design/icons-vue";
+import { useRouter } from "vue-router";
+import { logoutRequest } from "@/api/user/loginApi";
 const bodyStyle = {
-    Padding: "10px 20px"
-}
+  Padding: "10px 20px"
+};
+const router = useRouter();
 const { t } = useI18n();
 const user = useUserStore();
-const username = user.name;
-const avatar = user.avatar;
-const showAvatar = avatar ? true : false;
 const props = defineProps(["style"]);
 const visible = ref(false);
 const showDrawer = () => {
@@ -59,6 +61,11 @@ const showDrawer = () => {
 };
 const closeDrawer = () => {
   visible.value = false;
+};
+const logout = () => {
+  logoutRequest().then(() => {
+    router.push("/login/login");
+  });
 };
 </script>
 <style scoped>
@@ -68,6 +75,7 @@ const closeDrawer = () => {
   font-size: 14px;
   color: white;
   cursor: pointer;
+  height: 64px;
 }
 .avatar-fake {
   width: 42px;
@@ -88,16 +96,6 @@ const closeDrawer = () => {
 }
 .select-item:hover {
   background-color: #f0f0f0;
-}
-.loginout-text {
-  height: 32px;
-  line-height: 32px;
-  font-size: 14px;
-  color: darkred;
-  cursor: pointer;
-}
-.loginout-text:hover {
-  color: red;
 }
 .drawer-item {
   display: flex;

@@ -49,7 +49,7 @@ func UpdateLfsSize(ctx context.Context, repoId int64, lfsSize int64) error {
 	return err
 }
 
-func ListAllRepo(ctx context.Context, teamId int64) ([]Repo, error) {
+func GetRepoListByTeamId(ctx context.Context, teamId int64) ([]Repo, error) {
 	ret := make([]Repo, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
@@ -75,7 +75,6 @@ func InsertRepo(ctx context.Context, reqDTO InsertRepoReqDTO) (Repo, error) {
 		DefaultBranch: reqDTO.DefaultBranch,
 		GitSize:       reqDTO.GitSize,
 		LfsSize:       reqDTO.LfsSize,
-		NodeId:        reqDTO.NodeId,
 		Cfg:           reqDTO.Cfg.ToString(),
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&r)

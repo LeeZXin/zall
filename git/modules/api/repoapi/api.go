@@ -17,12 +17,12 @@ import (
 func InitApi() {
 	cfgsrv.Inner.InitGitCfg()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/api/repo", apisession.CheckLogin)
+		group := e.Group("/api/gitRepo", apisession.CheckLogin)
 		{
 			// 获取模版列表
 			group.GET("/allGitIgnoreTemplateList", allGitIgnoreTemplateList)
 			// 初始化仓库
-			group.POST("/init", initRepo)
+			group.POST("/create", createRepo)
 			// 删除仓库
 			group.POST("/delete", deleteRepo)
 			// 展示仓库列表
@@ -204,18 +204,17 @@ func fileDto2Vo(list []reposrv.FileDTO) []FileVO {
 	return ret
 }
 
-func initRepo(c *gin.Context) {
-	var req InitRepoReqVO
+func createRepo(c *gin.Context) {
+	var req CreateRepoReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.InitRepo(c, reposrv.InitRepoReqDTO{
+		err := reposrv.Outer.CreateRepo(c, reposrv.CreateRepoReqDTO{
 			Operator:      apisession.MustGetLoginUser(c),
 			Name:          req.Name,
 			Desc:          req.Desc,
-			CreateReadme:  req.CreateReadme,
+			AddReadme:     req.AddReadme,
 			GitIgnoreName: req.GitIgnoreName,
 			DefaultBranch: req.DefaultBranch,
 			TeamId:        req.TeamId,
-			NodeId:        req.NodeId,
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -251,20 +250,22 @@ func listRepo(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		repoVoList, _ := listutil.Map(repoList, func(t repomd.Repo) (RepoVO, error) {
+		data, _ := listutil.Map(repoList, func(t repomd.Repo) (RepoVO, error) {
 			return RepoVO{
-				Name:    t.Name,
-				Path:    t.Path,
-				Author:  t.Author,
-				TeamId:  t.TeamId,
-				GitSize: t.GitSize,
-				LfsSize: t.LfsSize,
-				Created: t.Created.Format(time.DateTime),
+				Id:       t.Id,
+				Name:     t.Name,
+				Path:     t.Path,
+				Author:   t.Author,
+				RepoDesc: t.RepoDesc,
+				GitSize:  t.GitSize,
+				LfsSize:  t.LfsSize,
+				Created:  t.Created.Format(time.DateTime),
+				Updated:  t.Updated.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ListRepoRespVO{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]RepoVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
-			RepoList: repoVoList,
+			Data:     data,
 		})
 	}
 }

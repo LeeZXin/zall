@@ -35,7 +35,7 @@ type InitRepoOpts struct {
 	Owner         User
 	RepoName      string
 	RepoPath      string
-	CreateReadme  bool
+	AddReadme     bool
 	GitIgnoreName string
 	DefaultBranch string
 }
@@ -81,7 +81,7 @@ func InitRepository(ctx context.Context, opts InitRepoOpts) error {
 	if opts.DefaultBranch == "" {
 		opts.DefaultBranch = GitDefaultBranch
 	}
-	if opts.CreateReadme || opts.GitIgnoreName != "" {
+	if opts.AddReadme || opts.GitIgnoreName != "" {
 		tmpDir, err := os.MkdirTemp(TempDir(), "init-"+util.RandomIdWithTime())
 		if err != nil {
 			return fmt.Errorf("failed to create temp dir for repository %s: %w", opts.RepoPath, err)
@@ -90,7 +90,6 @@ func InitRepository(ctx context.Context, opts InitRepoOpts) error {
 		if err = initTemporaryRepository(ctx, tmpDir, opts); err != nil {
 			return err
 		}
-	} else {
 		SetDefaultBranch(ctx, opts.RepoPath, opts.DefaultBranch)
 	}
 	return InitRepoHook(opts.RepoPath)
@@ -100,7 +99,7 @@ func initTemporaryRepository(ctx context.Context, tmpDir string, opts InitRepoOp
 	if _, err := NewCommand("clone", opts.RepoPath, tmpDir).Run(ctx); err != nil {
 		return fmt.Errorf("failed to clone original repository %s: %w", opts.RepoPath, err)
 	}
-	if opts.CreateReadme {
+	if opts.AddReadme {
 		util.WriteFile(filepath.Join(tmpDir, "README.md"), []byte(fmt.Sprintf("# %s  ", opts.RepoName)))
 	}
 	if opts.GitIgnoreName != "" {
@@ -164,7 +163,7 @@ func commitAndPushRepository(ctx context.Context, opts CommitAndPushOpts) error 
 	if err != nil {
 		return fmt.Errorf("git commit failed repo:%s err: %v", opts.RepoPath, err)
 	}
-	_, err = NewCommand("push", "origin", opts.Branch).
+	_, err = NewCommand("push", "origin", "HEAD:"+opts.Branch).
 		Run(
 			ctx,
 			WithDir(opts.RepoPath),

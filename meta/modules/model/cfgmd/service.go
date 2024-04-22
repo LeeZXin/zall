@@ -26,6 +26,12 @@ func GetByKey(ctx context.Context, kv util.KeyVal) (bool, error) {
 	return b, err
 }
 
+func ExistByKey(ctx context.Context, key string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("cfg_key = ?", key).
+		Exist(new(SysCfg))
+}
+
 func UpdateByKey(ctx context.Context, kv util.KeyVal) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("cfg_key = ?", kv.Key()).

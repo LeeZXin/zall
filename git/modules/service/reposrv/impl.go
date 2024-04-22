@@ -2,7 +2,6 @@ package reposrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/git/modules/model/gitnodemd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/service/gpgkeysrv"
 	"github.com/LeeZXin/zall/git/modules/service/sshkeysrv"
@@ -38,7 +37,7 @@ const (
 )
 
 const (
-	initRepo = iota
+	createRepo = iota
 	deleteRepo
 )
 
@@ -131,7 +130,7 @@ func (s *outerImpl) EntriesRepo(ctx context.Context, reqDTO EntriesRepoReqDTO) (
 		Ref:      reqDTO.Ref,
 		Dir:      reqDTO.Dir,
 		Offset:   reqDTO.Offset,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return TreeDTO{}, util.InternalError(err)
@@ -150,41 +149,36 @@ func (*outerImpl) ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]repomd
 		repoList []repomd.Repo
 		err      error
 	)
-	if !reqDTO.Operator.IsAdmin {
-		p, b := teamsrv.Inner.GetUserPermDetail(ctx, reqDTO.TeamId, reqDTO.Operator.Account)
-		if !b {
-			return nil, util.UnauthorizedError()
-		}
-		if !p.IsAdmin {
-			// 没有任何访问仓库权限
-			if len(p.PermDetail.RepoPermList) == 0 && !p.PermDetail.DefaultRepoPerm.CanAccessRepo {
-				return nil, nil
-			}
-			// 访问部分仓库
-			if len(p.PermDetail.RepoPermList) > 0 {
-				repoPermList, _ := listutil.Filter(p.PermDetail.RepoPermList, func(p perm.RepoPermWithId) (bool, error) {
-					return p.CanAccessRepo, nil
-				})
-				// 存在部分可读仓库权限
-				if len(repoPermList) > 0 {
-					idList, _ := listutil.Map(repoPermList, func(t perm.RepoPermWithId) (int64, error) {
-						return t.RepoId, nil
-					})
-					repoList, err = repomd.GetRepoByIdList(ctx, idList)
-					if err != nil {
-						logger.Logger.WithContext(ctx).Error(err)
-						return nil, util.InternalError(err)
-					}
-					return repoList, nil
-				}
-			}
-			return nil, nil
-		}
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, reqDTO.TeamId, reqDTO.Operator.Account)
+	if !b {
+		return nil, util.UnauthorizedError()
 	}
-	repoList, err = repomd.ListAllRepo(ctx, reqDTO.TeamId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
+	// 没有任何访问仓库权限
+	if len(p.PermDetail.RepoPermList) == 0 && !p.PermDetail.DefaultRepoPerm.CanAccessRepo {
+		return nil, nil
+	}
+	// 访问部分仓库
+	if len(p.PermDetail.RepoPermList) > 0 {
+		repoPermList, _ := listutil.Filter(p.PermDetail.RepoPermList, func(p perm.RepoPermWithId) (bool, error) {
+			return p.CanAccessRepo, nil
+		})
+		// 存在部分可读仓库权限
+		if len(repoPermList) > 0 {
+			idList, _ := listutil.Map(repoPermList, func(t perm.RepoPermWithId) (int64, error) {
+				return t.RepoId, nil
+			})
+			repoList, err = repomd.GetRepoByIdList(ctx, idList)
+			if err != nil {
+				logger.Logger.WithContext(ctx).Error(err)
+				return nil, util.InternalError(err)
+			}
+		}
+	} else {
+		repoList, err = repomd.GetRepoListByTeamId(ctx, reqDTO.TeamId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
 	}
 	return repoList, nil
 }
@@ -209,7 +203,7 @@ func (s *outerImpl) CatFile(ctx context.Context, reqDTO CatFileReqDTO) (CatFileR
 		Ref:      reqDTO.Ref,
 		Dir:      reqDTO.Dir,
 		FileName: reqDTO.FileName,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return CatFileRespDTO{}, util.InternalError(err)
@@ -240,7 +234,7 @@ func (s *outerImpl) TreeRepo(ctx context.Context, reqDTO TreeRepoReqDTO) (TreeRe
 		RepoPath: repo.Path,
 		Ref:      reqDTO.Ref,
 		Dir:      reqDTO.Dir,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return TreeRepoRespDTO{}, util.InternalError(err)
@@ -270,13 +264,13 @@ func tree2Dto(vo reqvo.TreeVO) TreeDTO {
 	return ret
 }
 
-// InitRepo 初始化仓库
-func (s *outerImpl) InitRepo(ctx context.Context, reqDTO InitRepoReqDTO) (err error) {
+// CreateRepo 初始化仓库
+func (s *outerImpl) CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) (err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.InitRepo),
+			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.CreateRepo),
 			ReqContent: reqDTO,
 			Err:        err,
 		})
@@ -286,7 +280,8 @@ func (s *outerImpl) InitRepo(ctx context.Context, reqDTO InitRepoReqDTO) (err er
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err = checkTeamPerm(ctx, reqDTO.TeamId, reqDTO.Operator, initRepo)
+	// 校验权限
+	err = checkTeamPerm(ctx, reqDTO.TeamId, reqDTO.Operator, createRepo)
 	if err != nil {
 		return
 	}
@@ -305,16 +300,6 @@ func (s *outerImpl) InitRepo(ctx context.Context, reqDTO InitRepoReqDTO) (err er
 		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.RepoAlreadyExists)
 		return
 	}
-	_, b, err = gitnodemd.GetById(ctx, reqDTO.NodeId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
 	// 添加数据
 	insertReq := repomd.InsertRepoReqDTO{
 		Name:          reqDTO.Name,
@@ -323,7 +308,6 @@ func (s *outerImpl) InitRepo(ctx context.Context, reqDTO InitRepoReqDTO) (err er
 		TeamId:        reqDTO.TeamId,
 		RepoDesc:      reqDTO.Desc,
 		DefaultBranch: reqDTO.DefaultBranch,
-		NodeId:        reqDTO.NodeId,
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 插入数据库
@@ -337,10 +321,10 @@ func (s *outerImpl) InitRepo(ctx context.Context, reqDTO InitRepoReqDTO) (err er
 			UserEmail:     reqDTO.Operator.Email,
 			RepoName:      reqDTO.Operator.Name,
 			RepoPath:      relativePath,
-			CreateReadme:  reqDTO.CreateReadme,
+			AddReadme:     reqDTO.AddReadme,
 			GitIgnoreName: reqDTO.GitIgnoreName,
 			DefaultBranch: reqDTO.DefaultBranch,
-		}, reqDTO.NodeId)
+		})
 		if err != nil {
 			return err
 		}
@@ -389,7 +373,7 @@ func (s *outerImpl) DeleteRepo(ctx context.Context, reqDTO DeleteRepoReqDTO) (er
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		err := client.DeleteRepo(ctx, reqvo.DeleteRepoReq{
 			RepoPath: repo.Path,
-		}, repo.NodeId)
+		})
 		if err != nil {
 			return err
 		}
@@ -422,7 +406,7 @@ func (s *outerImpl) AllBranches(ctx context.Context, reqDTO AllBranchesReqDTO) (
 	}
 	branches, err := client.GetAllBranches(ctx, reqvo.GetAllBranchesReq{
 		RepoPath: repo.Path,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -448,7 +432,7 @@ func (s *outerImpl) AllTags(ctx context.Context, reqDTO AllTagsReqDTO) ([]string
 	}
 	tags, err := client.GetAllTags(ctx, reqvo.GetAllTagsReq{
 		RepoPath: repo.Path,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -474,7 +458,7 @@ func (s *outerImpl) Gc(ctx context.Context, reqDTO GcReqDTO) error {
 	}
 	err = client.Gc(ctx, reqvo.GcReq{
 		RepoPath: repo.Path,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
 			return err
@@ -504,7 +488,7 @@ func (s *outerImpl) DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (
 		RepoPath: repo.Path,
 		Target:   reqDTO.Target,
 		Head:     reqDTO.Head,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
 			return DiffCommitsRespDTO{}, err
@@ -561,7 +545,7 @@ func (s *outerImpl) DiffFile(ctx context.Context, reqDTO DiffFileReqDTO) (DiffFi
 		Target:   reqDTO.Target,
 		Head:     reqDTO.Head,
 		FileName: reqDTO.FileName,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
 			return DiffFileRespDTO{}, err
@@ -645,7 +629,7 @@ func (s *outerImpl) ShowDiffTextContent(ctx context.Context, reqDTO ShowDiffText
 		FileName:  reqDTO.FileName,
 		StartLine: startLine,
 		Limit:     reqDTO.Limit,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
 			return nil, err
@@ -683,7 +667,7 @@ func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReq
 		RepoPath: repo.Path,
 		Ref:      reqDTO.Ref,
 		Offset:   reqDTO.Cursor,
-	}, repo.NodeId)
+	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
 			return HistoryCommitsRespDTO{}, err
@@ -899,8 +883,8 @@ func checkTeamPerm(ctx context.Context, teamId int64, operator apisession.UserIn
 	}
 	pass := false
 	switch permCode {
-	case initRepo:
-		pass = p.PermDetail.TeamPerm.CanInitRepo
+	case createRepo:
+		pass = p.PermDetail.TeamPerm.CanCreateRepo
 	case deleteRepo:
 		pass = p.PermDetail.TeamPerm.CanDeleteRepo
 	}
@@ -933,7 +917,7 @@ func (s *outerImpl) RefreshAllGitHooks(ctx context.Context, reqDTO RefreshAllGit
 		err := repomd.IterateRepo(ctx, func(repo *repomd.Repo) error {
 			return client.InitRepoHook(context.Background(), reqvo.InitRepoHookReq{
 				RepoPath: repo.Path,
-			}, repo.NodeId)
+			})
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)

@@ -3,6 +3,7 @@ package teamapi
 import (
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -17,10 +18,16 @@ func InitApi() {
 		// 项目
 		group := e.Group("/api/team", apisession.CheckLogin)
 		{
-			group.POST("/insert", insertTeam)
+			group.POST("/create", createTeam)
 			group.GET("/list", listTeam)
 			group.POST("/delete", deleteTeam)
 			group.POST("/update", updateTeam)
+			// 是否是团队管理员
+			group.POST("/isAdmin", isAdmin)
+			// 获取团队权限
+			group.POST("/getTeamPerm", getTeamPerm)
+			// 获取团队信息
+			group.POST("/get", getTeam)
 		}
 		// 项目用户
 		group = e.Group("/api/teamUser", apisession.CheckLogin)
@@ -41,10 +48,64 @@ func InitApi() {
 	})
 }
 
-func insertTeam(c *gin.Context) {
-	var req InsertTeamReqVO
+func isAdmin(c *gin.Context) {
+	var req IsAdminReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.InsertTeam(c, teamsrv.InsertTeamReqDTO{
+		b, err := teamsrv.Outer.IsAdmin(c, teamsrv.IsAdminReqDTO{
+			TeamId:   req.TeamId,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[bool]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     b,
+		})
+	}
+}
+
+func getTeamPerm(c *gin.Context) {
+	var req GetTeamPermReqVO
+	if util.ShouldBindJSON(&req, c) {
+		teamPerm, err := teamsrv.Outer.GetTeamPerm(c, teamsrv.GetTeamPermReqDTO{
+			TeamId:   req.TeamId,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[perm.TeamPerm]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     teamPerm,
+		})
+	}
+}
+
+func getTeam(c *gin.Context) {
+	var req GetTeamPermReqVO
+	if util.ShouldBindJSON(&req, c) {
+		team, err := teamsrv.Outer.GetTeam(c, teamsrv.GetTeamReqDTO{
+			TeamId:   req.TeamId,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[teamsrv.TeamDTO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     team,
+		})
+	}
+}
+
+func createTeam(c *gin.Context) {
+	var req CreateTeamReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := teamsrv.Outer.CreateTeam(c, teamsrv.CreateTeamReqDTO{
 			Name:     req.Name,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -66,9 +127,8 @@ func listTeam(c *gin.Context) {
 	}
 	data, _ := listutil.Map(teamList, func(t teamsrv.TeamDTO) (TeamVO, error) {
 		return TeamVO{
-			TeamId:  t.TeamId,
-			Name:    t.Name,
-			Created: t.Created.Format(time.DateTime),
+			TeamId: t.TeamId,
+			Name:   t.Name,
 		}, nil
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]TeamVO]{

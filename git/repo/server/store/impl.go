@@ -42,7 +42,7 @@ func (s *storeImpl) InitRepo(ctx context.Context, req reqvo.InitRepoReq) error {
 		},
 		RepoName:      req.RepoName,
 		RepoPath:      filepath.Join(git.RepoDir(), req.RepoPath),
-		CreateReadme:  req.CreateReadme,
+		AddReadme:     req.AddReadme,
 		GitIgnoreName: req.GitIgnoreName,
 		DefaultBranch: req.DefaultBranch,
 	})

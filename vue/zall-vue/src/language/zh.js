@@ -1,6 +1,6 @@
 export default {
     app: "ZALL",
-    loginoutText: "退出登录",
+    logoutText: "退出登录",
     footer: "Build with zsf",
     createTeamText: "创建团队",
     myTeam: "我的团队",
@@ -40,7 +40,7 @@ export default {
         pleaseConfirmEmail: "请输入正确的邮箱",
         pleaseConfirmConfirmPassword: "确认密码和输入密码不一致"
     },
-    menu: {
+    teamMenu: {
         gitRepo: "代码仓库",
         app: "应用服务",
         action: "工作流",
@@ -48,7 +48,8 @@ export default {
         timerTask: "定时任务",
         applyApproval: "审批申请",
         dbAudit: "数据库审计",
-        monitorAlert: "监控告警"
+        monitorAlert: "监控告警",
+        teamSettings: "团队设置"
     },
     settings: {
         sshAndGpg: "SSH和GPG密钥"

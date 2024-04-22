@@ -1,11 +1,6 @@
 <template>
   <div style="padding:14px">
-    <div style="margin-bottom:20px">
-      <span class="header" @click="backToAppList">
-        <arrow-left-outlined />
-        <span style="margin-left:8px">应用服务列表</span>
-      </span>
-    </div>
+    <ZNaviBack url="/team/app/list" name="应用服务列表" />
     <div class="container">
       <div class="body">
         <div class="title">创建应用服务</div>
@@ -40,29 +35,16 @@
 </template>
 <script setup>
 import { reactive } from "vue";
-import { ArrowLeftOutlined } from "@ant-design/icons-vue";
-import { useTeamStore } from "@/pinia/TeamStore";
-import { useRouter } from "vue-router";
+import { useTeamStore } from "@/pinia/teamStore";
+import ZNaviBack from "@/components/common/ZNaviBack";
 const team = useTeamStore();
 const teamName = team.teamName;
-const router = useRouter();
 const formState = reactive({
   appId: "",
   appName: ""
 });
-const backToAppList = () => {
-  router.push("/team/app/list");
-};
 </script>
 <style scoped>
-.header {
-  font-size: 14px;
-  cursor: pointer;
-  margin-bottom: 10px;
-}
-.header:hover {
-  color: #1677ff;
-}
 .body > .title {
   font-size: 16px;
   font-weight: bold;

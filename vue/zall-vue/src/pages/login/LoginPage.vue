@@ -27,48 +27,49 @@
 import { UserOutlined, KeyOutlined } from "@ant-design/icons-vue";
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
-import api from "@/api/user/LoginApi";
+import { useRouter, useRoute } from "vue-router";
+import { loginRequest } from "@/api/user/loginApi";
 import { message } from "ant-design-vue";
-import { useUserStore } from "@/pinia/UserStore";
-
+import { useUserStore } from "@/pinia/userStore";
+import { accountRegexp, passwordRegexp } from "@/utils/regexp";
 const user = useUserStore();
 const account = ref("");
 const password = ref("");
 const { t } = useI18n();
+const route = useRoute();
 const router = useRouter();
 // 跳转注册页面
 const goToRegister = () => router.push("/login/register");
 // 登录请求
 const login = () => {
-  let inputAccount = account.value;
-  if (!inputAccount || inputAccount.length < 4 || inputAccount.length > 32) {
+  // 验证账号
+  if (!accountRegexp.test(account.value)) {
     message.error(t("login.pleaseConfirmAccount"));
     return;
   }
-  let inputPassword = password.value;
-  if (!inputPassword || inputPassword.length < 6) {
+  // 验证密码
+  if (!passwordRegexp.test(password.value)) {
     message.error(t("login.pleaseConfirmPassword"));
     return;
   }
-  api
-    .Login({
-      account: account.value,
-      password: password.value
-    })
-    .then(res => {
-      user.$patch(state => {
-        state.account = res.user.account;
-        state.avatarUrl = res.user.avatarUrl;
-        state.email = res.user.email;
-        state.isAdmin = res.user.isAdmin;
-        state.isProhibited = res.user.isProhibited;
-        state.name = res.user.name;
-        state.roleType = res.user.roleType;
-        state.sessionId = res.sessionId;
-        state.sessionExpireAt = res.expireAt;
-      });
-    });
+  loginRequest({
+    account: account.value,
+    password: password.value
+  }).then(res => {
+    user.account = res.session.userInfo.account;
+    user.avatarUrl = res.session.userInfo.avatarUrl;
+    user.email = res.session.userInfo.email;
+    user.isAdmin = res.session.userInfo.isAdmin;
+    user.name = res.session.userInfo.name;
+    user.roleType = res.session.userInfo.roleType;
+    user.sessionId = res.session.sessionId;
+    user.sessionExpireAt = res.session.expireAt;
+    if (route.query && route.query.redirect_uri) {
+      window.location.href = decodeURI(route.query.redirect_uri);
+    } else {
+      router.push("/index");
+    }
+  });
 };
 </script>
 <style scoped>

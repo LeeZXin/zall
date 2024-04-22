@@ -1,6 +1,6 @@
 export default {
     app: "ZALL",
-    loginoutText: "sign out",
+    logoutText: "logout",
     footer: "build with zsf",
     createTeamText: "Create team",
     myTeam: "My Teams",
@@ -40,7 +40,7 @@ export default {
         pleaseConfirmEmail: "email length should greater than 0",
         pleaseConfirmConfirmPassword: "confirm password should be equal with password"
     },
-    menu: {
+    teamMenu: {
         gitRepo: "Git repo",
         app: "App service",
         action: "Action",
@@ -48,7 +48,8 @@ export default {
         timerTask: "Timer task",
         applyApproval: "Apply approval",
         dbAudit: "Database audit",
-        monitorAlert: "Monitor alert"
+        monitorAlert: "Monitor alert",
+        teamSettings: "Team settings"
     },
     settings: {
         sshAndGpg: "SSH and GPG keys"

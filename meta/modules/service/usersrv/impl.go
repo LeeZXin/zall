@@ -67,7 +67,7 @@ func (s *innerImpl) CheckAccountAndPassword(ctx context.Context, reqDTO CheckAcc
 
 type outerImpl struct{}
 
-func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (userRet usermd.UserInfo, sessionId string, expireAt int64, err error) {
+func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (session apisession.Session, err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -113,9 +113,9 @@ func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (userRet user
 		logger.Logger.WithContext(ctx).Error(err)
 	}
 	// 生成sessionId
-	sessionId = apisession.GenSessionId()
-	expireAt = time.Now().Add(LoginSessionExpiry).UnixMilli()
-	err = sessionStore.PutSession(apisession.Session{
+	sessionId := apisession.GenSessionId()
+	expireAt := time.Now().Add(LoginSessionExpiry).UnixMilli()
+	session = apisession.Session{
 		SessionId: sessionId,
 		UserInfo: apisession.UserInfo{
 			Account:      user.Account,
@@ -126,12 +126,12 @@ func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (userRet user
 			IsAdmin:      user.IsAdmin,
 		},
 		ExpireAt: expireAt,
-	})
+	}
+	err = sessionStore.PutSession(session)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 	}
-	userRet = user.ToUserInfo()
 	return
 }
 
@@ -160,7 +160,7 @@ func (s *outerImpl) Refresh(ctx context.Context, reqDTO RefreshReqDTO) (string, 
 	return sessionId, expireAt, nil
 }
 
-func (*outerImpl) LoginOut(ctx context.Context, reqDTO LoginOutReqDTO) error {
+func (*outerImpl) Logout(ctx context.Context, reqDTO LogoutReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (er
 		return
 	}
 	// 添加账号
-	_, err = usermd.InsertUser(ctx, usermd.InsertUserReqDTO{
+	err = usermd.InsertUser(ctx, usermd.InsertUserReqDTO{
 		Account:   reqDTO.Account,
 		Name:      reqDTO.Name,
 		Email:     reqDTO.Email,
@@ -209,6 +209,7 @@ func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (er
 	return nil
 }
 
+// RegisterUser 注册用户
 func (*outerImpl) RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (err error) {
 	// 插入日志
 	defer func() {
@@ -243,14 +244,13 @@ func (*outerImpl) RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (
 		return
 	}
 	// 添加账号
-	_, err = usermd.InsertUser(ctx, usermd.InsertUserReqDTO{
-		Account:   reqDTO.Account,
-		Name:      reqDTO.Name,
-		Email:     reqDTO.Email,
-		Password:  util.EncryptUserPassword(reqDTO.Password),
-		AvatarUrl: reqDTO.AvatarUrl,
-		IsAdmin:   countUser == 0,
-		RoleType:  usermd.DeveloperRole,
+	err = usermd.InsertUser(ctx, usermd.InsertUserReqDTO{
+		Account:  reqDTO.Account,
+		Name:     reqDTO.Name,
+		Email:    reqDTO.Email,
+		Password: util.EncryptUserPassword(reqDTO.Password),
+		IsAdmin:  countUser == 0,
+		RoleType: usermd.DeveloperRole,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

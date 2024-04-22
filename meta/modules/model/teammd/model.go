@@ -15,6 +15,7 @@ type Team struct {
 	Id      int64     `json:"id" xorm:"pk autoincr"`
 	Name    string    `json:"name"`
 	Created time.Time `json:"created" xorm:"created"`
+	Updated time.Time `json:"updated" xorm:"updated"`
 }
 
 func (*Team) TableName() string {

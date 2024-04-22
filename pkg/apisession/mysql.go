@@ -52,6 +52,9 @@ func (m *mysqlStore) GetBySessionId(sessionId string) (Session, bool, error) {
 	defer xsess.Close()
 	ret := SessionModel{}
 	b, err := xsess.Where("session_id = ?", sessionId).And("expire_at > ?", time.Now().UnixMilli()).Get(&ret)
+	if err != nil || !b {
+		return Session{}, b, err
+	}
 	return ret.ToSession(), b, err
 }
 

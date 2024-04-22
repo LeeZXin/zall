@@ -9,7 +9,7 @@ type InitRepoReq struct {
 	UserEmail     string `json:"userEmail"`
 	RepoName      string `json:"repoName"`
 	RepoPath      string `json:"repoPath"`
-	CreateReadme  bool   `json:"createReadme"`
+	AddReadme     bool   `json:"addReadme"`
 	GitIgnoreName string `json:"gitIgnoreName"`
 	DefaultBranch string `json:"defaultBranch"`
 }

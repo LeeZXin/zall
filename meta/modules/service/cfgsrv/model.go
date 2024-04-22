@@ -14,7 +14,6 @@ var (
 	DefaultSysCfg = &SysCfg{
 		DisableSelfRegisterUser: false,
 		AllowUserCreateTeam:     true,
-		DisableSmartHttp:        false,
 	}
 	DefaultGitCfg = &GitCfg{
 		AppUrl:       fmt.Sprintf("http://%s:%d", common.GetLocalIP(), common.HttpServerPort()),
@@ -36,8 +35,6 @@ type SysCfg struct {
 	DisableSelfRegisterUser bool `json:"disableSelfRegisterUser"`
 	// 允许用户(非管理员)自行创建项目组
 	AllowUserCreateTeam bool `json:"allowUserCreateTeam"`
-	// 禁用http smart协议
-	DisableSmartHttp bool `json:"disableSmartHttp"`
 }
 
 func (c *SysCfg) Key() string {
@@ -120,5 +117,23 @@ func (c *EnvCfg) Val() string {
 }
 
 func (c *EnvCfg) FromStore(val string) error {
+	return json.Unmarshal([]byte(val), c)
+}
+
+type GitRepoServerCfg struct {
+	HttpHost string `json:"httpHost"`
+	SshHost  string `json:"sshHost"`
+}
+
+func (*GitRepoServerCfg) Key() string {
+	return "git_repo_server_cfg"
+}
+
+func (c *GitRepoServerCfg) Val() string {
+	ret, _ := json.Marshal(c)
+	return string(ret)
+}
+
+func (c *GitRepoServerCfg) FromStore(val string) error {
 	return json.Unmarshal([]byte(val), c)
 }

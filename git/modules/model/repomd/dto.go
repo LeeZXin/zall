@@ -12,7 +12,6 @@ type InsertRepoReqDTO struct {
 	GitSize       int64
 	LfsSize       int64
 	Cfg           RepoCfg
-	NodeId        int64
 }
 
 type RepoInfo struct {
@@ -25,7 +24,6 @@ type RepoInfo struct {
 	LfsSize int64   `json:"lfsSize"`
 	CfgStr  string  `json:"-"`
 	Cfg     RepoCfg `json:"cfg"`
-	NodeId  int64   `json:"nodeId"`
 }
 
 type RepoStatus int

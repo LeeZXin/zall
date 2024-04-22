@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-type InsertTeamReqDTO struct {
+type CreateTeamReqDTO struct {
 	Name     string              `json:"name"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertTeamReqDTO) IsValid() error {
+func (r *CreateTeamReqDTO) IsValid() error {
 	if !teammd.IsTeamNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
@@ -46,6 +46,39 @@ type DeleteTeamReqDTO struct {
 }
 
 func (r *DeleteTeamReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type IsAdminReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *IsAdminReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type GetTeamPermReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetTeamPermReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -204,9 +237,8 @@ func (r *ListTeamReqDTO) IsValid() error {
 }
 
 type TeamDTO struct {
-	TeamId  int64     `json:"teamId"`
-	Name    string    `json:"name"`
-	Created time.Time `json:"created"`
+	TeamId int64  `json:"teamId"`
+	Name   string `json:"name"`
 }
 
 type UserDTO struct {
@@ -215,4 +247,19 @@ type UserDTO struct {
 	RoleId   int64     `json:"roleId"`
 	RoleName string    `json:"roleName"`
 	Created  time.Time `json:"created"`
+}
+
+type GetTeamReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetTeamReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
 }

@@ -18,22 +18,24 @@ func IsUsernameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
 }
 
-func InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (User, error) {
-	u := User{
-		Account:   reqDTO.Account,
-		Name:      reqDTO.Name,
-		Email:     reqDTO.Email,
-		Password:  reqDTO.Password,
-		AvatarUrl: reqDTO.AvatarUrl,
-		IsAdmin:   reqDTO.IsAdmin,
-		RoleType:  reqDTO.RoleType,
-	}
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&u)
-	return u, err
+func InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Insert(&User{
+			Account:   reqDTO.Account,
+			Name:      reqDTO.Name,
+			Email:     reqDTO.Email,
+			Password:  reqDTO.Password,
+			AvatarUrl: reqDTO.AvatarUrl,
+			IsAdmin:   reqDTO.IsAdmin,
+			RoleType:  reqDTO.RoleType,
+		})
+	return err
 }
 
 func DeleteUser(ctx context.Context, account string) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).Where("account = ?", account).Delete(new(User))
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("account = ?", account).
+		Delete(new(User))
 	return rows == 1, err
 }
 

@@ -2,7 +2,6 @@ package lfs
 
 import (
 	"github.com/LeeZXin/zall/git/repo/reqvo"
-	"github.com/LeeZXin/zall/git/repo/server/apisession"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
@@ -21,13 +20,13 @@ var (
 func InitApi() {
 	lfsSrv = NewLfs()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/api/v1/lfs/prop", apisession.CheckToken)
+		group := e.Group("/api/v1/lfs/prop")
 		{
 			group.POST("/stat", lfsStat)
 			group.POST("/exists", lfsExists)
 			group.POST("/batchExists", lfsBatchExists)
 		}
-		group = e.Group("/api/v1/lfs/file/:corpId/:repoName/:oid", apisession.CheckToken, packRepoPath, packOid)
+		group = e.Group("/api/v1/lfs/file/:corpId/:repoName/:oid", packRepoPath, packOid)
 		{
 			group.PUT("/upload", lfsUpload)
 			group.GET("/download", lfsDownload)

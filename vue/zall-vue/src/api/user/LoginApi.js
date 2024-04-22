@@ -1,20 +1,34 @@
 import request from '@/utils/request.js'
-export default {
-    // 登录
-    Login: (data) => request({
-        url: "/api/login/login",
-        method: "POST",
-        data: data
-    }),
-    // 注册
-    Register: (data) => request({
-        url: "/api/login/register",
-        method: "POST",
-        data: data
-    }),
-    // 退出登录
-    LoginOut: () => request({
-        url: "/api/login/loginOut",
-        method: "GET",
-    })
+
+// 登录
+const loginRequest = (data) => request({
+    url: "/api/login/login",
+    method: "POST",
+    data: data
+});
+
+// 注册
+const registerRequest = (data) => request({
+    url: "/api/login/register",
+    method: "POST",
+    data: data
+});
+
+// 退出登录
+const logoutRequest = () => request({
+    url: "/api/login/logout",
+    method: "GET",
+});
+
+// 获取登录信息
+const getUserInfoRequest = () => request({
+    url: "/api/login/userInfo",
+    method: "GET",
+})
+
+export {
+    loginRequest,
+    registerRequest,
+    logoutRequest,
+    getUserInfoRequest
 }

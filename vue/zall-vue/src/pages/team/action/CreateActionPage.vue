@@ -7,55 +7,53 @@
       </span>
     </div>
     <div class="container">
-      <div class="body">
-        <div class="title">创建工作流</div>
-        <div class="form-item">
-          <div class="label">
-            <span>所属团队</span>
-          </div>
-          <div class="form-item-text">{{teamName}}</div>
+      <div class="title">创建工作流</div>
+      <div class="form-item">
+        <div class="label">
+          <span>所属团队</span>
         </div>
-        <div class="form-item">
-          <div class="label">
-            <span>工作流名称</span>
-          </div>
-          <div>
-            <a-input type="input" v-model:value="formState.actionName" />
-          </div>
+        <div class="form-item-text">{{teamName}}</div>
+      </div>
+      <div class="form-item">
+        <div class="label">
+          <span>工作流名称</span>
         </div>
-        <div class="form-item">
-          <div class="label">
-            <span>代理地址</span>
-          </div>
-          <div>
-            <a-input type="input" v-model:value="formState.agentHost" />
-          </div>
+        <div>
+          <a-input type="input" v-model:value="formState.actionName" />
         </div>
-        <div class="form-item">
-          <div class="label">
-            <span>代理token</span>
-          </div>
-          <div>
-            <a-input type="input" v-model:value="formState.agentToken" />
-          </div>
+      </div>
+      <div class="form-item">
+        <div class="label">
+          <span>代理地址</span>
         </div>
-        <div class="form-item">
-          <div class="label">
-            <span>yaml配置</span>
-            <span class="insert-template" @click="insertTemplate">插入模版</span>
-            <span @click="formatYaml" class="format-yaml-text">格式化yaml</span>
-          </div>
-          <div>
-            <Codemirror
-              v-model="formState.yamlContent"
-              :style="codemirroStyle"
-              :extensions="extensions"
-            />
-          </div>
+        <div>
+          <a-input type="input" v-model:value="formState.agentHost" />
         </div>
-        <div class="form-item">
-          <a-button type="primary" style="margin-top:20px;">立即创建</a-button>
+      </div>
+      <div class="form-item">
+        <div class="label">
+          <span>代理token</span>
         </div>
+        <div>
+          <a-input type="input" v-model:value="formState.agentToken" />
+        </div>
+      </div>
+      <div class="form-item">
+        <div class="label">
+          <span>yaml配置</span>
+          <span class="insert-template" @click="insertTemplate">插入模版</span>
+          <span @click="formatYaml" class="format-yaml-text">格式化yaml</span>
+        </div>
+        <div>
+          <Codemirror
+            v-model="formState.yamlContent"
+            :style="codemirroStyle"
+            :extensions="extensions"
+          />
+        </div>
+      </div>
+      <div class="form-item">
+        <a-button type="primary" style="margin-top:20px;">立即创建</a-button>
       </div>
     </div>
   </div>
@@ -66,7 +64,7 @@ import {
   ArrowLeftOutlined,
   ExclamationCircleOutlined
 } from "@ant-design/icons-vue";
-import { useTeamStore } from "@/pinia/TeamStore";
+import { useTeamStore } from "@/pinia/teamStore";
 import { useRouter } from "vue-router";
 import { Codemirror } from "vue-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -136,11 +134,6 @@ const insertTemplate = () => {
 }
 .header:hover {
   color: #1677ff;
-}
-.body > .title {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 10px;
 }
 .format-yaml-text {
   float: right;
