@@ -147,7 +147,7 @@ func handleGitCommand(user *usermd.UserInfo, session ssh.Session) error {
 	}
 	// LFS token authentication
 	if verb == lfsAuthenticateVerb {
-		url := fmt.Sprintf("%s/%s/info/lfs", gitCfg.AppUrl, repoPath)
+		url := fmt.Sprintf("%s/%s/info/lfs", gitCfg.HttpUrl, repoPath)
 		now := time.Now()
 		claims := lfs.Claims{
 			RegisteredClaims: jwt.RegisteredClaims{
@@ -215,7 +215,7 @@ func handleGitCommand(user *usermd.UserInfo, session ssh.Session) error {
 			gitenv.EnvRepoId, strconv.FormatInt(repo.Id, 10),
 			gitenv.EnvPusherAccount, user.Account,
 			gitenv.EnvPusherEmail, user.Email,
-			gitenv.EnvAppUrl, gitCfg.AppUrl,
+			gitenv.EnvAppUrl, gitCfg.HttpUrl,
 			gitenv.EnvHookToken, git.HookToken(),
 		)...,
 	)
@@ -223,15 +223,15 @@ func handleGitCommand(user *usermd.UserInfo, session ssh.Session) error {
 	return gitCmd.Run()
 }
 
-func checkAccessMode(ctx context.Context, account, repoPath string, permCode int) (repomd.RepoInfo, error) {
+func checkAccessMode(ctx context.Context, account, repoPath string, permCode int) (repomd.Repo, error) {
 	repo, b := reposrv.Inner.GetByRepoPath(ctx, repoPath)
 	if !b {
-		return repomd.RepoInfo{}, util.InvalidArgsError()
+		return repomd.Repo{}, util.InvalidArgsError()
 	}
 	// 获取权限
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, account)
 	if !b {
-		return repomd.RepoInfo{}, util.UnauthorizedError()
+		return repomd.Repo{}, util.UnauthorizedError()
 	}
 	pass := false
 	switch permCode {
@@ -243,7 +243,7 @@ func checkAccessMode(ctx context.Context, account, repoPath string, permCode int
 		pass = true
 	}
 	if !pass {
-		return repomd.RepoInfo{}, util.UnauthorizedError()
+		return repomd.Repo{}, util.UnauthorizedError()
 	}
 	return repo, nil
 }

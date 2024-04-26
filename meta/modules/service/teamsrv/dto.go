@@ -236,11 +236,6 @@ func (r *ListTeamReqDTO) IsValid() error {
 	return nil
 }
 
-type TeamDTO struct {
-	TeamId int64  `json:"teamId"`
-	Name   string `json:"name"`
-}
-
 type UserDTO struct {
 	TeamId   int64     `json:"teamId"`
 	Account  string    `json:"account"`

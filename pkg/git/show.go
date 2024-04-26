@@ -4,8 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/LeeZXin/zall/pkg/typesniffer"
+	"github.com/LeeZXin/zsf-utils/sortutil"
 	"strconv"
 	"strings"
+)
+
+const (
+	// FileBlobSizeLimit 文件大小限制
+	FileBlobSizeLimit = 1024 * 1024 * 2
+	LsTreeLimit       = 500
 )
 
 func ShowFileTextContentByCommitId(ctx context.Context, repoPath, commitId, filePath string, startLine, limit int) ([]string, error) {
@@ -59,29 +67,27 @@ type LsTreeRet struct {
 	Blob string
 }
 
-func LsTreeWithoutRecurse(ctx context.Context, repoPath, refName, dir string, offset, limit int) ([]LsTreeRet, error) {
-	cmd := NewCommand("ls-tree", "--full-tree", "-l", refName)
+func (c LsTreeRet) CompareTo(c2 LsTreeRet) bool {
+	if c.Mode == DirectoryMode && c2.Mode == DirectoryMode {
+		return c.Path <= c2.Path
+	} else if c.Mode == DirectoryMode {
+		return true
+	} else if c2.Mode == DirectoryMode {
+		return false
+	} else {
+		return c.Path <= c2.Path
+	}
+}
+
+// LsTreeWithoutRecurse git ls-tree --full-tree -l master
+func LsTreeWithoutRecurse(ctx context.Context, repoPath, ref, dir string) ([]LsTreeRet, bool, error) {
+	cmd := NewCommand("ls-tree", "--full-tree", "-l", ref)
 	if dir != "" {
-		cmd.AddArgs("--", dir+"/")
+		cmd.AddArgs("--", dir)
 	}
 	result := cmd.RunWithReadPipe(ctx, WithDir(repoPath))
-	if offset < 0 {
-		offset = 0
-	}
-	var endNum int
-	if limit < 0 {
-		endNum = -1
-	} else {
-		endNum = offset + limit
-	}
 	ret := make([]LsTreeRet, 0)
 	if err := result.RangeStringLines(func(n int, line string) (bool, error) {
-		if n < offset {
-			return true, nil
-		}
-		if endNum > 0 && n >= endNum {
-			return false, nil
-		}
 		fields := strings.Fields(line)
 		if len(fields) == 5 {
 			size, _ := strconv.ParseInt(fields[3], 10, 64)
@@ -92,11 +98,15 @@ func LsTreeWithoutRecurse(ctx context.Context, repoPath, refName, dir string, of
 				Blob: fields[2],
 			})
 		}
+		// 限制展示500的数量
+		if n >= LsTreeLimit {
+			return false, nil
+		}
 		return true, nil
 	}); err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return ret, nil
+	return ret, false, nil
 }
 
 func CountObjects(ctx context.Context, repoPath string) (int64, float64, error) {
@@ -125,14 +135,17 @@ type FileCommit struct {
 	Commit
 }
 
-func LsTreeCommit(ctx context.Context, repoPath, refName string, dir string, offset, limit int) ([]FileCommit, error) {
-	lsRet, err := LsTreeWithoutRecurse(ctx, repoPath, refName, dir, offset, limit)
+func LsTreeCommit(ctx context.Context, repoPath, ref string, dir string) ([]FileCommit, error) {
+	lsRet, _, err := LsTreeWithoutRecurse(ctx, repoPath, ref, dir)
 	if err != nil {
 		return nil, err
 	}
+	if len(lsRet) > 1 {
+		sortutil.SliceStable(lsRet)
+	}
 	commits := make([]FileCommit, 0, len(lsRet))
 	for _, ret := range lsRet {
-		commit, err := GetFileLatestCommit(ctx, repoPath, refName, ret.Path)
+		commit, err := GetFileLatestCommit(ctx, repoPath, ref, ret.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -144,35 +157,49 @@ func LsTreeCommit(ctx context.Context, repoPath, refName string, dir string, off
 	return commits, nil
 }
 
-func GetFileContentByBlob(ctx context.Context, repoPath, blob string) (string, error) {
-	result, err := NewCommand("show", blob).Run(ctx, WithDir(repoPath))
+func LsTreeBlob(ctx context.Context, repoPath, ref string, dir string) ([]LsTreeRet, error) {
+	lsRet, _, err := LsTreeWithoutRecurse(ctx, repoPath, ref, dir)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return result.ReadAsString(), nil
+	sortutil.SliceStable(lsRet)
+	return lsRet, nil
 }
 
-func GetFileContentByRef(ctx context.Context, repoPath, refName, filePath string) (FileMode, string, bool, error) {
-	result, err := NewCommand("ls-tree", "--full-tree", "-l", refName, "--", filePath).Run(ctx, WithDir(repoPath))
+func GetFileContentByBlob(ctx context.Context, repoPath, blob string) ([]byte, error) {
+	result, err := NewCommand("show", blob).Run(ctx, WithDir(repoPath))
 	if err != nil {
-		return "", "", false, err
+		return nil, err
+	}
+	return result.ReadAsBytes(), nil
+}
+
+func GetFileTextContentByRef(ctx context.Context, repoPath, ref, filePath string) (FileMode, string, int64, bool, error) {
+	result, err := NewCommand("ls-tree", "--full-tree", "-l", ref, "--", filePath).Run(ctx, WithDir(repoPath))
+	if err != nil {
+		return "", "", 0, false, err
 	}
 	ret := result.ReadAsString()
 	if ret == "" {
-		return "", "", false, nil
+		return "", "", 0, false, nil
 	}
 	fields := strings.Fields(strings.TrimSpace(ret))
-	if len(fields) < 3 {
-		return "", "", false, errors.New("unknown format")
+	if len(fields) < 4 {
+		return "", "", 0, false, errors.New("unknown format")
 	}
 	blob := fields[2]
 	mode := fields[0]
-	if mode == RegularFileMode.String() {
-		content, err := GetFileContentByBlob(ctx, repoPath, blob)
+	size, err := strconv.ParseInt(fields[3], 10, 64)
+	var content string
+	if err == nil && size < FileBlobSizeLimit {
+		bc, err := GetFileContentByBlob(ctx, repoPath, blob)
 		if err != nil {
-			return "", "", false, err
+			return "", "", 0, false, err
 		}
-		return RegularFileMode, content, true, nil
+		sniffedType := typesniffer.DetectContentType(bc)
+		if sniffedType.IsText() {
+			content = string(bc)
+		}
 	}
-	return FileMode(mode), "", true, nil
+	return FileMode(mode), content, size, true, nil
 }

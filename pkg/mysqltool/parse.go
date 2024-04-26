@@ -15,7 +15,6 @@ func Parse(sql string) {
 	}
 	s, ok := stmt.(*ast.SelectStmt)
 	if ok {
-		fmt.Println("yes")
 		checker := new(Checker)
 		s.Accept(checker)
 		fmt.Println(checker.GetTableNames()[0].Text())

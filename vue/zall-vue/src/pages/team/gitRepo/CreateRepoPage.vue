@@ -100,7 +100,7 @@ const formState = reactive({
   desc: "",
   gitignore: "",
   addReadme: true,
-  defaultBranch: "master"
+  defaultBranch: "main"
 });
 const allGitIgnoreTemplateList = ref([]);
 allGitIgnoreTemplateListRequest().then(res => {

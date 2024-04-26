@@ -3,10 +3,8 @@ package cfgsrv
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
-	"github.com/LeeZXin/zsf/common"
 	"time"
 )
 
@@ -16,12 +14,10 @@ var (
 		AllowUserCreateTeam:     true,
 	}
 	DefaultGitCfg = &GitCfg{
-		AppUrl:       fmt.Sprintf("http://%s:%d", common.GetLocalIP(), common.HttpServerPort()),
 		LfsEnabled:   true,
 		LfsJwtExpiry: 3600,
 		LfsJwtSecret: idutil.RandomUuid(),
 		ActionToken:  idutil.RandomUuid(),
-		RepoToken:    idutil.RandomUuid(),
 	}
 	DefaultEnvCfg = &EnvCfg{
 		Envs: []string{
@@ -51,8 +47,10 @@ func (c *SysCfg) FromStore(val string) error {
 }
 
 type GitCfg struct {
-	// AppUrl 域名地址
-	AppUrl string `json:"appUrl"`
+	// HttpUrl smart http url
+	HttpUrl string `json:"httpUrl"`
+	// SshUrl ssh url
+	SshUrl string `json:"sshUrl"`
 	// LfsEnabled 是否启用lfs
 	LfsEnabled bool `json:"lfsEnabled"`
 	// LfsJwtExpiry lfs jwt过期时间 单位秒
@@ -63,8 +61,6 @@ type GitCfg struct {
 	lfsJwtSecretBytes []byte
 	// ActionToken action 执行token
 	ActionToken string `json:"actionToken"`
-	// RepoToken git服务token
-	RepoToken string `json:"repoToken"`
 }
 
 func (c *GitCfg) GetLfsJwtExpiry() time.Duration {

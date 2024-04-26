@@ -6,6 +6,8 @@ import router from "../router/router";
 
 const t = i18n.global.t;
 
+let redirectTimeout = null;
+
 const request = axios.create({
     baseURL: "/",
     timeout: 30000
@@ -46,20 +48,22 @@ request.interceptors.response.use(
         return data
     },
     (error) => {
-        console.log(error)
         const status = error.response.status
         if (status === 404) {
             message.error(t("system.request404"))
         } else if (status === 401) {
-            message.error(t("system.notLogin"))
-            setTimeout(() => {
-                router.push({
-                    path: "/login/login",
-                    query: {
-                        redirect_uri: encodeURI(window.location.href)
-                    }
-                })
-            }, 3000)
+            if (!redirectTimeout) {
+                message.error(t("system.notLogin"))
+                redirectTimeout = setTimeout(() => {
+                    redirectTimeout = null;
+                    router.push({
+                        path: "/login/login",
+                        query: {
+                            redirect_uri: encodeURI(window.location.href)
+                        }
+                    })
+                }, 3000)
+            }
         } else if (status === 403) {
             message.error(t("system.request403"))
         } else {

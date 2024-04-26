@@ -20,6 +20,7 @@ type InnerService interface {
 }
 
 type OuterService interface {
+	// Login 登录
 	Login(context.Context, LoginReqDTO) (apisession.Session, error)
 	Refresh(context.Context, RefreshReqDTO) (string, int64, error)
 	Logout(context.Context, LogoutReqDTO) error

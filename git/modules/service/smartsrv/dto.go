@@ -11,7 +11,7 @@ import (
 )
 
 type UploadPackReqDTO struct {
-	Repo            repomd.RepoInfo `json:"repo"`
+	Repo            repomd.Repo     `json:"repo"`
 	Operator        usermd.UserInfo `json:"operator"`
 	C               *gin.Context    `json:"-"`
 	FromAccessToken bool            `json:"fromAccessToken"`
@@ -31,7 +31,7 @@ func (r *UploadPackReqDTO) IsValid() error {
 }
 
 type ReceivePackReqDTO struct {
-	Repo     repomd.RepoInfo `json:"repo"`
+	Repo     repomd.Repo     `json:"repo"`
 	Operator usermd.UserInfo `json:"operator"`
 	C        *gin.Context    `json:"-"`
 }
@@ -49,12 +49,12 @@ func (r *ReceivePackReqDTO) IsValid() error {
 	return nil
 }
 
-func validateRepo(info repomd.RepoInfo) bool {
+func validateRepo(info repomd.Repo) bool {
 	return info.Id > 0
 }
 
 type InfoRefsReqDTO struct {
-	Repo            repomd.RepoInfo `json:"repo"`
+	Repo            repomd.Repo     `json:"repo"`
 	Operator        usermd.UserInfo `json:"operator"`
 	C               *gin.Context    `json:"-"`
 	FromAccessToken bool            `json:"fromAccessToken"`
@@ -74,7 +74,7 @@ func (r *InfoRefsReqDTO) IsValid() error {
 }
 
 type SendFileReqDTO struct {
-	Repo     repomd.RepoInfo     `json:"repo"`
+	Repo     repomd.Repo         `json:"repo"`
 	Operator apisession.UserInfo `json:"operator"`
 	FilePath string              `json:"filePath"`
 }

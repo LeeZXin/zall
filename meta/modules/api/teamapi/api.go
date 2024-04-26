@@ -1,6 +1,7 @@
 package teamapi
 
 import (
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/perm"
@@ -18,7 +19,9 @@ func InitApi() {
 		// 项目
 		group := e.Group("/api/team", apisession.CheckLogin)
 		{
+			// 创建团队
 			group.POST("/create", createTeam)
+			// 获取所在团队列表
 			group.GET("/list", listTeam)
 			group.POST("/delete", deleteTeam)
 			group.POST("/update", updateTeam)
@@ -95,9 +98,12 @@ func getTeam(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.DataResp[teamsrv.TeamDTO]{
+		c.JSON(http.StatusOK, ginutil.DataResp[TeamVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     team,
+			Data: TeamVO{
+				TeamId: team.Id,
+				Name:   team.Name,
+			},
 		})
 	}
 }
@@ -125,9 +131,9 @@ func listTeam(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(teamList, func(t teamsrv.TeamDTO) (TeamVO, error) {
+	data, _ := listutil.Map(teamList, func(t teammd.Team) (TeamVO, error) {
 		return TeamVO{
-			TeamId: t.TeamId,
+			TeamId: t.Id,
 			Name:   t.Name,
 		}, nil
 	})

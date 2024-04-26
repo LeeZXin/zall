@@ -170,32 +170,26 @@ func (*outerImpl) GetTeamPerm(ctx context.Context, reqDTO GetTeamPermReqDTO) (pe
 }
 
 // GetTeam 获取团队信息
-func (*outerImpl) GetTeam(ctx context.Context, reqDTO GetTeamReqDTO) (TeamDTO, error) {
+func (*outerImpl) GetTeam(ctx context.Context, reqDTO GetTeamReqDTO) (teammd.Team, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return TeamDTO{}, err
+		return teammd.Team{}, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, b, err := teammd.GetUserPermDetail(ctx, reqDTO.TeamId, reqDTO.Operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return TeamDTO{}, err
+		return teammd.Team{}, err
 	}
 	if !b {
-		return TeamDTO{}, nil
+		return teammd.Team{}, nil
 	}
-	team, b, err := teammd.GetByTeamId(ctx, reqDTO.TeamId)
+	team, _, err := teammd.GetByTeamId(ctx, reqDTO.TeamId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return TeamDTO{}, err
+		return teammd.Team{}, err
 	}
-	if !b {
-		return TeamDTO{}, nil
-	}
-	return TeamDTO{
-		TeamId: team.Id,
-		Name:   team.Name,
-	}, nil
+	return team, nil
 }
 
 func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDTO, int64, error) {
@@ -569,18 +563,17 @@ func (*outerImpl) ListRole(ctx context.Context, reqDTO ListRoleReqDTO) ([]RoleDT
 		return nil, util.InternalError(err)
 	}
 	return listutil.Map(groups, func(t teammd.Role) (RoleDTO, error) {
-		perm := t.Perm
 		return RoleDTO{
 			RoleId: t.Id,
 			TeamId: t.TeamId,
 			Name:   t.Name,
-			Perm:   *perm,
+			Perm:   *t.Perm,
 		}, nil
 	})
 }
 
 // ListTeam 展示用户所在团队列表
-func (*outerImpl) ListTeam(ctx context.Context, reqDTO ListTeamReqDTO) ([]TeamDTO, error) {
+func (*outerImpl) ListTeam(ctx context.Context, reqDTO ListTeamReqDTO) ([]teammd.Team, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
@@ -599,12 +592,7 @@ func (*outerImpl) ListTeam(ctx context.Context, reqDTO ListTeamReqDTO) ([]TeamDT
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(teamList, func(t teammd.Team) (TeamDTO, error) {
-		return TeamDTO{
-			TeamId: t.Id,
-			Name:   t.Name,
-		}, nil
-	})
+	return teamList, nil
 }
 
 // DeleteTeam 删除项目

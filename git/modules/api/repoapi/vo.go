@@ -14,20 +14,19 @@ type CreateRepoReqVO struct {
 }
 
 type DeleteRepoReqVO struct {
-	Id int64 `json:"id"`
+	RepoId int64 `json:"repoId"`
 }
 
-type TreeRepoReqVO struct {
-	Id  int64  `json:"id"`
-	Ref string `json:"ref"`
-	Dir string `json:"dir"`
+type IndexRepoReqVO struct {
+	RepoId int64  `json:"repoId"`
+	Ref    string `json:"ref"`
+	Dir    string `json:"dir"`
 }
 
 type EntriesRepoReqVO struct {
-	Id     int64  `json:"id"`
+	RepoId int64  `json:"repoId"`
 	Ref    string `json:"ref"`
 	Dir    string `json:"dir"`
-	Offset int    `json:"offset"`
 }
 
 type ListRepoReqVO struct {
@@ -58,42 +57,54 @@ type FileVO struct {
 }
 
 type TreeVO struct {
-	Files   []FileVO `json:"files"`
-	Limit   int      `json:"limit"`
-	Offset  int      `json:"offset"`
-	HasMore bool     `json:"hasMore"`
+	Files []FileVO `json:"files"`
 }
 
-type TreeRepoRespVO struct {
+type BlobVO struct {
+	Mode    string `json:"mode"`
+	RawPath string `json:"rawPath"`
+	Path    string `json:"path"`
+}
+
+type IndexRepoRespVO struct {
 	ginutil.BaseResp
+	HasReadme    bool     `json:"hasReadme"`
 	ReadmeText   string   `json:"readmeText"`
 	LatestCommit CommitVO `json:"latestCommit"`
 	Tree         TreeVO   `json:"tree"`
 }
 
 type RepoVO struct {
-	Id       int64  `json:"id"`
-	Name     string `json:"name"`
-	Path     string `json:"path"`
-	Author   string `json:"author"`
-	RepoDesc string `json:"repoDesc"`
-	GitSize  int64  `json:"gitSize"`
-	LfsSize  int64  `json:"lfsSize"`
-	Created  string `json:"created"`
-	Updated  string `json:"updated"`
+	RepoId       int64  `json:"repoId"`
+	Name         string `json:"name"`
+	Path         string `json:"path"`
+	Author       string `json:"author"`
+	RepoDesc     string `json:"repoDesc"`
+	GitSize      int64  `json:"gitSize"`
+	LfsSize      int64  `json:"lfsSize"`
+	Created      string `json:"created"`
+	Updated      string `json:"updated"`
+	TeamId       int64  `json:"teamId"`
+	LastOperated string `json:"lastOperated"`
 }
 
 type CatFileReqVO struct {
-	Id       int64  `json:"id"`
+	RepoId   int64  `json:"repoId"`
 	Ref      string `json:"ref"`
-	Dir      string `json:"dir"`
-	FileName string `json:"fileName"`
+	FilePath string `json:"filePath"`
 }
 
-type CatFileRespVO struct {
-	ginutil.BaseResp
-	Mode    string `json:"mode"`
-	Content string `json:"content"`
+type BlameReqVO struct {
+	RepoId   int64  `json:"repoId"`
+	Ref      string `json:"ref"`
+	FilePath string `json:"filePath"`
+}
+
+type CatFileVO struct {
+	FileMode string   `json:"fileMode"`
+	Content  string   `json:"content"`
+	Size     string   `json:"size"`
+	Commit   CommitVO `json:"commit"`
 }
 
 type RepoTypeVO struct {
@@ -101,26 +112,41 @@ type RepoTypeVO struct {
 	Name   string `json:"name"`
 }
 
+type GetRepoReqVO struct {
+	RepoId int64 `json:"repoId"`
+}
+
+type GetSimpleInfoReqVO struct {
+	RepoId int64 `json:"repoId"`
+}
+
+type SimpleInfoVO struct {
+	Branches     []string `json:"branches"`
+	Tags         []string `json:"tags"`
+	CloneHttpUrl string   `json:"cloneHttpUrl"`
+	CloneSshUrl  string   `json:"cloneSshUrl"`
+}
+
 type AllBranchesReqVO struct {
-	Id int64 `json:"id"`
+	RepoId int64 `json:"repoId"`
 }
 
 type AllTagsReqVO struct {
-	Id int64 `json:"id"`
+	RepoId int64 `json:"repoId"`
 }
 
 type GcReqVO struct {
-	Id int64 `json:"id"`
+	RepoId int64 `json:"repoId"`
 }
 
 type PrepareMergeReqVO struct {
-	Id     int64  `json:"id"`
+	RepoId int64  `json:"repoId"`
 	Target string `json:"target"`
 	Head   string `json:"head"`
 }
 
 type DiffFileReqVO struct {
-	Id       int64  `json:"id"`
+	RepoId   int64  `json:"repoId"`
 	Target   string `json:"target"`
 	Head     string `json:"head"`
 	FileName string `json:"fileName"`
@@ -177,7 +203,7 @@ type DiffLineVO struct {
 }
 
 type ShowDiffTextContentReqVO struct {
-	Id        int64  `json:"id"`
+	RepoId    int64  `json:"repoId"`
 	CommitId  string `json:"commitId"`
 	FileName  string `json:"fileName"`
 	Offset    int    `json:"offset"`
@@ -186,7 +212,7 @@ type ShowDiffTextContentReqVO struct {
 }
 
 type HistoryCommitsReqVO struct {
-	Id     int64  `json:"id"`
+	RepoId int64  `json:"repoId"`
 	Ref    string `json:"ref"`
 	Cursor int    `json:"cursor"`
 }
@@ -198,25 +224,30 @@ type HistoryCommitsRespVO struct {
 }
 
 type RepoTokenVO struct {
-	Id      int64  `json:"id"`
+	TokenId int64  `json:"tokenId"`
 	Account string `json:"account"`
 	Token   string `json:"token"`
 	Created string `json:"created"`
 }
 
 type CreateRepoTokenReqVO struct {
-	Id int64 `json:"id"`
+	RepoId int64 `json:"repoId"`
 }
 
 type DeleteRepoTokenReqVO struct {
-	Id int64 `json:"id"`
+	TokenId int64 `json:"tokenId"`
 }
 
 type ListRepoTokenReqVO struct {
-	Id int64 `json:"id"`
+	RepoId int64 `json:"repoId"`
 }
 
 type TransferTeam struct {
-	Id     int64 `json:"id"`
+	RepoId int64 `json:"repoId"`
 	TeamId int64 `json:"teamId"`
+}
+
+type BlameLineVO struct {
+	Number int      `json:"number"`
+	Commit CommitVO `json:"commit"`
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zsf/logger"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -54,7 +55,7 @@ func preReceive(c *gin.Context) {
 func postReceive(c *gin.Context) {
 	var req githook.Opts
 	if ginutil.ShouldBind(&req, c) {
-		go hookSrv.PostReceive(c, req)
+		go hookSrv.PostReceive(logger.CopyMDC(c), req)
 		util.DefaultOkResponse(c)
 	}
 }

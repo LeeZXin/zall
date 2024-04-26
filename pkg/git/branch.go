@@ -10,9 +10,9 @@ func GetAllBranchList(ctx context.Context, repoPath string) ([]string, error) {
 	pipeResult := cmd.RunWithReadPipe(ctx, WithDir(repoPath))
 	ret := make([]string, 0)
 	err := pipeResult.RangeStringLines(func(_ int, line string) (bool, error) {
-		split := strings.Split(strings.TrimSpace(line), " ")
-		if len(split) == 2 {
-			ret = append(ret, strings.TrimPrefix(split[1], BranchPrefix))
+		fields := strings.Fields(strings.TrimSpace(line))
+		if len(fields) == 2 {
+			ret = append(ret, strings.TrimPrefix(fields[1], BranchPrefix))
 		}
 		return true, nil
 	})

@@ -19,6 +19,10 @@ func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/gitRepo", apisession.CheckLogin)
 		{
+			// 仓库信息
+			group.POST("/get", getRepo)
+			// 基本信息
+			group.POST("/simpleInfo", getSimpleInfo)
 			// 获取模版列表
 			group.GET("/allGitIgnoreTemplateList", allGitIgnoreTemplateList)
 			// 初始化仓库
@@ -28,7 +32,7 @@ func InitApi() {
 			// 展示仓库列表
 			group.POST("/list", listRepo)
 			// 展示仓库主页
-			group.POST("/tree", treeRepo)
+			group.POST("/index", indexRepo)
 			// 展示更多文件列表
 			group.POST("/entries", entriesRepo)
 			// 展示单个文件内容
@@ -57,15 +61,58 @@ func InitApi() {
 			group.Any("/refreshAllGitHooks", refreshAllGitHooks)
 			// 迁移项目组
 			group.POST("/transferTeam", transferTeam)
+			// 获取每一行提交信息
+			group.POST("/blame", blame)
 		}
 	})
+}
+
+func getRepo(c *gin.Context) {
+	var req GetRepoReqVO
+	if util.ShouldBindJSON(&req, c) {
+		repo, _, err := reposrv.Outer.GetRepo(c, reposrv.GetRepoReqDTO{
+			RepoId:   req.RepoId,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[RepoVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     repo2VO(repo),
+		})
+	}
+}
+
+func getSimpleInfo(c *gin.Context) {
+	var req GetSimpleInfoReqVO
+	if util.ShouldBindJSON(&req, c) {
+		info, err := reposrv.Outer.SimpleInfo(c, reposrv.SimpleInfoReqDTO{
+			RepoId:   req.RepoId,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[SimpleInfoVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data: SimpleInfoVO{
+				Branches:     info.Branches,
+				Tags:         info.Tags,
+				CloneHttpUrl: info.CloneHttpUrl,
+				CloneSshUrl:  info.CloneSshUrl,
+			},
+		})
+	}
 }
 
 func allBranches(c *gin.Context) {
 	var req AllBranchesReqVO
 	if util.ShouldBindJSON(&req, c) {
 		branches, err := reposrv.Outer.AllBranches(c, reposrv.AllBranchesReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -83,7 +130,7 @@ func allTags(c *gin.Context) {
 	var req AllTagsReqVO
 	if util.ShouldBindJSON(&req, c) {
 		branches, err := reposrv.Outer.AllTags(c, reposrv.AllTagsReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -101,7 +148,7 @@ func gc(c *gin.Context) {
 	var req GcReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := reposrv.Outer.Gc(c, reposrv.GcReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -121,12 +168,12 @@ func allGitIgnoreTemplateList(c *gin.Context) {
 	})
 }
 
-// treeRepo 代码详情页
-func treeRepo(c *gin.Context) {
-	var req TreeRepoReqVO
+// indexRepo 代码详情页
+func indexRepo(c *gin.Context) {
+	var req IndexRepoReqVO
 	if util.ShouldBindJSON(&req, c) {
-		respDTO, err := reposrv.Outer.TreeRepo(c, reposrv.TreeRepoReqDTO{
-			Id:       req.Id,
+		respDTO, err := reposrv.Outer.IndexRepo(c, reposrv.IndexRepoReqDTO{
+			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			Dir:      req.Dir,
 			Operator: apisession.MustGetLoginUser(c),
@@ -135,15 +182,13 @@ func treeRepo(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, TreeRepoRespVO{
+		c.JSON(http.StatusOK, IndexRepoRespVO{
 			BaseResp:     ginutil.DefaultSuccessResp,
 			ReadmeText:   respDTO.ReadmeText,
+			HasReadme:    respDTO.HasReadme,
 			LatestCommit: commitDto2Vo(respDTO.LatestCommit),
 			Tree: TreeVO{
-				Offset:  respDTO.Tree.Offset,
-				Files:   fileDto2Vo(respDTO.Tree.Files),
-				Limit:   respDTO.Tree.Limit,
-				HasMore: respDTO.Tree.HasMore,
+				Files: fileDto2Vo(respDTO.Tree.Files),
 			},
 		})
 	}
@@ -153,22 +198,26 @@ func treeRepo(c *gin.Context) {
 func entriesRepo(c *gin.Context) {
 	var req EntriesRepoReqVO
 	if util.ShouldBindJSON(&req, c) {
-		repoRespDTO, err := reposrv.Outer.EntriesRepo(c, reposrv.EntriesRepoReqDTO{
-			Id:       req.Id,
+		blobs, err := reposrv.Outer.EntriesRepo(c, reposrv.EntriesRepoReqDTO{
+			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			Dir:      req.Dir,
-			Offset:   req.Offset,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, TreeVO{
-			Offset:  repoRespDTO.Offset,
-			Files:   fileDto2Vo(repoRespDTO.Files),
-			Limit:   repoRespDTO.Limit,
-			HasMore: repoRespDTO.HasMore,
+		data, _ := listutil.Map(blobs, func(t reposrv.BlobDTO) (BlobVO, error) {
+			return BlobVO{
+				Mode:    t.Mode,
+				RawPath: t.RawPath,
+				Path:    t.Path,
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.DataResp[[]BlobVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
 		})
 	}
 }
@@ -229,7 +278,7 @@ func deleteRepo(c *gin.Context) {
 	if util.ShouldBindJSON(&req, c) {
 		err := reposrv.Outer.DeleteRepo(c, reposrv.DeleteRepoReqDTO{
 			Operator: apisession.MustGetLoginUser(c),
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -251,17 +300,7 @@ func listRepo(c *gin.Context) {
 			return
 		}
 		data, _ := listutil.Map(repoList, func(t repomd.Repo) (RepoVO, error) {
-			return RepoVO{
-				Id:       t.Id,
-				Name:     t.Name,
-				Path:     t.Path,
-				Author:   t.Author,
-				RepoDesc: t.RepoDesc,
-				GitSize:  t.GitSize,
-				LfsSize:  t.LfsSize,
-				Created:  t.Created.Format(time.DateTime),
-				Updated:  t.Updated.Format(time.DateTime),
-			}, nil
+			return repo2VO(t), nil
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[[]RepoVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -270,24 +309,69 @@ func listRepo(c *gin.Context) {
 	}
 }
 
+func repo2VO(t repomd.Repo) RepoVO {
+	return RepoVO{
+		RepoId:       t.Id,
+		Name:         t.Name,
+		Path:         t.Path,
+		Author:       t.Author,
+		RepoDesc:     t.RepoDesc,
+		GitSize:      t.GitSize,
+		LfsSize:      t.LfsSize,
+		TeamId:       t.TeamId,
+		Created:      t.Created.Format(time.DateTime),
+		Updated:      t.Updated.Format(time.DateTime),
+		LastOperated: util.ReadableTimeComparingNow(t.LastOperated),
+	}
+}
+
 func catFile(c *gin.Context) {
 	var req CatFileReqVO
 	if util.ShouldBindJSON(&req, c) {
 		resp, err := reposrv.Outer.CatFile(c, reposrv.CatFileReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			Ref:      req.Ref,
-			Dir:      req.Dir,
-			FileName: req.FileName,
+			FilePath: req.FilePath,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, CatFileRespVO{
+		c.JSON(http.StatusOK, ginutil.DataResp[CatFileVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
-			Mode:     resp.ModeName,
-			Content:  resp.Content,
+			Data: CatFileVO{
+				FileMode: resp.ModeName,
+				Content:  resp.Content,
+				Size:     util.VolumeReadable(resp.Size),
+				Commit:   commitDto2Vo(resp.Commit),
+			},
+		})
+	}
+}
+
+func blame(c *gin.Context) {
+	var req BlameReqVO
+	if util.ShouldBindJSON(&req, c) {
+		lines, err := reposrv.Outer.Blame(c, reposrv.BlameReqDTO{
+			RepoId:   req.RepoId,
+			Ref:      req.Ref,
+			FilePath: req.FilePath,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(lines, func(t reposrv.BlameLineDTO) (BlameLineVO, error) {
+			return BlameLineVO{
+				Number: t.Number,
+				Commit: commitDto2Vo(t.Commit),
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.DataResp[[]BlameLineVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     data,
 		})
 	}
 }
@@ -296,7 +380,7 @@ func diffFile(c *gin.Context) {
 	var req DiffFileReqVO
 	if util.ShouldBindJSON(&req, c) {
 		respDTO, err := reposrv.Outer.DiffFile(c, reposrv.DiffFileReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			Target:   req.Target,
 			Head:     req.Head,
 			FileName: req.FileName,
@@ -335,7 +419,7 @@ func diffCommits(c *gin.Context) {
 	var req PrepareMergeReqVO
 	if util.ShouldBindJSON(&req, c) {
 		respDTO, err := reposrv.Outer.DiffCommits(c, reposrv.DiffCommitsReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			Target:   req.Target,
 			Head:     req.Head,
 			Operator: apisession.MustGetLoginUser(c),
@@ -379,7 +463,7 @@ func showDiffTextContent(c *gin.Context) {
 	var req ShowDiffTextContentReqVO
 	if util.ShouldBindJSON(&req, c) {
 		lines, err := reposrv.Outer.ShowDiffTextContent(c, reposrv.ShowDiffTextContentReqDTO{
-			Id:        req.Id,
+			RepoId:    req.RepoId,
 			CommitId:  req.CommitId,
 			FileName:  req.FileName,
 			Offset:    req.Offset,
@@ -411,7 +495,7 @@ func historyCommits(c *gin.Context) {
 	var req HistoryCommitsReqVO
 	if util.ShouldBindJSON(&req, c) {
 		respDTO, err := reposrv.Outer.HistoryCommits(c, reposrv.HistoryCommitsReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			Cursor:   req.Cursor,
 			Operator: apisession.MustGetLoginUser(c),
@@ -434,7 +518,7 @@ func listRepoToken(c *gin.Context) {
 	var req ListRepoTokenReqVO
 	if util.ShouldBindJSON(&req, c) {
 		tokens, err := reposrv.Outer.ListRepoToken(c, reposrv.ListRepoTokenReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -443,7 +527,7 @@ func listRepoToken(c *gin.Context) {
 		}
 		data, _ := listutil.Map(tokens, func(t reposrv.RepoTokenDTO) (RepoTokenVO, error) {
 			return RepoTokenVO{
-				Id:      t.Id,
+				TokenId: t.TokenId,
 				Account: t.Account,
 				Token:   t.Token,
 				Created: t.Created.Format(time.DateTime),
@@ -460,7 +544,7 @@ func insertRepoToken(c *gin.Context) {
 	var req CreateRepoTokenReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := reposrv.Outer.InsertRepoToken(c, reposrv.InsertRepoTokenReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -475,7 +559,7 @@ func deleteRepoToken(c *gin.Context) {
 	var req DeleteRepoTokenReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := reposrv.Outer.DeleteRepoToken(c, reposrv.DeleteRepoTokenReqDTO{
-			Id:       req.Id,
+			TokenId:  req.TokenId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -499,7 +583,7 @@ func transferTeam(c *gin.Context) {
 	var req TransferTeam
 	if util.ShouldBindJSON(&req, c) {
 		err := reposrv.Outer.TransferTeam(c, reposrv.TransferTeamReqDTO{
-			Id:       req.Id,
+			RepoId:   req.RepoId,
 			TeamId:   req.TeamId,
 			Operator: apisession.MustGetLoginUser(c),
 		})

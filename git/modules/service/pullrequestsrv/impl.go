@@ -209,7 +209,7 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 	return nil
 }
 
-func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullRequest, info reqvo.DiffRefsResp, repo repomd.RepoInfo, operator apisession.UserInfo, message string, cfg cfgsrv.GitCfg) error {
+func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullRequest, info reqvo.DiffRefsResp, repo repomd.Repo, operator apisession.UserInfo, message string, cfg cfgsrv.GitCfg) error {
 	b, err := pullrequestmd.UpdatePrStatusAndCommitId(
 		ctx,
 		pr.Id,
@@ -242,7 +242,6 @@ func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullReques
 				PusherAccount: operator.Account,
 				PusherEmail:   operator.Email,
 				Message:       message,
-				AppUrl:        cfg.AppUrl,
 			},
 		})
 		if err != nil {
@@ -347,24 +346,24 @@ func (*outerImpl) ReviewPullRequest(ctx context.Context, reqDTO ReviewPullReques
 }
 
 // checkPerm 校验权限
-func checkPerm(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.RepoInfo, error) {
+func checkPerm(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, error) {
 	pr, b, err := pullrequestmd.GetById(ctx, prId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return pullrequestmd.PullRequest{}, repomd.RepoInfo{}, util.InternalError(err)
+		return pullrequestmd.PullRequest{}, repomd.Repo{}, util.InternalError(err)
 	}
 	if !b {
-		return pullrequestmd.PullRequest{}, repomd.RepoInfo{}, util.InvalidArgsError()
+		return pullrequestmd.PullRequest{}, repomd.Repo{}, util.InvalidArgsError()
 	}
 	repo, err := checkPermByRepoId(ctx, pr.Id, operator)
 	return pr, repo, err
 }
 
 // checkPermByRepoId 校验权限
-func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.RepoInfo, error) {
+func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
 	repo, b := reposrv.Inner.GetByRepoId(ctx, repoId)
 	if !b {
-		return repomd.RepoInfo{}, util.InvalidArgsError()
+		return repomd.Repo{}, util.InvalidArgsError()
 	}
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if !b {
@@ -376,7 +375,7 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 	return repo, nil
 }
 
-func triggerWebhook(repo repomd.RepoInfo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, actionType string) {
+func triggerWebhook(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, actionType string) {
 	go func() {
 		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()

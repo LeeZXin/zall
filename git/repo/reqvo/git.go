@@ -140,7 +140,6 @@ type EntriesRepoReq struct {
 	RepoPath string `json:"repoPath"`
 	Ref      string `json:"ref"`
 	Dir      string `json:"dir"`
-	Offset   int    `json:"offset"`
 }
 
 type FileVO struct {
@@ -150,21 +149,28 @@ type FileVO struct {
 	Commit  CommitVO `json:"commit"`
 }
 
-type TreeVO struct {
-	Files   []FileVO `json:"files"`
-	Limit   int      `json:"limit"`
-	Offset  int      `json:"offset"`
-	HasMore bool     `json:"hasMore"`
+type BlobVO struct {
+	Mode    string `json:"mode"`
+	RawPath string `json:"rawPath"`
+	Path    string `json:"path"`
 }
 
-type TreeRepoReq struct {
+type TreeVO struct {
+	Files []FileVO `json:"files"`
+}
+
+type BlameLineVO struct {
+	Number int      `json:"number"`
+	Commit CommitVO `json:"commit"`
+}
+
+type IndexRepoReq struct {
 	RepoPath string `json:"repoPath"`
 	Ref      string `json:"ref"`
 	Dir      string `json:"dir"`
 }
 
-type TreeRepoResp struct {
-	IsEmpty      bool     `json:"isEmpty"`
+type IndexRepoResp struct {
 	ReadmeText   string   `json:"readmeText"`
 	HasReadme    bool     `json:"hasReadme"`
 	LatestCommit CommitVO `json:"latestCommit"`
@@ -174,14 +180,15 @@ type TreeRepoResp struct {
 type CatFileReq struct {
 	RepoPath string `json:"repoPath"`
 	Ref      string `json:"ref"`
-	Dir      string `json:"dir"`
-	FileName string `json:"fileName"`
+	FilePath string `json:"filePath"`
 }
 
 type CatFileResp struct {
-	FileMode string `json:"fileMode"`
-	ModeName string `json:"modeName"`
-	Content  string `json:"content"`
+	FileMode string   `json:"fileMode"`
+	ModeName string   `json:"modeName"`
+	Content  string   `json:"content"`
+	Size     int64    `json:"size"`
+	Commit   CommitVO `json:"commit"`
 }
 
 type UploadPackReq struct {
@@ -212,4 +219,10 @@ type MergeReq struct {
 		Message       string `json:"message"`
 		AppUrl        string `json:"appUrl"`
 	} `json:"mergeOpts"`
+}
+
+type BlameReq struct {
+	RepoPath string `json:"repoPath"`
+	Ref      string `json:"ref"`
+	FilePath string `json:"filePath"`
 }

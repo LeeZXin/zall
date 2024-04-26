@@ -31,8 +31,9 @@ func InitApi() {
 			group.POST("/initRepoHook", initRepoHook)
 			group.POST("/entriesRepo", entriesRepo)
 			group.POST("/catFile", catFile)
-			group.POST("/treeRepo", treeRepo)
+			group.POST("/indexRepo", indexRepo)
 			group.POST("/merge", merge)
+			group.POST("/blame", blame)
 		}
 		group = e.Group("/api/v1/git/smart/:corpId/:repoName", packRepoPath)
 		{
@@ -208,7 +209,7 @@ func entriesRepo(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.DataResp[reqvo.TreeVO]{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]reqvo.BlobVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     resp,
 		})
@@ -230,15 +231,15 @@ func catFile(c *gin.Context) {
 	}
 }
 
-func treeRepo(c *gin.Context) {
-	var req reqvo.TreeRepoReq
+func indexRepo(c *gin.Context) {
+	var req reqvo.IndexRepoReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.TreeRepo(c, req)
+		resp, err := storeSrv.IndexRepo(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.DataResp[reqvo.TreeRepoResp]{
+		c.JSON(http.StatusOK, ginutil.DataResp[reqvo.IndexRepoResp]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     resp,
 		})
@@ -275,5 +276,20 @@ func merge(c *gin.Context) {
 			return
 		}
 		util.DefaultOkResponse(c)
+	}
+}
+
+func blame(c *gin.Context) {
+	var req reqvo.BlameReq
+	if util.ShouldBindJSON(&req, c) {
+		lines, err := storeSrv.Blame(c, req)
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[[]reqvo.BlameLineVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     lines,
+		})
 	}
 }

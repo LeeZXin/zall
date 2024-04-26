@@ -1,7 +1,7 @@
 <template>
   <a-layout>
     <a-layout-header style="font-size:22px;color:white">
-      <span>zall</span>
+      <span>{{repo.name}}</span>
       <span class="switch-repo-text" @click="switchRepo">{{t("gitRepo.switchRepo")}}</span>
       <AvatarName style="float:right;" />
       <I18nSelect style="float:right;margin-right: 20px" />
@@ -50,7 +50,7 @@ import I18nSelect from "../components/i18n/I18nSelect";
 import AvatarName from "../components/user/AvatarName";
 import { useI18n } from "vue-i18n";
 import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import {
   BranchesOutlined,
   FileOutlined,
@@ -60,16 +60,28 @@ import {
   CalendarOutlined,
   KeyOutlined
 } from "@ant-design/icons-vue";
+import { getRepoRequest } from "@/api/git/gitApi";
+import { useRepoStore } from "@/pinia/repoStore";
 const { t } = useI18n();
 const collapsed = ref(false);
 const router = useRouter();
+const route = useRoute();
+const repo = useRepoStore();
 const switchRepo = () => {
-  router.push("/team/gitRepo/list");
+  router.push(`/team/${repo.teamId}/gitRepo/list`);
 };
 const onselect = event => {
-  console.log(event.key);
-  //router.push(event.key);
+  router.push(event.key);
 };
+if (repo.repoId === 0) {
+  getRepoRequest({
+    repoId: parseInt(route.params.repoId)
+  }).then(res => {
+    repo.repoId = res.data.repoId;
+    repo.name = res.data.name;
+    repo.teamId = res.data.teamId;
+  });
+}
 </script>
 <style scoped>
 .switch-repo-text {

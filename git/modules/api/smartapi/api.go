@@ -47,14 +47,14 @@ func handleGoGet(c *gin.Context) {
 			c.String(http.StatusInternalServerError, "")
 			return
 		}
-		h, _ := url.Parse(cfg.AppUrl)
+		h, _ := url.Parse(cfg.HttpUrl)
 		t := "/" + url.PathEscape(split[0]) + "/" + url.PathEscape(split[1])
 		ret := fmt.Sprintf(
 			`<meta name="go-import" content="%s">`,
 			html.EscapeString(fmt.Sprintf(
 				"%s git %s",
 				h.Host+t,
-				cfg.AppUrl+t,
+				cfg.HttpUrl+t,
 			),
 			))
 		c.String(http.StatusOK, ret)
@@ -92,7 +92,7 @@ func auth(c *gin.Context) {
 		repo := getRepo(c)
 		// 常规账号密码不存在就检查访问令牌
 		b = reposrv.Inner.CheckRepoToken(c.Request.Context(), reposrv.CheckRepoTokenReqDTO{
-			Id:      repo.Id,
+			RepoId:  repo.Id,
 			Account: account,
 			Token:   password,
 		})
@@ -150,8 +150,8 @@ func infoRefs(c *gin.Context) {
 	}
 }
 
-func getRepo(c *gin.Context) repomd.RepoInfo {
-	return c.MustGet("repo").(repomd.RepoInfo)
+func getRepo(c *gin.Context) repomd.Repo {
+	return c.MustGet("repo").(repomd.Repo)
 }
 
 func getFromAccessToken(c *gin.Context) bool {

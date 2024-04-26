@@ -16,7 +16,7 @@
     <ZTable :columns="columns" :dataSource="repoList" v-if="wholeRepoList.length > 0">
       <template #bodyCell="{dataIndex, dataItem}">
         <div v-if="dataIndex === 'operation'">
-          <div class="op-icon" @click="checkRepo">
+          <div class="op-icon" @click="checkRepo(dataItem)">
             <a-tooltip placement="top">
               <template #title>
                 <span>查看</span>
@@ -42,8 +42,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter, useRoute } from "vue-router";
 import { getTeamPermRequest } from "@/api/team/teamApi";
 import { getRepoListRequest } from "@/api/git/gitApi";
-import { useTeamStore } from "@/pinia/teamStore";
-const team = useTeamStore();
+import { useRepoStore } from "@/pinia/repoStore";
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -66,6 +65,7 @@ const searchChange = () => {
     return item.name.indexOf(searchKey) >= 0;
   });
 };
+// 跳转创建仓库页面
 const gotoCreatePage = () => {
   router.push(`/team/${route.params.teamId}/gitRepo/create`);
 };
@@ -83,8 +83,8 @@ const columns = ref([
   },
   {
     title: "最近更新时间",
-    dataIndex: "updated",
-    key: "updated"
+    dataIndex: "lastOperated",
+    key: "lastOperated"
   },
   {
     title: "操作",
@@ -92,23 +92,33 @@ const columns = ref([
     key: "operation"
   }
 ]);
+// 获取团队权限 判断是否可以创建仓库
 getTeamPermRequest({
-  teamId: team.teamId
+  teamId: parseInt(route.params.teamId)
 }).then(res => {
   canCreateRepo.value = res.data.canCreateRepo;
 });
+// 获取仓库列表
 getRepoListRequest({
-  teamId: team.teamId
+  teamId: parseInt(route.params.teamId)
 }).then(res => {
   const ret = res.data.map(item => {
     return {
-      key: item.id,
+      key: item.repoId,
       ...item
     };
   });
   wholeRepoList.value = ret;
   repoList.value = ret;
 });
+// 跳转仓库代码首页
+const checkRepo = item => {
+  const repo = useRepoStore();
+  repo.repoId = item.repoId;
+  repo.name = item.name;
+  repo.teamId = item.teamId;
+  router.push(`/gitRepo/${item.repoId}/index`);
+};
 </script>
 <style scoped>
 .no-data {

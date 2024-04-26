@@ -216,8 +216,8 @@ func InitRepoHook(ctx context.Context, req reqvo.InitRepoHookReq) error {
 	return nil
 }
 
-func EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq) (reqvo.TreeVO, error) {
-	var resp ginutil.DataResp[reqvo.TreeVO]
+func EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq) ([]reqvo.BlobVO, error) {
+	var resp ginutil.DataResp[[]reqvo.BlobVO]
 	err := postHttp(
 		ctx,
 		"/api/v1/git/store/entriesRepo",
@@ -225,10 +225,10 @@ func EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq) (reqvo.TreeVO, e
 		&resp,
 	)
 	if err != nil {
-		return reqvo.TreeVO{}, err
+		return nil, err
 	}
 	if !resp.IsSuccess() {
-		return reqvo.TreeVO{}, bizerr.NewBizErr(resp.Code, resp.Message)
+		return nil, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
 	return resp.Data, nil
 }
@@ -250,19 +250,19 @@ func CatFile(ctx context.Context, req reqvo.CatFileReq) (reqvo.CatFileResp, erro
 	return resp.Data, nil
 }
 
-func TreeRepo(ctx context.Context, req reqvo.TreeRepoReq) (reqvo.TreeRepoResp, error) {
-	var resp ginutil.DataResp[reqvo.TreeRepoResp]
+func IndexRepo(ctx context.Context, req reqvo.IndexRepoReq) (reqvo.IndexRepoResp, error) {
+	var resp ginutil.DataResp[reqvo.IndexRepoResp]
 	err := postHttp(
 		ctx,
-		"/api/v1/git/store/treeRepo",
+		"/api/v1/git/store/indexRepo",
 		req,
 		&resp,
 	)
 	if err != nil {
-		return reqvo.TreeRepoResp{}, err
+		return reqvo.IndexRepoResp{}, err
 	}
 	if !resp.IsSuccess() {
-		return reqvo.TreeRepoResp{}, bizerr.NewBizErr(resp.Code, resp.Message)
+		return reqvo.IndexRepoResp{}, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
 	return resp.Data, nil
 }
@@ -289,10 +289,10 @@ func UploadPack(req reqvo.UploadPackReq, repoId int64, pusherAccount, pusherEmai
 		"/api/v1/git/smart/"+req.RepoPath+"/git-upload-pack",
 		req.C,
 		map[string]string{
-			"Repo-TeamId":    strconv.FormatInt(repoId, 10),
+			"Repo-Id":        strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
-			"AppId-HostUrl":  appUrl,
+			"App-Url":        appUrl,
 		},
 	)
 }
@@ -381,6 +381,23 @@ func LfsStat(ctx context.Context, req reqvo.LfsStatReq) (reqvo.LfsStatResp, erro
 	}
 	if !resp.IsSuccess() {
 		return reqvo.LfsStatResp{}, bizerr.NewBizErr(resp.Code, resp.Message)
+	}
+	return resp.Data, nil
+}
+
+func Blame(ctx context.Context, req reqvo.BlameReq) ([]reqvo.BlameLineVO, error) {
+	var resp ginutil.DataResp[[]reqvo.BlameLineVO]
+	err := postHttp(
+		ctx,
+		"/api/v1/git/store/blame",
+		req,
+		&resp,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if !resp.IsSuccess() {
+		return nil, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
 	return resp.Data, nil
 }

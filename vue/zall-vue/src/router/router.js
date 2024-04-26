@@ -3,7 +3,6 @@ import { useUserStore } from "@/pinia/userStore";
 import { useTeamStore } from "@/pinia/teamStore";
 import { getUserInfoRequest } from "@/api/user/loginApi";
 import { getTeamRequest } from '@/api/team/teamApi';
-
 const router = createRouter({
     history: createWebHistory(),
     routes: [{
@@ -92,7 +91,7 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/gitRepo/RepoIndexPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/tree/:file+",
+                path: "/gitRepo/:repoId(\\d+)/tree/:ref/:files+",
                 component: () =>
                     import ("../pages/team/gitRepo/RepoTreePage")
             }, {
@@ -182,19 +181,18 @@ router.beforeEach((to, from, next) => {
             user.sessionExpireAt = res.session.expireAt;
         });
     }
-    // 特殊teamId
-    const team = useTeamStore();
     // 如果有teamId参数 校验store是否有team
-    if (team.teamId === 0 && to.params.teamId) {
-        getTeamRequest({
-            teamId: parseInt(to.params.teamId)
-        }).then(res => {
-            team.teamId = res.data.teamId;
-            team.name = res.data.name;
-            next();
-        })
-    } else {
-        next();
+    if (to.params.teamId) {
+        const team = useTeamStore();
+        if (team.teamId === 0) {
+            getTeamRequest({
+                teamId: parseInt(to.params.teamId)
+            }).then(res => {
+                team.teamId = res.data.teamId;
+                team.name = res.data.name;
+            })
+        }
     }
+    next();
 })
 export default router;

@@ -121,10 +121,11 @@ func GetCommitByCommitId(ctx context.Context, repoPath string, commitId string) 
 			if isPrefix {
 				continue
 			}
-			_, typ, size, err = readBatchLine(string(line))
+			commitId, typ, size, err = readBatchLine(string(line))
 			if err != nil {
 				return fmt.Errorf("readBatchLine err: %v", err)
 			}
+			c.Id = commitId
 			break
 		}
 		switch typ {
@@ -368,8 +369,8 @@ func GetGitLogCommitList(ctx context.Context, repoPath, ref string, skip, limit 
 	})
 }
 
-func GetFileLatestCommit(ctx context.Context, repoPath, refName, filePath string) (Commit, error) {
-	result, err := NewCommand("log", PrettyLogFormat, "-1", refName, "--", filePath).
+func GetFileLatestCommit(ctx context.Context, repoPath, ref, filePath string) (Commit, error) {
+	result, err := NewCommand("log", PrettyLogFormat, "-1", ref, "--", filePath).
 		Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return Commit{}, err
@@ -378,30 +379,30 @@ func GetFileLatestCommit(ctx context.Context, repoPath, refName, filePath string
 	return GetCommitByCommitId(ctx, repoPath, commitId)
 }
 
-func GetCommit(ctx context.Context, repoPath string, refName string) (Commit, string, error) {
-	if CheckRefIsTag(ctx, repoPath, refName) {
-		if !strings.HasPrefix(refName, TagPrefix) {
-			refName = TagPrefix + refName
+func GetCommit(ctx context.Context, repoPath string, ref string) (Commit, string, error) {
+	if CheckRefIsTag(ctx, repoPath, ref) {
+		if !strings.HasPrefix(ref, TagPrefix) {
+			ref = TagPrefix + ref
 		}
-		commit, err := GetCommitByTag(ctx, repoPath, refName)
-		return commit, refName, err
+		commit, err := GetCommitByTag(ctx, repoPath, ref)
+		return commit, ref, err
 	}
-	if CheckRefIsBranch(ctx, repoPath, refName) {
-		if !strings.HasPrefix(refName, BranchPrefix) {
-			refName = BranchPrefix + refName
+	if CheckRefIsBranch(ctx, repoPath, ref) {
+		if !strings.HasPrefix(ref, BranchPrefix) {
+			ref = BranchPrefix + ref
 		}
-		commitId, err := GetRefCommitId(ctx, repoPath, refName)
+		commitId, err := GetRefCommitId(ctx, repoPath, ref)
 		if err != nil {
 			return Commit{}, "", err
 		}
 		commit, err := GetCommitByCommitId(ctx, repoPath, commitId)
-		return commit, refName, err
+		return commit, ref, err
 	}
-	if CheckRefIsCommit(ctx, repoPath, refName) {
-		commit, err := GetCommitByCommitId(ctx, repoPath, refName)
-		return commit, refName, err
+	if CheckRefIsCommit(ctx, repoPath, ref) {
+		commit, err := GetCommitByCommitId(ctx, repoPath, ref)
+		return commit, ref, err
 	}
-	return Commit{}, "", fmt.Errorf("%s unsupported type", refName)
+	return Commit{}, "", fmt.Errorf("%s unsupported type", ref)
 }
 
 type DetectForcePushEnv struct {

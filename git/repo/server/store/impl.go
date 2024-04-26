@@ -19,10 +19,6 @@ import (
 	"strings"
 )
 
-const (
-	LsTreeCommitLimit = 25
-)
-
 var (
 	protocolPattern = regexp.MustCompile(`^[0-9a-zA-Z]+=[0-9a-zA-Z]+(:[0-9a-zA-Z]+=[0-9a-zA-Z]+)*$`)
 )
@@ -247,23 +243,33 @@ func (s *storeImpl) InitRepoHook(ctx context.Context, req reqvo.InitRepoHookReq)
 }
 
 // EntriesRepo 仓库文件列表
-func (s *storeImpl) EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq) (reqvo.TreeVO, error) {
+func (s *storeImpl) EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq) ([]reqvo.BlobVO, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	if req.Dir == "" {
 		req.Dir = "."
 	}
-	commits, err := git.LsTreeCommit(ctx, repoPath, req.Ref, req.Dir, req.Offset, LsTreeCommitLimit)
+	blobs, err := git.LsTreeBlob(ctx, repoPath, req.Ref, req.Dir)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return reqvo.TreeVO{}, util.InternalError(err)
+		return nil, util.InternalError(err)
 	}
-	return lsRet2TreeDTO(commits, req.Offset, LsTreeCommitLimit), nil
+	return listutil.Map(blobs, func(t git.LsTreeRet) (reqvo.BlobVO, error) {
+		return reqvo.BlobVO{
+			Mode:    t.Mode.Readable(),
+			RawPath: t.Path,
+			Path:    path.Base(t.Path),
+		}, nil
+	})
 }
 
 // CatFile 展示文件内容
 func (s *storeImpl) CatFile(ctx context.Context, req reqvo.CatFileReq) (reqvo.CatFileResp, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	fileMode, content, _, err := git.GetFileContentByRef(ctx, repoPath, req.Ref, req.FileName)
+	commit, err := git.GetFileLatestCommit(ctx, repoPath, req.Ref, req.FilePath)
+	if err != nil {
+		return reqvo.CatFileResp{}, err
+	}
+	fileMode, content, size, _, err := git.GetFileTextContentByRef(ctx, repoPath, req.Ref, req.FilePath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.CatFileResp{}, util.InternalError(err)
@@ -272,11 +278,13 @@ func (s *storeImpl) CatFile(ctx context.Context, req reqvo.CatFileReq) (reqvo.Ca
 		FileMode: fileMode.String(),
 		ModeName: fileMode.Readable(),
 		Content:  content,
+		Size:     size,
+		Commit:   commit2Vo(commit),
 	}, nil
 }
 
-// TreeRepo 仓库首页
-func (s *storeImpl) TreeRepo(ctx context.Context, req reqvo.TreeRepoReq) (reqvo.TreeRepoResp, error) {
+// IndexRepo 仓库首页
+func (s *storeImpl) IndexRepo(ctx context.Context, req reqvo.IndexRepoReq) (reqvo.IndexRepoResp, error) {
 	if req.Dir == "" {
 		req.Dir = "."
 	}
@@ -284,28 +292,28 @@ func (s *storeImpl) TreeRepo(ctx context.Context, req reqvo.TreeRepoReq) (reqvo.
 	latestCommit, err := git.GetFileLatestCommit(ctx, repoPath, req.Ref, req.Dir)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return reqvo.TreeRepoResp{}, util.InternalError(err)
+		return reqvo.IndexRepoResp{}, util.InternalError(err)
 	}
-	commits, err := git.LsTreeCommit(ctx, repoPath, req.Ref, req.Dir, 0, LsTreeCommitLimit)
+	commits, err := git.LsTreeCommit(ctx, repoPath, req.Ref, req.Dir)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return reqvo.TreeRepoResp{}, util.InternalError(err)
+		return reqvo.IndexRepoResp{}, util.InternalError(err)
 	}
-	_, readme, hasReadme, err := git.GetFileContentByRef(ctx, repoPath, req.Ref, filepath.Join(req.Dir, "readme.md"))
+	_, readme, _, hasReadme, err := git.GetFileTextContentByRef(ctx, repoPath, req.Ref, filepath.Join(req.Dir, "README.md"))
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
 	if err == nil && !hasReadme {
-		_, readme, hasReadme, err = git.GetFileContentByRef(ctx, repoPath, req.Ref, filepath.Join(req.Dir, "README.md"))
+		_, readme, _, hasReadme, err = git.GetFileTextContentByRef(ctx, repoPath, req.Ref, filepath.Join(req.Dir, "readme.md"))
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 		}
 	}
-	return reqvo.TreeRepoResp{
+	return reqvo.IndexRepoResp{
 		ReadmeText:   readme,
 		HasReadme:    hasReadme,
 		LatestCommit: commit2Vo(latestCommit),
-		Tree:         lsRet2TreeDTO(commits, 0, LsTreeCommitLimit),
+		Tree:         lsRet2TreeVO(commits),
 	}, nil
 }
 
@@ -340,10 +348,10 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 	}
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	env = append(env, util.JoinFields(
-		gitenv.EnvRepoId, req.C.GetHeader("Repo-TeamId"),
+		gitenv.EnvRepoId, req.C.GetHeader("Repo-Id"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
-		gitenv.EnvAppUrl, req.C.GetHeader("AppId-HostUrl"),
+		gitenv.EnvAppUrl, req.C.GetHeader("App-Url"),
 		gitenv.EnvHookToken, git.HookToken(),
 	)...)
 	err = git.UploadPack(req.C, repoPath, reqBody, req.C.Writer, env)
@@ -384,10 +392,10 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	env = append(env, util.JoinFields(
 		gitenv.EnvHookUrl, fmt.Sprintf("http://127.0.0.1:%d", common.HttpServerPort()),
-		gitenv.EnvRepoId, req.C.GetHeader("Repo-TeamId"),
+		gitenv.EnvRepoId, req.C.GetHeader("Repo-Id"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
-		gitenv.EnvAppUrl, req.C.GetHeader("AppId-HostUrl"),
+		gitenv.EnvAppUrl, req.C.GetHeader("App-Url"),
 		gitenv.EnvHookToken, git.HookToken(),
 		"--stateless-rpc", repoPath,
 	)...)
@@ -441,6 +449,22 @@ func (s *storeImpl) Merge(ctx context.Context, req reqvo.MergeReq) error {
 	return nil
 }
 
+// Blame git blame获取每一行提交人和时间
+func (s *storeImpl) Blame(ctx context.Context, req reqvo.BlameReq) ([]reqvo.BlameLineVO, error) {
+	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
+	lines, err := git.Blame(ctx, repoPath, req.Ref, req.FilePath)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(lines, func(t git.BlameLine) (reqvo.BlameLineVO, error) {
+		return reqvo.BlameLineVO{
+			Number: t.Number,
+			Commit: commit2Vo(*t.Commit),
+		}, nil
+	})
+}
+
 func packetWrite(str string) []byte {
 	s := strconv.FormatInt(int64(len(str)+4), 16)
 	if len(s)%4 != 0 {
@@ -449,7 +473,7 @@ func packetWrite(str string) []byte {
 	return []byte(s + str)
 }
 
-func lsRet2TreeDTO(commits []git.FileCommit, offset, limit int) reqvo.TreeVO {
+func lsRet2TreeVO(commits []git.FileCommit) reqvo.TreeVO {
 	files, _ := listutil.Map(commits, func(t git.FileCommit) (reqvo.FileVO, error) {
 		ret := reqvo.FileVO{
 			Mode:    t.Mode.Readable(),
@@ -474,10 +498,7 @@ func lsRet2TreeDTO(commits []git.FileCommit, offset, limit int) reqvo.TreeVO {
 		return ret, nil
 	})
 	return reqvo.TreeVO{
-		Files:   files,
-		Limit:   limit,
-		Offset:  offset,
-		HasMore: len(commits) == limit,
+		Files: files,
 	}
 }
 

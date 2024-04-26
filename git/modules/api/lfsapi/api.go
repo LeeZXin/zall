@@ -88,7 +88,7 @@ func packRepoPath(c *gin.Context) {
 		if !b {
 			// 常规账号密码不存在的话就检查访问令牌
 			b = reposrv.Inner.CheckRepoToken(ctx, reposrv.CheckRepoTokenReqDTO{
-				Id:      repo.Id,
+				RepoId:  repo.Id,
 				Account: account,
 				Token:   password,
 			})
@@ -232,18 +232,18 @@ func batch(c *gin.Context) {
 			if isUpload {
 				actions = map[string]LinkVO{
 					"upload": {
-						Href:   fmt.Sprintf("%s/%s/info/lfs/objects/%s/%d", cfg.AppUrl, repoPath, t.Oid, t.Size),
+						Href:   fmt.Sprintf("%s/%s/info/lfs/objects/%s/%d", cfg.HttpUrl, repoPath, t.Oid, t.Size),
 						Header: header,
 					},
 					"verify": {
-						Href:   fmt.Sprintf("%s/%s/info/lfs/verify", cfg.AppUrl, repoPath),
+						Href:   fmt.Sprintf("%s/%s/info/lfs/verify", cfg.HttpUrl, repoPath),
 						Header: verifyHeader,
 					},
 				}
 			} else {
 				actions = map[string]LinkVO{
 					"download": {
-						Href:   fmt.Sprintf("%s/%s/info/lfs/objects/%s", cfg.AppUrl, repoPath, t.Oid),
+						Href:   fmt.Sprintf("%s/%s/info/lfs/objects/%s", cfg.HttpUrl, repoPath, t.Oid),
 						Header: header,
 					},
 				}
@@ -272,8 +272,8 @@ func getOperator(c *gin.Context) usermd.UserInfo {
 	return c.MustGet("operator").(usermd.UserInfo)
 }
 
-func getRepo(c *gin.Context) repomd.RepoInfo {
-	return c.MustGet("repo").(repomd.RepoInfo)
+func getRepo(c *gin.Context) repomd.Repo {
+	return c.MustGet("repo").(repomd.Repo)
 }
 
 func lock(c *gin.Context) {

@@ -161,7 +161,7 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 	}
 }
 
-func triggerWebhook(hookList []webhookmd.Webhook, repo repomd.RepoInfo, revInfo githook.RevInfo, operator usermd.UserInfo, isTag bool) {
+func triggerWebhook(hookList []webhookmd.Webhook, repo repomd.Repo, revInfo githook.RevInfo, operator usermd.UserInfo, isTag bool) {
 	if len(hookList) == 0 {
 		return
 	}

@@ -15,21 +15,29 @@ var (
 )
 
 type InnerService interface {
-	GetByRepoPath(context.Context, string) (repomd.RepoInfo, bool)
-	GetByRepoId(context.Context, int64) (repomd.RepoInfo, bool)
+	GetByRepoPath(context.Context, string) (repomd.Repo, bool)
+	GetByRepoId(context.Context, int64) (repomd.Repo, bool)
 	CheckRepoToken(context.Context, CheckRepoTokenReqDTO) bool
 }
 
 type OuterService interface {
-	EntriesRepo(context.Context, EntriesRepoReqDTO) (TreeDTO, error)
+	// SimpleInfo 基本信息
+	SimpleInfo(context.Context, SimpleInfoReqDTO) (SimpleInfoRespDTO, error)
+	// GetRepo 获取仓库信息
+	GetRepo(context.Context, GetRepoReqDTO) (repomd.Repo, bool, error)
+	// EntriesRepo 文件列表
+	EntriesRepo(context.Context, EntriesRepoReqDTO) ([]BlobDTO, error)
 	// ListRepo 获取仓库列表
 	ListRepo(context.Context, ListRepoReqDTO) ([]repomd.Repo, error)
+	// CatFile 展示文件详细内容 仅展示文本信息
 	CatFile(context.Context, CatFileReqDTO) (CatFileRespDTO, error)
-	TreeRepo(context.Context, TreeRepoReqDTO) (TreeRepoRespDTO, error)
+	// IndexRepo 代码首页
+	IndexRepo(context.Context, IndexRepoReqDTO) (IndexRepoRespDTO, error)
 	// CreateRepo 创建仓库
 	CreateRepo(context.Context, CreateRepoReqDTO) error
 	AllGitIgnoreTemplateList() []string
 	DeleteRepo(context.Context, DeleteRepoReqDTO) error
+	// AllBranches 获取所有分支
 	AllBranches(context.Context, AllBranchesReqDTO) ([]string, error)
 	AllTags(context.Context, AllTagsReqDTO) ([]string, error)
 	Gc(context.Context, GcReqDTO) error
@@ -42,4 +50,6 @@ type OuterService interface {
 	ListRepoToken(context.Context, ListRepoTokenReqDTO) ([]RepoTokenDTO, error)
 	RefreshAllGitHooks(context.Context, RefreshAllGitHooksReqDTO) error
 	TransferTeam(context.Context, TransferTeamReqDTO) error
+	// Blame 获取每一行提交信息
+	Blame(context.Context, BlameReqDTO) ([]BlameLineDTO, error)
 }

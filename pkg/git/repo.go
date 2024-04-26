@@ -150,7 +150,7 @@ func commitAndPushRepository(ctx context.Context, opts CommitAndPushOpts) error 
 	commitCmd := NewCommand(
 		"commit",
 		"--no-gpg-sign",
-		fmt.Sprintf("--message='%s'", opts.CommitMsg),
+		fmt.Sprintf("--message=%s", opts.CommitMsg),
 		fmt.Sprintf("--author='%s <%s>'", opts.Committer.Account, opts.Committer.Email),
 	)
 	env = append(env,

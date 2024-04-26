@@ -10,13 +10,13 @@ const (
 
 func VolumeReadable(b int64) string {
 	if b > Gib {
-		return fmt.Sprintf("%d Gib", b/Gib)
+		return fmt.Sprintf("%dGB", b/Gib)
 	}
 	if b > Mib {
-		return fmt.Sprintf("%d Mib", b/Mib)
+		return fmt.Sprintf("%dMB", b/Mib)
 	}
 	if b > Kib {
-		return fmt.Sprintf("%d Kib", b/Kib)
+		return fmt.Sprintf("%dKB", b/Kib)
 	}
-	return fmt.Sprintf("%d bytes", b)
+	return fmt.Sprintf("%dB", b)
 }

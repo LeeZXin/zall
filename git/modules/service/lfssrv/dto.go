@@ -26,7 +26,7 @@ type LfsLockDTO struct {
 
 type LockReqDTO struct {
 	RefName  string          `json:"refName"`
-	Repo     repomd.RepoInfo `json:"repo"`
+	Repo     repomd.Repo     `json:"repo"`
 	Operator usermd.UserInfo `json:"operator"`
 	Path     string          `json:"path"`
 }
@@ -50,7 +50,7 @@ type LockRespDTO struct {
 }
 
 type ListLockReqDTO struct {
-	Repo            repomd.RepoInfo `json:"repo"`
+	Repo            repomd.Repo     `json:"repo"`
 	Operator        usermd.UserInfo `json:"operator"`
 	Path            string          `json:"path"`
 	Cursor          int64           `json:"cursor"`
@@ -75,7 +75,7 @@ type ListLockRespDTO struct {
 }
 
 type UnlockReqDTO struct {
-	Repo     repomd.RepoInfo `json:"repo"`
+	Repo     repomd.Repo     `json:"repo"`
 	LockId   int64           `json:"lockId"`
 	Force    bool            `json:"force"`
 	Operator usermd.UserInfo `json:"operator"`
@@ -107,8 +107,8 @@ func (p *PointerDTO) IsValid() error {
 }
 
 type VerifyReqDTO struct {
-	PointerDTO      `json:"pointerDTO"`
-	Repo            repomd.RepoInfo `json:"repo"`
+	PointerDTO
+	Repo            repomd.Repo     `json:"repo"`
 	Operator        usermd.UserInfo `json:"operator"`
 	FromAccessToken bool            `json:"fromAccessToken"`
 }
@@ -128,7 +128,7 @@ func (r *VerifyReqDTO) IsValid() error {
 
 type DownloadReqDTO struct {
 	Oid             string          `json:"oid"`
-	Repo            repomd.RepoInfo `json:"repo"`
+	Repo            repomd.Repo     `json:"repo"`
 	Operator        usermd.UserInfo `json:"operator"`
 	FromAccessToken bool            `json:"fromAccessToken"`
 	C               *gin.Context    `json:"-"`
@@ -150,7 +150,7 @@ func (r *DownloadReqDTO) IsValid() error {
 type UploadReqDTO struct {
 	Oid      string          `json:"oid"`
 	Size     int64           `json:"size"`
-	Repo     repomd.RepoInfo `json:"repo"`
+	Repo     repomd.Repo     `json:"repo"`
 	Operator usermd.UserInfo `json:"operator"`
 	C        *gin.Context    `json:"-"`
 }
@@ -176,7 +176,7 @@ type DownloadRespDTO struct {
 }
 
 type BatchReqDTO struct {
-	Repo     repomd.RepoInfo `json:"repo"`
+	Repo     repomd.Repo     `json:"repo"`
 	Operator usermd.UserInfo `json:"operator"`
 	Objects  []PointerDTO    `json:"objects"`
 	IsUpload bool            `json:"isUpload"`
@@ -229,6 +229,6 @@ type ErrObjDTO struct {
 	Message string `json:"message"`
 }
 
-func validateRepo(repo repomd.RepoInfo) bool {
+func validateRepo(repo repomd.Repo) bool {
 	return repo.Id > 0
 }

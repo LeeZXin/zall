@@ -14,20 +14,20 @@ func IsRepoTokenTokenValid(token string) bool {
 	return len(token) == 16
 }
 
-func GetByPath(ctx context.Context, path string) (RepoInfo, bool, error) {
+func GetByPath(ctx context.Context, path string) (Repo, bool, error) {
 	var ret Repo
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("path = ?", path).
 		Get(&ret)
-	return ret.ToRepoInfo(), b, err
+	return ret, b, err
 }
 
-func GetByRepoId(ctx context.Context, repoId int64) (RepoInfo, bool, error) {
+func GetByRepoId(ctx context.Context, repoId int64) (Repo, bool, error) {
 	var ret Repo
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", repoId).
 		Get(&ret)
-	return ret.ToRepoInfo(), b, err
+	return ret, b, err
 }
 
 func UpdateGitSize(ctx context.Context, repoId int64, gitSize int64) error {
@@ -75,7 +75,8 @@ func InsertRepo(ctx context.Context, reqDTO InsertRepoReqDTO) (Repo, error) {
 		DefaultBranch: reqDTO.DefaultBranch,
 		GitSize:       reqDTO.GitSize,
 		LfsSize:       reqDTO.LfsSize,
-		Cfg:           reqDTO.Cfg.ToString(),
+		Cfg:           &reqDTO.Cfg,
+		RepoStatus:    reqDTO.RepoStatus,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&r)
 	return r, err

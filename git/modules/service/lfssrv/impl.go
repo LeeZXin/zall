@@ -352,7 +352,7 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 	}, nil
 }
 
-func checkPerm(ctx context.Context, repo repomd.RepoInfo, operator usermd.UserInfo, permCode int) error {
+func checkPerm(ctx context.Context, repo repomd.Repo, operator usermd.UserInfo, permCode int) error {
 	if operator.IsAdmin {
 		return nil
 	}

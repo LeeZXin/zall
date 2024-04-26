@@ -29,11 +29,11 @@ type Store interface {
 	// InitRepoHook 重建仓库hook
 	InitRepoHook(context.Context, reqvo.InitRepoHookReq) error
 	// EntriesRepo 仓库文件列表
-	EntriesRepo(context.Context, reqvo.EntriesRepoReq) (reqvo.TreeVO, error)
+	EntriesRepo(context.Context, reqvo.EntriesRepoReq) ([]reqvo.BlobVO, error)
 	// CatFile 展示文件内容
 	CatFile(context.Context, reqvo.CatFileReq) (reqvo.CatFileResp, error)
-	// TreeRepo 仓库首页
-	TreeRepo(context.Context, reqvo.TreeRepoReq) (reqvo.TreeRepoResp, error)
+	// IndexRepo 仓库首页
+	IndexRepo(context.Context, reqvo.IndexRepoReq) (reqvo.IndexRepoResp, error)
 	// UploadPack git-upload-pack
 	UploadPack(reqvo.UploadPackReq)
 	// ReceivePack git-receive-pack
@@ -42,4 +42,6 @@ type Store interface {
 	InfoRefs(context.Context, reqvo.InfoRefsReq)
 	// Merge 合并两个分支
 	Merge(context.Context, reqvo.MergeReq) error
+	// Blame git blame获取每一行提交人和时间
+	Blame(context.Context, reqvo.BlameReq) ([]reqvo.BlameLineVO, error)
 }

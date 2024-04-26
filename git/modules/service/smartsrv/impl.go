@@ -50,7 +50,7 @@ func (s *outerImpl) UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) (er
 	err = client.UploadPack(reqvo.UploadPackReq{
 		RepoPath: reqDTO.Repo.Path,
 		C:        reqDTO.C,
-	}, reqDTO.Repo.Id, reqDTO.Operator.Account, reqDTO.Operator.Email, cfg.AppUrl)
+	}, reqDTO.Repo.Id, reqDTO.Operator.Account, reqDTO.Operator.Email, cfg.HttpUrl)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -84,7 +84,7 @@ func (s *outerImpl) ReceivePack(ctx context.Context, reqDTO ReceivePackReqDTO) (
 	err = client.ReceivePack(reqvo.ReceivePackReq{
 		RepoPath: reqDTO.Repo.Path,
 		C:        reqDTO.C,
-	}, reqDTO.Repo.Id, reqDTO.Operator.Account, reqDTO.Operator.Email, cfg.AppUrl)
+	}, reqDTO.Repo.Id, reqDTO.Operator.Account, reqDTO.Operator.Email, cfg.HttpUrl)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -118,7 +118,7 @@ func (s *outerImpl) InfoRefs(ctx context.Context, reqDTO InfoRefsReqDTO) error {
 	return nil
 }
 
-func getPerm(ctx context.Context, repo repomd.RepoInfo, operator usermd.UserInfo, permCode int) error {
+func getPerm(ctx context.Context, repo repomd.Repo, operator usermd.UserInfo, permCode int) error {
 	if operator.IsAdmin {
 		return nil
 	}

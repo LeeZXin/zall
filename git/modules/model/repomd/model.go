@@ -2,6 +2,7 @@ package repomd
 
 import (
 	"encoding/json"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
 )
 
@@ -10,20 +11,48 @@ const (
 	RepoTokenTableName = "zgit_repo_token"
 )
 
+type RepoStatus int
+
+const (
+	OpenRepoStatus RepoStatus = iota + 1
+	ClosedRepoStatus
+	DeletedRepoStatus
+)
+
+func (s RepoStatus) Int() int {
+	return int(s)
+}
+
+func (s RepoStatus) Readable() string {
+	switch s {
+	case OpenRepoStatus:
+		return i18n.GetByKey(i18n.RepoOpenStatus)
+	case ClosedRepoStatus:
+		return i18n.GetByKey(i18n.RepoClosedStatus)
+	case DeletedRepoStatus:
+		return i18n.GetByKey(i18n.RepoDeletedStatus)
+	default:
+		return i18n.GetByKey(i18n.RepoUnknownStatus)
+	}
+}
+
 type Repo struct {
-	Id            int64     `json:"id" xorm:"pk autoincr"`
-	Path          string    `json:"path"`
-	Name          string    `json:"name"`
-	Author        string    `json:"author"`
-	TeamId        int64     `json:"teamId"`
-	RepoDesc      string    `json:"repoDesc"`
-	DefaultBranch string    `json:"defaultBranch"`
-	RepoStatus    int       `json:"repoStatus"`
-	GitSize       int64     `json:"gitSize"`
-	LfsSize       int64     `json:"lfsSize"`
-	Cfg           string    `json:"cfg"`
-	Created       time.Time `json:"created" xorm:"created"`
-	Updated       time.Time `json:"updated" xorm:"updated"`
+	Id            int64      `json:"id" xorm:"pk autoincr"`
+	Path          string     `json:"path"`
+	Name          string     `json:"name"`
+	Author        string     `json:"author"`
+	TeamId        int64      `json:"teamId"`
+	RepoDesc      string     `json:"repoDesc"`
+	DefaultBranch string     `json:"defaultBranch"`
+	RepoStatus    RepoStatus `json:"repoStatus"`
+	GitSize       int64      `json:"gitSize"`
+	LfsSize       int64      `json:"lfsSize"`
+	// 仓库配置
+	Cfg *RepoCfg `json:"cfg"`
+	// LastOperated 最后操作时间
+	LastOperated time.Time `json:"lastOperated" xorm:"created"`
+	Created      time.Time `json:"created" xorm:"created"`
+	Updated      time.Time `json:"updated" xorm:"updated"`
 }
 
 func (*Repo) TableName() string {
@@ -42,26 +71,6 @@ func (*RepoToken) TableName() string {
 	return RepoTokenTableName
 }
 
-func (r *Repo) GetCfg() RepoCfg {
-	var ret RepoCfg
-	_ = json.Unmarshal([]byte(r.Cfg), &ret)
-	return ret
-}
-
-func (r *Repo) ToRepoInfo() RepoInfo {
-	return RepoInfo{
-		Id:      r.Id,
-		Name:    r.Name,
-		Path:    r.Path,
-		Author:  r.Author,
-		TeamId:  r.TeamId,
-		GitSize: r.GitSize,
-		LfsSize: r.LfsSize,
-		CfgStr:  r.Cfg,
-		Cfg:     r.GetCfg(),
-	}
-}
-
 type RepoCfg struct {
 	// 单个lfs size大小限制
 	SingleLfsFileLimitSize int64 `json:"singleLfsFileLimitSize"`
@@ -71,7 +80,13 @@ type RepoCfg struct {
 	MaxGitLimitSize int64 `json:"maxGitLimitSize"`
 }
 
-func (c *RepoCfg) ToString() string {
-	m, _ := json.Marshal(c)
-	return string(m)
+func (c *RepoCfg) FromDB(content []byte) error {
+	if c == nil {
+		*c = RepoCfg{}
+	}
+	return json.Unmarshal(content, c)
+}
+
+func (c *RepoCfg) ToDB() ([]byte, error) {
+	return json.Marshal(c)
 }

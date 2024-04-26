@@ -50,7 +50,7 @@ func (d *Dialer) ProxySession(sshHost string, src ssh.Session, opts *ProxyOpts) 
 			}
 		}
 	}
-	err = target.Setenv("ZGIT_SRC_FINGERPRINT", opts.SrcFingerprint)
+	target.Setenv("ZGIT_SRC_FINGERPRINT", opts.SrcFingerprint)
 	target.Stdin = src
 	target.Stdout = src
 	target.Stderr = src.Stderr()
