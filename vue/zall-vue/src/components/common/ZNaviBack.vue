@@ -18,7 +18,7 @@ const goTo = () => {
 </script>
 <style scoped>
 .navi-back {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 .navi-back > .header {
   font-size: 14px;

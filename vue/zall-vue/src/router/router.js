@@ -1,8 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useUserStore } from "@/pinia/userStore";
-import { useTeamStore } from "@/pinia/teamStore";
 import { getUserInfoRequest } from "@/api/user/loginApi";
-import { getTeamRequest } from '@/api/team/teamApi';
 const router = createRouter({
     history: createWebHistory(),
     routes: [{
@@ -91,17 +89,21 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/gitRepo/RepoIndexPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/tree/:ref/:files+",
+                path: "/gitRepo/:repoId(\\d+)/tree/:refType/:ref/:files+",
                 component: () =>
                     import ("../pages/team/gitRepo/RepoTreePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/pullRequests/list",
+                path: "/gitRepo/:repoId(\\d+)/pullRequest/list",
                 component: () =>
-                    import ("../pages/team/gitRepo/PullRequestsListPage")
+                    import ("../pages/team/gitRepo/PullRequestListPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/pullRequests/create",
+                path: "/gitRepo/:repoId(\\d+)/pullRequest/create",
                 component: () =>
                     import ("../pages/team/gitRepo/CreatePullRequestPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/pullRequest/:prId(\\d+)/detail",
+                component: () =>
+                    import ("../pages/team/gitRepo/PullRequestDetailPage")
             }, {
                 path: "/gitRepo/:repoId(\\d+)/Branches/list",
                 component: () =>
@@ -180,18 +182,6 @@ router.beforeEach((to, from, next) => {
             user.sessionId = res.session.sessionId;
             user.sessionExpireAt = res.session.expireAt;
         });
-    }
-    // 如果有teamId参数 校验store是否有team
-    if (to.params.teamId) {
-        const team = useTeamStore();
-        if (team.teamId === 0) {
-            getTeamRequest({
-                teamId: parseInt(to.params.teamId)
-            }).then(res => {
-                team.teamId = res.data.teamId;
-                team.name = res.data.name;
-            })
-        }
     }
     next();
 })

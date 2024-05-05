@@ -15,7 +15,7 @@ var (
 )
 
 func ReadableTimeComparingNow(t time.Time) string {
-	d := time.Now().Sub(t)
+	d := time.Since(t)
 	if d < time.Second {
 		return "0" + i18n.GetByKey(i18n.TimeBeforeSecondUnit)
 	}

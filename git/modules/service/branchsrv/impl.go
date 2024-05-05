@@ -99,13 +99,18 @@ func (*outerImpl) ListProtectedBranch(ctx context.Context, reqDTO ListProtectedB
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(branchList, func(t branchmd.ProtectedBranchDTO) (ProtectedBranchDTO, error) {
-		return ProtectedBranchDTO{
+	ret, _ := listutil.Map(branchList, func(t branchmd.ProtectedBranch) (ProtectedBranchDTO, error) {
+		d := ProtectedBranchDTO{
 			Id:     t.Id,
 			RepoId: t.RepoId,
 			Branch: t.Branch,
-			Cfg:    t.Cfg,
-		}, nil
+		}
+		if t.Cfg == nil {
+			d.Cfg = branchmd.ProtectedBranchCfg{}
+		} else {
+			d.Cfg = *t.Cfg
+		}
+		return d, nil
 	})
 	return ret, nil
 }

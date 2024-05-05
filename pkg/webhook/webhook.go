@@ -33,7 +33,7 @@ func TriggerGitHook(url string, headers map[string]string, req GitReceiveHook) {
 	})
 }
 
-func TriggerPrHook(url string, headers map[string]string, req PullRequestActionHook) {
+func TriggerPrHook(url string, headers map[string]string, req PullRequestHook) {
 	initWebhook()
 	_ = apiExecutor.Execute(func() {
 		err := httputil.Post(context.Background(), httpClient, url, headers, req, nil)

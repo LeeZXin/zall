@@ -78,15 +78,3 @@ type TeamVO struct {
 type DeleteTeamReqVO struct {
 	TeamId int64 `json:"teamId"`
 }
-
-type IsAdminReqVO struct {
-	TeamId int64 `json:"teamId"`
-}
-
-type GetTeamPermReqVO struct {
-	TeamId int64 `json:"teamId"`
-}
-
-type GetTeamReqVO struct {
-	TeamId int64 `json:"teamId"`
-}

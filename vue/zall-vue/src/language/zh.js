@@ -78,5 +78,11 @@ export default {
     },
     createTeam: {
         teamName: "团队名称*(不包含特殊字符,长度不得超过32)"
-    }
+    },
+    secondBefore: "秒前",
+    minuteBefore: "分钟前",
+    hourBefore: "小时前",
+    dayBefore: "天前",
+    monthBefore: "月前",
+    yearBefore: "年前"
 }

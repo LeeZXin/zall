@@ -117,7 +117,7 @@ func listConfig(c *gin.Context) {
 				Created:     t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]ConfigVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[ConfigVO]{
 			DataResp: ginutil.DataResp[[]ConfigVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,

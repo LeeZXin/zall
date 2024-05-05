@@ -411,7 +411,7 @@ func listDeployLog(c *gin.Context) {
 				PlanId:         t.PlanId,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]DeployLogVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[DeployLogVO]{
 			DataResp: ginutil.DataResp[[]DeployLogVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
@@ -444,7 +444,7 @@ func listOpLog(c *gin.Context) {
 				Created:        t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]OpLogVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[OpLogVO]{
 			DataResp: ginutil.DataResp[[]OpLogVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
@@ -480,7 +480,7 @@ func listPlan(c *gin.Context) {
 				Created:    t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]PlanVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[PlanVO]{
 			DataResp: ginutil.DataResp[[]PlanVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,

@@ -41,7 +41,7 @@ import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter, useRoute } from "vue-router";
 import { getTeamPermRequest } from "@/api/team/teamApi";
-import { getRepoListRequest } from "@/api/git/gitApi";
+import { getRepoListRequest } from "@/api/git/repoApi";
 import { useRepoStore } from "@/pinia/repoStore";
 const { t } = useI18n();
 const route = useRoute();
@@ -93,15 +93,11 @@ const columns = ref([
   }
 ]);
 // 获取团队权限 判断是否可以创建仓库
-getTeamPermRequest({
-  teamId: parseInt(route.params.teamId)
-}).then(res => {
+getTeamPermRequest(route.params.teamId).then(res => {
   canCreateRepo.value = res.data.canCreateRepo;
 });
 // 获取仓库列表
-getRepoListRequest({
-  teamId: parseInt(route.params.teamId)
-}).then(res => {
+getRepoListRequest(route.params.teamId).then(res => {
   const ret = res.data.map(item => {
     return {
       key: item.repoId,

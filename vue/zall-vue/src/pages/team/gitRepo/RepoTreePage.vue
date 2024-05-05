@@ -17,7 +17,7 @@
       </div>
       <div class="right">
         <div class="file-path">
-          <template v-for="(item, index) in files" v-bind:key="index">
+          <template v-for="item in files" v-bind:key="item">
             <div class="file-path-item">{{item}}</div>
             <div class="file-path-split" v-if="index < files.length - 1">/</div>
           </template>
@@ -47,7 +47,7 @@
             <div style="max-height:calc(100vh - 234px);overflow:scroll;width:100%">
               <div class="code-code">
                 <ul class="blame-info" v-if="showBlame">
-                  <li v-for="(item, index) in blameList" v-bind:key="index" :style="blameLineStyle">
+                  <li v-for="item in blameList" v-bind:key="item.commit.commitId" :style="blameLineStyle">
                     <a-popover>
                       <template #content>
                         <div class="commit-content">
@@ -93,7 +93,7 @@ import {
   entriesRepoRequest,
   catFileRequest,
   blameRequest
-} from "@/api/git/gitApi";
+} from "@/api/git/repoApi";
 const route = useRoute();
 const props = defineProps(["style"]);
 const fileContent = ref("");
@@ -150,6 +150,7 @@ const codeOrBlameChange = () => {
       blameRequest({
         repoId: parseInt(route.params.repoId),
         ref: route.params.ref,
+        refType: route.params.refType,
         filePath: files.value.join("/")
       }).then(res => {
         hasBlame = true;
@@ -177,6 +178,7 @@ const getFiles = dir => {
   return entriesRepoRequest({
     repoId: parseInt(route.params.repoId),
     ref: route.params.ref,
+    refType: route.params.refType,
     dir
   });
 };
@@ -199,7 +201,8 @@ const selectNode = (node, e) => {
     history.replaceState(
       {},
       "",
-      `/gitRepo/${route.params.repoId}/tree/${route.params.ref}/` + filePath
+      `/gitRepo/${route.params.repoId}/tree/${route.params.refType}/${route.params.ref}/` +
+        filePath
     );
     files.value = filePath.split("/");
     getAndCatFile(filePath);
@@ -246,6 +249,7 @@ const catFile = filePath => {
   return catFileRequest({
     repoId: parseInt(route.params.repoId),
     ref: route.params.ref,
+    refType: route.params.refType,
     filePath
   });
 };

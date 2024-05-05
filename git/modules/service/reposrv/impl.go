@@ -25,7 +25,6 @@ import (
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/patrickmn/go-cache"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -146,6 +145,7 @@ func (s *outerImpl) EntriesRepo(ctx context.Context, reqDTO EntriesRepoReqDTO) (
 		RepoPath: repo.Path,
 		Ref:      reqDTO.Ref,
 		Dir:      reqDTO.Dir,
+		RefType:  reqDTO.RefType,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -224,6 +224,7 @@ func (s *outerImpl) CatFile(ctx context.Context, reqDTO CatFileReqDTO) (CatFileR
 		RepoPath: repo.Path,
 		Ref:      reqDTO.Ref,
 		FilePath: reqDTO.FilePath,
+		RefType:  reqDTO.RefType,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -257,6 +258,7 @@ func (s *outerImpl) IndexRepo(ctx context.Context, reqDTO IndexRepoReqDTO) (Inde
 		RepoPath: repo.Path,
 		Ref:      reqDTO.Ref,
 		Dir:      reqDTO.Dir,
+		RefType:  reqDTO.RefType,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -533,7 +535,8 @@ func (s *outerImpl) Gc(ctx context.Context, reqDTO GcReqDTO) error {
 	return nil
 }
 
-func (s *outerImpl) DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (DiffCommitsRespDTO, error) {
+// DiffRefs 比较分支或tag的不同
+func (s *outerImpl) DiffRefs(ctx context.Context, reqDTO DiffRefsReqDTO) (DiffCommitsRespDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return DiffCommitsRespDTO{}, err
 	}
@@ -549,9 +552,11 @@ func (s *outerImpl) DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (
 		return DiffCommitsRespDTO{}, err
 	}
 	refs, err := client.DiffRefs(ctx, reqvo.DiffRefsReq{
-		RepoPath: repo.Path,
-		Target:   reqDTO.Target,
-		Head:     reqDTO.Head,
+		RepoPath:   repo.Path,
+		Target:     reqDTO.Target,
+		TargetType: reqDTO.TargetType,
+		Head:       reqDTO.Head,
+		HeadType:   reqDTO.HeadType,
 	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
@@ -575,9 +580,8 @@ func (s *outerImpl) DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (
 	}
 	ret.DiffNumsStats.Stats, _ = listutil.Map(refs.DiffNumsStats.Stats, func(t reqvo.DiffNumsStatVO) (DiffNumsStatDTO, error) {
 		return DiffNumsStatDTO{
-			RawPath:    t.Path,
-			Path:       path.Base(t.Path),
-			TotalNums:  t.TotalNums,
+			RawPath:    t.RawPath,
+			Path:       t.Path,
 			InsertNums: t.InsertNums,
 			DeleteNums: t.DeleteNums,
 		}, nil
@@ -585,7 +589,7 @@ func (s *outerImpl) DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (
 	ret.Commits, _ = listutil.Map(refs.Commits, func(t reqvo.CommitVO) (CommitDTO, error) {
 		return commit2Dto(t), nil
 	})
-	ret.CanMerge = len(ret.Commits) > 0 && len(ret.ConflictFiles) == 0
+	ret.CanMerge = refs.CanMerge
 	return ret, nil
 }
 
@@ -609,6 +613,7 @@ func (s *outerImpl) Blame(ctx context.Context, reqDTO BlameReqDTO) ([]BlameLineD
 		RepoPath: repo.Path,
 		Ref:      reqDTO.Ref,
 		FilePath: reqDTO.FilePath,
+		RefType:  reqDTO.RefType,
 	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
@@ -644,7 +649,7 @@ func (s *outerImpl) DiffFile(ctx context.Context, reqDTO DiffFileReqDTO) (DiffFi
 		RepoPath: repo.Path,
 		Target:   reqDTO.Target,
 		Head:     reqDTO.Head,
-		FileName: reqDTO.FileName,
+		FilePath: reqDTO.FilePath,
 	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
@@ -667,7 +672,6 @@ func (s *outerImpl) DiffFile(ctx context.Context, reqDTO DiffFileReqDTO) (DiffFi
 	}
 	ret.Lines, _ = listutil.Map(resp.Lines, func(t reqvo.DiffLineVO) (DiffLineDTO, error) {
 		return DiffLineDTO{
-			Index:   t.Index,
 			LeftNo:  t.LeftNo,
 			Prefix:  t.Prefix,
 			RightNo: t.RightNo,
@@ -739,7 +743,6 @@ func (s *outerImpl) ShowDiffTextContent(ctx context.Context, reqDTO ShowDiffText
 	}
 	return listutil.Map(lines, func(t reqvo.DiffLineVO) (DiffLineDTO, error) {
 		return DiffLineDTO{
-			Index:   t.Index,
 			LeftNo:  t.LeftNo,
 			Prefix:  t.Prefix,
 			RightNo: t.RightNo,

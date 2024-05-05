@@ -161,6 +161,14 @@ var (
 			Id:         "pullRequestSrv.ReviewPullRequest",
 			DefaultRet: "评审合并请求",
 		},
+		AddComment: KeyItem{
+			Id:         "pullRequestSrv.AddComment",
+			DefaultRet: "添加评论",
+		},
+		DeleteComment: KeyItem{
+			Id:         "pullRequestSrv.DeleteComment",
+			DefaultRet: "删除评论",
+		},
 	}
 
 	CfgSrvKeysVO = CfgSrvKeys{
@@ -538,6 +546,8 @@ type PullRequestSrvKeys struct {
 	ClosePullRequest  KeyItem
 	MergePullRequest  KeyItem
 	ReviewPullRequest KeyItem
+	AddComment        KeyItem
+	DeleteComment     KeyItem
 }
 
 type CfgSrvKeys struct {

@@ -236,7 +236,7 @@ func listPermOrder(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.PageResp[[]PermApprovalOrderVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[PermApprovalOrderVO]{
 			DataResp: ginutil.DataResp[[]PermApprovalOrderVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     permOrdersDto2Vo(orders),
@@ -280,7 +280,7 @@ func listAppliedPermOrder(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.PageResp[[]PermApprovalOrderVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[PermApprovalOrderVO]{
 			DataResp: ginutil.DataResp[[]PermApprovalOrderVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     permOrdersDto2Vo(orders),
@@ -303,7 +303,7 @@ func listUpdateOrder(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.PageResp[[]UpdateApprovalOrderVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[UpdateApprovalOrderVO]{
 			DataResp: ginutil.DataResp[[]UpdateApprovalOrderVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     updateOrdersDto2Vo(orders),
@@ -346,7 +346,7 @@ func listAppliedUpdateOrder(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.PageResp[[]UpdateApprovalOrderVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[UpdateApprovalOrderVO]{
 			DataResp: ginutil.DataResp[[]UpdateApprovalOrderVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     updateOrdersDto2Vo(orders),
@@ -382,7 +382,7 @@ func listDbPerm(c *gin.Context) {
 				Expired:     t.Expired.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]PermVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[PermVO]{
 			DataResp: ginutil.DataResp[[]PermVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
@@ -433,7 +433,7 @@ func listDbPermByAccount(c *gin.Context) {
 				Expired:     t.Expired.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]PermVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[PermVO]{
 			DataResp: ginutil.DataResp[[]PermVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,

@@ -15,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -68,6 +69,9 @@ func (s *storeImpl) GetAllBranches(ctx context.Context, req reqvo.GetAllBranches
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
+	sort.SliceStable(ret, func(i, j int) bool {
+		return ret[i] < ret[j]
+	})
 	return ret, nil
 }
 
@@ -79,6 +83,9 @@ func (s *storeImpl) GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq) ([]
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
+	sort.SliceStable(ret, func(i, j int) bool {
+		return ret[i] < ret[j]
+	})
 	return ret, nil
 }
 
@@ -96,13 +103,15 @@ func (s *storeImpl) Gc(ctx context.Context, req reqvo.GcReq) error {
 // DiffRefs 对比两个ref差异
 func (s *storeImpl) DiffRefs(ctx context.Context, req reqvo.DiffRefsReq) (reqvo.DiffRefsResp, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	if !git.CheckExists(ctx, repoPath, req.Head) {
+	head := req.HeadType.PackRef(req.Head)
+	target := req.TargetType.PackRef(req.Target)
+	if !git.CheckExists(ctx, repoPath, head) {
 		return reqvo.DiffRefsResp{}, util.InvalidArgsError()
 	}
-	if !git.CheckExists(ctx, repoPath, req.Target) {
+	if !git.CheckExists(ctx, repoPath, target) {
 		return reqvo.DiffRefsResp{}, util.InvalidArgsError()
 	}
-	info, err := git.GetDiffRefsInfo(ctx, repoPath, req.Target, req.Head)
+	info, err := git.GetDiffRefsInfo(ctx, repoPath, target, head)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.DiffRefsResp{}, util.InternalError(err)
@@ -124,7 +133,6 @@ func (s *storeImpl) DiffRefs(ctx context.Context, req reqvo.DiffRefsReq) (reqvo.
 		return reqvo.DiffNumsStatVO{
 			RawPath:    t.Path,
 			Path:       path.Base(t.Path),
-			TotalNums:  t.TotalNums,
 			InsertNums: t.InsertNums,
 			DeleteNums: t.DeleteNums,
 		}, nil
@@ -132,7 +140,26 @@ func (s *storeImpl) DiffRefs(ctx context.Context, req reqvo.DiffRefsReq) (reqvo.
 	ret.Commits, _ = listutil.Map(info.Commits, func(t git.Commit) (reqvo.CommitVO, error) {
 		return commit2Vo(t), nil
 	})
-	ret.CanMerge = len(ret.Commits) > 0 && len(ret.ConflictFiles) == 0
+	ret.CanMerge = info.IsMergeAble()
+	return ret, nil
+}
+
+// CanMerge 两个ref是否可以合并
+func (s *storeImpl) CanMerge(ctx context.Context, req reqvo.CanMergeReq) (bool, error) {
+	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
+	head := req.HeadType.PackRef(req.Head)
+	target := req.TargetType.PackRef(req.Target)
+	if !git.CheckExists(ctx, repoPath, head) {
+		return false, util.InvalidArgsError()
+	}
+	if !git.CheckExists(ctx, repoPath, target) {
+		return false, util.InvalidArgsError()
+	}
+	ret, err := git.CanMerge(ctx, repoPath, target, head)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return false, util.InternalError(err)
+	}
 	return ret, nil
 }
 
@@ -145,7 +172,7 @@ func (s *storeImpl) DiffFile(ctx context.Context, req reqvo.DiffFileReq) (reqvo.
 	if !git.CheckExists(ctx, repoPath, req.Head) {
 		return reqvo.DiffFileResp{}, util.InvalidArgsError()
 	}
-	d, err := git.GetDiffFileDetail(ctx, repoPath, req.Target, req.Head, req.FileName)
+	d, err := git.GetDiffFileDetail(ctx, repoPath, req.Target, req.Head, req.FilePath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.DiffFileResp{}, err
@@ -164,7 +191,6 @@ func (s *storeImpl) DiffFile(ctx context.Context, req reqvo.DiffFileReq) (reqvo.
 	}
 	ret.Lines, _ = listutil.Map(d.Lines, func(t git.DiffLine) (reqvo.DiffLineVO, error) {
 		return reqvo.DiffLineVO{
-			Index:   t.Index,
 			LeftNo:  t.LeftNo,
 			Prefix:  t.Prefix,
 			RightNo: t.RightNo,
@@ -200,7 +226,6 @@ func (s *storeImpl) ShowDiffTextContent(ctx context.Context, req reqvo.ShowDiffT
 	for i, line := range lineList {
 		n := req.StartLine + i
 		ret = append(ret, reqvo.DiffLineVO{
-			Index:   i,
 			LeftNo:  n,
 			Prefix:  " ",
 			RightNo: n,
@@ -248,7 +273,8 @@ func (s *storeImpl) EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq) (
 	if req.Dir == "" {
 		req.Dir = "."
 	}
-	blobs, err := git.LsTreeBlob(ctx, repoPath, req.Ref, req.Dir)
+	ref := req.RefType.PackRef(req.Ref)
+	blobs, err := git.LsTreeBlob(ctx, repoPath, ref, req.Dir)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -265,11 +291,12 @@ func (s *storeImpl) EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq) (
 // CatFile 展示文件内容
 func (s *storeImpl) CatFile(ctx context.Context, req reqvo.CatFileReq) (reqvo.CatFileResp, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	commit, err := git.GetFileLatestCommit(ctx, repoPath, req.Ref, req.FilePath)
+	ref := req.RefType.PackRef(req.Ref)
+	commit, err := git.GetFileLatestCommit(ctx, repoPath, ref, req.FilePath)
 	if err != nil {
 		return reqvo.CatFileResp{}, err
 	}
-	fileMode, content, size, _, err := git.GetFileTextContentByRef(ctx, repoPath, req.Ref, req.FilePath)
+	fileMode, content, size, _, err := git.GetFileTextContentByRef(ctx, repoPath, ref, req.FilePath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.CatFileResp{}, util.InternalError(err)
@@ -288,23 +315,24 @@ func (s *storeImpl) IndexRepo(ctx context.Context, req reqvo.IndexRepoReq) (reqv
 	if req.Dir == "" {
 		req.Dir = "."
 	}
+	ref := req.RefType.PackRef(req.Ref)
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	latestCommit, err := git.GetFileLatestCommit(ctx, repoPath, req.Ref, req.Dir)
+	latestCommit, err := git.GetFileLatestCommit(ctx, repoPath, ref, req.Dir)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.IndexRepoResp{}, util.InternalError(err)
 	}
-	commits, err := git.LsTreeCommit(ctx, repoPath, req.Ref, req.Dir)
+	commits, err := git.LsTreeCommit(ctx, repoPath, ref, req.Dir)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.IndexRepoResp{}, util.InternalError(err)
 	}
-	_, readme, _, hasReadme, err := git.GetFileTextContentByRef(ctx, repoPath, req.Ref, filepath.Join(req.Dir, "README.md"))
+	_, readme, _, hasReadme, err := git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(req.Dir, "README.md"))
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
 	if err == nil && !hasReadme {
-		_, readme, _, hasReadme, err = git.GetFileTextContentByRef(ctx, repoPath, req.Ref, filepath.Join(req.Dir, "readme.md"))
+		_, readme, _, hasReadme, err = git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(req.Dir, "readme.md"))
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 		}
@@ -348,7 +376,7 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 	}
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	env = append(env, util.JoinFields(
-		gitenv.EnvRepoId, req.C.GetHeader("Repo-Id"),
+		gitenv.EnvRepoId, req.C.GetHeader("Repo-PrId"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
 		gitenv.EnvAppUrl, req.C.GetHeader("App-Url"),
@@ -392,7 +420,7 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	env = append(env, util.JoinFields(
 		gitenv.EnvHookUrl, fmt.Sprintf("http://127.0.0.1:%d", common.HttpServerPort()),
-		gitenv.EnvRepoId, req.C.GetHeader("Repo-Id"),
+		gitenv.EnvRepoId, req.C.GetHeader("Repo-PrId"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
 		gitenv.EnvAppUrl, req.C.GetHeader("App-Url"),
@@ -452,7 +480,8 @@ func (s *storeImpl) Merge(ctx context.Context, req reqvo.MergeReq) error {
 // Blame git blame获取每一行提交人和时间
 func (s *storeImpl) Blame(ctx context.Context, req reqvo.BlameReq) ([]reqvo.BlameLineVO, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	lines, err := git.Blame(ctx, repoPath, req.Ref, req.FilePath)
+	ref := req.RefType.PackRef(req.Ref)
+	lines, err := git.Blame(ctx, repoPath, ref, req.FilePath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)

@@ -2,9 +2,7 @@ package branchmd
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/IGLOU-EU/go-wildcard/v2"
-	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"regexp"
 )
@@ -21,7 +19,7 @@ func InsertProtectedBranch(ctx context.Context, reqDTO InsertProtectedBranchReqD
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ProtectedBranch{
 		Branch: reqDTO.Branch,
 		RepoId: reqDTO.RepoId,
-		Cfg:    reqDTO.Cfg.ToString(),
+		Cfg:    &reqDTO.Cfg,
 	})
 	return err
 }
@@ -34,34 +32,29 @@ func DeleteById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
-func GetProtectedBranch(ctx context.Context, repoId int64, branch string) (ProtectedBranchDTO, bool, error) {
+func GetProtectedBranch(ctx context.Context, repoId int64, branch string) (ProtectedBranch, bool, error) {
 	ret := ProtectedBranch{}
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("repo_id = ?", repoId).
 		And("branch = ?", branch).
-		Limit(1).
 		Get(&ret)
-	return protectedBranch2DTO(ret), b, err
+	return ret, b, err
 }
 
-func GetById(ctx context.Context, id int64) (ProtectedBranchDTO, bool, error) {
+func GetById(ctx context.Context, id int64) (ProtectedBranch, bool, error) {
 	ret := ProtectedBranch{}
 	b, err := xormutil.MustGetXormSession(ctx).
 		And("id = ?", id).
 		Get(&ret)
-	return protectedBranch2DTO(ret), b, err
+	return ret, b, err
 }
 
-func ListProtectedBranch(ctx context.Context, repoId int64) ([]ProtectedBranchDTO, error) {
-	session := xormutil.MustGetXormSession(ctx).
-		Where("repo_id = ?", repoId)
+func ListProtectedBranch(ctx context.Context, repoId int64) ([]ProtectedBranch, error) {
 	ret := make([]ProtectedBranch, 0)
-	if err := session.Find(&ret); err != nil {
-		return nil, err
-	}
-	return listutil.Map(ret, func(t ProtectedBranch) (ProtectedBranchDTO, error) {
-		return protectedBranch2DTO(t), nil
-	})
+	err := xormutil.MustGetXormSession(ctx).
+		Where("repo_id = ?", repoId).
+		Find(&ret)
+	return ret, err
 }
 
 func IsProtectedBranch(ctx context.Context, repoId int64, branch string) (ProtectedBranchCfg, bool, error) {
@@ -70,20 +63,9 @@ func IsProtectedBranch(ctx context.Context, repoId int64, branch string) (Protec
 		return ProtectedBranchCfg{}, false, err
 	}
 	for _, pb := range pbList {
-		if wildcard.Match(pb.Branch, branch) {
-			return pb.Cfg, true, nil
+		if wildcard.Match(pb.Branch, branch) && pb.Cfg != nil {
+			return *pb.Cfg, true, nil
 		}
 	}
 	return ProtectedBranchCfg{}, false, nil
-}
-
-func protectedBranch2DTO(b ProtectedBranch) ProtectedBranchDTO {
-	var cfg ProtectedBranchCfg
-	json.Unmarshal([]byte(b.Cfg), &cfg)
-	return ProtectedBranchDTO{
-		Id:     b.Id,
-		RepoId: b.RepoId,
-		Branch: b.Branch,
-		Cfg:    cfg,
-	}
 }

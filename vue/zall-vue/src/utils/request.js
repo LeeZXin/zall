@@ -11,14 +11,7 @@ let redirectTimeout = null;
 const request = axios.create({
     baseURL: "/",
     timeout: 30000
-})
-
-request.defaults.headers.post['Content-Type'] = 'application/json;charset=utf-8'
-request.defaults.transformRequest = [
-    (data) => {
-        return JSON.stringify(data);
-    }
-]
+});
 
 request.interceptors.request.use(
     (config) => {
@@ -39,13 +32,14 @@ request.interceptors.request.use(
 request.interceptors.response.use(
     (response) => {
         let data = response.data
-        if (data.code !== 0) {
-            if (data.message) {
-                message.error(data.message)
-                return Promise.reject(new Error(data.message))
-            }
+        if (data.code === 0) {
+            return data;
         }
-        return data
+        if (data.message) {
+            message.error(data.message)
+            return Promise.reject(new Error(data.message))
+        }
+        return Promise.reject(new Error("返回信息有误"))
     },
     (error) => {
         const status = error.response.status

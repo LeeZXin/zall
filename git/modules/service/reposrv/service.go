@@ -41,7 +41,9 @@ type OuterService interface {
 	AllBranches(context.Context, AllBranchesReqDTO) ([]string, error)
 	AllTags(context.Context, AllTagsReqDTO) ([]string, error)
 	Gc(context.Context, GcReqDTO) error
-	DiffCommits(context.Context, DiffCommitsReqDTO) (DiffCommitsRespDTO, error)
+	// DiffRefs 比较分支或tag的不同
+	DiffRefs(context.Context, DiffRefsReqDTO) (DiffCommitsRespDTO, error)
+	// DiffFile 文件差异内容
 	DiffFile(context.Context, DiffFileReqDTO) (DiffFileRespDTO, error)
 	ShowDiffTextContent(context.Context, ShowDiffTextContentReqDTO) ([]DiffLineDTO, error)
 	HistoryCommits(context.Context, HistoryCommitsReqDTO) (HistoryCommitsRespDTO, error)

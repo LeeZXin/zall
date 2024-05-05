@@ -50,15 +50,14 @@ var (
 )
 
 type DiffNumsStatInfo struct {
-	FileChangeNums int `json:"fileChangeNums"`
-	InsertNums     int `json:"insertNums"`
-	DeleteNums     int `json:"deleteNums"`
-	Stats          []DiffNumsStat
+	FileChangeNums int            `json:"fileChangeNums"`
+	InsertNums     int            `json:"insertNums"`
+	DeleteNums     int            `json:"deleteNums"`
+	Stats          []DiffNumsStat `json:"stats"`
 }
 
 type DiffNumsStat struct {
 	Path       string
-	TotalNums  int
 	InsertNums int
 	DeleteNums int
 }
@@ -87,7 +86,6 @@ func newDiffDetail(filePath string) DiffFileDetail {
 }
 
 type DiffLine struct {
-	Index   int    `json:"index"`
 	LeftNo  int    `json:"leftNo"`
 	Prefix  string `json:"prefix"`
 	RightNo int    `json:"rightNo"`
@@ -108,28 +106,28 @@ func GetFilesDiffCount(ctx context.Context, repoPath, target, head string) (int,
 }
 
 func GetDiffNumsStat(ctx context.Context, repoPath, target, head string) (DiffNumsStatInfo, error) {
-	pipeResult := NewCommand("diff", "--numstat", target+".."+head, "--").RunWithReadPipe(ctx, WithDir(repoPath))
-	ret := make([]DiffNumsStat, 0)
+	pipeResult := NewCommand("diff", "--numstat", target+".."+head).RunWithReadPipe(ctx, WithDir(repoPath))
+	stats := make([]DiffNumsStat, 0)
 	insertNumsTotal := 0
 	deleteNumsTotal := 0
 	if err := pipeResult.RangeStringLines(func(_ int, line string) (bool, error) {
 		fields := strings.Fields(line)
 		if len(fields) == 3 {
-			deleteNums, err := strconv.Atoi(fields[0])
-			if err != nil {
-				return false, fmt.Errorf("parseInt err: %v", deleteNums)
+			var (
+				deleteNums, insertNums int
+			)
+			if fields[0] != "-" {
+				deleteNums, _ = strconv.Atoi(fields[0])
 			}
-			insertNums, err := strconv.Atoi(fields[1])
-			if err != nil {
-				return false, fmt.Errorf("parseInt err: %v", insertNums)
+			if fields[1] != "-" {
+				insertNums, _ = strconv.Atoi(fields[1])
 			}
 			insertNumsTotal += insertNums
 			deleteNumsTotal += deleteNums
-			ret = append(ret, DiffNumsStat{
+			stats = append(stats, DiffNumsStat{
 				Path:       fields[2],
 				InsertNums: insertNums,
 				DeleteNums: deleteNums,
-				TotalNums:  insertNums + deleteNums,
 			})
 		}
 		return true, nil
@@ -137,10 +135,10 @@ func GetDiffNumsStat(ctx context.Context, repoPath, target, head string) (DiffNu
 		return DiffNumsStatInfo{}, err
 	}
 	return DiffNumsStatInfo{
-		FileChangeNums: len(ret),
+		FileChangeNums: len(stats),
 		InsertNums:     insertNumsTotal,
 		DeleteNums:     deleteNumsTotal,
-		Stats:          ret,
+		Stats:          stats,
 	}, nil
 }
 
@@ -249,7 +247,9 @@ func parseHunks(reader *bufio.Reader) ([]DiffLine, error) {
 	deletionNums := 0
 	ret := make([]DiffLine, 0)
 	var (
-		index, leftNo, rightNo int
+		leftNo, rightNo, index int
+
+		lastLeftNo = -1
 	)
 	for {
 		line, isPrefix, err := reader.ReadLine()
@@ -269,35 +269,45 @@ func parseHunks(reader *bufio.Reader) ([]DiffLine, error) {
 				return nil, err
 			}
 			ret = append(ret, DiffLine{
-				Index:   index,
-				LeftNo:  leftNo - 1,
+				LeftNo:  -1,
 				Prefix:  TagLinePrefix,
-				RightNo: rightNo - 1,
+				RightNo: -1,
 				Text:    lineStr,
 			})
-		} else if strings.HasPrefix(lineStr, "+") {
+		} else if strings.HasPrefix(lineStr, InsertLinePrefix) {
+			left := lastLeftNo
+			if index > 0 && ret[index-1].Prefix == InsertLinePrefix {
+				left = ret[index-1].LeftNo + 1
+			}
 			ret = append(ret, DiffLine{
-				Index:   index,
-				LeftNo:  leftNo,
+				LeftNo:  left,
 				Prefix:  InsertLinePrefix,
 				RightNo: rightNo,
 				Text:    lineStr[1:],
 			})
 			rightNo++
 			insertionNums++
-		} else if strings.HasPrefix(lineStr, "-") {
+		} else if strings.HasPrefix(lineStr, DeleteLinePrefix) {
+			right := rightNo
+			if index > 0 {
+				if ret[index-1].Prefix == DeleteLinePrefix {
+					right = ret[index-1].RightNo + 1
+				} else {
+					lastLeftNo = leftNo
+				}
+			} else {
+				lastLeftNo = leftNo
+			}
 			ret = append(ret, DiffLine{
-				Index:   index,
 				LeftNo:  leftNo,
 				Prefix:  DeleteLinePrefix,
-				RightNo: rightNo,
+				RightNo: right,
 				Text:    lineStr[1:],
 			})
 			leftNo++
 			deletionNums++
 		} else {
 			ret = append(ret, DiffLine{
-				Index:   index,
 				LeftNo:  leftNo,
 				Prefix:  NormalLinePrefix,
 				RightNo: rightNo,
@@ -305,6 +315,7 @@ func parseHunks(reader *bufio.Reader) ([]DiffLine, error) {
 			})
 			leftNo++
 			rightNo++
+			lastLeftNo = leftNo
 		}
 		index++
 	}

@@ -18,6 +18,8 @@ type Store interface {
 	Gc(context.Context, reqvo.GcReq) error
 	// DiffRefs 对比两个ref差异
 	DiffRefs(context.Context, reqvo.DiffRefsReq) (reqvo.DiffRefsResp, error)
+	// CanMerge 两个ref是否可以合并
+	CanMerge(context.Context, reqvo.CanMergeReq) (bool, error)
 	// DiffFile 对比两个分支单个文件差异
 	DiffFile(context.Context, reqvo.DiffFileReq) (reqvo.DiffFileResp, error)
 	// GetRepoSize 获取仓库大小

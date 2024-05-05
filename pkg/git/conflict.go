@@ -53,13 +53,13 @@ func (u *unmergedFile) IsConflict() bool {
 	return false
 }
 
-func findConflictFiles(ctx context.Context, repoPath string, pr DiffRefsInfo) ([]string, error) {
+func findConflictFiles(ctx context.Context, repoPath string, originHead, targetCommitId, mergeBase string) ([]string, error) {
 	tempDir := filepath.Join(TempDir(), "pull-"+util.RandomIdWithTime())
 	defer util.RemoveAll(tempDir)
-	if err := prepare4Merge(ctx, repoPath, tempDir, pr); err != nil {
+	if err := prepare4Merge(ctx, repoPath, tempDir, originHead, targetCommitId); err != nil {
 		return nil, err
 	}
-	_, err := NewCommand("read-tree", "-m", pr.MergeBase, MergeBranch, TrackingBranch).
+	_, err := NewCommand("read-tree", "-m", mergeBase, MergeBranch, TrackingBranch).
 		Run(ctx, WithDir(tempDir))
 	if err != nil {
 		return nil, err

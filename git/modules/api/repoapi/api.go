@@ -10,6 +10,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
 	"net/http"
 	"time"
 )
@@ -20,9 +21,9 @@ func InitApi() {
 		group := e.Group("/api/gitRepo", apisession.CheckLogin)
 		{
 			// 仓库信息
-			group.POST("/get", getRepo)
+			group.GET("/get/:repoId", getRepo)
 			// 基本信息
-			group.POST("/simpleInfo", getSimpleInfo)
+			group.GET("/simpleInfo/:repoId", getSimpleInfo)
 			// 获取模版列表
 			group.GET("/allGitIgnoreTemplateList", allGitIgnoreTemplateList)
 			// 初始化仓库
@@ -30,27 +31,27 @@ func InitApi() {
 			// 删除仓库
 			group.POST("/delete", deleteRepo)
 			// 展示仓库列表
-			group.POST("/list", listRepo)
+			group.GET("/list/:teamId", listRepo)
 			// 展示仓库主页
-			group.POST("/index", indexRepo)
+			group.GET("/index", indexRepo)
 			// 展示更多文件列表
-			group.POST("/entries", entriesRepo)
+			group.GET("/entries", entriesRepo)
 			// 展示单个文件内容
-			group.POST("/catFile", catFile)
+			group.GET("/catFile", catFile)
 			// 展示仓库所有分支
-			group.POST("/allBranches", allBranches)
+			group.GET("/allBranches/:repoId", allBranches)
 			// 展示仓库所有tag
-			group.POST("/allTags", allTags)
+			group.GET("/allTags/:repoId", allTags)
 			// gc
-			group.POST("/gc", gc)
+			group.POST("/gc/:repoId", gc)
 			// 提交差异
-			group.POST("/diffCommits", diffCommits)
+			group.GET("/diffRefs", diffRefs)
 			// 展示提交文件差异
-			group.POST("/diffFile", diffFile)
+			group.GET("/diffFile", diffFile)
 			// 展示文件内容
-			group.POST("/showDiffTextContent", showDiffTextContent)
+			group.GET("/showDiffTextContent", showDiffTextContent)
 			// 历史提交
-			group.POST("/historyCommits", historyCommits)
+			group.GET("/historyCommits", historyCommits)
 			// 获取令牌列表
 			group.POST("/listRepoToken", listRepoToken)
 			// 删除访问令牌
@@ -62,101 +63,86 @@ func InitApi() {
 			// 迁移项目组
 			group.POST("/transferTeam", transferTeam)
 			// 获取每一行提交信息
-			group.POST("/blame", blame)
+			group.GET("/blame", blame)
 		}
 	})
 }
 
 func getRepo(c *gin.Context) {
-	var req GetRepoReqVO
-	if util.ShouldBindJSON(&req, c) {
-		repo, _, err := reposrv.Outer.GetRepo(c, reposrv.GetRepoReqDTO{
-			RepoId:   req.RepoId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		c.JSON(http.StatusOK, ginutil.DataResp[RepoVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     repo2VO(repo),
-		})
+	repo, _, err := reposrv.Outer.GetRepo(c, reposrv.GetRepoReqDTO{
+		RepoId:   getRepoId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	c.JSON(http.StatusOK, ginutil.DataResp[RepoVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     repo2VO(repo),
+	})
 }
 
 func getSimpleInfo(c *gin.Context) {
-	var req GetSimpleInfoReqVO
-	if util.ShouldBindJSON(&req, c) {
-		info, err := reposrv.Outer.SimpleInfo(c, reposrv.SimpleInfoReqDTO{
-			RepoId:   req.RepoId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		c.JSON(http.StatusOK, ginutil.DataResp[SimpleInfoVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data: SimpleInfoVO{
-				Branches:     info.Branches,
-				Tags:         info.Tags,
-				CloneHttpUrl: info.CloneHttpUrl,
-				CloneSshUrl:  info.CloneSshUrl,
-			},
-		})
+	info, err := reposrv.Outer.SimpleInfo(c, reposrv.SimpleInfoReqDTO{
+		RepoId:   getRepoId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	c.JSON(http.StatusOK, ginutil.DataResp[SimpleInfoVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: SimpleInfoVO{
+			Branches:     info.Branches,
+			Tags:         info.Tags,
+			CloneHttpUrl: info.CloneHttpUrl,
+			CloneSshUrl:  info.CloneSshUrl,
+		},
+	})
 }
 
 func allBranches(c *gin.Context) {
-	var req AllBranchesReqVO
-	if util.ShouldBindJSON(&req, c) {
-		branches, err := reposrv.Outer.AllBranches(c, reposrv.AllBranchesReqDTO{
-			RepoId:   req.RepoId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     branches,
-		})
+	branches, err := reposrv.Outer.AllBranches(c, reposrv.AllBranchesReqDTO{
+		RepoId:   getRepoId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     branches,
+	})
 }
 
 func allTags(c *gin.Context) {
-	var req AllTagsReqVO
-	if util.ShouldBindJSON(&req, c) {
-		branches, err := reposrv.Outer.AllTags(c, reposrv.AllTagsReqDTO{
-			RepoId:   req.RepoId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     branches,
-		})
+	branches, err := reposrv.Outer.AllTags(c, reposrv.AllTagsReqDTO{
+		RepoId:   getRepoId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     branches,
+	})
 }
 
 func gc(c *gin.Context) {
-	var req GcReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.Gc(c, reposrv.GcReqDTO{
-			RepoId:   req.RepoId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+	err := reposrv.Outer.Gc(c, reposrv.GcReqDTO{
+		RepoId:   getRepoId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
 // allGitIgnoreTemplateList 获取模版列表
@@ -171,11 +157,12 @@ func allGitIgnoreTemplateList(c *gin.Context) {
 // indexRepo 代码详情页
 func indexRepo(c *gin.Context) {
 	var req IndexRepoReqVO
-	if util.ShouldBindJSON(&req, c) {
+	if util.ShouldBindQuery(&req, c) {
 		respDTO, err := reposrv.Outer.IndexRepo(c, reposrv.IndexRepoReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			Dir:      req.Dir,
+			RefType:  req.RefType,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -197,11 +184,12 @@ func indexRepo(c *gin.Context) {
 // entriesRepo 展示文件列表
 func entriesRepo(c *gin.Context) {
 	var req EntriesRepoReqVO
-	if util.ShouldBindJSON(&req, c) {
+	if util.ShouldBindQuery(&req, c) {
 		blobs, err := reposrv.Outer.EntriesRepo(c, reposrv.EntriesRepoReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			Dir:      req.Dir,
+			RefType:  req.RefType,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -232,8 +220,8 @@ func commitDto2Vo(dto reposrv.CommitDTO) CommitVO {
 			Account: dto.Committer.Account,
 			Email:   dto.Committer.Email,
 		},
-		AuthoredTime:  util.ReadableTimeComparingNow(time.UnixMilli(dto.AuthoredTime)),
-		CommittedTime: util.ReadableTimeComparingNow(time.UnixMilli(dto.CommittedTime)),
+		AuthoredTime:  time.UnixMilli(dto.AuthoredTime).Format(time.DateTime),
+		CommittedTime: time.UnixMilli(dto.CommittedTime).Format(time.DateTime),
 		CommitMsg:     dto.CommitMsg,
 		CommitId:      dto.CommitId,
 		ShortId:       dto.ShortId,
@@ -289,24 +277,22 @@ func deleteRepo(c *gin.Context) {
 }
 
 func listRepo(c *gin.Context) {
-	var req ListRepoReqVO
-	if util.ShouldBindJSON(&req, c) {
-		repoList, err := reposrv.Outer.ListRepo(c, reposrv.ListRepoReqDTO{
-			TeamId:   req.TeamId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		data, _ := listutil.Map(repoList, func(t repomd.Repo) (RepoVO, error) {
-			return repo2VO(t), nil
-		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]RepoVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     data,
-		})
+	teamId := cast.ToInt64(c.Param("teamId"))
+	repoList, err := reposrv.Outer.ListRepo(c, reposrv.ListRepoReqDTO{
+		TeamId:   teamId,
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	data, _ := listutil.Map(repoList, func(t repomd.Repo) (RepoVO, error) {
+		return repo2VO(t), nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]RepoVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }
 
 func repo2VO(t repomd.Repo) RepoVO {
@@ -327,11 +313,12 @@ func repo2VO(t repomd.Repo) RepoVO {
 
 func catFile(c *gin.Context) {
 	var req CatFileReqVO
-	if util.ShouldBindJSON(&req, c) {
+	if util.ShouldBindQuery(&req, c) {
 		resp, err := reposrv.Outer.CatFile(c, reposrv.CatFileReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			FilePath: req.FilePath,
+			RefType:  req.RefType,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -352,11 +339,12 @@ func catFile(c *gin.Context) {
 
 func blame(c *gin.Context) {
 	var req BlameReqVO
-	if util.ShouldBindJSON(&req, c) {
+	if util.ShouldBindQuery(&req, c) {
 		lines, err := reposrv.Outer.Blame(c, reposrv.BlameReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			FilePath: req.FilePath,
+			RefType:  req.RefType,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -378,19 +366,19 @@ func blame(c *gin.Context) {
 
 func diffFile(c *gin.Context) {
 	var req DiffFileReqVO
-	if util.ShouldBindJSON(&req, c) {
+	if util.ShouldBindQuery(&req, c) {
 		respDTO, err := reposrv.Outer.DiffFile(c, reposrv.DiffFileReqDTO{
 			RepoId:   req.RepoId,
 			Target:   req.Target,
 			Head:     req.Head,
-			FileName: req.FileName,
+			FilePath: req.FilePath,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		ret := DiffFileRespVO{
+		ret := DiffFileVO{
 			FilePath:    respDTO.FilePath,
 			OldMode:     respDTO.OldMode,
 			Mode:        respDTO.Mode,
@@ -404,32 +392,35 @@ func diffFile(c *gin.Context) {
 		}
 		ret.Lines, _ = listutil.Map(respDTO.Lines, func(t reposrv.DiffLineDTO) (DiffLineVO, error) {
 			return DiffLineVO{
-				Index:   t.Index,
 				LeftNo:  t.LeftNo,
 				Prefix:  t.Prefix,
 				RightNo: t.RightNo,
 				Text:    t.Text,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ret)
+		c.JSON(http.StatusOK, ginutil.DataResp[DiffFileVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     ret,
+		})
 	}
 }
 
-func diffCommits(c *gin.Context) {
-	var req PrepareMergeReqVO
-	if util.ShouldBindJSON(&req, c) {
-		respDTO, err := reposrv.Outer.DiffCommits(c, reposrv.DiffCommitsReqDTO{
-			RepoId:   req.RepoId,
-			Target:   req.Target,
-			Head:     req.Head,
-			Operator: apisession.MustGetLoginUser(c),
+func diffRefs(c *gin.Context) {
+	var req DiffRefsReqVO
+	if util.ShouldBindQuery(&req, c) {
+		respDTO, err := reposrv.Outer.DiffRefs(c, reposrv.DiffRefsReqDTO{
+			RepoId:     req.RepoId,
+			Target:     req.Target,
+			TargetType: req.TargetType,
+			Head:       req.Head,
+			HeadType:   req.HeadType,
+			Operator:   apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		respVO := PrepareMergeRespVO{
-			BaseResp:     ginutil.DefaultSuccessResp,
+		respVO := DiffRefsVO{
 			Target:       respDTO.Target,
 			Head:         respDTO.Head,
 			TargetCommit: commitDto2Vo(respDTO.TargetCommit),
@@ -450,18 +441,20 @@ func diffCommits(c *gin.Context) {
 			return DiffNumsStatVO{
 				RawPath:    t.RawPath,
 				Path:       t.Path,
-				TotalNums:  t.TotalNums,
 				InsertNums: t.InsertNums,
 				DeleteNums: t.DeleteNums,
 			}, nil
 		})
-		c.JSON(http.StatusOK, respVO)
+		c.JSON(http.StatusOK, ginutil.DataResp[DiffRefsVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     respVO,
+		})
 	}
 }
 
 func showDiffTextContent(c *gin.Context) {
 	var req ShowDiffTextContentReqVO
-	if util.ShouldBindJSON(&req, c) {
+	if util.ShouldBindQuery(&req, c) {
 		lines, err := reposrv.Outer.ShowDiffTextContent(c, reposrv.ShowDiffTextContentReqDTO{
 			RepoId:    req.RepoId,
 			CommitId:  req.CommitId,
@@ -477,7 +470,6 @@ func showDiffTextContent(c *gin.Context) {
 		}
 		data, _ := listutil.Map(lines, func(t reposrv.DiffLineDTO) (DiffLineVO, error) {
 			return DiffLineVO{
-				Index:   t.Index,
 				LeftNo:  t.LeftNo,
 				Prefix:  t.Prefix,
 				RightNo: t.RightNo,
@@ -493,7 +485,7 @@ func showDiffTextContent(c *gin.Context) {
 
 func historyCommits(c *gin.Context) {
 	var req HistoryCommitsReqVO
-	if util.ShouldBindJSON(&req, c) {
+	if util.ShouldBindQuery(&req, c) {
 		respDTO, err := reposrv.Outer.HistoryCommits(c, reposrv.HistoryCommitsReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
@@ -593,4 +585,8 @@ func transferTeam(c *gin.Context) {
 		}
 		util.DefaultOkResponse(c)
 	}
+}
+
+func getRepoId(c *gin.Context) int64 {
+	return cast.ToInt64(c.Param("repoId"))
 }

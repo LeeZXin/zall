@@ -3,70 +3,89 @@
     <div class="header">
       <span class="arrow" @click="clickArrow">
         <right-outlined v-show="!showCode" />
-        <down-outlined v-show="showCode"/>
+        <down-outlined v-show="showCode" />
       </span>
       <span style="color:green;margin-right:8px">
-        <span>7</span>
+        <span>{{props.stat.insertNums}}</span>
         <span>++</span>
       </span>
       <span style="color:red;margin-right:8px">
-        <span>6</span>
+        <span>{{props.stat.deleteNums}}</span>
         <span>--</span>
       </span>
-      <span>dfdsf.json</span>
+      <span>{{props.stat.rawPath}}</span>
     </div>
-    <table v-show="showCode">
+    <div class="is-binary-text" v-show="showCode && loadData && isBinary">二进制文件</div>
+    <table v-show="showCode && loadData && !isBinary">
       <colgroup>
         <col width="44" />
         <col />
         <col width="44" />
         <col />
       </colgroup>
-      <tr>
-        <td class="blob-num blob-num-deletion">1</td>
-        <td class="blob-code blob-code-deletion">
-          <span class="blob-code-inner blob-code-marker" data-code-marker="-">
-            <span
-              class="x"
-            >fucj youfucj youfucj youfucj youfucj youfucj youfucj youfucj youfucj youfucj youfucj youfucj you</span>
-          </span>
-        </td>
-        <td class="blob-num blob-num-addition">1</td>
-        <td class="blob-code blob-code-addition">
-          <span class="blob-code-inner blob-code-marker" data-code-marker="+">
-            <span class="x">fuc</span>
-          </span>
-        </td>
-      </tr>
-      <tr>
-        <td class="blob-num blob-num-context">2</td>
-        <td class="blob-code blob-code-context split-side-left">
-          <span class="blob-code-inner blob-code-marker" data-code-marker>yes</span>
-        </td>
-        <td class="blob-num blob-num-context">2</td>
-        <td class="blob-code blob-code-context split-side-right">
-          <span class="blob-code-inner blob-code-marker" data-code-marker>yes</span>
-        </td>
-      </tr>
-      <tr>
-        <td class="blob-num blob-num-context">3</td>
-        <td class="blob-code blob-code-context split-side-left">
-          <span class="blob-code-inner blob-code-marker" data-code-marker></span>
-        </td>
-        <td class="blob-num blob-num-context">3</td>
-        <td class="blob-code blob-code-context split-side-right">
-          <span class="blob-code-inner blob-code-marker" data-code-marker></span>
-        </td>
-      </tr>
-      <tr>
-        <td class="blob-num blob-num-hunk" colspan="1">
-          <column-height-outlined />
-        </td>
-        <td
-          class="blob-code blob-code-inner blob-code-hunk"
-          colspan="3"
-          align="left"
-        >@@ 1,23 2,34 @@</td>
+      <tr v-for="(item, index) in diffLines" v-bind:key="index">
+        <template v-if="item.prefix === '-'">
+          <td class="blob-num blob-num-deletion">{{item.leftNo}}</td>
+          <td class="blob-code blob-code-deletion">
+            <span class="blob-code-inner blob-code-marker" data-code-marker="-">
+              <span class="x">{{item.text}}</span>
+            </span>
+          </td>
+          <td class="blob-num blob-num-deletion"></td>
+          <td class="blob-code blob-code-deletion">
+            <span class="blob-code-inner blob-code-marker">
+              <span class="x"></span>
+            </span>
+          </td>
+        </template>
+        <template v-else-if="item.prefix === '*'">
+          <td class="blob-num blob-num-deletion">{{item.leftNo}}</td>
+          <td class="blob-code blob-code-deletion">
+            <span class="blob-code-inner blob-code-marker" data-code-marker="-">
+              <span class="x">{{item.text}}</span>
+            </span>
+          </td>
+          <td class="blob-num blob-num-addition">{{item.rightNo}}</td>
+          <td class="blob-code blob-code-addition">
+            <span class="blob-code-inner blob-code-marker" data-code-marker="+">
+              <span class="x">{{item.updateText}}</span>
+            </span>
+          </td>
+        </template>
+        <template v-else-if="item.prefix === '+'">
+          <td class="blob-num blob-num-addition"></td>
+          <td class="blob-code blob-code-addition">
+            <span class="blob-code-inner">
+              <span class="x"></span>
+            </span>
+          </td>
+          <td class="blob-num blob-num-addition">{{item.rightNo}}</td>
+          <td class="blob-code blob-code-addition">
+            <span class="blob-code-inner blob-code-marker" data-code-marker="+">
+              <span class="x">{{item.text}}</span>
+            </span>
+          </td>
+        </template>
+        <template v-else-if="item.prefix === ' '">
+          <td class="blob-num blob-num-context">{{item.leftNo}}</td>
+          <td class="blob-code blob-code-context split-side-left">
+            <span class="blob-code-inner blob-code-marker" data-code-marker>{{item.text}}</span>
+          </td>
+          <td class="blob-num blob-num-context">{{item.rightNo}}</td>
+          <td class="blob-code blob-code-context split-side-right">
+            <span class="blob-code-inner blob-code-marker" data-code-marker>{{item.text}}</span>
+          </td>
+        </template>
+        <template v-else>
+          <td class="blob-num blob-num-hunk" colspan="1">
+            <column-height-outlined />
+          </td>
+          <td
+            class="blob-code blob-code-inner blob-code-hunk"
+            colspan="3"
+            align="left"
+          >{{item.text}}</td>
+        </template>
       </tr>
     </table>
   </div>
@@ -77,11 +96,58 @@ import {
   RightOutlined,
   DownOutlined
 } from "@ant-design/icons-vue";
-import { ref } from "vue";
+import { ref, defineProps } from "vue";
+import { diffFileRequest } from "@/api/git/repoApi";
 const showCode = ref(false);
+const loadData = ref(false);
+const isBinary = ref(false);
+const diffLines = ref([]);
 const clickArrow = () => {
-    showCode.value = !showCode.value;
-}
+  let show = !showCode.value;
+  if (show && !loadData.value) {
+    loadData.value = true;
+    diffFileRequest({
+      repoId: props.repoId,
+      target: props.target,
+      head: props.head,
+      filePath: props.stat.rawPath
+    }).then(res => {
+      isBinary.value = res.data.isBinary;
+      let lines = res.data.lines;
+      let addMap = {};
+      let delMap = {};
+      lines.forEach(item => {
+        if (item.prefix === "+") {
+          addMap[item.rightNo] = item;
+        } else if (item.prefix === "-") {
+          delMap[item.leftNo] = item;
+        }
+      });
+      let ret = [];
+      lines.forEach(item => {
+        let line = { ...item };
+        if (item.prefix === "-") {
+          let add = addMap[item.rightNo];
+          if (add) {
+            line.updateText = add.text;
+            line.prefix = "*";
+          }
+          ret.push(line);
+        } else if (item.prefix === "+") {
+          let del = delMap[item.leftNo];
+          if (!del) {
+            ret.push(line);
+          }
+        } else {
+          ret.push(line);
+        }
+      });
+      diffLines.value = ret;
+    });
+  }
+  showCode.value = show;
+};
+const props = defineProps(["stat", "head", "target", "repoId"]);
 </script>
 <style scoped>
 .diff-table {
@@ -93,6 +159,10 @@ const clickArrow = () => {
   padding: 0 10px;
   line-height: 32px;
   font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+  white-space: nowrap;
 }
 .diff-table * {
   position: static;
@@ -193,5 +263,12 @@ const clickArrow = () => {
   cursor: pointer;
   margin-right: 8px;
   font-size: 10px;
+}
+.is-binary-text {
+  border-top: 1px solid #d9d9d9;
+  line-height: 80px;
+  font-size: 14px;
+  text-align: center;
+  width: 100%;
 }
 </style>

@@ -89,3 +89,10 @@ ul {
 .op-list>li:hover {
     background-color: #f0f0f0;
 }
+
+.no-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    word-break: break-all;
+}

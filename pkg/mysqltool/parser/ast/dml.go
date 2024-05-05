@@ -845,7 +845,7 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.From != nil {
 		ctx.WriteKeyWord(" FROM ")
 		if err := n.From.Restore(ctx); err != nil {
-			errors.Annotate(err, "An error occurred while restore SelectStmt.From")
+			errors.Annotate(err, "An error occurred while restore SelectStmt.FromId")
 		}
 	}
 

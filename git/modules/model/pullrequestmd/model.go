@@ -1,6 +1,7 @@
 package pullrequestmd
 
 import (
+	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
 )
@@ -8,18 +9,29 @@ import (
 const (
 	PullRequestTableName = "zgit_pull_request"
 	ReviewTableName      = "zgit_pull_request_review"
+	TimelineTableName    = "zgit_pull_request_timeline"
 )
 
 type PrStatus int
 
 const (
-	PrOpenStatus PrStatus = iota + 1
+	PrAllStatus PrStatus = iota
+	PrOpenStatus
 	PrClosedStatus
 	PrMergedStatus
 )
 
 func (s PrStatus) Int() int {
 	return int(s)
+}
+
+func (s PrStatus) IsValid() bool {
+	switch s {
+	case PrAllStatus, PrOpenStatus, PrClosedStatus, PrMergedStatus:
+		return true
+	default:
+		return false
+	}
 }
 
 func (s PrStatus) Readable() string {
@@ -67,16 +79,24 @@ func (s ReviewStatus) IsValid() bool {
 }
 
 type PullRequest struct {
-	Id             int64     `json:"id" xorm:"pk autoincr"`
-	RepoId         int64     `json:"repoId"`
-	Target         string    `json:"target"`
-	TargetCommitId string    `json:"targetCommitId"`
-	Head           string    `json:"head"`
-	HeadCommitId   string    `json:"headCommitId"`
-	PrStatus       PrStatus  `json:"prStatus"`
-	CreateBy       string    `json:"createBy"`
-	Created        time.Time `json:"created" xorm:"created"`
-	Updated        time.Time `json:"updated" xorm:"updated"`
+	Id             int64       `json:"id" xorm:"pk autoincr"`
+	RepoId         int64       `json:"repoId"`
+	Target         string      `json:"target"`
+	TargetType     git.RefType `json:"targetType"`
+	TargetCommitId string      `json:"targetCommitId"`
+	Head           string      `json:"head"`
+	HeadType       git.RefType `json:"headType"`
+	HeadCommitId   string      `json:"headCommitId"`
+	PrStatus       PrStatus    `json:"prStatus"`
+	CreateBy       string      `json:"createBy"`
+	CloseBy        string      `json:"closeBy"`
+	MergeBy        string      `json:"mergeBy"`
+	PrTitle        string      `json:"prTitle"`
+	CommentCount   int         `json:"commentCount"`
+	Created        time.Time   `json:"created" xorm:"created"`
+	Closed         *time.Time  `json:"closed"`
+	Merged         *time.Time  `json:"merged"`
+	Updated        time.Time   `json:"updated" xorm:"updated"`
 }
 
 func (*PullRequest) TableName() string {
@@ -95,4 +115,16 @@ type Review struct {
 
 func (*Review) TableName() string {
 	return ReviewTableName
+}
+
+type Timeline struct {
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	PrId    int64     `json:"prId"`
+	Action  *Action   `json:"action"`
+	Account string    `json:"account"`
+	Created time.Time `json:"created" xorm:"created"`
+}
+
+func (*Timeline) TableName() string {
+	return TimelineTableName
 }

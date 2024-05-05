@@ -40,13 +40,35 @@ func HandleApiErr(err error, c *gin.Context) {
 func ShouldBindJSON(obj any, c *gin.Context) bool {
 	err := c.ShouldBindJSON(obj)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, ginutil.BaseResp{
-			Code:    apicode.BadRequestCode.Int(),
-			Message: i18n.GetByKey(i18n.SystemInvalidArgs),
-		})
+		ReturnHttpBadRequest(c)
 		return false
 	}
 	return true
+}
+
+func ShouldBindQuery(obj any, c *gin.Context) bool {
+	err := ginutil.BindQuery(c, obj)
+	if err != nil {
+		ReturnHttpBadRequest(c)
+		return false
+	}
+	return true
+}
+
+func ShouldBindParams(obj any, c *gin.Context) bool {
+	err := ginutil.BindParams(c, obj)
+	if err != nil {
+		ReturnHttpBadRequest(c)
+		return false
+	}
+	return true
+}
+
+func ReturnHttpBadRequest(c *gin.Context) {
+	c.JSON(http.StatusBadRequest, ginutil.BaseResp{
+		Code:    apicode.BadRequestCode.Int(),
+		Message: i18n.GetByKey(i18n.SystemInvalidArgs),
+	})
 }
 
 func DefaultOkResponse(c *gin.Context) {

@@ -49,7 +49,7 @@
   </a-popover>
 </template>
 <script setup>
-import { ref, defineEmits, defineProps } from "vue";
+import { ref, defineEmits, defineProps, watch } from "vue";
 import {
   SearchOutlined,
   BranchesOutlined,
@@ -109,6 +109,21 @@ const tagInputChange = () => {
     });
   }
 };
+watch(
+  () => props.branches,
+  newValue => {
+    branches.value = newValue;
+    if (newValue && newValue.length > 0) {
+      select(newValue[0]);
+    }
+  }
+);
+watch(
+  () => props.tags,
+  newValue => {
+    tags.value = newValue;
+  }
+);
 </script>
 <style scoped>
 .branch-tag-select {

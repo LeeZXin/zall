@@ -17,10 +17,37 @@ import (
 	"time"
 )
 
+type RefType string
+
 const (
-	CommitType = "commit"
-	TagType    = "tag"
+	BranchType RefType = "branch"
+	CommitType RefType = "commit"
+	TagType    RefType = "tag"
 )
+
+func (t RefType) IsValid() bool {
+	switch t {
+	case BranchType, CommitType, TagType:
+		return true
+	default:
+		return false
+	}
+}
+
+func (t RefType) PackRef(ref string) string {
+	switch t {
+	case BranchType:
+		return BranchPrefix + ref
+	case TagType:
+		return TagPrefix + ref
+	default:
+		return ref
+	}
+}
+
+func (t RefType) String() string {
+	return string(t)
+}
 
 var (
 	ShortCommitIdPattern = regexp.MustCompile(`^[0-9a-f]{7}$`)
@@ -129,7 +156,7 @@ func GetCommitByCommitId(ctx context.Context, repoPath string, commitId string) 
 			break
 		}
 		switch typ {
-		case CommitType:
+		case CommitType.String():
 			return genCommit(io.LimitReader(reader, size), &c)
 		default:
 			return fmt.Errorf("unsupported type: %s", typ)
@@ -164,7 +191,7 @@ func GetCommitByTag(ctx context.Context, repoPath string, tag string) (c Commit,
 			break
 		}
 		switch typ {
-		case TagType:
+		case TagType.String():
 			t := &Tag{
 				Id:  id,
 				Tag: tag,

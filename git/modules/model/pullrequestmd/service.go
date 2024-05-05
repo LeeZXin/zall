@@ -2,55 +2,73 @@ package pullrequestmd
 
 import (
 	"context"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
+	"time"
 )
+
+func IsPrTitleValid(title string) bool {
+	return len(title) > 0 && len(title) <= 255
+}
 
 func InsertPullRequest(ctx context.Context, reqDTO InsertPullRequestReqDTO) (PullRequest, error) {
 	ret := PullRequest{
-		RepoId:   reqDTO.RepoId,
-		Target:   reqDTO.Target,
-		Head:     reqDTO.Head,
-		PrStatus: reqDTO.PrStatus,
-		CreateBy: reqDTO.CreateBy,
+		RepoId:       reqDTO.RepoId,
+		Target:       reqDTO.Target,
+		TargetType:   reqDTO.TargetType,
+		Head:         reqDTO.Head,
+		HeadType:     reqDTO.HeadType,
+		PrStatus:     reqDTO.PrStatus,
+		CreateBy:     reqDTO.CreateBy,
+		PrTitle:      reqDTO.Title,
+		CommentCount: reqDTO.CommentCount,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
 }
 
-func ExistsOpenStatusPrByRepoIdAndRef(ctx context.Context, reqDTO ExistsOpenStatusPrByRepoIdAndRefReqDTO) (bool, error) {
+func ExistsPrByRepoIdAndRef(ctx context.Context, reqDTO ExistsPrByRepoIdAndRefReqDTO) (bool, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("repo_id = ?", reqDTO.RepoId).
 		And("target = ?", reqDTO.Target).
 		And("head = ?", reqDTO.Head).
-		And("pr_status = ?", PrOpenStatus).
+		And("pr_status = ?", reqDTO.Status).
+		And("target_type = ?", reqDTO.TargetType).
+		And("head_type = ?", reqDTO.HeadType).
 		Exist(new(PullRequest))
 }
 
-func UpdatePrStatus(ctx context.Context, id int64, oldStatus, newStatus PrStatus) (bool, error) {
+func ClosePrStatus(ctx context.Context, id int64, oldStatus PrStatus, account string) (bool, error) {
+	now := time.Now()
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		And("pr_status = ?", oldStatus).
-		Cols("pr_status").
+		Cols("pr_status", "close_by", "closed").
 		Update(&PullRequest{
-			PrStatus: newStatus,
+			PrStatus: PrClosedStatus,
+			Closed:   &now,
+			CloseBy:  account,
 		})
 	return rows == 1, err
 }
 
-func UpdatePrStatusAndCommitId(ctx context.Context, id int64, oldStatus, newStatus PrStatus, targetCommitId, headCommitId string) (bool, error) {
+func MergePrStatus(ctx context.Context, id int64, oldStatus PrStatus, targetCommitId, headCommitId, account string) (bool, error) {
+	now := time.Now()
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		And("pr_status = ?", oldStatus).
-		Cols("pr_status", "target_commit_id", "head_commit_id").
+		Cols("pr_status", "target_commit_id", "head_commit_id", "merged", "merge_by").
 		Update(&PullRequest{
 			TargetCommitId: targetCommitId,
 			HeadCommitId:   headCommitId,
-			PrStatus:       newStatus,
+			PrStatus:       PrMergedStatus,
+			Merged:         &now,
+			MergeBy:        account,
 		})
 	return rows == 1, err
 }
 
-func GetById(ctx context.Context, id int64) (PullRequest, bool, error) {
+func GetPullRequestById(ctx context.Context, id int64) (PullRequest, bool, error) {
 	var ret PullRequest
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
@@ -102,4 +120,81 @@ func GetReview(ctx context.Context, prId int64, reviewer string) (Review, bool, 
 		And("reviewer = ?", reviewer).
 		Get(&ret)
 	return ret, b, err
+}
+
+func ListPullRequest(ctx context.Context, reqDTO ListPullRequestReqDTO) ([]PullRequest, int64, error) {
+	ret := make([]PullRequest, 0)
+	session := xormutil.MustGetXormSession(ctx).Where("repo_id = ?", reqDTO.RepoId)
+	session.Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize)
+	if reqDTO.SearchKey != "" {
+		session.And("pr_title like ?", reqDTO.SearchKey+"%")
+	}
+	if reqDTO.Status != PrAllStatus {
+		session.And("pr_status = ?", reqDTO.Status)
+	}
+	total, err := session.OrderBy("id desc").FindAndCount(&ret)
+	return ret, total, err
+}
+
+func GroupByPrStatus(ctx context.Context, repoId int64) ([]GroupByPrStatusDTO, error) {
+	ret := make([]GroupByPrStatusDTO, 0)
+	session := xormutil.MustGetXormSession(ctx)
+	err := session.
+		Where("repo_id = ?", repoId).
+		GroupBy("pr_status").
+		Select("pr_status, count(*) as total_count").
+		Table(PullRequestTableName).
+		Find(&ret)
+	return ret, err
+}
+
+func BatchInsertTimeline(ctx context.Context, reqDTOs []InsertTimelineReqDTO) error {
+	timelines, _ := listutil.Map(reqDTOs, func(t InsertTimelineReqDTO) (*Timeline, error) {
+		return &Timeline{
+			PrId:    t.PrId,
+			Action:  &t.Action,
+			Account: t.Account,
+		}, nil
+	})
+	_, err := xormutil.MustGetXormSession(ctx).
+		Insert(timelines)
+	return err
+}
+
+func ListTimeline(ctx context.Context, prId int64) ([]Timeline, error) {
+	ret := make([]Timeline, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("pr_id = ?", prId).
+		OrderBy("id asc").
+		Find(&ret)
+	return ret, err
+}
+
+func GetTimelineById(ctx context.Context, id int64) (Timeline, bool, error) {
+	var ret Timeline
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	return ret, b, err
+}
+
+func DeleteTimelineById(ctx context.Context, id int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Delete(new(Timeline))
+	return rows == 1, err
+}
+
+func IncrCommentCount(ctx context.Context, id int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Incr("comment_count").
+		Cols("comment_count").
+		Update(new(PullRequest))
+	return rows == 1, err
+}
+
+func DecrCommentCount(ctx context.Context, id int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Decr("comment_count").
+		Cols("comment_count").
+		Update(new(PullRequest))
+	return rows == 1, err
 }

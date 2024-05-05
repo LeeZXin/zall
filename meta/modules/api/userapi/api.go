@@ -179,7 +179,7 @@ func listUser(c *gin.Context) {
 				Updated:      t.Updated.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]UserVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[UserVO]{
 			DataResp: ginutil.DataResp[[]UserVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,

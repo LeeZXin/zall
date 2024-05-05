@@ -9,8 +9,25 @@ var (
 )
 
 type OuterService interface {
+	// GetStats 获取统计详情
+	GetStats(context.Context, GetStatsReqDTO) (GetStatsRespDTO, error)
+	// GetPullRequest 查询合并请求
+	GetPullRequest(context.Context, GetPullRequestReqDTO) (PullRequestDTO, error)
+	// ListPullRequest 查询合并请求列表
+	ListPullRequest(context.Context, ListPullRequestReqDTO) ([]PullRequestDTO, int64, error)
+	// SubmitPullRequest 创建合并请求
 	SubmitPullRequest(context.Context, SubmitPullRequestReqDTO) error
+	// ClosePullRequest 关闭合并请求
 	ClosePullRequest(context.Context, ClosePullRequestReqDTO) error
+	// MergePullRequest 合并代码
 	MergePullRequest(context.Context, MergePullRequestReqDTO) error
+	// CanMergePullRequest 是否可合并
+	CanMergePullRequest(context.Context, CanMergePullRequestReqDTO) (CanMergePullRequestRespDTO, error)
 	ReviewPullRequest(context.Context, ReviewPullRequestReqDTO) error
+	// ListTimeline 展示时间轴
+	ListTimeline(context.Context, ListTimelineReqDTO) ([]TimelineDTO, error)
+	// AddComment 添加评论
+	AddComment(context.Context, AddCommentReqDTO) error
+	// DeleteComment 删除评论
+	DeleteComment(context.Context, DeleteCommentReqDTO) error
 }

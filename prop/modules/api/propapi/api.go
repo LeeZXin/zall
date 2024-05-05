@@ -263,7 +263,7 @@ func listHistory(c *gin.Context) {
 				Creator:   t.Creator,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]HistoryVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[HistoryVO]{
 			DataResp: ginutil.DataResp[[]HistoryVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
@@ -334,7 +334,7 @@ func listDeploy(c *gin.Context) {
 				Created:   t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]DeployVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[DeployVO]{
 			DataResp: ginutil.DataResp[[]DeployVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,

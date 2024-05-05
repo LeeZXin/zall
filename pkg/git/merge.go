@@ -36,10 +36,14 @@ type DiffRefsInfo struct {
 	MergeBase     string           `json:"mergeBase"`
 	DiffNumsStats DiffNumsStatInfo `json:"diffNumsStats"`
 	ConflictFiles []string         `json:"conflictFiles"`
+	CanMerge      bool             `json:"canMerge"`
 }
 
 // IsMergeAble 是否可合并
 func (i *DiffRefsInfo) IsMergeAble() bool {
+	if !strings.HasPrefix(i.OriginHead, BranchPrefix) {
+		return false
+	}
 	return len(i.Commits) > 0 && len(i.ConflictFiles) == 0
 }
 
@@ -81,11 +85,43 @@ func GetDiffRefsInfo(ctx context.Context, repoPath, target, head string) (DiffRe
 	if err != nil {
 		return DiffRefsInfo{}, err
 	}
-	pr.ConflictFiles, err = findConflictFiles(ctx, repoPath, pr)
-	if err != nil {
-		return DiffRefsInfo{}, err
+	if strings.HasPrefix(pr.OriginHead, BranchPrefix) {
+		pr.ConflictFiles, err = findConflictFiles(ctx, repoPath, pr.OriginHead, pr.TargetCommit.Id, pr.MergeBase)
+		if err != nil {
+			return DiffRefsInfo{}, err
+		}
+	} else {
+		pr.ConflictFiles = []string{}
 	}
 	return pr, nil
+}
+
+func CanMerge(ctx context.Context, repoPath, target, head string) (bool, error) {
+	headCommit, _, err := GetCommit(ctx, repoPath, head)
+	if err != nil {
+		return false, err
+	}
+	targetCommit, _, err := GetCommit(ctx, repoPath, target)
+	if err != nil {
+		return false, err
+	}
+	// 这里要反过来 git log 查看target的提交记录 不是head的提交记录
+	commits, err := GetGitDiffCommitList(ctx, repoPath, headCommit.Id, targetCommit.Id)
+	if err != nil {
+		return false, err
+	}
+	mergeBase, err := MergeBase(ctx, repoPath, targetCommit.Id, headCommit.Id)
+	if err != nil {
+		return false, err
+	}
+	if strings.HasPrefix(head, BranchPrefix) {
+		conflictFiles, err := findConflictFiles(ctx, repoPath, head, targetCommit.Id, mergeBase)
+		if err != nil {
+			return false, err
+		}
+		return len(commits) > 0 && len(conflictFiles) == 0, nil
+	}
+	return false, nil
 }
 
 func Merge(ctx context.Context, repoPath, target, head string, opts MergeRepoOpts) error {
@@ -102,7 +138,7 @@ func doMerge(ctx context.Context, repoPath string, pr DiffRefsInfo, opts MergeRe
 	}
 	tempDir := filepath.Join(TempDir(), "merge-"+util.RandomIdWithTime())
 	defer util.RemoveAll(tempDir)
-	if err := prepare4Merge(ctx, repoPath, tempDir, pr); err != nil {
+	if err := prepare4Merge(ctx, repoPath, tempDir, pr.OriginHead, pr.TargetCommit.Id); err != nil {
 		return err
 	}
 	infoPath := filepath.Join(tempDir, ".git", "info")
@@ -169,11 +205,11 @@ func doMerge(ctx context.Context, repoPath string, pr DiffRefsInfo, opts MergeRe
 	return nil
 }
 
-func prepare4Merge(ctx context.Context, repoPath string, tempDir string, pr DiffRefsInfo) error {
+func prepare4Merge(ctx context.Context, repoPath string, tempDir string, originHead, targetCommitId string) error {
 	if err := initEmptyRepository(ctx, tempDir, false); err != nil {
 		return err
 	}
-	if _, err := NewCommand("remote", "add", "-t", pr.OriginHead, "-m", pr.OriginHead, "origin", repoPath).
+	if _, err := NewCommand("remote", "add", "-t", originHead, "-m", originHead, "origin", repoPath).
 		Run(ctx, WithDir(tempDir)); err != nil {
 		return errors.New("add remote failed")
 	}
@@ -182,14 +218,14 @@ func prepare4Merge(ctx context.Context, repoPath string, tempDir string, pr Diff
 	if CheckGitVersionAtLeast("2.25.0") == nil {
 		fetchArgs = append(fetchArgs, "--no-write-commit-graph")
 	}
-	if _, err := NewCommand("fetch", "origin", pr.OriginHead+":"+MergeBranch, pr.OriginHead+":original_"+pr.OriginHead).AddArgs(fetchArgs...).
+	if _, err := NewCommand("fetch", "origin", originHead+":"+MergeBranch, originHead+":original_"+originHead).AddArgs(fetchArgs...).
 		Run(ctx, WithDir(tempDir)); err != nil {
 		return err
 	}
 	if err := SetDefaultBranch(ctx, tempDir, MergeBranch); err != nil {
 		return err
 	}
-	if _, err := NewCommand("fetch", "origin", pr.TargetCommit.Id+":"+TrackingBranch).AddArgs(fetchArgs...).
+	if _, err := NewCommand("fetch", "origin", targetCommitId+":"+TrackingBranch).AddArgs(fetchArgs...).
 		Run(ctx, WithDir(tempDir)); err != nil {
 		return err
 	}

@@ -9,7 +9,7 @@
     <a-layout>
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
         <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @select="onselect">
-          <a-menu-item :key="`/team/${route.params.teamId}/gitRepo/list`">
+          <a-menu-item key="/gitRepo/list">
             <branches-outlined />
             <span>{{t("teamMenu.gitRepo")}}</span>
           </a-menu-item>
@@ -66,12 +66,11 @@ import {
   AlertOutlined,
   SettingOutlined
 } from "@ant-design/icons-vue";
-import { isTeamAdminRequest } from "@/api/team/teamApi";
+import { isTeamAdminRequest, getTeamRequest } from "@/api/team/teamApi";
 const team = useTeamStore();
 const router = useRouter();
 const { t } = useI18n();
 const collapsed = ref(false);
-
 const route = useRoute();
 const selectedKeys = ref([]);
 const switchTeam = () => {
@@ -79,24 +78,25 @@ const switchTeam = () => {
 };
 const isAdmin = ref(false);
 const onselect = event => {
-  router.push(event.key);
+  router.push(`/team/${route.params.teamId}` + event.key);
 };
 // 为了子页面能体现在导航栏
-const pagesMap = {
-  gitRepo: `/team/${route.params.teamId}/gitRepo/list`
-};
-for (let key in pagesMap) {
-  let value = pagesMap[key];
-  if (route.path.indexOf(key) >= 0) {
-    selectedKeys.value = [value];
-    break;
-  }
+const pagesList = ["/gitRepo/list"];
+let page = pagesList.find(item => {
+  return route.path.endsWith(item);
+});
+if (page) {
+  selectedKeys.value = [page];
 }
-isTeamAdminRequest({
-  teamId: parseInt(route.params.teamId)
-}).then(res => {
+isTeamAdminRequest(route.params.teamId).then(res => {
   isAdmin.value = res.data;
 });
+if (team.teamId === 0) {
+  getTeamRequest(route.params.teamId).then(res => {
+    team.teamId = res.data.teamId;
+    team.name = res.data.name;
+  });
+}
 </script>
 <style scoped>
 .switch-team-text {

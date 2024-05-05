@@ -102,7 +102,7 @@ func listDetect(c *gin.Context) {
 				Enabled:       t.Enabled,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]DetectVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[DetectVO]{
 			DataResp: ginutil.DataResp[[]DetectVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
@@ -133,7 +133,7 @@ func listLog(c *gin.Context) {
 				Created: t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]LogVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[LogVO]{
 			DataResp: ginutil.DataResp[[]LogVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,

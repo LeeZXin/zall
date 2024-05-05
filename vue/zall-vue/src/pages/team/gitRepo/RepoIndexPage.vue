@@ -57,7 +57,7 @@
               <span>{{latestCommit.committedTime}}</span>
             </div>
           </div>
-          <div class="dir-line" v-for="(item, index) in files" v-bind:key="index">
+          <div class="dir-line" v-for="item in files" v-bind:key="item.commit.commitId">
             <div class="dir-line-item dir-line-file" @click="toRepoTree(item.rawPath)">
               <folder-outlined v-if="item.mode === 'directory'" style="margin-right:4px" />
               <span>{{item.path}}</span>
@@ -121,7 +121,7 @@ import "@kangc/v-md-editor/lib/style/base-editor.css";
 import githubTheme from "@kangc/v-md-editor/lib/theme/github.js";
 import "@kangc/v-md-editor/lib/theme/style/github.css";
 import BranchTagSelect from "@/components/git/BranchTagSelect";
-import { treeRepoRequest, simpleInfoRequest } from "@/api/git/gitApi";
+import { treeRepoRequest, simpleInfoRequest } from "@/api/git/repoApi";
 import { useRoute, useRouter } from "vue-router";
 import { message } from "ant-design-vue";
 const route = useRoute();
@@ -144,11 +144,15 @@ const gitHttpUrl = ref("");
 // git clone ssh://xxxx
 const gitSshUrl = ref("");
 // 选择的分支或标签
-const selectedRef = ref("");
+const selectedRef = reactive({
+  ref: "",
+  refType: ""
+});
 // 
 const onBranchTagSelect = event => {
-  selectedRef.value = event.value;
-  getTreeRepo(event.value);
+  selectedRef.refType = event.key;
+  selectedRef.ref = event.value;
+  getTreeRepo(event.value, event.key);
 };
 // 最后一次提交
 const latestCommit = reactive({
@@ -157,19 +161,18 @@ const latestCommit = reactive({
   shortCommitId: "",
   committedTime: ""
 });
-simpleInfoRequest({
-  repoId
-}).then(res => {
+simpleInfoRequest(repoId).then(res => {
   branches.value = res.data.branches;
   tags.value = res.data.tags;
   gitHttpUrl.value = res.data.cloneHttpUrl;
   gitSshUrl.value = res.data.cloneSshUrl;
 });
 // getTreeRepo 获取代码信息
-const getTreeRepo = ref => {
+const getTreeRepo = (ref, refType) => {
   treeRepoRequest({
     repoId,
-    ref
+    ref,
+    refType
   }).then(res => {
     if (res.latestCommit) {
       latestCommit.committer = res.latestCommit.committer.account;
@@ -195,7 +198,7 @@ const copy = type => {
 };
 // 跳转代码详情页
 const toRepoTree = path => {
-  router.push(`/gitRepo/${route.params.repoId}/tree/${selectedRef.value}/` + path);
+  router.push(`/gitRepo/${route.params.repoId}/tree/${selectedRef.refType}/${selectedRef.ref}/` + path);
 }
 </script>
 <style scoped>

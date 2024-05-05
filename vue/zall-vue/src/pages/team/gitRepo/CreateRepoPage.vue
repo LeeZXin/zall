@@ -81,7 +81,7 @@ import { useI18n } from "vue-i18n";
 import {
   allGitIgnoreTemplateListRequest,
   createRepoRequest
-} from "@/api/git/gitApi";
+} from "@/api/git/repoApi";
 import {
   repoNameRegexp,
   defaultBranchRegexp,

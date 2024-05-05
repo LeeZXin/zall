@@ -10,12 +10,12 @@ const (
 )
 
 type ProtectedBranch struct {
-	Id      int64     `json:"id" xorm:"pk autoincr"`
-	Branch  string    `json:"branch"`
-	RepoId  int64     `json:"repoId"`
-	Cfg     string    `json:"cfg"`
-	Created time.Time `json:"created" xorm:"created"`
-	Updated time.Time `json:"updated" xorm:"updated"`
+	Id      int64               `json:"id" xorm:"pk autoincr"`
+	Branch  string              `json:"branch"`
+	RepoId  int64               `json:"repoId"`
+	Cfg     *ProtectedBranchCfg `json:"cfg"`
+	Created time.Time           `json:"created" xorm:"created"`
+	Updated time.Time           `json:"updated" xorm:"updated"`
 }
 
 func (*ProtectedBranch) TableName() string {
@@ -34,4 +34,15 @@ type ProtectedBranchCfg struct {
 func (c *ProtectedBranchCfg) ToString() string {
 	m, _ := json.Marshal(c)
 	return string(m)
+}
+
+func (c *ProtectedBranchCfg) FromDB(content []byte) error {
+	if c == nil {
+		*c = ProtectedBranchCfg{}
+	}
+	return json.Unmarshal(content, c)
+}
+
+func (c *ProtectedBranchCfg) ToDB() ([]byte, error) {
+	return json.Marshal(c)
 }

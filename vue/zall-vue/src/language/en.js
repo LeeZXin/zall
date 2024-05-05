@@ -78,5 +78,11 @@ export default {
     },
     createTeam: {
         teamName: "Team name* (excluding special characters, the length must not exceed 32)"
-    }
+    },
+    secondBefore: " second ago",
+    minuteBefore: " minute ago",
+    hourBefore: " hour ago",
+    dayBefore: " day ago",
+    monthBefore: " month ago",
+    yearBefore: " year ago"
 }

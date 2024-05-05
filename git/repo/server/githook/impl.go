@@ -52,7 +52,7 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 			return util.NewBizErr(apicode.ForcePushForbiddenCode, i18n.RepoSizeExceedLimit, util.VolumeReadable(repo.Cfg.MaxGitLimitSize))
 		}
 	}
-	var pbList []branchmd.ProtectedBranchDTO
+	var pbList []branchmd.ProtectedBranch
 	for _, info := range opts.RevInfoList {
 		name := info.RefName
 		// 是分支
@@ -71,7 +71,7 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 				// 通配符匹配 是保护分支
 				if wildcard.Match(pb.Branch, name) {
 					// 只有可推送名单里面才能直接push
-					if opts.PrId > 0 && len(pb.Cfg.DirectPushList) > 0 {
+					if opts.PrId > 0 && pb.Cfg != nil && len(pb.Cfg.DirectPushList) > 0 {
 						// prId为空说明不是来自合并请求的push
 						contains, _ := listutil.Contains(pb.Cfg.DirectPushList, func(account string) (bool, error) {
 							return account == opts.PusherAccount, nil

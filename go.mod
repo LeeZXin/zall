@@ -5,8 +5,8 @@ go 1.20
 require (
 	github.com/42wim/sshsig v0.0.0-20211121163825-841cf5bbc121
 	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
-	github.com/LeeZXin/zsf v1.1.59
-	github.com/LeeZXin/zsf-utils v1.0.52
+	github.com/LeeZXin/zsf v1.1.66
+	github.com/LeeZXin/zsf-utils v1.0.58
 	github.com/PaesslerAG/gval v1.2.2
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548
 	github.com/gin-gonic/gin v1.9.1
@@ -86,6 +86,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.15.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect

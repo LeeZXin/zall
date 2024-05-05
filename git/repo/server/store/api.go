@@ -34,6 +34,7 @@ func InitApi() {
 			group.POST("/indexRepo", indexRepo)
 			group.POST("/merge", merge)
 			group.POST("/blame", blame)
+			group.POST("/canMerge", canMerge)
 		}
 		group = e.Group("/api/v1/git/smart/:corpId/:repoName", packRepoPath)
 		{
@@ -123,6 +124,21 @@ func diffRefs(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, ginutil.DataResp[reqvo.DiffRefsResp]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     resp,
+		})
+	}
+}
+
+func canMerge(c *gin.Context) {
+	var req reqvo.CanMergeReq
+	if util.ShouldBindJSON(&req, c) {
+		resp, err := storeSrv.CanMerge(c, req)
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[bool]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     resp,
 		})

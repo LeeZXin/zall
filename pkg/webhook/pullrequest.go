@@ -2,7 +2,7 @@ package webhook
 
 import "github.com/LeeZXin/zall/pkg/git"
 
-type PullRequestActionHook struct {
+type PullRequestHook struct {
 	PrId       int64    `json:"prId"`
 	RepoId     int64    `json:"repoId"`
 	RepoName   string   `json:"repoName"`

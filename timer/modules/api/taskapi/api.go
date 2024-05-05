@@ -143,7 +143,7 @@ func listTask(c *gin.Context) {
 				TaskStatus: t.TaskStatus.Readable(),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]TaskVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[TaskVO]{
 			DataResp: ginutil.DataResp[[]TaskVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
@@ -178,7 +178,7 @@ func listLog(c *gin.Context) {
 				Created:     t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[[]TaskLogVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[TaskLogVO]{
 			DataResp: ginutil.DataResp[[]TaskLogVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,

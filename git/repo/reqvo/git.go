@@ -1,6 +1,7 @@
 package reqvo
 
 import (
+	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,9 +32,19 @@ type GcReq struct {
 }
 
 type DiffRefsReq struct {
-	RepoPath string `json:"repoPath"`
-	Target   string `json:"target"`
-	Head     string `json:"head"`
+	RepoPath   string      `json:"repoPath"`
+	Target     string      `json:"target"`
+	TargetType git.RefType `json:"targetType"`
+	Head       string      `json:"head"`
+	HeadType   git.RefType `json:"headType"`
+}
+
+type CanMergeReq struct {
+	RepoPath   string      `json:"repoPath"`
+	Target     string      `json:"target"`
+	TargetType git.RefType `json:"targetType"`
+	Head       string      `json:"head"`
+	HeadType   git.RefType `json:"headType"`
 }
 
 type DiffRefsResp struct {
@@ -75,7 +86,6 @@ type DiffNumsStatInfoVO struct {
 type DiffNumsStatVO struct {
 	RawPath    string `json:"rawPath"`
 	Path       string `json:"path"`
-	TotalNums  int    `json:"totalNums"`
 	InsertNums int    `json:"insertNums"`
 	DeleteNums int    `json:"deleteNums"`
 }
@@ -84,7 +94,7 @@ type DiffFileReq struct {
 	RepoPath string `json:"repoPath"`
 	Target   string `json:"target"`
 	Head     string `json:"head"`
-	FileName string `json:"fileName"`
+	FilePath string `json:"filePath"`
 }
 
 type DiffFileResp struct {
@@ -102,7 +112,6 @@ type DiffFileResp struct {
 }
 
 type DiffLineVO struct {
-	Index   int    `json:"index"`
 	LeftNo  int    `json:"leftNo"`
 	Prefix  string `json:"prefix"`
 	RightNo int    `json:"rightNo"`
@@ -137,9 +146,10 @@ type InitRepoHookReq struct {
 }
 
 type EntriesRepoReq struct {
-	RepoPath string `json:"repoPath"`
-	Ref      string `json:"ref"`
-	Dir      string `json:"dir"`
+	RepoPath string      `json:"repoPath"`
+	Ref      string      `json:"ref"`
+	RefType  git.RefType `json:"refType"`
+	Dir      string      `json:"dir"`
 }
 
 type FileVO struct {
@@ -165,9 +175,10 @@ type BlameLineVO struct {
 }
 
 type IndexRepoReq struct {
-	RepoPath string `json:"repoPath"`
-	Ref      string `json:"ref"`
-	Dir      string `json:"dir"`
+	RepoPath string      `json:"repoPath"`
+	Ref      string      `json:"ref"`
+	Dir      string      `json:"dir"`
+	RefType  git.RefType `json:"refType"`
 }
 
 type IndexRepoResp struct {
@@ -178,9 +189,10 @@ type IndexRepoResp struct {
 }
 
 type CatFileReq struct {
-	RepoPath string `json:"repoPath"`
-	Ref      string `json:"ref"`
-	FilePath string `json:"filePath"`
+	RepoPath string      `json:"repoPath"`
+	Ref      string      `json:"ref"`
+	RefType  git.RefType `json:"refType"`
+	FilePath string      `json:"filePath"`
 }
 
 type CatFileResp struct {
@@ -222,7 +234,8 @@ type MergeReq struct {
 }
 
 type BlameReq struct {
-	RepoPath string `json:"repoPath"`
-	Ref      string `json:"ref"`
-	FilePath string `json:"filePath"`
+	RepoPath string      `json:"repoPath"`
+	Ref      string      `json:"ref"`
+	FilePath string      `json:"filePath"`
+	RefType  git.RefType `json:"refType"`
 }

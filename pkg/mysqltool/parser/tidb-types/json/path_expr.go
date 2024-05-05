@@ -22,7 +22,7 @@ import (
 )
 
 /*
-	From MySQL 5.7, JSON path expression grammar:
+	FromId MySQL 5.7, JSON path expression grammar:
 		pathExpression ::= scope (pathLeg)*
 		scope ::= [ columnReference ] '$'
 		columnReference ::= // omit...

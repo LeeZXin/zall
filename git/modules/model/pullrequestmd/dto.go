@@ -1,11 +1,20 @@
 package pullrequestmd
 
+import (
+	"github.com/LeeZXin/zall/pkg/git"
+	"github.com/LeeZXin/zsf-utils/ginutil"
+)
+
 type InsertPullRequestReqDTO struct {
-	RepoId   int64
-	Target   string
-	Head     string
-	CreateBy string
-	PrStatus PrStatus
+	RepoId       int64
+	Target       string
+	TargetType   git.RefType
+	Head         string
+	HeadType     git.RefType
+	CreateBy     string
+	Title        string
+	PrStatus     PrStatus
+	CommentCount int
 }
 
 type InsertReviewReqDTO struct {
@@ -20,8 +29,29 @@ type UpdateReviewReqDTO struct {
 	Status ReviewStatus
 }
 
-type ExistsOpenStatusPrByRepoIdAndRefReqDTO struct {
-	RepoId int64
-	Head   string
-	Target string
+type ExistsPrByRepoIdAndRefReqDTO struct {
+	RepoId     int64
+	Head       string
+	HeadType   git.RefType
+	Target     string
+	TargetType git.RefType
+	Status     PrStatus
+}
+
+type ListPullRequestReqDTO struct {
+	RepoId    int64
+	SearchKey string
+	Status    PrStatus
+	ginutil.Page2Req
+}
+
+type GroupByPrStatusDTO struct {
+	PrStatus   PrStatus
+	TotalCount int64
+}
+
+type InsertTimelineReqDTO struct {
+	PrId    int64
+	Action  Action
+	Account string
 }

@@ -1,6 +1,7 @@
 package repoapi
 
 import (
+	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
@@ -18,19 +19,17 @@ type DeleteRepoReqVO struct {
 }
 
 type IndexRepoReqVO struct {
-	RepoId int64  `json:"repoId"`
-	Ref    string `json:"ref"`
-	Dir    string `json:"dir"`
+	RepoId  int64       `json:"repoId"`
+	Ref     string      `json:"ref"`
+	Dir     string      `json:"dir"`
+	RefType git.RefType `json:"refType"`
 }
 
 type EntriesRepoReqVO struct {
-	RepoId int64  `json:"repoId"`
-	Ref    string `json:"ref"`
-	Dir    string `json:"dir"`
-}
-
-type ListRepoReqVO struct {
-	TeamId int64 `json:"teamId"`
+	RepoId  int64       `json:"repoId"`
+	Ref     string      `json:"ref"`
+	Dir     string      `json:"dir"`
+	RefType git.RefType `json:"refType"`
 }
 
 type UserVO struct {
@@ -89,15 +88,17 @@ type RepoVO struct {
 }
 
 type CatFileReqVO struct {
-	RepoId   int64  `json:"repoId"`
-	Ref      string `json:"ref"`
-	FilePath string `json:"filePath"`
+	RepoId   int64       `json:"repoId"`
+	Ref      string      `json:"ref"`
+	FilePath string      `json:"filePath"`
+	RefType  git.RefType `json:"refType"`
 }
 
 type BlameReqVO struct {
-	RepoId   int64  `json:"repoId"`
-	Ref      string `json:"ref"`
-	FilePath string `json:"filePath"`
+	RepoId   int64       `json:"repoId"`
+	Ref      string      `json:"ref"`
+	FilePath string      `json:"filePath"`
+	RefType  git.RefType `json:"refType"`
 }
 
 type CatFileVO struct {
@@ -116,10 +117,6 @@ type GetRepoReqVO struct {
 	RepoId int64 `json:"repoId"`
 }
 
-type GetSimpleInfoReqVO struct {
-	RepoId int64 `json:"repoId"`
-}
-
 type SimpleInfoVO struct {
 	Branches     []string `json:"branches"`
 	Tags         []string `json:"tags"`
@@ -127,33 +124,22 @@ type SimpleInfoVO struct {
 	CloneSshUrl  string   `json:"cloneSshUrl"`
 }
 
-type AllBranchesReqVO struct {
-	RepoId int64 `json:"repoId"`
-}
-
-type AllTagsReqVO struct {
-	RepoId int64 `json:"repoId"`
-}
-
-type GcReqVO struct {
-	RepoId int64 `json:"repoId"`
-}
-
-type PrepareMergeReqVO struct {
-	RepoId int64  `json:"repoId"`
-	Target string `json:"target"`
-	Head   string `json:"head"`
+type DiffRefsReqVO struct {
+	RepoId     int64       `json:"repoId"`
+	Target     string      `json:"target"`
+	TargetType git.RefType `json:"targetType"`
+	Head       string      `json:"head"`
+	HeadType   git.RefType `json:"headType"`
 }
 
 type DiffFileReqVO struct {
 	RepoId   int64  `json:"repoId"`
 	Target   string `json:"target"`
 	Head     string `json:"head"`
-	FileName string `json:"fileName"`
+	FilePath string `json:"filePath"`
 }
 
-type PrepareMergeRespVO struct {
-	ginutil.BaseResp
+type DiffRefsVO struct {
 	Target        string             `json:"target"`
 	Head          string             `json:"head"`
 	TargetCommit  CommitVO           `json:"targetCommit"`
@@ -175,12 +161,11 @@ type DiffNumsStatInfoVO struct {
 type DiffNumsStatVO struct {
 	RawPath    string `json:"rawPath"`
 	Path       string `json:"path"`
-	TotalNums  int    `json:"totalNums"`
 	InsertNums int    `json:"insertNums"`
 	DeleteNums int    `json:"deleteNums"`
 }
 
-type DiffFileRespVO struct {
+type DiffFileVO struct {
 	FilePath    string       `json:"filePath"`
 	OldMode     string       `json:"oldMode"`
 	Mode        string       `json:"mode"`
@@ -195,7 +180,6 @@ type DiffFileRespVO struct {
 }
 
 type DiffLineVO struct {
-	Index   int    `json:"index"`
 	LeftNo  int    `json:"leftNo"`
 	Prefix  string `json:"prefix"`
 	RightNo int    `json:"rightNo"`

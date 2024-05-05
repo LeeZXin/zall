@@ -3,6 +3,7 @@ package reposrv
 import (
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"regexp"
@@ -82,11 +83,15 @@ func (r *DeleteRepoReqDTO) IsValid() error {
 type IndexRepoReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Ref      string              `json:"ref"`
+	RefType  git.RefType         `json:"refType"`
 	Dir      string              `json:"dir"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *IndexRepoReqDTO) IsValid() error {
+	if !r.RefType.IsValid() {
+		return util.InvalidArgsError()
+	}
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -128,11 +133,15 @@ func (r *LsTreeRepoReqDTO) IsValid() error {
 type CatFileReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Ref      string              `json:"ref"`
+	RefType  git.RefType         `json:"refType"`
 	FilePath string              `json:"filePath"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *CatFileReqDTO) IsValid() error {
+	if !r.RefType.IsValid() {
+		return util.InvalidArgsError()
+	}
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -140,9 +149,6 @@ func (r *CatFileReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if len(r.Ref) > 128 || len(r.Ref) == 0 {
-		return util.InvalidArgsError()
-	}
-	if !validateFilePath(r.FilePath) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -151,11 +157,15 @@ func (r *CatFileReqDTO) IsValid() error {
 type BlameReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Ref      string              `json:"ref"`
+	RefType  git.RefType         `json:"refType"`
 	FilePath string              `json:"filePath"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *BlameReqDTO) IsValid() error {
+	if !r.RefType.IsValid() {
+		return util.InvalidArgsError()
+	}
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -163,9 +173,6 @@ func (r *BlameReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if len(r.Ref) > 128 || len(r.Ref) == 0 {
-		return util.InvalidArgsError()
-	}
-	if !validateFilePath(r.FilePath) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -182,11 +189,15 @@ type CatFileRespDTO struct {
 type EntriesRepoReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Ref      string              `json:"ref"`
+	RefType  git.RefType         `json:"refType"`
 	Dir      string              `json:"dir"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *EntriesRepoReqDTO) IsValid() error {
+	if !r.RefType.IsValid() {
+		return util.InvalidArgsError()
+	}
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -323,15 +334,23 @@ var gitignoreSet = hashset.NewHashSet(
 	"XilinxISE", "Xojo", "Yeoman", "Yii", "ZendFramework", "Zephir", "core", "esp-idf", "macOS", "uVision",
 )
 
-type DiffCommitsReqDTO struct {
-	RepoId   int64               `json:"repoId"`
-	Target   string              `json:"target"`
-	Head     string              `json:"head"`
-	Operator apisession.UserInfo `json:"operator"`
+type DiffRefsReqDTO struct {
+	RepoId     int64               `json:"repoId"`
+	Target     string              `json:"target"`
+	TargetType git.RefType         `json:"targetType"`
+	Head       string              `json:"head"`
+	HeadType   git.RefType         `json:"headType"`
+	Operator   apisession.UserInfo `json:"operator"`
 }
 
-func (r *DiffCommitsReqDTO) IsValid() error {
+func (r *DiffRefsReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !r.TargetType.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !r.HeadType.IsValid() {
 		return util.InvalidArgsError()
 	}
 	if !util.ValidateRef(r.Target) {
@@ -365,7 +384,6 @@ type DiffNumsStatInfoDTO struct {
 type DiffNumsStatDTO struct {
 	RawPath    string `json:"rawPath"`
 	Path       string `json:"path"`
-	TotalNums  int    `json:"totalNums"`
 	InsertNums int    `json:"insertNums"`
 	DeleteNums int    `json:"deleteNums"`
 }
@@ -385,7 +403,6 @@ type DiffFileRespDTO struct {
 }
 
 type DiffLineDTO struct {
-	Index   int    `json:"index"`
 	LeftNo  int    `json:"leftNo"`
 	Prefix  string `json:"prefix"`
 	RightNo int    `json:"rightNo"`
@@ -418,9 +435,6 @@ func (r *ShowDiffTextContentReqDTO) IsValid() error {
 	if r.Direction != UpDirection && r.Direction != DownDirection {
 		return util.InvalidArgsError()
 	}
-	if !validateFilePath(r.FileName) {
-		return util.InvalidArgsError()
-	}
 	return nil
 }
 
@@ -428,7 +442,7 @@ type DiffFileReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Target   string              `json:"target"`
 	Head     string              `json:"head"`
-	FileName string              `json:"fileName"`
+	FilePath string              `json:"filePath"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -440,9 +454,6 @@ func (r *DiffFileReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if !util.ValidateRef(r.Head) {
-		return util.InvalidArgsError()
-	}
-	if !validateFilePath(r.FileName) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -471,10 +482,6 @@ func (r *HistoryCommitsReqDTO) IsValid() error {
 type HistoryCommitsRespDTO struct {
 	Data   []CommitDTO
 	Cursor int
-}
-
-func validateFilePath(path string) bool {
-	return len(path) <= 255 && len(path) > 0
 }
 
 type InsertRepoTokenReqDTO struct {

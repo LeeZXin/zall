@@ -289,7 +289,7 @@ func UploadPack(req reqvo.UploadPackReq, repoId int64, pusherAccount, pusherEmai
 		"/api/v1/git/smart/"+req.RepoPath+"/git-upload-pack",
 		req.C,
 		map[string]string{
-			"Repo-Id":        strconv.FormatInt(repoId, 10),
+			"Repo-PrId":      strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
 			"App-Url":        appUrl,
@@ -398,6 +398,23 @@ func Blame(ctx context.Context, req reqvo.BlameReq) ([]reqvo.BlameLineVO, error)
 	}
 	if !resp.IsSuccess() {
 		return nil, bizerr.NewBizErr(resp.Code, resp.Message)
+	}
+	return resp.Data, nil
+}
+
+func CanMerge(ctx context.Context, req reqvo.CanMergeReq) (bool, error) {
+	var resp ginutil.DataResp[bool]
+	err := postHttp(
+		ctx,
+		"/api/v1/git/store/canMerge",
+		req,
+		&resp,
+	)
+	if err != nil {
+		return false, err
+	}
+	if !resp.IsSuccess() {
+		return false, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
 	return resp.Data, nil
 }
