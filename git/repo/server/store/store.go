@@ -11,13 +11,19 @@ type Store interface {
 	// DeleteRepo 删除仓库
 	DeleteRepo(context.Context, reqvo.DeleteRepoReq) error
 	// GetAllBranches 获取所有分支
-	GetAllBranches(context.Context, reqvo.GetAllBranchesReq) ([]string, error)
+	GetAllBranches(context.Context, reqvo.GetAllBranchesReq) ([]reqvo.RefVO, error)
+	// GetAllBranchAndLastCommit 获取所有分支+最后提交信息
+	GetAllBranchAndLastCommit(context.Context, reqvo.GetAllBranchesReq) ([]reqvo.RefCommitVO, error)
+	// DeleteBranch 删除分支
+	DeleteBranch(context.Context, reqvo.DeleteBranchReq) error
 	// GetAllTags 获取所有tags
-	GetAllTags(context.Context, reqvo.GetAllTagsReq) ([]string, error)
+	GetAllTags(context.Context, reqvo.GetAllTagsReq) ([]reqvo.RefVO, error)
 	// Gc 触发仓库gc
 	Gc(context.Context, reqvo.GcReq) error
 	// DiffRefs 对比两个ref差异
 	DiffRefs(context.Context, reqvo.DiffRefsReq) (reqvo.DiffRefsResp, error)
+	// DiffCommits 对比两个提交差异
+	DiffCommits(context.Context, reqvo.DiffCommitsReq) (reqvo.DiffCommitsResp, error)
 	// CanMerge 两个ref是否可以合并
 	CanMerge(context.Context, reqvo.CanMergeReq) (bool, error)
 	// DiffFile 对比两个分支单个文件差异

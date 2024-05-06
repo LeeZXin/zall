@@ -1,6 +1,7 @@
 package repoapi
 
 import (
+	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 )
@@ -21,7 +22,6 @@ type DeleteRepoReqVO struct {
 type IndexRepoReqVO struct {
 	RepoId  int64       `json:"repoId"`
 	Ref     string      `json:"ref"`
-	Dir     string      `json:"dir"`
 	RefType git.RefType `json:"refType"`
 }
 
@@ -38,14 +38,15 @@ type UserVO struct {
 }
 
 type CommitVO struct {
-	Author        UserVO `json:"author"`
-	Committer     UserVO `json:"committer"`
-	AuthoredTime  string `json:"authoredTime"`
-	CommittedTime string `json:"committedTime"`
-	CommitMsg     string `json:"commitMsg"`
-	CommitId      string `json:"commitId"`
-	ShortId       string `json:"shortId"`
-	Verified      bool   `json:"verified"`
+	Parent        []string `json:"parent"`
+	Author        UserVO   `json:"author"`
+	Committer     UserVO   `json:"committer"`
+	AuthoredTime  string   `json:"authoredTime"`
+	CommittedTime string   `json:"committedTime"`
+	CommitMsg     string   `json:"commitMsg"`
+	CommitId      string   `json:"commitId"`
+	ShortId       string   `json:"shortId"`
+	Verified      bool     `json:"verified"`
 }
 
 type FileVO struct {
@@ -108,15 +109,6 @@ type CatFileVO struct {
 	Commit   CommitVO `json:"commit"`
 }
 
-type RepoTypeVO struct {
-	Option int    `json:"option"`
-	Name   string `json:"name"`
-}
-
-type GetRepoReqVO struct {
-	RepoId int64 `json:"repoId"`
-}
-
 type SimpleInfoVO struct {
 	Branches     []string `json:"branches"`
 	Tags         []string `json:"tags"`
@@ -130,6 +122,11 @@ type DiffRefsReqVO struct {
 	TargetType git.RefType `json:"targetType"`
 	Head       string      `json:"head"`
 	HeadType   git.RefType `json:"headType"`
+}
+
+type DiffCommitsReqVO struct {
+	RepoId   int64  `json:"repoId"`
+	CommitId string `json:"commitId"`
 }
 
 type DiffFileReqVO struct {
@@ -149,6 +146,12 @@ type DiffRefsVO struct {
 	DiffNumsStats DiffNumsStatInfoVO `json:"diffNumsStats"`
 	ConflictFiles []string           `json:"conflictFiles"`
 	CanMerge      bool               `json:"canMerge"`
+}
+
+type DiffCommitsVO struct {
+	Commit        CommitVO           `json:"commit"`
+	NumFiles      int                `json:"numFiles"`
+	DiffNumsStats DiffNumsStatInfoVO `json:"diffNumsStats"`
 }
 
 type DiffNumsStatInfoVO struct {
@@ -234,4 +237,22 @@ type TransferTeam struct {
 type BlameLineVO struct {
 	Number int      `json:"number"`
 	Commit CommitVO `json:"commit"`
+}
+
+type PullRequestVO struct {
+	Id       int64                  `json:"id"`
+	PrStatus pullrequestmd.PrStatus `json:"prStatus"`
+	PrTitle  string                 `json:"prTitle"`
+	Created  string                 `json:"created"`
+}
+
+type BranchCommitVO struct {
+	Name            string         `json:"name"`
+	LastCommit      CommitVO       `json:"lastCommit"`
+	LastPullRequest *PullRequestVO `json:"lastPullRequest,omitempty"`
+}
+
+type DeleteBranchReqVO struct {
+	RepoId int64  `json:"repoId"`
+	Branch string `json:"branch"`
 }

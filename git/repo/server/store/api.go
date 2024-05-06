@@ -21,9 +21,12 @@ func InitApi() {
 			group.POST("/initRepo", initRepo)
 			group.POST("/delRepo", delRepo)
 			group.POST("/getAllBranches", getAllBranches)
+			group.POST("/getAllBranchAndLastCommit", getAllBranchAndLastCommit)
+			group.POST("/deleteBranch", deleteBranch)
 			group.POST("/getAllTags", getAllTags)
 			group.POST("/gc", gc)
 			group.POST("/diffRefs", diffRefs)
+			group.POST("/diffCommits", diffCommits)
 			group.POST("/diffFile", diffFile)
 			group.POST("/getRepoSize", getRepoSize)
 			group.POST("/showDiffTextContent", showDiffTextContent)
@@ -81,7 +84,34 @@ func getAllBranches(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]reqvo.RefVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     ret,
+		})
+	}
+}
+
+func deleteBranch(c *gin.Context) {
+	var req reqvo.DeleteBranchReq
+	if util.ShouldBindJSON(&req, c) {
+		err := storeSrv.DeleteBranch(c, req)
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func getAllBranchAndLastCommit(c *gin.Context) {
+	var req reqvo.GetAllBranchesReq
+	if util.ShouldBindJSON(&req, c) {
+		ret, err := storeSrv.GetAllBranchAndLastCommit(c, req)
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[[]reqvo.RefCommitVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     ret,
 		})
@@ -96,7 +126,7 @@ func getAllTags(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]reqvo.RefVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     ret,
 		})
@@ -124,6 +154,21 @@ func diffRefs(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, ginutil.DataResp[reqvo.DiffRefsResp]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     resp,
+		})
+	}
+}
+
+func diffCommits(c *gin.Context) {
+	var req reqvo.DiffCommitsReq
+	if util.ShouldBindJSON(&req, c) {
+		resp, err := storeSrv.DiffCommits(c, req)
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.DataResp[reqvo.DiffCommitsResp]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     resp,
 		})

@@ -11,6 +11,8 @@ const getRepoRequest = (repoId) => request.get("/api/gitRepo/get/" + repoId);
 const treeRepoRequest = (data) => request.get("/api/gitRepo/index", { params: data });
 // 所有分支
 const allBranchesRequest = (repoId) => request.get("/api/gitRepo/allBranches/" + repoId);
+// 所有分支+最后提交信息
+const allBranchCommitRequest = (repoId) => request.get("/api/gitRepo/allBranchCommit/" + repoId);
 // 基本信息
 const simpleInfoRequest = (repoId) => request.get("/api/gitRepo/simpleInfo/" + repoId);
 // 文件列表
@@ -21,8 +23,14 @@ const catFileRequest = (data) => request.get("/api/gitRepo/catFile", { params: d
 const blameRequest = (data) => request.get("/api/gitRepo/blame", { params: data });
 // 比较差异
 const diffRefsRequest = (data) => request.get("/api/gitRepo/diffRefs", { params: data });
+// 比较差异
+const diffCommitsRequest = (data) => request.get("/api/gitRepo/diffCommits", { params: data });
 // 文件差异内容
 const diffFileRequest = (data) => request.get("/api/gitRepo/diffFile", { params: data });
+// 删除分支
+const deleteBranchRequest = (data) => request.delete("/api/gitRepo/deleteBranch", { params: data });
+// 提交历史
+const historyCommitsRequest = (data) => request.get("/api/gitRepo/historyCommits", { params: data });
 export {
     createRepoRequest,
     allGitIgnoreTemplateListRequest,
@@ -35,5 +43,9 @@ export {
     catFileRequest,
     blameRequest,
     diffRefsRequest,
-    diffFileRequest
+    diffFileRequest,
+    allBranchCommitRequest,
+    deleteBranchRequest,
+    historyCommitsRequest,
+    diffCommitsRequest
 }

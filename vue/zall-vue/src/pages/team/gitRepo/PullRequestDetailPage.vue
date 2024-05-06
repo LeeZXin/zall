@@ -11,7 +11,7 @@
     <div class="desc">
       <PrStatusTag :status="prStore.prStatus" />
       <span class="create-by">{{prStore.createBy}}</span>
-      <span>wants to merge into {{prStore.target}} from {{prStore.head}}</span>
+      <span>wants to merge into {{prStore.head}} from {{prStore.target}}</span>
     </div>
     <div>
       <a-tabs style="width: 100%;" @change="selectTab">
@@ -234,7 +234,7 @@ const detectCanMerge = () => {
     canMergeDetect.value = res.data;
   });
 };
-if (prStore.id === 0) {
+if (prStore.id === 0 || prStore.id !== parseInt(route.params.prId)) {
   getPullRequestRequest(route.params.prId).then(res => {
     prStore.commentCount = res.data.commentCount;
     prStore.createBy = res.data.createBy;

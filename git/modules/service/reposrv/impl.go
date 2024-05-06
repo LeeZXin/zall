@@ -2,6 +2,7 @@ package reposrv
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/service/gpgkeysrv"
 	"github.com/LeeZXin/zall/git/modules/service/sshkeysrv"
@@ -257,7 +258,6 @@ func (s *outerImpl) IndexRepo(ctx context.Context, reqDTO IndexRepoReqDTO) (Inde
 	resp, err := client.IndexRepo(ctx, reqvo.IndexRepoReq{
 		RepoPath: repo.Path,
 		Ref:      reqDTO.Ref,
-		Dir:      reqDTO.Dir,
 		RefType:  reqDTO.RefType,
 	})
 	if err != nil {
@@ -301,10 +301,13 @@ func (s *outerImpl) SimpleInfo(ctx context.Context, reqDTO SimpleInfoReqDTO) (Si
 		logger.Logger.WithContext(ctx).Error(err)
 		return SimpleInfoRespDTO{}, util.InternalError(err)
 	}
-	ret := SimpleInfoRespDTO{
-		Branches: branches,
-		Tags:     tags,
-	}
+	ret := SimpleInfoRespDTO{}
+	ret.Branches, _ = listutil.Map(branches, func(t reqvo.RefVO) (string, error) {
+		return t.Name, nil
+	})
+	ret.Tags, _ = listutil.Map(tags, func(t reqvo.RefVO) (string, error) {
+		return t.Name, nil
+	})
 	cfg, b := cfgsrv.Inner.GetGitCfg(ctx)
 	if b {
 		if cfg.HttpUrl != "" {
@@ -477,7 +480,35 @@ func (s *outerImpl) AllBranches(ctx context.Context, reqDTO AllBranchesReqDTO) (
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return branches, nil
+	return listutil.Map(branches, func(t reqvo.RefVO) (string, error) {
+		return t.Name, nil
+	})
+}
+
+// DeleteBranch 删除分支
+func (s *outerImpl) DeleteBranch(ctx context.Context, reqDTO DeleteBranchReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	if !b {
+		return util.InvalidArgsError()
+	}
+	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return err
+	}
+	err = client.DeleteBranch(ctx, reqvo.DeleteBranchReq{
+		RepoPath: repo.Path,
+		Branch:   reqDTO.Branch,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }
 
 // AllTags 仓库所有tag
@@ -503,7 +534,9 @@ func (s *outerImpl) AllTags(ctx context.Context, reqDTO AllTagsReqDTO) ([]string
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return tags, nil
+	return listutil.Map(tags, func(t reqvo.RefVO) (string, error) {
+		return t.Name, nil
+	})
 }
 
 // Gc git gc
@@ -536,20 +569,20 @@ func (s *outerImpl) Gc(ctx context.Context, reqDTO GcReqDTO) error {
 }
 
 // DiffRefs 比较分支或tag的不同
-func (s *outerImpl) DiffRefs(ctx context.Context, reqDTO DiffRefsReqDTO) (DiffCommitsRespDTO, error) {
+func (s *outerImpl) DiffRefs(ctx context.Context, reqDTO DiffRefsReqDTO) (DiffRefsRespDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return DiffCommitsRespDTO{}, err
+		return DiffRefsRespDTO{}, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
 	if !b {
-		return DiffCommitsRespDTO{}, util.InvalidArgsError()
+		return DiffRefsRespDTO{}, util.InvalidArgsError()
 	}
 	// 校验权限
 	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
-		return DiffCommitsRespDTO{}, err
+		return DiffRefsRespDTO{}, err
 	}
 	refs, err := client.DiffRefs(ctx, reqvo.DiffRefsReq{
 		RepoPath:   repo.Path,
@@ -560,12 +593,12 @@ func (s *outerImpl) DiffRefs(ctx context.Context, reqDTO DiffRefsReqDTO) (DiffCo
 	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
-			return DiffCommitsRespDTO{}, err
+			return DiffRefsRespDTO{}, err
 		}
 		logger.Logger.WithContext(ctx).Error(err)
-		return DiffCommitsRespDTO{}, util.InternalError(err)
+		return DiffRefsRespDTO{}, util.InternalError(err)
 	}
-	ret := DiffCommitsRespDTO{
+	ret := DiffRefsRespDTO{
 		Target:       refs.Target,
 		Head:         refs.Head,
 		TargetCommit: commit2Dto(refs.TargetCommit),
@@ -590,6 +623,53 @@ func (s *outerImpl) DiffRefs(ctx context.Context, reqDTO DiffRefsReqDTO) (DiffCo
 		return commit2Dto(t), nil
 	})
 	ret.CanMerge = refs.CanMerge
+	return ret, nil
+}
+
+// DiffCommits 比较commits不同
+func (s *outerImpl) DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (DiffCommitsRespDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return DiffCommitsRespDTO{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	if !b {
+		return DiffCommitsRespDTO{}, util.InvalidArgsError()
+	}
+	// 校验权限
+	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return DiffCommitsRespDTO{}, err
+	}
+	refs, err := client.DiffCommits(ctx, reqvo.DiffCommitsReq{
+		RepoPath: repo.Path,
+		CommitId: reqDTO.CommitId,
+	})
+	if err != nil {
+		if bizerr.IsBizErr(err) {
+			return DiffCommitsRespDTO{}, err
+		}
+		logger.Logger.WithContext(ctx).Error(err)
+		return DiffCommitsRespDTO{}, util.InternalError(err)
+	}
+	ret := DiffCommitsRespDTO{
+		Commit:   commit2Dto(refs.Commit),
+		NumFiles: refs.NumFiles,
+		DiffNumsStats: DiffNumsStatInfoDTO{
+			FileChangeNums: refs.DiffNumsStats.FileChangeNums,
+			InsertNums:     refs.DiffNumsStats.InsertNums,
+			DeleteNums:     refs.DiffNumsStats.DeleteNums,
+		},
+	}
+	ret.DiffNumsStats.Stats, _ = listutil.Map(refs.DiffNumsStats.Stats, func(t reqvo.DiffNumsStatVO) (DiffNumsStatDTO, error) {
+		return DiffNumsStatDTO{
+			RawPath:    t.RawPath,
+			Path:       t.Path,
+			InsertNums: t.InsertNums,
+			DeleteNums: t.DeleteNums,
+		}, nil
+	})
 	return ret, nil
 }
 
@@ -683,6 +763,7 @@ func (s *outerImpl) DiffFile(ctx context.Context, reqDTO DiffFileReqDTO) (DiffFi
 
 func commit2Dto(commit reqvo.CommitVO) CommitDTO {
 	return CommitDTO{
+		Parent: commit.Parent,
 		Author: UserDTO{
 			Account: commit.Author.Account,
 			Email:   commit.Author.Email,
@@ -1054,4 +1135,58 @@ func (*outerImpl) TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (
 		return
 	}
 	return
+}
+
+// AllBranchCommits 所有的分支+提交信息
+func (*outerImpl) AllBranchCommits(ctx context.Context, reqDTO AllBranchCommitsReqDTO) ([]BranchCommitDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
+	// 校验权限
+	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return nil, err
+	}
+	branches, err := client.GetAllBranchAndLastCommit(ctx, reqvo.GetAllBranchesReq{
+		RepoPath: repo.Path,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	heads, _ := listutil.Map(branches, func(t reqvo.RefCommitVO) (string, error) {
+		return t.Name, nil
+	})
+	pullRequests, err := pullrequestmd.GetLastPullRequestByRepoIdAndHead(ctx, reqDTO.RepoId, heads)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	prMap, _ := listutil.CollectToMap(pullRequests, func(t pullrequestmd.PullRequest) (string, error) {
+		return t.Head, nil
+	}, func(t pullrequestmd.PullRequest) (pullrequestmd.PullRequest, error) {
+		return t, nil
+	})
+	return listutil.Map(branches, func(t reqvo.RefCommitVO) (BranchCommitDTO, error) {
+		pr, b := prMap[t.Name]
+		ret := BranchCommitDTO{
+			Name:       t.Name,
+			LastCommit: commit2Dto(t.LastCommit),
+		}
+		if b {
+			ret.LastPullRequest = &PullRequestDTO{
+				Id:       pr.Id,
+				PrStatus: pr.PrStatus,
+				PrTitle:  pr.PrTitle,
+				Created:  pr.Created,
+			}
+		}
+		return ret, nil
+	})
 }

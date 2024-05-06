@@ -74,10 +74,6 @@ ul {
     margin-left: 4px;
 }
 
-.op-list {
-    width: 80px;
-}
-
 .op-list>li {
     line-height: 28px;
     width: 100%;

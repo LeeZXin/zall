@@ -5,7 +5,7 @@
         <template #title>
           <span>Copy Sha</span>
         </template>
-        <copy-outlined />
+        <copy-outlined @click="copy()" />
       </a-tooltip>
     </div>
     <div class="sha">
@@ -16,9 +16,14 @@
 <script setup>
 import { CopyOutlined } from "@ant-design/icons-vue";
 import { defineProps, useSlots } from "vue";
+import { message } from "ant-design-vue";
 const props = defineProps(["style"]);
 const slots = useSlots();
 const children = slots.default?.()[0].children;
+const copy = () => {
+  message.success("复制成功");
+  window.navigator.clipboard.writeText(children);
+};
 </script>
 <style scoped>
 .body {

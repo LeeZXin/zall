@@ -15,7 +15,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -62,31 +61,66 @@ func (s *storeImpl) DeleteRepo(ctx context.Context, req reqvo.DeleteRepoReq) err
 }
 
 // GetAllBranches 获取所有分支
-func (s *storeImpl) GetAllBranches(ctx context.Context, req reqvo.GetAllBranchesReq) ([]string, error) {
+func (s *storeImpl) GetAllBranches(ctx context.Context, req reqvo.GetAllBranchesReq) ([]reqvo.RefVO, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	ret, err := git.GetAllBranchList(ctx, repoPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	sort.SliceStable(ret, func(i, j int) bool {
-		return ret[i] < ret[j]
+	return listutil.Map(ret, func(t git.Ref) (reqvo.RefVO, error) {
+		return reqvo.RefVO{
+			LastCommitId: t.LastCommitId,
+			Name:         t.Name,
+		}, nil
 	})
-	return ret, nil
+}
+
+// GetAllBranchAndLastCommit 获取所有分支+最后提交信息
+func (s *storeImpl) GetAllBranchAndLastCommit(ctx context.Context, req reqvo.GetAllBranchesReq) ([]reqvo.RefCommitVO, error) {
+	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
+	ret, err := git.GetAllBranchList(ctx, repoPath)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(ret, func(t git.Ref) (reqvo.RefCommitVO, error) {
+		commit, err := git.GetCommitByCommitId(ctx, repoPath, t.LastCommitId)
+		if err != nil {
+			return reqvo.RefCommitVO{}, err
+		}
+		return reqvo.RefCommitVO{
+			LastCommit: commit2Vo(commit),
+			Name:       t.Name,
+		}, nil
+	})
+}
+
+// DeleteBranch 删除分支
+func (s *storeImpl) DeleteBranch(ctx context.Context, req reqvo.DeleteBranchReq) error {
+	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
+	err := git.DeleteBranch(ctx, repoPath, req.Branch, true)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }
 
 // GetAllTags 获取所有tag
-func (s *storeImpl) GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq) ([]string, error) {
+func (s *storeImpl) GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq) ([]reqvo.RefVO, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	ret, err := git.GetAllTagList(ctx, repoPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	sort.SliceStable(ret, func(i, j int) bool {
-		return ret[i] < ret[j]
+	return listutil.Map(ret, func(t git.Ref) (reqvo.RefVO, error) {
+		return reqvo.RefVO{
+			LastCommitId: t.LastCommitId,
+			Name:         t.Name,
+		}, nil
 	})
-	return ret, nil
 }
 
 // Gc 触发仓库gc
@@ -144,6 +178,37 @@ func (s *storeImpl) DiffRefs(ctx context.Context, req reqvo.DiffRefsReq) (reqvo.
 	return ret, nil
 }
 
+// DiffCommits 对比两个提交差异
+func (s *storeImpl) DiffCommits(ctx context.Context, req reqvo.DiffCommitsReq) (reqvo.DiffCommitsResp, error) {
+	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
+	if !git.CheckExists(ctx, repoPath, req.CommitId) {
+		return reqvo.DiffCommitsResp{}, util.InvalidArgsError()
+	}
+	info, err := git.GetDiffCommitsInfo(ctx, repoPath, req.CommitId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return reqvo.DiffCommitsResp{}, util.InternalError(err)
+	}
+	ret := reqvo.DiffCommitsResp{
+		Commit:   commit2Vo(info.Commit),
+		NumFiles: info.NumFiles,
+		DiffNumsStats: reqvo.DiffNumsStatInfoVO{
+			FileChangeNums: info.DiffNumsStats.FileChangeNums,
+			InsertNums:     info.DiffNumsStats.InsertNums,
+			DeleteNums:     info.DiffNumsStats.DeleteNums,
+		},
+	}
+	ret.DiffNumsStats.Stats, _ = listutil.Map(info.DiffNumsStats.Stats, func(t git.DiffNumsStat) (reqvo.DiffNumsStatVO, error) {
+		return reqvo.DiffNumsStatVO{
+			RawPath:    t.Path,
+			Path:       path.Base(t.Path),
+			InsertNums: t.InsertNums,
+			DeleteNums: t.DeleteNums,
+		}, nil
+	})
+	return ret, nil
+}
+
 // CanMerge 两个ref是否可以合并
 func (s *storeImpl) CanMerge(ctx context.Context, req reqvo.CanMergeReq) (bool, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
@@ -165,12 +230,12 @@ func (s *storeImpl) CanMerge(ctx context.Context, req reqvo.CanMergeReq) (bool, 
 
 // DiffFile 对比两个分支单个文件差异
 func (s *storeImpl) DiffFile(ctx context.Context, req reqvo.DiffFileReq) (reqvo.DiffFileResp, error) {
-	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	if !git.CheckExists(ctx, repoPath, req.Target) {
+	if req.Target == "" {
 		return reqvo.DiffFileResp{}, util.InvalidArgsError()
 	}
-	if !git.CheckExists(ctx, repoPath, req.Head) {
-		return reqvo.DiffFileResp{}, util.InvalidArgsError()
+	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
+	if req.Head == "" {
+		req.Head = git.EmptyTreeSHA
 	}
 	d, err := git.GetDiffFileDetail(ctx, repoPath, req.Target, req.Head, req.FilePath)
 	if err != nil {
@@ -312,27 +377,25 @@ func (s *storeImpl) CatFile(ctx context.Context, req reqvo.CatFileReq) (reqvo.Ca
 
 // IndexRepo 仓库首页
 func (s *storeImpl) IndexRepo(ctx context.Context, req reqvo.IndexRepoReq) (reqvo.IndexRepoResp, error) {
-	if req.Dir == "" {
-		req.Dir = "."
-	}
 	ref := req.RefType.PackRef(req.Ref)
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	latestCommit, err := git.GetFileLatestCommit(ctx, repoPath, ref, req.Dir)
+	dir := "."
+	latestCommit, err := git.GetFileLatestCommit(ctx, repoPath, ref, dir)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.IndexRepoResp{}, util.InternalError(err)
 	}
-	commits, err := git.LsTreeCommit(ctx, repoPath, ref, req.Dir)
+	commits, err := git.LsTreeCommit(ctx, repoPath, ref, dir)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.IndexRepoResp{}, util.InternalError(err)
 	}
-	_, readme, _, hasReadme, err := git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(req.Dir, "README.md"))
+	_, readme, _, hasReadme, err := git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(dir, "README.md"))
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
 	if err == nil && !hasReadme {
-		_, readme, _, hasReadme, err = git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(req.Dir, "readme.md"))
+		_, readme, _, hasReadme, err = git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(dir, "readme.md"))
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 		}
@@ -533,6 +596,7 @@ func lsRet2TreeVO(commits []git.FileCommit) reqvo.TreeVO {
 
 func commit2Vo(c git.Commit) reqvo.CommitVO {
 	return reqvo.CommitVO{
+		Parent: c.Parent,
 		Author: reqvo.UserVO{
 			Account: c.Author.Account,
 			Email:   c.Author.Email,

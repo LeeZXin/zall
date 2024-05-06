@@ -1,27 +1,35 @@
 <template>
   <div style="padding:14px">
-    <a-radio-group v-model:value="branchType">
-      <a-radio-button value="all">所有</a-radio-button>
-      <a-radio-button value="active">活跃</a-radio-button>
-      <a-radio-button value="inactive">非活跃</a-radio-button>
-    </a-radio-group>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0">
       <template #bodyCell="{dataIndex, dataItem}">
-        <a-tag color="purple" v-if="dataIndex === 'pullRequest'">{{dataItem[dataIndex]}}</a-tag>
-        <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
-        <div v-else>
+        <template v-if="dataIndex === 'pullRequest'">
+          <template v-if="dataItem[dataIndex]">
+            <a-button
+              type="link"
+              @click="toPrDetail(dataItem[dataIndex].id)"
+            >#{{dataItem[dataIndex].id}}</a-button>
+            <PrStatusTag :status="dataItem[dataIndex].prStatus" />
+          </template>
+        </template>
+        <template v-else-if="dataIndex === 'lastCommitTime'">
+          <span>{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
+        </template>
+        <template v-else-if="dataIndex !== 'operation'">
+          <span>{{dataItem[dataIndex]}}</span>
+        </template>
+        <template v-else>
           <div class="op-icon">
             <a-tooltip placement="top">
               <template #title>
                 <span>Delete Branch</span>
               </template>
-              <delete-outlined />
+              <delete-outlined @click="deleteBranch(dataItem['name'])" />
             </a-tooltip>
           </div>
           <a-popover placement="bottomRight" trigger="click">
             <template #content>
               <ul class="op-list">
-                <li>
+                <li @click="goToHistoryCommits(dataItem['name'])">
                   <control-outlined />
                   <span style="margin-left:4px">查看所有的活动</span>
                 </li>
@@ -30,31 +38,27 @@
             </template>
             <div class="op-icon">...</div>
           </a-popover>
-        </div>
+        </template>
       </template>
     </ZTable>
   </div>
 </template>
 <script setup>
 import ZTable from "@/components/common/ZTable";
-import { ref } from "vue";
-import { DeleteOutlined, ControlOutlined } from "@ant-design/icons-vue";
-const branchType = ref("all");
-const dataSource = ref([
-  {
-    key: "1",
-    name: "胡彦斌",
-    age: 32,
-    pullRequest: "西湖区湖底公园1号"
-  },
-  {
-    key: "2",
-    name: "胡彦祖",
-    age: 42,
-    pullRequest: "西湖区湖底公园1号"
-  }
-]);
-
+import { ref, createVNode } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import {
+  DeleteOutlined,
+  ControlOutlined,
+  ExclamationCircleOutlined
+} from "@ant-design/icons-vue";
+import { allBranchCommitRequest, deleteBranchRequest } from "@/api/git/repoApi";
+import { readableTimeComparingNow } from "@/utils/time";
+import PrStatusTag from "@/components/git/PrStatusTag";
+import { Modal, message } from "ant-design-vue";
+const router = useRouter();
+const route = useRoute();
+const dataSource = ref([]);
 const columns = ref([
   {
     title: "分支",
@@ -63,8 +67,8 @@ const columns = ref([
   },
   {
     title: "最后更新时间",
-    dataIndex: "age",
-    key: "age"
+    dataIndex: "lastCommitTime",
+    key: "lastCommitTime"
   },
   {
     title: "合并请求",
@@ -77,6 +81,43 @@ const columns = ref([
     key: "operation"
   }
 ]);
+const listBranch = () => {
+  allBranchCommitRequest(route.params.repoId).then(res => {
+    dataSource.value = res.data.map(item => {
+      return {
+        key: item.name,
+        name: item.name,
+        lastCommitTime: item.lastCommit.committedTime,
+        pullRequest: item.lastPullRequest
+      };
+    });
+  });
+};
+const deleteBranch = branch => {
+  Modal.confirm({
+    title: `你确定要删除${branch}吗?`,
+    icon: createVNode(ExclamationCircleOutlined),
+    okText: "ok",
+    cancelText: "cancel",
+    onOk() {
+      deleteBranchRequest({
+        repoId: parseInt(route.params.repoId),
+        branch
+      }).then(() => {
+        message.success("删除成功");
+        listBranch();
+      });
+    },
+    onCancel() {}
+  });
+};
+const toPrDetail = id => {
+  router.push(`/gitRepo/${route.params.repoId}/pullRequest/${id}/detail`);
+};
+const goToHistoryCommits = branch => {
+  router.push(`/gitRepo/${route.params.repoId}/commit/list/${branch}`);
+};
+listBranch();
 </script>
 <style scoped>
 .header {

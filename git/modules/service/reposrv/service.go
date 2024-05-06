@@ -39,13 +39,17 @@ type OuterService interface {
 	DeleteRepo(context.Context, DeleteRepoReqDTO) error
 	// AllBranches 获取所有分支
 	AllBranches(context.Context, AllBranchesReqDTO) ([]string, error)
+	// AllTags 所有的标签
 	AllTags(context.Context, AllTagsReqDTO) ([]string, error)
 	Gc(context.Context, GcReqDTO) error
 	// DiffRefs 比较分支或tag的不同
-	DiffRefs(context.Context, DiffRefsReqDTO) (DiffCommitsRespDTO, error)
+	DiffRefs(context.Context, DiffRefsReqDTO) (DiffRefsRespDTO, error)
+	// DiffCommits 比较提交的不同
+	DiffCommits(context.Context, DiffCommitsReqDTO) (DiffCommitsRespDTO, error)
 	// DiffFile 文件差异内容
 	DiffFile(context.Context, DiffFileReqDTO) (DiffFileRespDTO, error)
 	ShowDiffTextContent(context.Context, ShowDiffTextContentReqDTO) ([]DiffLineDTO, error)
+	// HistoryCommits 分支提交历史
 	HistoryCommits(context.Context, HistoryCommitsReqDTO) (HistoryCommitsRespDTO, error)
 	InsertRepoToken(context.Context, InsertRepoTokenReqDTO) error
 	DeleteRepoToken(context.Context, DeleteRepoTokenReqDTO) error
@@ -54,4 +58,8 @@ type OuterService interface {
 	TransferTeam(context.Context, TransferTeamReqDTO) error
 	// Blame 获取每一行提交信息
 	Blame(context.Context, BlameReqDTO) ([]BlameLineDTO, error)
+	// AllBranchCommits 所有的分支+提交信息
+	AllBranchCommits(context.Context, AllBranchCommitsReqDTO) ([]BranchCommitDTO, error)
+	// DeleteBranch 删除分支
+	DeleteBranch(context.Context, DeleteBranchReqDTO) error
 }

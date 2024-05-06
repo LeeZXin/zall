@@ -17,7 +17,7 @@
       </div>
       <div class="right">
         <div class="file-path">
-          <template v-for="item in files" v-bind:key="item">
+          <template v-for="(item, index) in files" v-bind:key="item">
             <div class="file-path-item">{{item}}</div>
             <div class="file-path-split" v-if="index < files.length - 1">/</div>
           </template>
@@ -30,7 +30,7 @@
             </div>
             <div class="right">
               <span>{{latestCommit.shortCommitId}}</span>
-              <span>{{latestCommit.committedTime}}</span>
+              <span>{{readableTimeComparingNow(latestCommit.committedTime)}}</span>
             </div>
           </div>
           <div class="code-body">
@@ -47,7 +47,11 @@
             <div style="max-height:calc(100vh - 234px);overflow:scroll;width:100%">
               <div class="code-code">
                 <ul class="blame-info" v-if="showBlame">
-                  <li v-for="item in blameList" v-bind:key="item.commit.commitId" :style="blameLineStyle">
+                  <li
+                    v-for="item in blameList"
+                    v-bind:key="item.commit.commitId"
+                    :style="blameLineStyle"
+                  >
                     <a-popover>
                       <template #content>
                         <div class="commit-content">
@@ -60,13 +64,15 @@
                           <div class="bottom">
                             <span class="author-name">{{item.commit.committer.account}}</span>
                             <span class="gray-text">提交于</span>
-                            <span class="gray-text">{{item.commit.committedTime}}</span>
+                            <span
+                              class="gray-text"
+                            >{{readableTimeComparingNow(item.commit.committedTime)}}</span>
                           </div>
                         </div>
                       </template>
                       <div class="commit-text">{{item.commit.committer.account}}</div>
                     </a-popover>
-                    <span>{{item.commit.committedTime}}</span>
+                    <span>{{readableTimeComparingNow(item.commit.committedTime)}}</span>
                   </li>
                 </ul>
                 <Codemirror
@@ -87,8 +93,10 @@
 import { OrderedListOutlined, LinkOutlined } from "@ant-design/icons-vue";
 import { ref, defineProps, reactive } from "vue";
 import { Codemirror } from "vue-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { useRoute } from "vue-router";
+import { readableTimeComparingNow } from "@/utils/time";
 import {
   entriesRepoRequest,
   catFileRequest,
@@ -98,10 +106,10 @@ const route = useRoute();
 const props = defineProps(["style"]);
 const fileContent = ref("");
 const fileSize = ref("");
-const extensions = [oneDark];
+const extensions = [oneDark, javascript()];
 const codeOrBlame = ref("code");
 const showBlame = ref(false);
-const files = ref(route.params.files);
+const files = ref(route.params.files?route.params.files:[]);
 const treeData = ref([]);
 const showRight = ref(false);
 // 展开节点

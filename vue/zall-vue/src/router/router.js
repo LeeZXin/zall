@@ -89,7 +89,7 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/gitRepo/RepoIndexPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/tree/:refType/:ref/:files+",
+                path: "/gitRepo/:repoId(\\d+)/tree/:refType/:ref/:files*",
                 component: () =>
                     import ("../pages/team/gitRepo/RepoTreePage")
             }, {
@@ -105,9 +105,17 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/gitRepo/PullRequestDetailPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/Branches/list",
+                path: "/gitRepo/:repoId(\\d+)/branch/list",
                 component: () =>
                     import ("../pages/team/gitRepo/BranchesPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/commit/list/:ref?",
+                component: () =>
+                    import ("../pages/team/gitRepo/HistoryCommitPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/commit/diff/:commitId",
+                component: () =>
+                    import ("../pages/team/gitRepo/DiffCommitsPage")
             }]
         },
         {

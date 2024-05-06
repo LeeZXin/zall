@@ -5,6 +5,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
+	"xorm.io/builder"
 )
 
 func IsPrTitleValid(title string) bool {
@@ -74,6 +75,21 @@ func GetPullRequestById(ctx context.Context, id int64) (PullRequest, bool, error
 		Where("id = ?", id).
 		Get(&ret)
 	return ret, b, err
+}
+
+func GetLastPullRequestByRepoIdAndHead(ctx context.Context, repoId int64, heads []string) ([]PullRequest, error) {
+	ret := make([]PullRequest, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		In("id",
+			builder.Select("max(id)").
+				Where(builder.And(
+					builder.Eq{"repo_id": repoId},
+					builder.In("head", heads),
+				)).
+				From(PullRequestTableName).
+				GroupBy("head"),
+		).Find(&ret)
+	return ret, err
 }
 
 func InsertReview(ctx context.Context, reqDTO InsertReviewReqDTO) error {

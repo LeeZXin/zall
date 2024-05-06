@@ -54,7 +54,7 @@
             </div>
             <div class="commit-text">
               <span style="margin-right:4px">{{latestCommit.shortCommitId}}</span>
-              <span>{{latestCommit.committedTime}}</span>
+              <span>{{readableTimeComparingNow(latestCommit.committedTime)}}</span>
             </div>
           </div>
           <div class="dir-line" v-for="item in files" v-bind:key="item.commit.commitId">
@@ -63,7 +63,7 @@
               <span>{{item.path}}</span>
             </div>
             <div class="dir-line-item">{{item.commit.commitMsg}}</div>
-            <div class="dir-line-item" style="text-align:right">{{item.commit.committedTime}}</div>
+            <div class="dir-line-item" style="text-align:right">{{readableTimeComparingNow(item.commit.committedTime)}}</div>
           </div>
         </div>
         <div class="dir-table">
@@ -124,6 +124,7 @@ import BranchTagSelect from "@/components/git/BranchTagSelect";
 import { treeRepoRequest, simpleInfoRequest } from "@/api/git/repoApi";
 import { useRoute, useRouter } from "vue-router";
 import { message } from "ant-design-vue";
+import { readableTimeComparingNow } from "@/utils/time";
 const route = useRoute();
 const router = useRouter();
 VMdEditor.use(githubTheme);
@@ -148,7 +149,7 @@ const selectedRef = reactive({
   ref: "",
   refType: ""
 });
-// 
+//
 const onBranchTagSelect = event => {
   selectedRef.refType = event.key;
   selectedRef.ref = event.value;
@@ -198,8 +199,11 @@ const copy = type => {
 };
 // 跳转代码详情页
 const toRepoTree = path => {
-  router.push(`/gitRepo/${route.params.repoId}/tree/${selectedRef.refType}/${selectedRef.ref}/` + path);
-}
+  router.push(
+    `/gitRepo/${route.params.repoId}/tree/${selectedRef.refType}/${selectedRef.ref}/` +
+      path
+  );
+};
 </script>
 <style scoped>
 .dir-table {

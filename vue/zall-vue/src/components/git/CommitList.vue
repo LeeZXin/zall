@@ -1,5 +1,5 @@
 <template>
-  <div class="commit-list">
+  <div class="commit-list" :style="props.style">
     <div class="title no-wrap">
       <span style="font-weight:bold">{{props.commits.length}}</span>
       <span style="color:orange">个提交</span>
@@ -29,7 +29,7 @@
 import CommitSha from "@/components/git/CommitSha";
 import { defineProps } from "vue";
 import { readableTimeComparingNow } from "@/utils/time";
-const props = defineProps(["commits", "diffNumsStats"]);
+const props = defineProps(["commits", "diffNumsStats", "style"]);
 </script>
 <style scoped>
 .commit-list {

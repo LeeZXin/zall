@@ -39,6 +39,12 @@ type DiffRefsInfo struct {
 	CanMerge      bool             `json:"canMerge"`
 }
 
+type DiffCommitsInfo struct {
+	Commit        Commit           `json:"commit"`
+	NumFiles      int              `json:"numFiles"`
+	DiffNumsStats DiffNumsStatInfo `json:"diffNumsStats"`
+}
+
 // IsMergeAble 是否可合并
 func (i *DiffRefsInfo) IsMergeAble() bool {
 	if !strings.HasPrefix(i.OriginHead, BranchPrefix) {
@@ -69,7 +75,7 @@ func GetDiffRefsInfo(ctx context.Context, repoPath, target, head string) (DiffRe
 		return DiffRefsInfo{}, err
 	}
 	// 这里要反过来 git log 查看target的提交记录 不是head的提交记录
-	pr.Commits, err = GetGitDiffCommitList(ctx, repoPath, pr.HeadCommit.Id, pr.TargetCommit.Id)
+	pr.Commits, err = GetGitDiffCommitList(ctx, repoPath, pr.TargetCommit.Id, pr.HeadCommit.Id)
 	if err != nil {
 		return DiffRefsInfo{}, err
 	}
@@ -92,6 +98,33 @@ func GetDiffRefsInfo(ctx context.Context, repoPath, target, head string) (DiffRe
 		}
 	} else {
 		pr.ConflictFiles = []string{}
+	}
+	return pr, nil
+}
+
+func GetDiffCommitsInfo(ctx context.Context, repoPath, commitId string) (DiffCommitsInfo, error) {
+	pr := DiffCommitsInfo{}
+	var err error
+	pr.Commit, err = GetCommitByCommitId(ctx, repoPath, commitId)
+	if err != nil {
+		return DiffCommitsInfo{}, err
+	}
+	var (
+		targetCommitId string
+	)
+	parentLen := len(pr.Commit.Parent)
+	if parentLen == 0 {
+		targetCommitId = EmptyTreeSHA
+	} else {
+		targetCommitId = pr.Commit.Parent[0]
+	}
+	pr.NumFiles, err = GetFilesDiffCount(ctx, repoPath, commitId, targetCommitId)
+	if err != nil {
+		return DiffCommitsInfo{}, err
+	}
+	pr.DiffNumsStats, err = GetDiffNumsStat(ctx, repoPath, commitId, targetCommitId)
+	if err != nil {
+		return DiffCommitsInfo{}, err
 	}
 	return pr, nil
 }

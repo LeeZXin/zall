@@ -31,7 +31,7 @@
             </li>
           </ul>
         </a-tab-pane>
-        <a-tab-pane key="tag" tab="标签">
+        <a-tab-pane key="tag" tab="标签" v-if="!props.disableTags">
           <ul class="branch-tag-list">
             <li @click="select(item)" v-for="item in tags" v-bind:key="item">
               <div class="branch-tag-name">{{item}}</div>
@@ -56,7 +56,13 @@ import {
   TagOutlined,
   CaretDownOutlined
 } from "@ant-design/icons-vue";
-const props = defineProps(["style", "branches", "tags"]);
+const props = defineProps([
+  "style",
+  "branches",
+  "tags",
+  "disableTags",
+  "defaultBranch"
+]);
 const selectedBranchOrTagName = ref("");
 const selectedBranchOrTagType = ref("");
 const searchBranch = ref("");
@@ -84,9 +90,6 @@ const select = name => {
   selectedBranchOrTagName.value = name;
   branchTagVisible.value = false;
 };
-if (props.branches && props.branches.length > 0) {
-  select(props.branches[0]);
-}
 // 搜索分支
 const branchInputChange = () => {
   const val = searchBranch.value;
@@ -109,12 +112,23 @@ const tagInputChange = () => {
     });
   }
 };
+if (props.branches && props.branches.length > 0) {
+  if (props.defaultBranch) {
+    select(props.defaultBranch);
+  } else {
+    select(props.branches[0]);
+  }
+}
 watch(
   () => props.branches,
   newValue => {
     branches.value = newValue;
     if (newValue && newValue.length > 0) {
-      select(newValue[0]);
+      if (props.defaultBranch) {
+        select(props.defaultBranch);
+      } else {
+        select(newValue[0]);
+      }
     }
   }
 );

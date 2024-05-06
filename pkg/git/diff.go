@@ -28,6 +28,8 @@ const (
 	TagLinePrefix    = "@"
 )
 
+const EmptyTreeSHA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+
 func (t DiffFileType) String() string {
 	switch t {
 	case CreatedFileType:
@@ -93,10 +95,10 @@ type DiffLine struct {
 }
 
 func GetFilesDiffCount(ctx context.Context, repoPath, target, head string) (int, error) {
-	result, err := NewCommand("diff", "-z", "--name-only", target+".."+head, "--").Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("diff", "-z", "--name-only", head+".."+target, "--").Run(ctx, WithDir(repoPath))
 	if err != nil {
 		if strings.Contains(err.Error(), "no merge base") {
-			result, err = NewCommand("diff", "-z", "--name-only", target, head, "--").Run(ctx, WithDir(repoPath))
+			result, err = NewCommand("diff", "-z", "--name-only", head, target, "--").Run(ctx, WithDir(repoPath))
 		}
 	}
 	if err != nil {
@@ -106,7 +108,7 @@ func GetFilesDiffCount(ctx context.Context, repoPath, target, head string) (int,
 }
 
 func GetDiffNumsStat(ctx context.Context, repoPath, target, head string) (DiffNumsStatInfo, error) {
-	pipeResult := NewCommand("diff", "--numstat", target+".."+head).RunWithReadPipe(ctx, WithDir(repoPath))
+	pipeResult := NewCommand("diff", "--numstat", head+".."+target, "--").RunWithReadPipe(ctx, WithDir(repoPath))
 	stats := make([]DiffNumsStat, 0)
 	insertNumsTotal := 0
 	deleteNumsTotal := 0
@@ -117,10 +119,10 @@ func GetDiffNumsStat(ctx context.Context, repoPath, target, head string) (DiffNu
 				deleteNums, insertNums int
 			)
 			if fields[0] != "-" {
-				deleteNums, _ = strconv.Atoi(fields[0])
+				deleteNums, _ = strconv.Atoi(fields[1])
 			}
 			if fields[1] != "-" {
-				insertNums, _ = strconv.Atoi(fields[1])
+				insertNums, _ = strconv.Atoi(fields[0])
 			}
 			insertNumsTotal += insertNums
 			deleteNumsTotal += deleteNums

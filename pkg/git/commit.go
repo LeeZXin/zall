@@ -368,7 +368,7 @@ func GetFullShaCommitId(ctx context.Context, repoPath, short string) (string, er
 }
 
 func GetGitDiffCommitList(ctx context.Context, repoPath, target, head string) ([]Commit, error) {
-	result, err := NewCommand("log", PrettyLogFormat, target+".."+head, "--max-count=100", "--").
+	result, err := NewCommand("log", PrettyLogFormat, head+".."+target, "--max-count=100", "--").
 		Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return nil, err

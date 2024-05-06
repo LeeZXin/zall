@@ -23,6 +23,11 @@ type GetAllBranchesReq struct {
 	RepoPath string `json:"repoPath"`
 }
 
+type DeleteBranchReq struct {
+	RepoPath string `json:"repoPath"`
+	Branch   string `json:"branch"`
+}
+
 type GetAllTagsReq struct {
 	RepoPath string `json:"repoPath"`
 }
@@ -37,6 +42,11 @@ type DiffRefsReq struct {
 	TargetType git.RefType `json:"targetType"`
 	Head       string      `json:"head"`
 	HeadType   git.RefType `json:"headType"`
+}
+
+type DiffCommitsReq struct {
+	RepoPath string `json:"repoPath"`
+	CommitId string `json:"commitId"`
 }
 
 type CanMergeReq struct {
@@ -59,21 +69,28 @@ type DiffRefsResp struct {
 	CanMerge      bool               `json:"canMerge"`
 }
 
+type DiffCommitsResp struct {
+	Commit        CommitVO           `json:"commit"`
+	NumFiles      int                `json:"numFiles"`
+	DiffNumsStats DiffNumsStatInfoVO `json:"diffNumsStats"`
+}
+
 type UserVO struct {
 	Account string `json:"account"`
 	Email   string `json:"email"`
 }
 
 type CommitVO struct {
-	Author        UserVO `json:"author"`
-	Committer     UserVO `json:"committer"`
-	AuthoredTime  int64  `json:"authoredTime"`
-	CommittedTime int64  `json:"committedTime"`
-	CommitMsg     string `json:"commitMsg"`
-	CommitId      string `json:"commitId"`
-	ShortId       string `json:"shortId"`
-	CommitSig     string `json:"commitSig"`
-	Payload       string `json:"payload"`
+	Parent        []string `json:"parent"`
+	Author        UserVO   `json:"author"`
+	Committer     UserVO   `json:"committer"`
+	AuthoredTime  int64    `json:"authoredTime"`
+	CommittedTime int64    `json:"committedTime"`
+	CommitMsg     string   `json:"commitMsg"`
+	CommitId      string   `json:"commitId"`
+	ShortId       string   `json:"shortId"`
+	CommitSig     string   `json:"commitSig"`
+	Payload       string   `json:"payload"`
 }
 
 type DiffNumsStatInfoVO struct {
@@ -177,7 +194,6 @@ type BlameLineVO struct {
 type IndexRepoReq struct {
 	RepoPath string      `json:"repoPath"`
 	Ref      string      `json:"ref"`
-	Dir      string      `json:"dir"`
 	RefType  git.RefType `json:"refType"`
 }
 
@@ -238,4 +254,14 @@ type BlameReq struct {
 	Ref      string      `json:"ref"`
 	FilePath string      `json:"filePath"`
 	RefType  git.RefType `json:"refType"`
+}
+
+type RefVO struct {
+	LastCommitId string `json:"lastCommitId"`
+	Name         string `json:"name"`
+}
+
+type RefCommitVO struct {
+	Name       string   `json:"name"`
+	LastCommit CommitVO `json:"lastCommit"`
 }

@@ -1,7 +1,7 @@
 <template>
   <div style="padding:10px" class="container">
-    <div v-if="allowUserCreateTeam">
-      <a-button type="primary" ghost @click="toCreateTeam">{{t("createTeamText")}}</a-button>
+    <div v-if="allowUserCreateTeam" style="text-align:right">
+      <a-button type="primary" @click="toCreateTeam">{{t("createTeamText")}}</a-button>
     </div>
     <div class="team-list">
       <div class="header">{{t("myTeam")}}</div>

@@ -1,6 +1,7 @@
 package reposrv
 
 import (
+	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/git"
@@ -84,7 +85,6 @@ type IndexRepoReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Ref      string              `json:"ref"`
 	RefType  git.RefType         `json:"refType"`
-	Dir      string              `json:"dir"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -99,9 +99,6 @@ func (r *IndexRepoReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if len(r.Ref) > 128 || len(r.Ref) == 0 {
-		return util.InvalidArgsError()
-	}
-	if strings.HasSuffix(r.Dir, "/") {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -231,14 +228,15 @@ type UserDTO struct {
 }
 
 type CommitDTO struct {
-	Author        UserDTO `json:"author"`
-	Committer     UserDTO `json:"committer"`
-	AuthoredTime  int64   `json:"authoredTime"`
-	CommittedTime int64   `json:"committedTime"`
-	CommitMsg     string  `json:"commitMsg"`
-	CommitId      string  `json:"commitId"`
-	ShortId       string  `json:"shortId"`
-	Verified      bool    `json:"verified"`
+	Parent        []string `json:"parent"`
+	Author        UserDTO  `json:"author"`
+	Committer     UserDTO  `json:"committer"`
+	AuthoredTime  int64    `json:"authoredTime"`
+	CommittedTime int64    `json:"committedTime"`
+	CommitMsg     string   `json:"commitMsg"`
+	CommitId      string   `json:"commitId"`
+	ShortId       string   `json:"shortId"`
+	Verified      bool     `json:"verified"`
 }
 
 type FileDTO struct {
@@ -276,6 +274,9 @@ type AllBranchesReqDTO struct {
 }
 
 func (r *AllBranchesReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -288,6 +289,9 @@ type AllTagsReqDTO struct {
 }
 
 func (r *AllTagsReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -300,6 +304,9 @@ type GcReqDTO struct {
 }
 
 func (r *GcReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -344,6 +351,9 @@ type DiffRefsReqDTO struct {
 }
 
 func (r *DiffRefsReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -362,7 +372,23 @@ func (r *DiffRefsReqDTO) IsValid() error {
 	return nil
 }
 
-type DiffCommitsRespDTO struct {
+type DiffCommitsReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	CommitId string              `json:"commitId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *DiffCommitsReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DiffRefsRespDTO struct {
 	Target        string              `json:"target"`
 	Head          string              `json:"head"`
 	TargetCommit  CommitDTO           `json:"targetCommit"`
@@ -372,6 +398,12 @@ type DiffCommitsRespDTO struct {
 	DiffNumsStats DiffNumsStatInfoDTO `json:"diffNumsStats"`
 	ConflictFiles []string            `json:"conflictFiles"`
 	CanMerge      bool                `json:"canMerge"`
+}
+
+type DiffCommitsRespDTO struct {
+	Commit        CommitDTO           `json:"commit"`
+	NumFiles      int                 `json:"numFiles"`
+	DiffNumsStats DiffNumsStatInfoDTO `json:"diffNumsStats"`
 }
 
 type DiffNumsStatInfoDTO struct {
@@ -420,6 +452,9 @@ type ShowDiffTextContentReqDTO struct {
 }
 
 func (r *ShowDiffTextContentReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -447,13 +482,16 @@ type DiffFileReqDTO struct {
 }
 
 func (r *DiffFileReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	if !util.ValidateRef(r.Target) {
 		return util.InvalidArgsError()
 	}
-	if !util.ValidateRef(r.Head) {
+	if r.Head != "" && !util.ValidateRef(r.Head) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -467,6 +505,9 @@ type HistoryCommitsReqDTO struct {
 }
 
 func (r *HistoryCommitsReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if len(r.Ref) == 0 {
 		return util.InvalidArgsError()
 	}
@@ -490,6 +531,9 @@ type InsertRepoTokenReqDTO struct {
 }
 
 func (r *InsertRepoTokenReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -502,6 +546,9 @@ type DeleteRepoTokenReqDTO struct {
 }
 
 func (r *DeleteRepoTokenReqDTO) IsValid() error {
+	if r.TokenId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -514,6 +561,9 @@ type ListRepoTokenReqDTO struct {
 }
 
 func (r *ListRepoTokenReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -534,6 +584,9 @@ type CheckRepoTokenReqDTO struct {
 }
 
 func (r *CheckRepoTokenReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !repomd.IsRepoTokenAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
@@ -595,4 +648,51 @@ type SimpleInfoRespDTO struct {
 type BlameLineDTO struct {
 	Number int       `json:"number"`
 	Commit CommitDTO `json:"commit"`
+}
+
+type AllBranchCommitsReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *AllBranchCommitsReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type BranchCommitDTO struct {
+	Name            string          `json:"name"`
+	LastCommit      CommitDTO       `json:"lastCommit"`
+	LastPullRequest *PullRequestDTO `json:"lastPullRequest,omitempty"`
+}
+
+type PullRequestDTO struct {
+	Id       int64                  `json:"id"`
+	PrStatus pullrequestmd.PrStatus `json:"prStatus"`
+	PrTitle  string                 `json:"prTitle"`
+	Created  time.Time              `json:"created"`
+}
+
+type DeleteBranchReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	Branch   string              `json:"branch"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *DeleteBranchReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.Branch == "" {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
 }

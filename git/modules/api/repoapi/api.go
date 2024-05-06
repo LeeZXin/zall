@@ -40,12 +40,16 @@ func InitApi() {
 			group.GET("/catFile", catFile)
 			// 展示仓库所有分支
 			group.GET("/allBranches/:repoId", allBranches)
+			// 展示仓库所有分支
+			group.GET("/allBranchCommit/:repoId", allBranchCommit)
 			// 展示仓库所有tag
 			group.GET("/allTags/:repoId", allTags)
 			// gc
 			group.POST("/gc/:repoId", gc)
 			// 提交差异
 			group.GET("/diffRefs", diffRefs)
+			// 提交差异
+			group.GET("/diffCommits", diffCommits)
 			// 展示提交文件差异
 			group.GET("/diffFile", diffFile)
 			// 展示文件内容
@@ -64,6 +68,8 @@ func InitApi() {
 			group.POST("/transferTeam", transferTeam)
 			// 获取每一行提交信息
 			group.GET("/blame", blame)
+			// 删除分支
+			group.DELETE("/deleteBranch", deleteBranch)
 		}
 	})
 }
@@ -103,6 +109,22 @@ func getSimpleInfo(c *gin.Context) {
 	})
 }
 
+func deleteBranch(c *gin.Context) {
+	var req DeleteBranchReqVO
+	if util.ShouldBindQuery(&req, c) {
+		err := reposrv.Outer.DeleteBranch(c, reposrv.DeleteBranchReqDTO{
+			RepoId:   req.RepoId,
+			Branch:   req.Branch,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
 func allBranches(c *gin.Context) {
 	branches, err := reposrv.Outer.AllBranches(c, reposrv.AllBranchesReqDTO{
 		RepoId:   getRepoId(c),
@@ -115,6 +137,36 @@ func allBranches(c *gin.Context) {
 	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     branches,
+	})
+}
+
+func allBranchCommit(c *gin.Context) {
+	branches, err := reposrv.Outer.AllBranchCommits(c, reposrv.AllBranchCommitsReqDTO{
+		RepoId:   getRepoId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(branches, func(t reposrv.BranchCommitDTO) (BranchCommitVO, error) {
+		ret := BranchCommitVO{
+			Name:       t.Name,
+			LastCommit: commitDto2Vo(t.LastCommit),
+		}
+		if t.LastPullRequest != nil {
+			ret.LastPullRequest = &PullRequestVO{
+				Id:       t.LastPullRequest.Id,
+				PrStatus: t.LastPullRequest.PrStatus,
+				PrTitle:  t.LastPullRequest.PrTitle,
+				Created:  t.LastPullRequest.Created.Format(time.DateTime),
+			}
+		}
+		return ret, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]BranchCommitVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
 	})
 }
 
@@ -161,7 +213,6 @@ func indexRepo(c *gin.Context) {
 		respDTO, err := reposrv.Outer.IndexRepo(c, reposrv.IndexRepoReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
-			Dir:      req.Dir,
 			RefType:  req.RefType,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -212,6 +263,7 @@ func entriesRepo(c *gin.Context) {
 
 func commitDto2Vo(dto reposrv.CommitDTO) CommitVO {
 	return CommitVO{
+		Parent: dto.Parent,
 		Author: UserVO{
 			Account: dto.Author.Account,
 			Email:   dto.Author.Email,
@@ -446,6 +498,42 @@ func diffRefs(c *gin.Context) {
 			}, nil
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[DiffRefsVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     respVO,
+		})
+	}
+}
+
+func diffCommits(c *gin.Context) {
+	var req DiffCommitsReqVO
+	if util.ShouldBindQuery(&req, c) {
+		respDTO, err := reposrv.Outer.DiffCommits(c, reposrv.DiffCommitsReqDTO{
+			RepoId:   req.RepoId,
+			CommitId: req.CommitId,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		respVO := DiffCommitsVO{
+			Commit:   commitDto2Vo(respDTO.Commit),
+			NumFiles: respDTO.NumFiles,
+			DiffNumsStats: DiffNumsStatInfoVO{
+				FileChangeNums: respDTO.DiffNumsStats.FileChangeNums,
+				InsertNums:     respDTO.DiffNumsStats.InsertNums,
+				DeleteNums:     respDTO.DiffNumsStats.DeleteNums,
+			},
+		}
+		respVO.DiffNumsStats.Stats, _ = listutil.Map(respDTO.DiffNumsStats.Stats, func(t reposrv.DiffNumsStatDTO) (DiffNumsStatVO, error) {
+			return DiffNumsStatVO{
+				RawPath:    t.RawPath,
+				Path:       t.Path,
+				InsertNums: t.InsertNums,
+				DeleteNums: t.DeleteNums,
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.DataResp[DiffCommitsVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     respVO,
 		})

@@ -58,8 +58,8 @@ func DeleteRepo(ctx context.Context, req reqvo.DeleteRepoReq) error {
 }
 
 // GetAllBranches 获取所有的分支
-func GetAllBranches(ctx context.Context, req reqvo.GetAllBranchesReq) ([]string, error) {
-	var resp ginutil.DataResp[[]string]
+func GetAllBranches(ctx context.Context, req reqvo.GetAllBranchesReq) ([]reqvo.RefVO, error) {
+	var resp ginutil.DataResp[[]reqvo.RefVO]
 	err := postHttp(
 		ctx,
 		"/api/v1/git/store/getAllBranches",
@@ -75,9 +75,45 @@ func GetAllBranches(ctx context.Context, req reqvo.GetAllBranchesReq) ([]string,
 	return resp.Data, nil
 }
 
+// DeleteBranch 删除分支
+func DeleteBranch(ctx context.Context, req reqvo.DeleteBranchReq) error {
+	var resp ginutil.DataResp[[]reqvo.RefVO]
+	err := postHttp(
+		ctx,
+		"/api/v1/git/store/deleteBranch",
+		req,
+		&resp,
+	)
+	if err != nil {
+		return err
+	}
+	if !resp.IsSuccess() {
+		return bizerr.NewBizErr(resp.Code, resp.Message)
+	}
+	return nil
+}
+
+// GetAllBranchAndLastCommit 获取所有的分支+最后提交信息
+func GetAllBranchAndLastCommit(ctx context.Context, req reqvo.GetAllBranchesReq) ([]reqvo.RefCommitVO, error) {
+	var resp ginutil.DataResp[[]reqvo.RefCommitVO]
+	err := postHttp(
+		ctx,
+		"/api/v1/git/store/getAllBranchAndLastCommit",
+		req,
+		&resp,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if !resp.IsSuccess() {
+		return nil, bizerr.NewBizErr(resp.Code, resp.Message)
+	}
+	return resp.Data, nil
+}
+
 // GetAllTags 获取所有的tag
-func GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq) ([]string, error) {
-	var resp ginutil.DataResp[[]string]
+func GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq) ([]reqvo.RefVO, error) {
+	var resp ginutil.DataResp[[]reqvo.RefVO]
 	err := postHttp(
 		ctx,
 		"/api/v1/git/store/getAllTags",
@@ -125,6 +161,24 @@ func DiffRefs(ctx context.Context, req reqvo.DiffRefsReq) (reqvo.DiffRefsResp, e
 	}
 	if !resp.IsSuccess() {
 		return reqvo.DiffRefsResp{}, bizerr.NewBizErr(resp.Code, resp.Message)
+	}
+	return resp.Data, nil
+}
+
+// DiffCommits 比较两个commit
+func DiffCommits(ctx context.Context, req reqvo.DiffCommitsReq) (reqvo.DiffCommitsResp, error) {
+	var resp ginutil.DataResp[reqvo.DiffCommitsResp]
+	err := postHttp(
+		ctx,
+		"/api/v1/git/store/diffCommits",
+		req,
+		&resp,
+	)
+	if err != nil {
+		return reqvo.DiffCommitsResp{}, err
+	}
+	if !resp.IsSuccess() {
+		return reqvo.DiffCommitsResp{}, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
 	return resp.Data, nil
 }

@@ -8,7 +8,7 @@
     </a-layout-header>
     <a-layout>
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
-        <a-menu theme="dark" mode="inline" @select="onselect" v-model:selectedKeys="selectedKeys">
+        <a-menu theme="dark" mode="inline" @click="clickPage" v-model:selectedKeys="selectedKeys">
           <a-menu-item key="/index">
             <file-outlined />
             <span>代码文件</span>
@@ -17,13 +17,17 @@
             <pull-request-outlined />
             <span>合并请求</span>
           </a-menu-item>
-          <a-menu-item key="/team/gitRepo/branches">
+          <a-menu-item key="/branch/list">
             <branches-outlined />
-            <span>分支</span>
+            <span>分支列表</span>
           </a-menu-item>
           <a-menu-item key="/team/gitRepo/tags">
             <tag-outlined />
-            <span>标签</span>
+            <span>标签列表</span>
+          </a-menu-item>
+          <a-menu-item key="/commit/list">
+            <cloud-upload-outlined />
+            <span>提交历史</span>
           </a-menu-item>
           <a-menu-item key="/team/gitRepo/opLogs">
             <calendar-outlined />
@@ -54,7 +58,7 @@
 import I18nSelect from "../components/i18n/I18nSelect";
 import AvatarName from "../components/user/AvatarName";
 import { useI18n } from "vue-i18n";
-import { ref, provide, nextTick } from "vue";
+import { ref, provide, nextTick, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
   BranchesOutlined,
@@ -63,7 +67,8 @@ import {
   TagOutlined,
   SettingOutlined,
   CalendarOutlined,
-  KeyOutlined
+  KeyOutlined,
+  CloudUploadOutlined
 } from "@ant-design/icons-vue";
 import { getRepoRequest } from "@/api/git/repoApi";
 import { useRepoStore } from "@/pinia/repoStore";
@@ -80,13 +85,18 @@ const container = ref(null);
 const pagesMap = {
   "/index": "/index",
   "/tree": "/index",
-  "/pullRequest": "/pullRequest/list"
+  "/pullRequest": "/pullRequest/list",
+  "/branch": "/branch/list",
+  "/commit": "/commit/list"
 };
 const switchRepo = () => {
   router.push(`/team/${repo.teamId}/gitRepo/list`);
 };
-const onselect = event => {
-  router.push(routeKey + event.key);
+const clickPage = event => {
+  router.push({
+    path: routeKey + event.key,
+    force: true
+  });
 };
 if (repo.repoId === 0) {
   getRepoRequest(parseInt(route.params.repoId)).then(res => {
@@ -95,14 +105,17 @@ if (repo.repoId === 0) {
     repo.teamId = res.data.teamId;
   });
 }
-const routeSuffix = route.path.replace(new RegExp(`^${routeKey}`), "");
-for (let key in pagesMap) {
-  let value = pagesMap[key];
-  if (routeSuffix.startsWith(key)) {
-    selectedKeys.value = [value];
-    break;
+const changeSelectedKey = path => {
+  const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
+  for (let key in pagesMap) {
+    let value = pagesMap[key];
+    if (routeSuffix.startsWith(key)) {
+      selectedKeys.value = [value];
+      break;
+    }
   }
-}
+};
+changeSelectedKey(route.path);
 provide("gitRepoLayoutReload", () => {
   routerActive.value = false;
   nextTick(() => {
@@ -132,6 +145,10 @@ provide("gitRepoLayoutScrollToElem", id => {
     });
   }
 });
+watch(
+  () => router.currentRoute.value.path,
+  newPath => changeSelectedKey(newPath)
+);
 </script>
 <style scoped>
 .switch-repo-text {
