@@ -158,7 +158,7 @@ var (
 			DefaultRet: "触发合并请求",
 		},
 		ReviewPullRequest: KeyItem{
-			Id:         "pullRequestSrv.ReviewPullRequest",
+			Id:         "pullRequestSrv.AgreeReviewPullRequest",
 			DefaultRet: "评审合并请求",
 		},
 		AddComment: KeyItem{
@@ -188,7 +188,7 @@ var (
 
 	BranchSrvKeysVO = BranchSrvKeys{
 		InsertProtectedBranch: KeyItem{
-			Id:         "branchSrv.InsertProtectedBranch",
+			Id:         "branchSrv.CreateProtectedBranch",
 			DefaultRet: "新增保护分支",
 		},
 		DeleteProtectedBranch: KeyItem{

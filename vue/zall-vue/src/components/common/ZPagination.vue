@@ -8,15 +8,15 @@
   }"
     >
       <div
-        @click="onclick('last')"
+        @click="onclick('previous')"
         class="z-pagination-btn"
         :class="{
-          'z-pagination-btn-active': !props.disableLastPage,
-          'z-pagination-btn-inactive': props.disableLastPage
+          'z-pagination-btn-active': !props.disablePreviousPage,
+          'z-pagination-btn-inactive': props.disablePreviousPage
       }"
       >
         <left-outlined />
-        <span style="padding-left:4px">{{t("lastPage")}}</span>
+        <span style="padding-left:4px">{{t("previousPage")}}</span>
       </div>
       <div
         @click="onclick('next')"
@@ -38,7 +38,7 @@ import { useI18n } from "vue-i18n";
 import { defineProps, defineEmits } from "vue";
 const props = defineProps([
   "style",
-  "disableLastPage",
+  "disablePreviousPage",
   "disableNextPage",
   "placement"
 ]);
@@ -46,7 +46,7 @@ const emit = defineEmits(["change"]);
 const { t } = useI18n();
 const onclick = key => {
   if (
-    (key === "last" && !props.disableLastPage) ||
+    (key === "previous" && !props.disablePreviousPage) ||
     (key === "next" && !props.disableNextPage)
   ) {
     emit("change", key);

@@ -1,34 +1,45 @@
 <template>
   <div style="padding:14px">
-    <div style="margin-bottom: 10px">
-      <BranchTagSelect
-        :disableTags="true"
-        :branches="branches"
-        :defaultBranch="route.params.ref"
-        @select="onBranchSelect"
-      />
-    </div>
-    <ul class="commit-list">
-      <li v-for="(item, index) in commits" v-bind:key="index">
-        <div style="width:70%">
-          <div class="commit-msg no-wrap">
-            <span class="commit-msg-text" @click="treeCommit(item)">{{item.commitMsg}}</span>
+    <template v-if="branches.length > 0">
+      <div style="margin-bottom: 10px">
+        <BranchTagSelect
+          :disableTags="true"
+          :branches="branches"
+          :defaultBranch="route.params.ref"
+          @select="onBranchSelect"
+        />
+      </div>
+      <ul class="commit-list">
+        <li v-for="(item, index) in commits" v-bind:key="index">
+          <div style="width:70%">
+            <div class="commit-msg no-wrap">
+              <span class="commit-msg-text" @click="treeCommit(item)">{{item.commitMsg}}</span>
+            </div>
+            <div class="commit-desc no-wrap">
+              <span>{{item.committer.account}}</span>
+              <span>提交于</span>
+              <span>{{readableTimeComparingNow(item.committedTime)}}</span>
+            </div>
           </div>
-          <div class="commit-desc no-wrap">
-            <span>{{item.committer.account}}</span>
-            <span>提交于</span>
-            <span>{{readableTimeComparingNow(item.committedTime)}}</span>
-          </div>
+          <CommitSha>{{item.shortId}}</CommitSha>
+        </li>
+        <li v-if="lastLoadCount >= 10">
+          <div style="width:100%;text-align:center;cursor:pointer" @click="getCommits()">加载更多...</div>
+        </li>
+      </ul>
+    </template>
+    <ZNoData v-else>
+      <template #desc>
+        <div style="text-align:center;font-size:14px">
+          <span>无提交数据, 尝试去</span>
+          <span class="suggest-text" @click="gotoIndex">提交代码</span>
         </div>
-        <CommitSha>{{item.shortId}}</CommitSha>
-      </li>
-      <li v-if="lastLoadCount >= 10">
-        <div style="width:100%;text-align:center;cursor:pointer" @click="getCommits()">加载更多...</div>
-      </li>
-    </ul>
+      </template>
+    </ZNoData>
   </div>
 </template>
 <script setup>
+import ZNoData from "@/components/common/ZNoData";
 import CommitSha from "@/components/git/CommitSha";
 import BranchTagSelect from "@/components/git/BranchTagSelect";
 import { allBranchesRequest, historyCommitsRequest } from "@/api/git/repoApi";
@@ -45,7 +56,6 @@ allBranchesRequest(route.params.repoId).then(res => {
   branches.value = res.data;
 });
 const getCommits = () => {
-  //console.log(commits.value.length);
   historyCommitsRequest({
     repoId: route.params.repoId,
     cursor: commits.value.length,
@@ -56,6 +66,11 @@ const getCommits = () => {
   });
 };
 const onBranchSelect = ({ value }) => {
+  history.replaceState(
+    {},
+    "",
+    `/gitRepo/${route.params.repoId}/commit/list/${value}`
+  );
   selectedBranch.value = value;
   commits.value = [];
   nextTick(() => {
@@ -64,6 +79,9 @@ const onBranchSelect = ({ value }) => {
 };
 const treeCommit = item => {
   router.push(`/gitRepo/${route.params.repoId}/commit/diff/${item.commitId}`);
+};
+const gotoIndex = () => {
+  router.push(`/gitRepo/${route.params.repoId}/index`);
 };
 </script>
 <style scoped>

@@ -1,7 +1,8 @@
 package branchmd
 
 import (
-	"encoding/json"
+	"github.com/IGLOU-EU/go-wildcard/v2"
+	"github.com/LeeZXin/zall/pkg/branch"
 	"time"
 )
 
@@ -9,40 +10,33 @@ const (
 	ProtectedBranchTableName = "zgit_protected_branch"
 )
 
+type ProtectedBranchList []ProtectedBranch
+
+func (l ProtectedBranchList) IsProtectedBranch(branch string) (bool, ProtectedBranch) {
+	for _, b := range l {
+		if wildcard.Match(b.Pattern, branch) {
+			return true, b
+		}
+	}
+	return false, ProtectedBranch{}
+}
+
 type ProtectedBranch struct {
-	Id      int64               `json:"id" xorm:"pk autoincr"`
-	Branch  string              `json:"branch"`
-	RepoId  int64               `json:"repoId"`
-	Cfg     *ProtectedBranchCfg `json:"cfg"`
-	Created time.Time           `json:"created" xorm:"created"`
-	Updated time.Time           `json:"updated" xorm:"updated"`
+	Id      int64                      `json:"id" xorm:"pk autoincr"`
+	Pattern string                     `json:"pattern"`
+	RepoId  int64                      `json:"repoId"`
+	Cfg     *branch.ProtectedBranchCfg `json:"cfg"`
+	Created time.Time                  `json:"created" xorm:"created"`
+	Updated time.Time                  `json:"updated" xorm:"updated"`
+}
+
+func (b *ProtectedBranch) GetCfg() branch.ProtectedBranchCfg {
+	if b.Cfg == nil {
+		return branch.ProtectedBranchCfg{}
+	}
+	return *b.Cfg
 }
 
 func (*ProtectedBranch) TableName() string {
 	return ProtectedBranchTableName
-}
-
-type ProtectedBranchCfg struct {
-	// 合并请求时代码评审数量大于该数量才能合并
-	ReviewCountWhenCreatePr int `json:"ReviewCountWhenCreatePr"`
-	// 代码评审员名单
-	ReviewerList []string `json:"reviewerList"`
-	// 可直接推送名单
-	DirectPushList []string `json:"directPushList"`
-}
-
-func (c *ProtectedBranchCfg) ToString() string {
-	m, _ := json.Marshal(c)
-	return string(m)
-}
-
-func (c *ProtectedBranchCfg) FromDB(content []byte) error {
-	if c == nil {
-		*c = ProtectedBranchCfg{}
-	}
-	return json.Unmarshal(content, c)
-}
-
-func (c *ProtectedBranchCfg) ToDB() ([]byte, error) {
-	return json.Marshal(c)
 }

@@ -258,3 +258,18 @@ func (r *GetTeamReqDTO) IsValid() error {
 	}
 	return nil
 }
+
+type ListAccountReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAccountReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}

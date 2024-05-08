@@ -1,6 +1,6 @@
 <template>
   <div style="padding:14px">
-    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0">
+    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" v-if="totalCount > 0">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'pullRequest'">
           <template v-if="dataItem[dataIndex]">
@@ -11,6 +11,9 @@
             <PrStatusTag :status="dataItem[dataIndex].prStatus" />
           </template>
         </template>
+        <template v-else-if="dataIndex === 'isProtectedBranch'">
+          <span>{{dataItem[dataIndex]?'是':'否'}}</span>
+        </template>
         <template v-else-if="dataIndex === 'lastCommitTime'">
           <span>{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
         </template>
@@ -18,7 +21,7 @@
           <span>{{dataItem[dataIndex]}}</span>
         </template>
         <template v-else>
-          <div class="op-icon">
+          <div class="op-icon" v-if="!dataItem['isProtectedBranch']">
             <a-tooltip placement="top">
               <template #title>
                 <span>Delete Branch</span>
@@ -41,9 +44,27 @@
         </template>
       </template>
     </ZTable>
+    <ZNoData v-else>
+      <template #desc>
+        <div style="font-size:14px;text-align:center">
+          <span>无分支数据, 尝试去</span>
+          <span class="suggest-text" @click="gotoIndex">提交代码</span>
+        </div>
+      </template>
+    </ZNoData>
+    <a-pagination
+      v-model:current="currPage"
+      :total="totalCount"
+      show-less-items
+      :pageSize="pageSize"
+      style="margin-top:10px"
+      v-show="totalCount > pageSize"
+      @change="()=>listBranch()"
+    />
   </div>
 </template>
 <script setup>
+import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import { ref, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -52,13 +73,19 @@ import {
   ControlOutlined,
   ExclamationCircleOutlined
 } from "@ant-design/icons-vue";
-import { allBranchCommitRequest, deleteBranchRequest } from "@/api/git/repoApi";
+import {
+  pageBranchCommitsRequest,
+  deleteBranchRequest
+} from "@/api/git/repoApi";
 import { readableTimeComparingNow } from "@/utils/time";
 import PrStatusTag from "@/components/git/PrStatusTag";
 import { Modal, message } from "ant-design-vue";
 const router = useRouter();
 const route = useRoute();
 const dataSource = ref([]);
+const currPage = ref(1);
+const pageSize = 10;
+const totalCount = ref(0);
 const columns = ref([
   {
     title: "分支",
@@ -69,6 +96,11 @@ const columns = ref([
     title: "最后更新时间",
     dataIndex: "lastCommitTime",
     key: "lastCommitTime"
+  },
+  {
+    title: "是否是保护分支",
+    dataIndex: "isProtectedBranch",
+    key: "isProtectedBranch"
   },
   {
     title: "合并请求",
@@ -82,13 +114,18 @@ const columns = ref([
   }
 ]);
 const listBranch = () => {
-  allBranchCommitRequest(route.params.repoId).then(res => {
+  pageBranchCommitsRequest({
+    repoId: route.params.repoId,
+    pageNum: currPage.value
+  }).then(res => {
+    totalCount.value = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.name,
         name: item.name,
         lastCommitTime: item.lastCommit.committedTime,
-        pullRequest: item.lastPullRequest
+        pullRequest: item.lastPullRequest,
+        isProtectedBranch: item.isProtectedBranch
       };
     });
   });
@@ -117,11 +154,10 @@ const toPrDetail = id => {
 const goToHistoryCommits = branch => {
   router.push(`/gitRepo/${route.params.repoId}/commit/list/${branch}`);
 };
+const gotoIndex = () => {
+  router.push(`/gitRepo/${route.params.repoId}/index`);
+};
 listBranch();
 </script>
 <style scoped>
-.header {
-  line-height: 32px;
-  font-size: 18px;
-}
 </style>

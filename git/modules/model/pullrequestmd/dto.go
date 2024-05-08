@@ -18,10 +18,9 @@ type InsertPullRequestReqDTO struct {
 }
 
 type InsertReviewReqDTO struct {
-	PrId      int64
-	ReviewMsg string
-	Status    ReviewStatus
-	Reviewer  string
+	PrId     int64
+	Status   ReviewStatus
+	Reviewer string
 }
 
 type UpdateReviewReqDTO struct {

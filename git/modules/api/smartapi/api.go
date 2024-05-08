@@ -67,7 +67,7 @@ func packRepoPath(c *gin.Context) {
 	corpId := c.Param("corpId")
 	repoName := c.Param("repoName")
 	repoPath := filepath.Join(corpId, repoName)
-	repo, b := reposrv.Inner.GetByRepoPath(c.Request.Context(), repoPath)
+	repo, b := reposrv.Inner.GetByRepoPath(c, repoPath)
 	if !b {
 		c.String(http.StatusNotFound, "not found")
 		c.Abort()
@@ -91,7 +91,7 @@ func auth(c *gin.Context) {
 	if !b {
 		repo := getRepo(c)
 		// 常规账号密码不存在就检查访问令牌
-		b = reposrv.Inner.CheckRepoToken(c.Request.Context(), reposrv.CheckRepoTokenReqDTO{
+		b = reposrv.Inner.CheckRepoToken(c, reposrv.CheckRepoTokenReqDTO{
 			RepoId:  repo.Id,
 			Account: account,
 			Token:   password,
@@ -116,7 +116,7 @@ func auth(c *gin.Context) {
 }
 
 func uploadPack(c *gin.Context) {
-	err := smartsrv.Outer.UploadPack(c.Request.Context(), smartsrv.UploadPackReqDTO{
+	err := smartsrv.Outer.UploadPack(c, smartsrv.UploadPackReqDTO{
 		Repo:            getRepo(c),
 		Operator:        getUserInfo(c),
 		C:               c,
@@ -128,7 +128,7 @@ func uploadPack(c *gin.Context) {
 }
 
 func receivePack(c *gin.Context) {
-	err := smartsrv.Outer.ReceivePack(c.Request.Context(), smartsrv.ReceivePackReqDTO{
+	err := smartsrv.Outer.ReceivePack(c, smartsrv.ReceivePackReqDTO{
 		Repo:     getRepo(c),
 		Operator: getUserInfo(c),
 		C:        c,
@@ -139,7 +139,7 @@ func receivePack(c *gin.Context) {
 }
 
 func infoRefs(c *gin.Context) {
-	err := smartsrv.Outer.InfoRefs(c.Request.Context(), smartsrv.InfoRefsReqDTO{
+	err := smartsrv.Outer.InfoRefs(c, smartsrv.InfoRefsReqDTO{
 		Repo:            getRepo(c),
 		Operator:        getUserInfo(c),
 		FromAccessToken: getFromAccessToken(c),

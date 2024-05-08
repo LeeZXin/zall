@@ -14,14 +14,13 @@ var (
 		CanHandleDeployPlan:   true,
 	}
 	DefaultRepoPerm = RepoPerm{
-		CanAccessRepo:            true,
-		CanUpdateRepo:            true,
-		CanCloseRepo:             true,
-		CanHandleProtectedBranch: true,
-		CanHandlePullRequest:     true,
-		CanHandleWebhook:         true,
-		CanAccessToken:           true,
-		CanUpdateToken:           true,
+		CanAccessRepo:        true,
+		CanUpdateRepo:        true,
+		CanCloseRepo:         true,
+		CanHandlePullRequest: true,
+		CanHandleWebhook:     true,
+		CanAccessToken:       true,
+		CanUpdateToken:       true,
 	}
 	DefaultPermDetail = Detail{
 		TeamPerm:        DefaultTeamPerm,
@@ -79,8 +78,6 @@ type RepoPerm struct {
 	CanUpdateRepo bool `json:"canUpdateRepo"`
 	// 是否可归档
 	CanCloseRepo bool `json:"canCloseRepo"`
-	// 是否可处理保护分支
-	CanHandleProtectedBranch bool `json:"canHandleProtectedBranch"`
 	// 是否可处理pr
 	CanHandlePullRequest bool `json:"canHandlePullRequest"`
 	// 是否可配置webhook

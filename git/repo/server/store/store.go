@@ -12,8 +12,10 @@ type Store interface {
 	DeleteRepo(context.Context, reqvo.DeleteRepoReq) error
 	// GetAllBranches 获取所有分支
 	GetAllBranches(context.Context, reqvo.GetAllBranchesReq) ([]reqvo.RefVO, error)
-	// GetAllBranchAndLastCommit 获取所有分支+最后提交信息
-	GetAllBranchAndLastCommit(context.Context, reqvo.GetAllBranchesReq) ([]reqvo.RefCommitVO, error)
+	// PageBranchAndLastCommit 分页获取分支+最后提交信息
+	PageBranchAndLastCommit(context.Context, reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error)
+	// PageTagAndCommit 分页获取tag+提交信息
+	PageTagAndCommit(context.Context, reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error)
 	// DeleteBranch 删除分支
 	DeleteBranch(context.Context, reqvo.DeleteBranchReq) error
 	// GetAllTags 获取所有tags
@@ -52,4 +54,8 @@ type Store interface {
 	Merge(context.Context, reqvo.MergeReq) error
 	// Blame git blame获取每一行提交人和时间
 	Blame(context.Context, reqvo.BlameReq) ([]reqvo.BlameLineVO, error)
+	// CreateArchive 下载压缩包
+	CreateArchive(context.Context, reqvo.CreateArchiveReq)
+	// DeleteTag 删除tag
+	DeleteTag(context.Context, reqvo.DeleteTagReqVO) error
 }

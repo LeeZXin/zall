@@ -37,6 +37,9 @@
               </div>
             </a-tab-pane>
           </a-tabs>
+          <div>
+            <a-button type="primary" ghost style="width:100%" @click="downloadZip" v-if="branches.length > 0 && selectedRef.refType === 'branch'">下载zip</a-button>
+          </div>
         </template>
         <a-button type="primary" style="float:right">
           <span>克隆</span>
@@ -204,6 +207,9 @@ const toRepoTree = path => {
       path
   );
 };
+const downloadZip = () => {
+  window.open(`/api/gitRepo/archive?repoId=${repoId}&fileName=${selectedRef.ref}.zip`);
+}
 </script>
 <style scoped>
 .dir-table {

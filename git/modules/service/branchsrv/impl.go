@@ -16,7 +16,7 @@ import (
 
 type outerImpl struct{}
 
-func (*outerImpl) InsertProtectedBranch(ctx context.Context, reqDTO InsertProtectedBranchReqDTO) (err error) {
+func (*outerImpl) CreateProtectedBranch(ctx context.Context, reqDTO CreateProtectedBranchReqDTO) (err error) {
 	// 插入日志
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
@@ -31,20 +31,51 @@ func (*outerImpl) InsertProtectedBranch(ctx context.Context, reqDTO InsertProtec
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err = checkPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	err = checkAdminPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return
 	}
 	if err = branchmd.InsertProtectedBranch(ctx, branchmd.InsertProtectedBranchReqDTO{
-		RepoId: reqDTO.RepoId,
-		Branch: reqDTO.Branch,
-		Cfg:    reqDTO.Cfg,
+		RepoId:  reqDTO.RepoId,
+		Pattern: reqDTO.Pattern,
+		Cfg:     reqDTO.Cfg,
 	}); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 		return
 	}
 	return
+}
+
+// UpdateProtectedBranch 编辑保护分支
+func (*outerImpl) UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtectedBranchReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	protectedBranch, b, err := branchmd.GetById(ctx, reqDTO.ProtectedBranchId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	err = checkAdminPerm(ctx, protectedBranch.RepoId, reqDTO.Operator)
+	if err != nil {
+		return err
+	}
+	_, err = branchmd.UpdateProtectedBranch(ctx, branchmd.UpdateProtectedBranchReqDTO{
+		Id:      reqDTO.ProtectedBranchId,
+		Pattern: reqDTO.Pattern,
+		Cfg:     reqDTO.Cfg,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }
 
 func (*outerImpl) DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtectedBranchReqDTO) (err error) {
@@ -62,7 +93,7 @@ func (*outerImpl) DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtec
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	pb, b, err := branchmd.GetById(ctx, reqDTO.Id)
+	pb, b, err := branchmd.GetById(ctx, reqDTO.ProtectedBranchId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -72,11 +103,11 @@ func (*outerImpl) DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtec
 		err = util.InvalidArgsError()
 		return
 	}
-	err = checkPerm(ctx, pb.RepoId, reqDTO.Operator)
+	err = checkAdminPerm(ctx, pb.RepoId, reqDTO.Operator)
 	if err != nil {
 		return
 	}
-	_, err = branchmd.DeleteById(ctx, reqDTO.Id)
+	_, err = branchmd.DeleteById(ctx, reqDTO.ProtectedBranchId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -90,7 +121,7 @@ func (*outerImpl) ListProtectedBranch(ctx context.Context, reqDTO ListProtectedB
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	err := checkTeamPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -100,23 +131,17 @@ func (*outerImpl) ListProtectedBranch(ctx context.Context, reqDTO ListProtectedB
 		return nil, util.InternalError(err)
 	}
 	ret, _ := listutil.Map(branchList, func(t branchmd.ProtectedBranch) (ProtectedBranchDTO, error) {
-		d := ProtectedBranchDTO{
-			Id:     t.Id,
-			RepoId: t.RepoId,
-			Branch: t.Branch,
-		}
-		if t.Cfg == nil {
-			d.Cfg = branchmd.ProtectedBranchCfg{}
-		} else {
-			d.Cfg = *t.Cfg
-		}
-		return d, nil
+		return ProtectedBranchDTO{
+			Id:      t.Id,
+			Pattern: t.Pattern,
+			Cfg:     *t.Cfg,
+		}, nil
 	})
 	return ret, nil
 }
 
-// checkPerm 检查权限 只需检查是否是项目管理员
-func checkPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) error {
+// checkAdminPerm 检查权限
+func checkAdminPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) error {
 	// 检查仓库是否存在
 	repo, b := reposrv.Inner.GetByRepoId(ctx, repoId)
 	if !b {
@@ -127,10 +152,24 @@ func checkPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) 
 	}
 	// 如果不是 检查用户组权限
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
-	if !b {
+	if !b || !p.IsAdmin {
 		return util.UnauthorizedError()
 	}
-	if !p.IsAdmin && !p.PermDetail.GetRepoPerm(repoId).CanHandleProtectedBranch {
+	return nil
+}
+
+// checkTeamPerm 仅检查是否属于团队权限
+func checkTeamPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) error {
+	// 检查仓库是否存在
+	repo, b := reposrv.Inner.GetByRepoId(ctx, repoId)
+	if !b {
+		return util.InvalidArgsError()
+	}
+	if operator.IsAdmin {
+		return nil
+	}
+	_, b = teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if !b {
 		return util.UnauthorizedError()
 	}
 	return nil

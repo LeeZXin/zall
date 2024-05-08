@@ -40,8 +40,10 @@ func InitApi() {
 			group.GET("/catFile", catFile)
 			// 展示仓库所有分支
 			group.GET("/allBranches/:repoId", allBranches)
-			// 展示仓库所有分支
-			group.GET("/allBranchCommit/:repoId", allBranchCommit)
+			// 分页展示分支+提交
+			group.GET("/pageBranchCommits", pageBranchCommits)
+			// 分页展示分支+提交
+			group.GET("/pageTagCommits", pageTagCommits)
 			// 展示仓库所有tag
 			group.GET("/allTags/:repoId", allTags)
 			// gc
@@ -70,6 +72,10 @@ func InitApi() {
 			group.GET("/blame", blame)
 			// 删除分支
 			group.DELETE("/deleteBranch", deleteBranch)
+			// 下载代码压缩包
+			group.GET("/archive", createArchive)
+			// 删除tag
+			group.DELETE("/deleteTag", deleteTag)
 		}
 	})
 }
@@ -125,6 +131,22 @@ func deleteBranch(c *gin.Context) {
 	}
 }
 
+func deleteTag(c *gin.Context) {
+	var req DeleteTagReqVO
+	if util.ShouldBindQuery(&req, c) {
+		err := reposrv.Outer.DeleteTag(c, reposrv.DeleteTagReqDTO{
+			RepoId:   req.RepoId,
+			Tag:      req.Tag,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
 func allBranches(c *gin.Context) {
 	branches, err := reposrv.Outer.AllBranches(c, reposrv.AllBranchesReqDTO{
 		RepoId:   getRepoId(c),
@@ -140,34 +162,72 @@ func allBranches(c *gin.Context) {
 	})
 }
 
-func allBranchCommit(c *gin.Context) {
-	branches, err := reposrv.Outer.AllBranchCommits(c, reposrv.AllBranchCommitsReqDTO{
-		RepoId:   getRepoId(c),
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	data, _ := listutil.Map(branches, func(t reposrv.BranchCommitDTO) (BranchCommitVO, error) {
-		ret := BranchCommitVO{
-			Name:       t.Name,
-			LastCommit: commitDto2Vo(t.LastCommit),
+func pageBranchCommits(c *gin.Context) {
+	var req PageRefCommitsReqVO
+	if util.ShouldBindQuery(&req, c) {
+		branches, total, err := reposrv.Outer.PageBranchCommits(c, reposrv.PageRefCommitsReqDTO{
+			RepoId:   req.RepoId,
+			PageNum:  req.PageNum,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
 		}
-		if t.LastPullRequest != nil {
-			ret.LastPullRequest = &PullRequestVO{
-				Id:       t.LastPullRequest.Id,
-				PrStatus: t.LastPullRequest.PrStatus,
-				PrTitle:  t.LastPullRequest.PrTitle,
-				Created:  t.LastPullRequest.Created.Format(time.DateTime),
+		data, _ := listutil.Map(branches, func(t reposrv.BranchCommitDTO) (BranchCommitVO, error) {
+			ret := BranchCommitVO{
+				Name:              t.Name,
+				IsProtectedBranch: t.IsProtectedBranch,
+				LastCommit:        commitDto2Vo(t.LastCommit),
 			}
+			if t.LastPullRequest != nil {
+				ret.LastPullRequest = &PullRequestVO{
+					Id:       t.LastPullRequest.Id,
+					PrStatus: t.LastPullRequest.PrStatus,
+					PrTitle:  t.LastPullRequest.PrTitle,
+					Created:  t.LastPullRequest.Created.Format(time.DateTime),
+				}
+			}
+			return ret, nil
+		})
+		c.JSON(http.StatusOK, ginutil.Page2Resp[BranchCommitVO]{
+			DataResp: ginutil.DataResp[[]BranchCommitVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			PageNum:    req.PageNum,
+			TotalCount: total,
+		})
+	}
+}
+
+func pageTagCommits(c *gin.Context) {
+	var req PageRefCommitsReqVO
+	if util.ShouldBindQuery(&req, c) {
+		tags, total, err := reposrv.Outer.PageTagCommits(c, reposrv.PageRefCommitsReqDTO{
+			RepoId:   req.RepoId,
+			PageNum:  req.PageNum,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
 		}
-		return ret, nil
-	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]BranchCommitVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
-	})
+		data, _ := listutil.Map(tags, func(t reposrv.TagCommitDTO) (TagCommitVO, error) {
+			return TagCommitVO{
+				Name:   t.Name,
+				Commit: commitDto2Vo(t.Commit),
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.Page2Resp[TagCommitVO]{
+			DataResp: ginutil.DataResp[[]TagCommitVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			PageNum:    req.PageNum,
+			TotalCount: total,
+		})
+	}
 }
 
 func allTags(c *gin.Context) {
@@ -261,24 +321,35 @@ func entriesRepo(c *gin.Context) {
 	}
 }
 
-func commitDto2Vo(dto reposrv.CommitDTO) CommitVO {
-	return CommitVO{
-		Parent: dto.Parent,
+func commitDto2Vo(d reposrv.CommitDTO) CommitVO {
+	ret := CommitVO{
+		Parent: d.Parent,
 		Author: UserVO{
-			Account: dto.Author.Account,
-			Email:   dto.Author.Email,
+			Account: d.Author.Account,
+			Email:   d.Author.Email,
 		},
 		Committer: UserVO{
-			Account: dto.Committer.Account,
-			Email:   dto.Committer.Email,
+			Account: d.Committer.Account,
+			Email:   d.Committer.Email,
 		},
-		AuthoredTime:  time.UnixMilli(dto.AuthoredTime).Format(time.DateTime),
-		CommittedTime: time.UnixMilli(dto.CommittedTime).Format(time.DateTime),
-		CommitMsg:     dto.CommitMsg,
-		CommitId:      dto.CommitId,
-		ShortId:       dto.ShortId,
-		Verified:      dto.Verified,
+		AuthoredTime:  time.UnixMilli(d.AuthoredTime).Format(time.DateTime),
+		CommittedTime: time.UnixMilli(d.CommittedTime).Format(time.DateTime),
+		CommitMsg:     d.CommitMsg,
+		CommitId:      d.CommitId,
+		ShortId:       d.ShortId,
+		Verified:      d.Verified,
 	}
+	if d.TaggerTime > 0 {
+		t := time.UnixMilli(d.TaggerTime).Format(time.DateTime)
+		ret.TaggerTime = &t
+		ret.Tagger = &UserVO{
+			Account: d.Tagger.Account,
+			Email:   d.Tagger.Email,
+		}
+		ret.ShortTagId = &d.ShortTagId
+		ret.TagCommitMsg = &d.TagCommitMsg
+	}
+	return ret
 }
 
 func fileDto2Vo(list []reposrv.FileDTO) []FileVO {
@@ -454,6 +525,22 @@ func diffFile(c *gin.Context) {
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     ret,
 		})
+	}
+}
+
+func createArchive(c *gin.Context) {
+	var req CreateArchiveReqVO
+	if util.ShouldBindQuery(&req, c) {
+		err := reposrv.Outer.CreateArchive(c, reposrv.CreateArchiveReqDTO{
+			RepoId:   req.RepoId,
+			FileName: req.FileName,
+			C:        c,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
 	}
 }
 

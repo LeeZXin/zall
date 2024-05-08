@@ -29,6 +29,8 @@ type OuterService interface {
 	GetTeamPerm(context.Context, GetTeamPermReqDTO) (perm.TeamPerm, error)
 	// GetTeam 获取团队信息
 	GetTeam(context.Context, GetTeamReqDTO) (teammd.Team, error)
+	// ListAccount 获取成员账号
+	ListAccount(context.Context, ListAccountReqDTO) ([]string, error)
 	ListUser(context.Context, ListUserReqDTO) ([]UserDTO, int64, error)
 	DeleteUser(context.Context, DeleteUserReqDTO) error
 	UpsertUser(context.Context, UpsertUserReqDTO) error

@@ -50,8 +50,8 @@ func (s PrStatus) Readable() string {
 type ReviewStatus int
 
 const (
-	AgreeMergeStatus ReviewStatus = iota + 1
-	DisagreeMergeStatus
+	AgreeReviewStatus ReviewStatus = iota + 1
+	CanceledReviewStatus
 )
 
 func (s ReviewStatus) Int() int {
@@ -60,10 +60,10 @@ func (s ReviewStatus) Int() int {
 
 func (s ReviewStatus) Readable() string {
 	switch s {
-	case AgreeMergeStatus:
-		return i18n.GetByKey(i18n.PullRequestAgreeMergeStatus)
-	case DisagreeMergeStatus:
-		return i18n.GetByKey(i18n.PullRequestDisagreeMergeStatus)
+	case AgreeReviewStatus:
+		return i18n.GetByKey(i18n.PullRequestAgreeReviewStatus)
+	case CanceledReviewStatus:
+		return i18n.GetByKey(i18n.PullRequestCanceledReviewStatus)
 	default:
 		return i18n.GetByKey(i18n.PullRequestUnknownReviewStatus)
 	}
@@ -71,7 +71,7 @@ func (s ReviewStatus) Readable() string {
 
 func (s ReviewStatus) IsValid() bool {
 	switch s {
-	case AgreeMergeStatus, DisagreeMergeStatus:
+	case AgreeReviewStatus, CanceledReviewStatus:
 		return true
 	default:
 		return false
@@ -107,7 +107,6 @@ type Review struct {
 	Id           int64        `json:"id" xorm:"pk autoincr"`
 	PrId         int64        `json:"prId"`
 	Reviewer     string       `json:"reviewer"`
-	ReviewMsg    string       `json:"reviewMsg"`
 	ReviewStatus ReviewStatus `json:"reviewStatus"`
 	Created      time.Time    `json:"created" xorm:"created"`
 	Updated      time.Time    `json:"updated" xorm:"updated"`

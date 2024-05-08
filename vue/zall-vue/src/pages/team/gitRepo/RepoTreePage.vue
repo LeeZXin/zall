@@ -109,7 +109,7 @@ const fileSize = ref("");
 const extensions = [oneDark, javascript()];
 const codeOrBlame = ref("code");
 const showBlame = ref(false);
-const files = ref(route.params.files?route.params.files:[]);
+const files = ref(route.params.files ? route.params.files : []);
 const treeData = ref([]);
 const showRight = ref(false);
 // 展开节点
@@ -209,8 +209,7 @@ const selectNode = (node, e) => {
     history.replaceState(
       {},
       "",
-      `/gitRepo/${route.params.repoId}/tree/${route.params.refType}/${route.params.ref}/` +
-        filePath
+      `/gitRepo/${route.params.repoId}/tree/${route.params.refType}/${route.params.ref}/${filePath}`
     );
     files.value = filePath.split("/");
     getAndCatFile(filePath);

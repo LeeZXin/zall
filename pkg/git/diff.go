@@ -95,10 +95,10 @@ type DiffLine struct {
 }
 
 func GetFilesDiffCount(ctx context.Context, repoPath, target, head string) (int, error) {
-	result, err := NewCommand("diff", "-z", "--name-only", head+".."+target, "--").Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("diff", "-z", "--name-only").AddDynamicArgs(head+".."+target).Run(ctx, WithDir(repoPath))
 	if err != nil {
 		if strings.Contains(err.Error(), "no merge base") {
-			result, err = NewCommand("diff", "-z", "--name-only", head, target, "--").Run(ctx, WithDir(repoPath))
+			result, err = NewCommand("diff", "-z", "--name-only").AddDynamicArgs(head, target).Run(ctx, WithDir(repoPath))
 		}
 	}
 	if err != nil {
@@ -108,7 +108,7 @@ func GetFilesDiffCount(ctx context.Context, repoPath, target, head string) (int,
 }
 
 func GetDiffNumsStat(ctx context.Context, repoPath, target, head string) (DiffNumsStatInfo, error) {
-	pipeResult := NewCommand("diff", "--numstat", head+".."+target, "--").RunWithReadPipe(ctx, WithDir(repoPath))
+	pipeResult := NewCommand("diff", "--numstat").AddDynamicArgs(head+".."+target).RunWithReadPipe(ctx, WithDir(repoPath))
 	stats := make([]DiffNumsStat, 0)
 	insertNumsTotal := 0
 	deleteNumsTotal := 0
@@ -145,7 +145,7 @@ func GetDiffNumsStat(ctx context.Context, repoPath, target, head string) (DiffNu
 }
 
 func GenDiffShortStat(ctx context.Context, repoPath, target, head string) (int, int, int, error) {
-	result, err := NewCommand("diff", "--shortstat", target+".."+head, "--").Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("diff", "--shortstat").AddDynamicArgs(target+".."+head).Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -177,7 +177,7 @@ func GenDiffShortStat(ctx context.Context, repoPath, target, head string) (int, 
 }
 
 func GetDiffFileDetail(ctx context.Context, repoPath, target, head, filePath string) (DiffFileDetail, error) {
-	pipeResult := NewCommand("diff", "--src-prefix=a/", "--dst-prefix=b/", head+".."+target, "--", filePath).RunWithReadPipe(ctx, WithDir(repoPath))
+	pipeResult := NewCommand("diff", "--src-prefix=a/", "--dst-prefix=b/").AddDynamicArgs(head+".."+target).AddArgs("--").AddDynamicArgs(filePath).RunWithReadPipe(ctx, WithDir(repoPath))
 	defer pipeResult.ClosePipe()
 	reader := bufio.NewReader(pipeResult.Reader())
 	c := newDiffDetail(filePath)
@@ -369,7 +369,11 @@ func parseHunkString(line string) (int, int, int, int, error) {
 }
 
 func GenDiffDetailRowData(ctx context.Context, repoPath, target, head, filePath string) (string, error) {
-	result, err := NewCommand("diff", "--src-prefix=a/", "--dst-prefix=b/", target+".."+head, "--", filePath).Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("diff", "--src-prefix=a/", "--dst-prefix=b/").
+		AddDynamicArgs(target+".."+head).
+		AddArgs("--").
+		AddDynamicArgs(filePath).
+		Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return "", err
 	}

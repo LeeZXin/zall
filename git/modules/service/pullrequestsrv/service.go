@@ -23,11 +23,16 @@ type OuterService interface {
 	MergePullRequest(context.Context, MergePullRequestReqDTO) error
 	// CanMergePullRequest 是否可合并
 	CanMergePullRequest(context.Context, CanMergePullRequestReqDTO) (CanMergePullRequestRespDTO, error)
-	ReviewPullRequest(context.Context, ReviewPullRequestReqDTO) error
+	// CanReviewPullRequest 是否可评审代码
+	CanReviewPullRequest(context.Context, CanReviewPullRequestReqDTO) (CanReviewPullRequestRespDTO, error)
+	// AgreeReviewPullRequest 同意合并代码
+	AgreeReviewPullRequest(context.Context, AgreeReviewPullRequestReqDTO) error
 	// ListTimeline 展示时间轴
 	ListTimeline(context.Context, ListTimelineReqDTO) ([]TimelineDTO, error)
 	// AddComment 添加评论
 	AddComment(context.Context, AddCommentReqDTO) error
 	// DeleteComment 删除评论
 	DeleteComment(context.Context, DeleteCommentReqDTO) error
+	// ListReview 评审记录
+	ListReview(context.Context, ListReviewReqDTO) ([]ReviewDTO, error)
 }

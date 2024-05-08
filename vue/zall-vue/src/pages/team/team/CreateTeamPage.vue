@@ -1,7 +1,7 @@
 <template>
   <div style="padding: 10px">
-    <ZNaviBack url="/teamList" name="选择团队" />
     <div class="container">
+      <ZNaviBack url="/teamList" name="选择团队" />
       <div class="title">创建团队</div>
       <div class="form-item">
         <div class="label">

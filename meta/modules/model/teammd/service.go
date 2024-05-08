@@ -226,3 +226,13 @@ func GetByRoleIdList(ctx context.Context, roleIdList []int64) ([]Role, error) {
 		Find(&ret)
 	return ret, err
 }
+
+func ListAccountByTeamId(ctx context.Context, teamId int64) ([]string, error) {
+	ret := make([]string, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("team_id = ?", teamId).
+		Cols("account").
+		Table(TeamUserTableName).
+		Find(&ret)
+	return ret, err
+}

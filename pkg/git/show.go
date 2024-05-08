@@ -17,7 +17,7 @@ const (
 )
 
 func ShowFileTextContentByCommitId(ctx context.Context, repoPath, commitId, filePath string, startLine, limit int) ([]string, error) {
-	pipeResult := NewCommand("show", fmt.Sprintf("%s:%s", commitId, filePath), "--text").
+	pipeResult := NewCommand("show", "--text").AddDynamicArgs(fmt.Sprintf("%s:%s", commitId, filePath)).
 		RunWithReadPipe(ctx, WithDir(repoPath))
 	ret := make([]string, 0)
 	endLine := startLine + limit
@@ -37,7 +37,7 @@ func ShowFileTextContentByCommitId(ctx context.Context, repoPath, commitId, file
 }
 
 func GetRefFilesCountAndSize(ctx context.Context, repoPath, refName string) (int, int64, error) {
-	result := NewCommand("ls-tree", "--full-tree", "-r", "-l", refName).
+	result := NewCommand("ls-tree", "--full-tree", "-r", "-l").AddDynamicArgs(refName).
 		RunWithReadPipe(ctx, WithDir(repoPath))
 	var (
 		fileCount = 0
@@ -81,7 +81,7 @@ func (c LsTreeRet) CompareTo(c2 LsTreeRet) bool {
 
 // LsTreeWithoutRecurse git ls-tree --full-tree -l master
 func LsTreeWithoutRecurse(ctx context.Context, repoPath, ref, dir string) ([]LsTreeRet, bool, error) {
-	cmd := NewCommand("ls-tree", "--full-tree", "-l", ref)
+	cmd := NewCommand("ls-tree", "--full-tree", "-l").AddDynamicArgs(ref)
 	if dir != "" {
 		cmd.AddArgs("--", dir)
 	}
@@ -167,7 +167,7 @@ func LsTreeBlob(ctx context.Context, repoPath, ref string, dir string) ([]LsTree
 }
 
 func GetFileContentByBlob(ctx context.Context, repoPath, blob string) ([]byte, error) {
-	result, err := NewCommand("show", blob).Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("show").AddDynamicArgs(blob).Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,11 @@ func GetFileContentByBlob(ctx context.Context, repoPath, blob string) ([]byte, e
 }
 
 func GetFileTextContentByRef(ctx context.Context, repoPath, ref, filePath string) (FileMode, string, int64, bool, error) {
-	result, err := NewCommand("ls-tree", "--full-tree", "-l", ref, "--", filePath).Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("ls-tree", "--full-tree", "-l").
+		AddDynamicArgs(ref).
+		AddArgs("--").
+		AddDynamicArgs(filePath).
+		Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return "", "", 0, false, err
 	}

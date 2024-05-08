@@ -20,7 +20,7 @@ func Blame(ctx context.Context, repoPath, ref, filePath string) ([]BlameLine, er
 		return []BlameLine{}, nil
 	}
 	//^d2ba af760 50358 98bd7 11835 459db ddc76 6e719
-	cmd := NewCommand("blame", "--date=short", ref, "--", filePath)
+	cmd := NewCommand("blame", "--date=short").AddDynamicArgs(ref).AddArgs("--").AddDynamicArgs(filePath)
 	pipeResult := cmd.RunWithReadPipe(ctx, WithDir(repoPath))
 	ret := make([]BlameLine, 0)
 	commitMap := make(map[string]*Commit)

@@ -14,6 +14,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/webhook"
@@ -315,41 +316,98 @@ func (s *outerImpl) CanMergePullRequest(ctx context.Context, reqDTO CanMergePull
 		return CanMergePullRequestRespDTO{}, util.InvalidArgsError()
 	}
 	var (
-		canMerge, isProtectedBranch bool
-		cfg                         branchmd.ProtectedBranchCfg
-		reviewCount                 int
+		reviewCanMerge, gitCanMerge, isProtectedBranch bool
+
+		cfg         branch.ProtectedBranchCfg
+		reviewCount int
 	)
 	ret := CanMergePullRequestRespDTO{}
-	canMerge, isProtectedBranch, cfg, reviewCount, err = s.detectCanMergePullRequest(ctx, pr, reqDTO.Operator)
+	reviewCanMerge, isProtectedBranch, cfg, reviewCount, err = s.detectCanMergePullRequest(ctx, pr)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return ret, util.InternalError(err)
 	}
-	ret.ReviewerList = cfg.ReviewerList
-	ret.DirectPushList = cfg.DirectPushList
-	ret.ReviewCountWhenCreatePr = cfg.ReviewCountWhenCreatePr
-	ret.ReviewCount = reviewCount
+	ret.ProtectedBranchCfg = cfg
 	ret.IsProtectedBranch = isProtectedBranch
-	if canMerge {
-		var info reqvo.DiffRefsResp
-		info, err = client.DiffRefs(ctx, reqvo.DiffRefsReq{
-			RepoPath:   repo.Path,
-			Target:     pr.Target,
-			TargetType: pr.TargetType,
-			Head:       pr.Head,
-			HeadType:   pr.HeadType,
-		})
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return ret, util.InternalError(err)
-		}
-		canMerge = info.CanMerge
-		ret.GitCanMerge = info.CanMerge
-		ret.GitCommitCount = len(info.Commits)
-		ret.GitConflictFiles = info.ConflictFiles
+	ret.ReviewCount = reviewCount
+	var info reqvo.DiffRefsResp
+	info, err = client.DiffRefs(ctx, reqvo.DiffRefsReq{
+		RepoPath:   repo.Path,
+		Target:     pr.Target,
+		TargetType: pr.TargetType,
+		Head:       pr.Head,
+		HeadType:   pr.HeadType,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return ret, util.InternalError(err)
 	}
-	ret.CanMerge = canMerge
+	gitCanMerge = info.CanMerge
+	ret.GitCanMerge = info.CanMerge
+	ret.GitCommitCount = len(info.Commits)
+	ret.GitConflictFiles = info.ConflictFiles
+	ret.CanMerge = reviewCanMerge && gitCanMerge
 	return ret, nil
+}
+
+// CanReviewPullRequest 是否可评审代码
+func (s *outerImpl) CanReviewPullRequest(ctx context.Context, reqDTO CanReviewPullRequestReqDTO) (CanReviewPullRequestRespDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return CanReviewPullRequestRespDTO{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, _, ret, err := s.canReview(ctx, reqDTO.PrId, reqDTO.Operator)
+	return ret, err
+}
+
+func (s *outerImpl) canReview(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, CanReviewPullRequestRespDTO, error) {
+	// 校验权限
+	pr, repo, err := checkPerm(ctx, prId, operator)
+	if err != nil {
+		return pr, repo, CanReviewPullRequestRespDTO{}, err
+	}
+	// 只允许从open
+	if pr.PrStatus != pullrequestmd.PrOpenStatus {
+		return pr, repo, CanReviewPullRequestRespDTO{}, util.InvalidArgsError()
+	}
+	protectedBranches, err := branchmd.ListProtectedBranch(ctx, pr.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return pr, repo, CanReviewPullRequestRespDTO{}, util.InternalError(err)
+	}
+	isProtectedBranch, protectedBranch := protectedBranches.IsProtectedBranch(pr.Head)
+	reviewerList := protectedBranch.GetCfg().ReviewerList
+	if reviewerList == nil {
+		reviewerList = []string{}
+	}
+	isInReviewerList, _ := listutil.Contains(reviewerList, func(t string) (bool, error) {
+		return t == operator.Account, nil
+	})
+	// 检查是否重复提交
+	review, b, err := pullrequestmd.GetReview(ctx, prId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return pr, repo, CanReviewPullRequestRespDTO{}, util.InternalError(err)
+	}
+	hasAgree := b && review.ReviewStatus == pullrequestmd.AgreeReviewStatus
+	/*
+		权限：本人拥有在该仓库"处理合并请求（handlePullRequest）"的权限
+		是否可评审取决于：
+		1、未重复提交
+		2、当不是保护分支， 可评审
+		3、否则
+			当指定了评审白名单，则判断自己是否在白名单里面，若在，可评审 若不在 不可评审
+			当未指定白名单，则可评审
+	*/
+	canReview := !hasAgree && (!isProtectedBranch || len(reviewerList) == 0 || isInReviewerList)
+	return pr, repo, CanReviewPullRequestRespDTO{
+		CanReview:         canReview,
+		IsProtectedBranch: isProtectedBranch,
+		ReviewerList:      reviewerList,
+		IsInReviewerList:  isInReviewerList,
+		HasAgree:          hasAgree,
+	}, nil
 }
 
 // MergePullRequest 提交合并代码
@@ -378,7 +436,7 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 		return
 	}
 	var canMerge bool
-	canMerge, _, _, _, err = s.detectCanMergePullRequest(ctx, pr, reqDTO.Operator)
+	canMerge, _, _, _, err = s.detectCanMergePullRequest(ctx, pr)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -423,28 +481,22 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 	return nil
 }
 
-func (*outerImpl) detectCanMergePullRequest(ctx context.Context, pr pullrequestmd.PullRequest, operator apisession.UserInfo) (bool, bool, branchmd.ProtectedBranchCfg, int, error) {
+func (*outerImpl) detectCanMergePullRequest(ctx context.Context, pr pullrequestmd.PullRequest) (bool, bool, branch.ProtectedBranchCfg, int, error) {
 	// 检查是否是保护分支
-	cfg, isProtectedBranch, err := branchmd.IsProtectedBranch(ctx, pr.Id, pr.Head)
+	cfg, isProtectedBranch, err := branchmd.IsProtectedBranch(ctx, pr.RepoId, pr.Head)
 	if err != nil {
 		return false, false, cfg, 0, err
 	}
 	if isProtectedBranch {
-		// 判断是否可直接推送
-		contains, _ := listutil.Contains(cfg.DirectPushList, func(account string) (bool, error) {
-			return account == operator.Account, nil
-		})
-		if !contains {
-			// 检查评审配置 评审者数量大于0
-			if cfg.ReviewCountWhenCreatePr > 0 {
-				var reviewCount int64
-				reviewCount, err = pullrequestmd.CountReview(ctx, pr.Id, pullrequestmd.AgreeMergeStatus)
-				if err != nil {
-					return false, true, cfg, 0, err
-				}
-				// 小于配置数量 不可合并
-				return int(reviewCount) > cfg.ReviewCountWhenCreatePr, true, cfg, int(reviewCount), nil
+		// 检查评审配置 评审者数量大于0
+		if cfg.ReviewCountWhenCreatePr > 0 {
+			var reviewCount int64
+			reviewCount, err = pullrequestmd.CountReview(ctx, pr.Id, pullrequestmd.AgreeReviewStatus)
+			if err != nil {
+				return false, true, cfg, 0, err
 			}
+			// 小于配置数量 不可合并
+			return int(reviewCount) >= cfg.ReviewCountWhenCreatePr, true, cfg, int(reviewCount), nil
 		}
 	}
 	return true, isProtectedBranch, cfg, 0, nil
@@ -499,7 +551,7 @@ func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullReques
 	return b, nil
 }
 
-func (*outerImpl) ReviewPullRequest(ctx context.Context, reqDTO ReviewPullRequestReqDTO) (err error) {
+func (s *outerImpl) AgreeReviewPullRequest(ctx context.Context, reqDTO AgreeReviewPullRequestReqDTO) (err error) {
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
@@ -513,71 +565,17 @@ func (*outerImpl) ReviewPullRequest(ctx context.Context, reqDTO ReviewPullReques
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	// 检查是否重复提交
-	_, b, err := pullrequestmd.GetReview(ctx, reqDTO.PrId, reqDTO.Operator.Account)
+	pr, repo, review, err := s.canReview(ctx, reqDTO.PrId, reqDTO.Operator)
 	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return err
 	}
-	if b {
-		err = util.NewBizErr(apicode.DataAlreadyExistsCode, i18n.ReviewAlreadyExists)
-		return
-	}
-	// 检查评审者是否有访问代码的权限
-	pr, b, err := pullrequestmd.GetPullRequestById(ctx, reqDTO.PrId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	repo, b, err := repomd.GetByRepoId(ctx, pr.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, reqDTO.Operator.Account)
-	if !b {
-		err = util.UnauthorizedError()
-		return
-	}
-	if !p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo {
-		err = util.UnauthorizedError()
-		return
-	}
-	// 检查是否是保护分支
-	cfg, isProtectedBranch, err := branchmd.IsProtectedBranch(ctx, repo.Id, pr.Head)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if isProtectedBranch {
-		// 看看是否在评审名单里面 如果设置了评审名单
-		if len(cfg.ReviewerList) > 0 {
-			contains, _ := listutil.Contains(cfg.ReviewerList, func(account string) (bool, error) {
-				return account == reqDTO.Operator.Account, nil
-			})
-			if !contains {
-				err = util.UnauthorizedError()
-				return
-			}
-		}
+	if !review.CanReview {
+		return util.InvalidArgsError()
 	}
 	err = pullrequestmd.InsertReview(ctx, pullrequestmd.InsertReviewReqDTO{
-		PrId:      reqDTO.PrId,
-		ReviewMsg: reqDTO.ReviewMsg,
-		Status:    reqDTO.Status,
-		Reviewer:  reqDTO.Operator.Account,
+		PrId:     reqDTO.PrId,
+		Status:   pullrequestmd.AgreeReviewStatus,
+		Reviewer: reqDTO.Operator.Account,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -750,6 +748,31 @@ func (*outerImpl) DeleteComment(ctx context.Context, reqDTO DeleteCommentReqDTO)
 		return
 	}
 	return
+}
+
+// ListReview 评审记录
+func (*outerImpl) ListReview(ctx context.Context, reqDTO ListReviewReqDTO) ([]ReviewDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	if _, _, err := checkPerm(ctx, reqDTO.PrId, reqDTO.Operator); err != nil {
+		return nil, err
+	}
+	reviews, err := pullrequestmd.ListReview(ctx, reqDTO.PrId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(reviews, func(t pullrequestmd.Review) (ReviewDTO, error) {
+		return ReviewDTO{
+			Id:           t.Id,
+			Reviewer:     t.Reviewer,
+			ReviewStatus: t.ReviewStatus,
+			Updated:      t.Updated,
+		}, nil
+	})
 }
 
 // checkPerm 校验权限

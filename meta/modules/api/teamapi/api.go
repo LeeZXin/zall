@@ -32,6 +32,8 @@ func InitApi() {
 			group.GET("/getTeamPerm/:teamId", getTeamPerm)
 			// 获取团队信息
 			group.GET("/get/:teamId", getTeam)
+			// 获取团队成员名称
+			group.GET("/listAccount/:teamId", listAccount)
 		}
 		// 项目用户
 		group = e.Group("/api/teamUser", apisession.CheckLogin)
@@ -100,6 +102,22 @@ func getTeam(c *gin.Context) {
 			TeamId: team.Id,
 			Name:   team.Name,
 		},
+	})
+}
+
+func listAccount(c *gin.Context) {
+	teamId := cast.ToInt64(c.Param("teamId"))
+	accounts, err := teamsrv.Outer.ListAccount(c, teamsrv.ListAccountReqDTO{
+		TeamId:   teamId,
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     accounts,
 	})
 }
 

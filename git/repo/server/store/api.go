@@ -11,17 +11,19 @@ import (
 )
 
 var (
-	storeSrv = NewStore()
+	storeSrv Store
 )
 
 func InitApi() {
+	storeSrv = NewStore()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/v1/git/store")
 		{
 			group.POST("/initRepo", initRepo)
 			group.POST("/delRepo", delRepo)
 			group.POST("/getAllBranches", getAllBranches)
-			group.POST("/getAllBranchAndLastCommit", getAllBranchAndLastCommit)
+			group.POST("/pageBranchAndLastCommit", pageBranchAndLastCommit)
+			group.POST("/pageTagAndCommit", pageTagAndCommit)
 			group.POST("/deleteBranch", deleteBranch)
 			group.POST("/getAllTags", getAllTags)
 			group.POST("/gc", gc)
@@ -38,6 +40,8 @@ func InitApi() {
 			group.POST("/merge", merge)
 			group.POST("/blame", blame)
 			group.POST("/canMerge", canMerge)
+			group.GET("/archive/:corpId/:repoName/:fileName", packRepoPath, createArchive)
+			group.POST("/deleteTag", deleteTag)
 		}
 		group = e.Group("/api/v1/git/smart/:corpId/:repoName", packRepoPath)
 		{
@@ -45,6 +49,14 @@ func InitApi() {
 			group.POST("/git-receive-pack", receivePack)
 			group.GET("/info/refs", infoRefs)
 		}
+	})
+}
+
+func createArchive(c *gin.Context) {
+	storeSrv.CreateArchive(c, reqvo.CreateArchiveReq{
+		RepoPath: c.GetString("repoPath"),
+		FileName: c.Param("fileName"),
+		C:        c,
 	})
 }
 
@@ -103,17 +115,40 @@ func deleteBranch(c *gin.Context) {
 	}
 }
 
-func getAllBranchAndLastCommit(c *gin.Context) {
-	var req reqvo.GetAllBranchesReq
+func pageBranchAndLastCommit(c *gin.Context) {
+	var req reqvo.PageRefCommitsReq
 	if util.ShouldBindJSON(&req, c) {
-		ret, err := storeSrv.GetAllBranchAndLastCommit(c, req)
+		ret, total, err := storeSrv.PageBranchAndLastCommit(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.DataResp[[]reqvo.RefCommitVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     ret,
+		c.JSON(http.StatusOK, ginutil.Page2Resp[reqvo.RefCommitVO]{
+			DataResp: ginutil.DataResp[[]reqvo.RefCommitVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     ret,
+			},
+			PageNum:    req.PageNum,
+			TotalCount: total,
+		})
+	}
+}
+
+func pageTagAndCommit(c *gin.Context) {
+	var req reqvo.PageRefCommitsReq
+	if util.ShouldBindJSON(&req, c) {
+		ret, total, err := storeSrv.PageTagAndCommit(c, req)
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.JSON(http.StatusOK, ginutil.Page2Resp[reqvo.RefCommitVO]{
+			DataResp: ginutil.DataResp[[]reqvo.RefCommitVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     ret,
+			},
+			PageNum:    req.PageNum,
+			TotalCount: total,
 		})
 	}
 }
@@ -352,5 +387,17 @@ func blame(c *gin.Context) {
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     lines,
 		})
+	}
+}
+
+func deleteTag(c *gin.Context) {
+	var req reqvo.DeleteTagReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := storeSrv.DeleteTag(c, req)
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
 	}
 }

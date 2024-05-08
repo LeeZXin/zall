@@ -7,7 +7,7 @@ export default {
     switchTeam: "切换团队",
     notFound: "页面丢失了",
     backToIndex: "回到首页",
-    lastPage: "上一页",
+    previousPage: "上一页",
     nextPage: "下一页",
     system: {
         requestFailed: "请求发送似乎有点问题, 请稍后重试",

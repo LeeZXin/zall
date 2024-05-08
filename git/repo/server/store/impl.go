@@ -23,6 +23,8 @@ var (
 	protocolPattern = regexp.MustCompile(`^[0-9a-zA-Z]+=[0-9a-zA-Z]+(:[0-9a-zA-Z]+=[0-9a-zA-Z]+)*$`)
 )
 
+const refLimit = 10
+
 type storeImpl struct{}
 
 func NewStore() Store {
@@ -70,30 +72,79 @@ func (s *storeImpl) GetAllBranches(ctx context.Context, req reqvo.GetAllBranches
 	}
 	return listutil.Map(ret, func(t git.Ref) (reqvo.RefVO, error) {
 		return reqvo.RefVO{
-			LastCommitId: t.LastCommitId,
+			LastCommitId: t.Sha,
 			Name:         t.Name,
 		}, nil
 	})
 }
 
-// GetAllBranchAndLastCommit 获取所有分支+最后提交信息
-func (s *storeImpl) GetAllBranchAndLastCommit(ctx context.Context, req reqvo.GetAllBranchesReq) ([]reqvo.RefCommitVO, error) {
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// PageBranchAndLastCommit 分页获取分支+最后提交信息
+func (s *storeImpl) PageBranchAndLastCommit(ctx context.Context, req reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	ret, err := git.GetAllBranchList(ctx, repoPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
+		return nil, 0, util.InternalError(err)
 	}
-	return listutil.Map(ret, func(t git.Ref) (reqvo.RefCommitVO, error) {
-		commit, err := git.GetCommitByCommitId(ctx, repoPath, t.LastCommitId)
+	offset := (req.PageNum - 1) * refLimit
+	totalCount := len(ret)
+	if offset >= totalCount {
+		return []reqvo.RefCommitVO{}, int64(totalCount), nil
+	}
+	ret = ret[offset:min(offset+refLimit, totalCount)]
+	data, err := listutil.Map(ret, func(t git.Ref) (reqvo.RefCommitVO, error) {
+		commit, err := git.GetCommitByCommitId(ctx, repoPath, t.Sha)
 		if err != nil {
 			return reqvo.RefCommitVO{}, err
 		}
 		return reqvo.RefCommitVO{
-			LastCommit: commit2Vo(commit),
-			Name:       t.Name,
+			Commit: commit2Vo(commit),
+			Name:   t.Name,
 		}, nil
 	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	return data, int64(totalCount), nil
+}
+
+// PageTagAndCommit 分页获取tag+提交信息
+func (s *storeImpl) PageTagAndCommit(ctx context.Context, req reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
+	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
+	ret, err := git.GetAllTagList(ctx, repoPath)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	offset := (req.PageNum - 1) * refLimit
+	totalCount := len(ret)
+	if offset >= totalCount {
+		return []reqvo.RefCommitVO{}, int64(totalCount), nil
+	}
+	ret = ret[offset:min(offset+refLimit, totalCount)]
+	data, err := listutil.Map(ret, func(t git.Ref) (reqvo.RefCommitVO, error) {
+		commit, err := git.GetCommitByTag(ctx, repoPath, t.Name)
+		if err != nil {
+			return reqvo.RefCommitVO{}, err
+		}
+		return reqvo.RefCommitVO{
+			Commit: commit2Vo(commit),
+			Name:   t.Name,
+		}, nil
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	return data, int64(totalCount), nil
 }
 
 // DeleteBranch 删除分支
@@ -117,7 +168,7 @@ func (s *storeImpl) GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq) ([]
 	}
 	return listutil.Map(ret, func(t git.Ref) (reqvo.RefVO, error) {
 		return reqvo.RefVO{
-			LastCommitId: t.LastCommitId,
+			LastCommitId: t.Sha,
 			Name:         t.Name,
 		}, nil
 	})
@@ -427,6 +478,7 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 	}
 	defer reqBody.Close()
 	// 不缓存任何东西
+	req.C.Writer.WriteHeader(http.StatusOK)
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
@@ -470,6 +522,7 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 	}
 	defer reqBody.Close()
 	// 不缓存任何东西
+	req.C.Writer.WriteHeader(http.StatusOK)
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
@@ -501,6 +554,7 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 func (s *storeImpl) InfoRefs(ctx context.Context, req reqvo.InfoRefsReq) {
 	serviceParam := req.C.Query("service")
 	// 不缓存任何东西
+	req.C.Writer.WriteHeader(http.StatusOK)
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
@@ -557,6 +611,79 @@ func (s *storeImpl) Blame(ctx context.Context, req reqvo.BlameReq) ([]reqvo.Blam
 	})
 }
 
+// DeleteTag 删除tag
+func (s *storeImpl) DeleteTag(ctx context.Context, req reqvo.DeleteTagReqVO) error {
+	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
+	if !git.CheckRefIsTag(ctx, repoPath, req.Tag) {
+		return util.InvalidArgsError()
+	}
+	err := git.DeleteTag(ctx, repoPath, req.Tag)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// CreateArchive 下载压缩包
+func (s *storeImpl) CreateArchive(ctx context.Context, req reqvo.CreateArchiveReq) {
+	var (
+		archiveType git.ArchiveType
+		ref         string
+	)
+	if strings.HasSuffix(req.FileName, ".zip") {
+		archiveType = git.ZIP
+		ref = strings.TrimSuffix(req.FileName, ".zip")
+	} else if strings.HasSuffix(req.FileName, ".tar.gz") {
+		archiveType = git.TARGZ
+		ref = strings.TrimSuffix(req.FileName, ".tar.gz")
+	} else {
+		util.HandleApiErr(util.InvalidArgsError(), req.C)
+		return
+	}
+	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
+	var (
+		commitId string
+		err      error
+	)
+	if git.CheckRefIsTag(ctx, repoPath, ref) {
+		var commit git.Commit
+		commit, err = git.GetCommitByTag(ctx, repoPath, ref)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			util.HandleApiErr(util.InternalError(err), req.C)
+			return
+		}
+		commitId = commit.Id
+	} else if git.CheckRefIsBranch(ctx, repoPath, ref) {
+		commitId, err = git.GetBranchCommitId(ctx, repoPath, ref)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			util.HandleApiErr(util.InternalError(err), req.C)
+			return
+		}
+	} else {
+		util.HandleApiErr(util.InvalidArgsError(), req.C)
+		return
+	}
+	// 不缓存任何东西
+	req.C.Writer.WriteHeader(http.StatusOK)
+	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
+	req.C.Header("Pragma", "no-cache")
+	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
+	req.C.Header("Content-Type", archiveType.HttpContentType())
+	req.C.Header("Content-Disposition", "attachment; filename=\""+req.FileName+"\"")
+	req.C.Header("Access-Control-Expose-Headers", "Content-Disposition")
+	req.C.Writer.WriteHeaderNow()
+	// 暂时不搞http缓存
+	err = git.CreateArchive(ctx, repoPath, commitId, archiveType, req.C.Writer)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		util.HandleApiErr(util.InternalError(err), req.C)
+		return
+	}
+}
+
 func packetWrite(str string) []byte {
 	s := strconv.FormatInt(int64(len(str)+4), 16)
 	if len(s)%4 != 0 {
@@ -595,7 +722,7 @@ func lsRet2TreeVO(commits []git.FileCommit) reqvo.TreeVO {
 }
 
 func commit2Vo(c git.Commit) reqvo.CommitVO {
-	return reqvo.CommitVO{
+	ret := reqvo.CommitVO{
 		Parent: c.Parent,
 		Author: reqvo.UserVO{
 			Account: c.Author.Account,
@@ -613,4 +740,14 @@ func commit2Vo(c git.Commit) reqvo.CommitVO {
 		CommitSig:     c.CommitSig.String(),
 		Payload:       c.Payload,
 	}
+	if c.Tag != nil {
+		ret.Tagger = reqvo.UserVO{
+			Account: c.Tag.Tagger.Account,
+			Email:   c.Tag.Tagger.Email,
+		}
+		ret.TaggerTime = c.Tag.TagTime.UnixMilli()
+		ret.ShortTagId = util.LongCommitId2ShortId(c.Tag.Id)
+		ret.TagCommitMsg = c.Tag.CommitMsg
+	}
+	return ret
 }

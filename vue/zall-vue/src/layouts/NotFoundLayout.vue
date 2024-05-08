@@ -5,7 +5,10 @@
       <I18nSelect style="float:right;" />
     </a-layout-header>
     <a-layout-content style="height: calc(100vh - 128px)">
-      <div class="not-found">:( {{t("notFound")}}</div>
+      <div class="not-found">
+        <FrownOutlined />
+        <span style="margin-left:8px">{{t("notFound")}}</span>
+      </div>
       <div class="back-to-index" @click="backToIndex">{{t("backToIndex")}}</div>
     </a-layout-content>
     <a-layout-footer style="text-align: center">{{t("footer")}}</a-layout-footer>
@@ -15,10 +18,11 @@
 import I18nSelect from "../components/i18n/I18nSelect";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import { FrownOutlined } from "@ant-design/icons-vue";
 const { t } = useI18n();
 const router = useRouter();
 const backToIndex = () => {
-    router.push("/index");
+  router.push("/index");
 };
 </script>
 <style scoped>

@@ -61,7 +61,7 @@ func afterUpdateWikiPage(ctx context.Context, tempDir string, message string, ha
 	if err != nil {
 		return fmt.Errorf("commit tree failed with err:%v", err)
 	}
-	if _, err = NewCommand("push", DefaultRemote, fmt.Sprintf("%s:%s", commitHash, BranchPrefix+WikiDefaultBranch)).
+	if _, err = NewCommand("push", DefaultRemote).AddDynamicArgs(fmt.Sprintf("%s:%s", commitHash, BranchPrefix+WikiDefaultBranch)).
 		Run(ctx, WithDir(tempDir)); err != nil {
 		return fmt.Errorf("push failed with err:%v", err)
 	}
@@ -70,7 +70,7 @@ func afterUpdateWikiPage(ctx context.Context, tempDir string, message string, ha
 
 func prepareUpdateWikiPage(ctx context.Context, wikiPath string, tempDir string) (bool, error) {
 	hasMasterBranch := IsBranchExist(ctx, wikiPath, WikiDefaultBranch)
-	cloneCmd := NewCommand("clone", "-s", "--bare", wikiPath, tempDir)
+	cloneCmd := NewCommand("clone", "-s", "--bare").AddDynamicArgs(wikiPath, tempDir)
 	if hasMasterBranch {
 		cloneCmd.AddArgs("-b", WikiDefaultBranch)
 	}
@@ -78,11 +78,11 @@ func prepareUpdateWikiPage(ctx context.Context, wikiPath string, tempDir string)
 		return false, fmt.Errorf("clone tempDir:%s failed with err:%v", tempDir, err)
 	}
 	if hasMasterBranch {
-		commitId, err := GetRefCommitId(ctx, tempDir, "HEAD")
+		commitId, err := GetBranchCommitId(ctx, tempDir, "HEAD")
 		if err != nil {
 			return false, fmt.Errorf("get head commitId failed with err:%v", err)
 		}
-		if _, err = NewCommand("read-tree", commitId).
+		if _, err = NewCommand("read-tree").AddDynamicArgs(commitId).
 			Run(ctx, WithDir(tempDir)); err != nil {
 			return false, fmt.Errorf("read tree failed with err:%v", err)
 		}

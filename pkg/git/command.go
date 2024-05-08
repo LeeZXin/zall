@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/LeeZXin/zall/pkg/git/process"
 	"github.com/LeeZXin/zsf/logger"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -37,12 +39,34 @@ func addGlobalCmdArgs(args ...string) {
 }
 
 type Command struct {
-	args []string
+	args        []string
+	invalidArgs []string
 }
 
 func (c *Command) AddArgs(args ...string) *Command {
 	c.args = append(c.args, args...)
 	return c
+}
+
+func (c *Command) AddDynamicArgs(args ...string) *Command {
+	if c.checkSafeDynamicArg(args...) {
+		c.args = append(c.args, args...)
+	}
+	return c
+}
+
+func (c *Command) isSafeDynamicArg(arg string) bool {
+	return len(strings.Fields(arg)) == 1 && (arg == "" || arg[0] != '-')
+}
+
+func (c *Command) checkSafeDynamicArg(args ...string) bool {
+	for _, arg := range args {
+		if !c.isSafeDynamicArg(arg) {
+			c.invalidArgs = append(c.invalidArgs, arg)
+			return false
+		}
+	}
+	return true
 }
 
 func (c *Command) Run(ctx context.Context, ros ...RunOpts) (*Result, error) {
@@ -92,6 +116,9 @@ func (c *Command) RunWithStdinPipe(ctx context.Context, ros ...RunOpts) *ReadWri
 }
 
 func (c *Command) run(ctx context.Context, ros ...RunOpts) error {
+	if len(c.invalidArgs) > 0 {
+		return fmt.Errorf("invalid arguments: %v", c.invalidArgs)
+	}
 	opts := new(runOpts)
 	for _, o := range ros {
 		o(opts)
@@ -132,7 +159,8 @@ func NewCommand(args ...string) *Command {
 		args = []string{}
 	}
 	return &Command{
-		args: append(globalCmdArgs, args...),
+		args:        append(globalCmdArgs, args...),
+		invalidArgs: make([]string, 0),
 	}
 }
 

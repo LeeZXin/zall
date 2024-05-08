@@ -1,6 +1,5 @@
 <template>
   <div style="padding:14px">
-    <ZNaviBack name="合并请求列表" :url="`/gitRepo/${route.params.repoId}/pullRequest/list`" />
     <div class="title no-wrap">
       <span class="pr-id">
         <span>#</span>
@@ -35,11 +34,24 @@
                       <LoadingOutlined />
                     </template>
                   </div>
-                  <div class="card-content" v-if="canMergeDetect.canMerge === true">
-                    <a-button @click="mergePr" type="primary">
-                      <LoadingOutlined v-if="merging" />
-                      <span>提交合并请求</span>
-                    </a-button>
+                  <div class="card-content" v-if="canMergeDetectLoaded">
+                    <div
+                      v-if="canMergeDetect.isProtectedBranch === true"
+                      style="font-size:14px;color:green;margin-bottom:10px"
+                    >
+                      <FileProtectOutlined />
+                      <span style="margin-left:4px">受保护分支规则保护</span>
+                    </div>
+                    <div v-if="canMergeDetect.canMerge === true">
+                      <a-button @click="mergePr" type="primary">
+                        <LoadingOutlined v-if="merging" />
+                        <span>提交合并请求</span>
+                      </a-button>
+                    </div>
+                    <div v-else class="can-not-merge-reason">
+                      <WarningOutlined />
+                      <span style="margin-left:4px">{{cannotMergeReason}}</span>
+                    </div>
                   </div>
                 </div>
               </a-timeline-item>
@@ -48,14 +60,12 @@
                   <template v-if="item.action.actionType === 3">
                     <div class="text">
                       <span>{{item.account}}</span>
-                      <span v-if="item.action.pr.status === 1">创建合并请求</span>
-                      <span v-else-if="item.action.pr.status === 2">关闭合并请求</span>
-                      <span v-else-if="item.action.pr.status === 3">提交合并请求</span>
+                      <span>{{prStatusMap[item.action.pr.status]}}</span>
                       <span>#{{item.prId}}</span>
                       <span>{{readableTimeComparingNow(item.created)}}</span>
                     </div>
                   </template>
-                  <template v-else-if="item.action.actionType === 1">
+                  <template v-else>
                     <div class="card-title no-wrap" :id="`comment-${item.id}`">
                       <span>{{item.account}}</span>
                       <span>评论于</span>
@@ -71,27 +81,10 @@
                         v-if="user.account === item.account"
                       >删除</span>
                     </div>
-                    <div class="card-content">
+                    <div class="card-content" v-if="item.action.actionType === 1">
                       <div class="comment-text">{{item.action.comment.comment}}</div>
                     </div>
-                  </template>
-                  <template v-else-if="item.action.actionType === 2">
-                    <div class="card-title no-wrap" :id="`comment-${item.id}`">
-                      <span>{{item.account}}</span>
-                      <span>评论于</span>
-                      <span>{{readableTimeComparingNow(item.created)}}</span>
-                      <span
-                        class="reply-btn"
-                        @click="selectReply(item)"
-                        v-if="prStore.prStatus === 1"
-                      >回复</span>
-                      <span
-                        class="del-btn"
-                        @click="deleteComment(item.id)"
-                        v-if="user.account === item.account"
-                      >删除</span>
-                    </div>
-                    <div class="card-content">
+                    <div class="card-content" v-else-if="item.action.actionType === 2">
                       <div
                         class="comment-reply no-wrap"
                         @click="scrollToComment(item.action.reply.fromId)"
@@ -145,17 +138,50 @@
             />
           </div>
         </a-tab-pane>
-        <a-tab-pane
-          key="reviewer"
-          tab="评审人"
-          v-if="prStore.prStatus === 1 || prStore.prStatus === 3"
-        ></a-tab-pane>
+        <a-tab-pane key="review" tab="评审代码" v-if="prStore.prStatus === 1 || prStore.prStatus === 3">
+          <div style="padding:10px">
+            <div class="section" style="margin-bottom:10px" v-if="prStore.prStatus === 1">
+              <template v-if="canReviewLoaded">
+                <div class="section-title">
+                  <span>{{canReviewMsg}}</span>
+                </div>
+                <div class="section-body" v-if="canReviewState.canReview">
+                  <a-button type="primary" @click="agreeReview">同意合并</a-button>
+                </div>
+              </template>
+              <div style="padding:14px" v-else>
+                <LoadingOutlined />
+              </div>
+            </div>
+            <ZTable
+              :columns="reviewColumns"
+              :dataSource="reviewList"
+              style="margin-top:0"
+              v-if="reviewList.length > 0"
+            >
+              <template #bodyCell="{dataIndex, dataItem}">
+                <template v-if="dataIndex === 'updated'">
+                  <span>{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
+                </template>
+                <template v-else>
+                  <span>{{dataItem[dataIndex]}}</span>
+                </template>
+              </template>
+            </ZTable>
+            <ZNoData v-else>
+              <template #desc>
+                <div class="no-data-text">无评审记录数据</div>
+              </template>
+            </ZNoData>
+          </div>
+        </a-tab-pane>
       </a-tabs>
     </div>
   </div>
 </template>
 <script setup>
-import ZNaviBack from "@/components/common/ZNaviBack";
+import ZTable from "@/components/common/ZTable";
+import ZNoData from "@/components/common/ZNoData";
 import FileDiffDetail from "@/components/git/FileDiffDetail";
 import CommitList from "@/components/git/CommitList";
 import ConflictFiles from "@/components/git/ConflictFiles";
@@ -169,7 +195,10 @@ import {
   addCommentRequest,
   deleteCommentRequest,
   canMergeRequest,
-  mergePullRequestRequest
+  mergePullRequestRequest,
+  canReviewRequest,
+  agreeReviewRequest,
+  listReviewRequest
 } from "@/api/git/prApi";
 import { useRoute } from "vue-router";
 import PrStatusTag from "@/components/git/PrStatusTag";
@@ -178,15 +207,37 @@ import { message, Modal } from "ant-design-vue";
 import {
   ExclamationCircleOutlined,
   LoadingOutlined,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  FileProtectOutlined,
+  CloseCircleFilled,
+  WarningOutlined
 } from "@ant-design/icons-vue";
 import { readableTimeComparingNow } from "@/utils/time";
-import { CloseCircleFilled, WarningOutlined } from "@ant-design/icons-vue";
 import { prCommentRegexp } from "@/utils/regexp";
+const reviewColumns = ref([
+  {
+    title: "评审人",
+    dataIndex: "reviewer",
+    key: "reviewer"
+  },
+  {
+    title: "操作时间",
+    dataIndex: "updated",
+    key: "updated"
+  },
+  {
+    title: "状态",
+    dataIndex: "reviewStatus",
+    key: "reviewStatus"
+  }
+]);
+const reviewList = ref([]);
 const user = useUserStore();
 const reload = inject("gitRepoLayoutReload");
 const scrollToElem = inject("gitRepoLayoutScrollToElem");
 const scrollToBottom = inject("gitRepoLayoutScrollToBottom");
+const cannotMergeReason = ref("");
+const canReviewMsg = ref("");
 // 冲突文件
 const conflictFiles = ref([]);
 // 提交列表
@@ -202,12 +253,50 @@ const headTargetCommitId = reactive({
   head: "",
   target: ""
 });
-const diffRefsLoaded = ref(false);
+const canReviewLoaded = ref(false);
 const selectTab = key => {
-  if (key === "diff" && !diffRefsLoaded.value) {
-    diffRefs();
+  switch (key) {
+    case "diff":
+      if (prStore.prStatus === 1) {
+        diffRefs();
+      }
+      listTimeline();
+      break;
+    case "review":
+      if (prStore.prStatus === 1) {
+        canReview();
+        listReview();
+      }
+      break;
+    case "timeline":
+      if (prStore.prStatus === 1) {
+        detectCanMerge();
+      }
+      break;
   }
 };
+const listReview = () => {
+  listReviewRequest(route.params.prId).then(res => {
+    reviewList.value = res.data.map(item => {
+      return {
+        ...item,
+        key: item.id
+      };
+    });
+  });
+};
+const prStatusMap = {
+  1: "创建合并请求",
+  2: "关闭合并请求",
+  3: "提交合并请求"
+};
+const canReviewState = reactive({
+  canReview: false,
+  isInReviewerList: false,
+  isProtectedBranch: false,
+  reviewerList: [],
+  hasAgree: false
+});
 const merging = ref(false);
 const canMerge = ref(false);
 const canMergeDetectLoaded = ref(false);
@@ -229,9 +318,28 @@ const listTimeline = () => {
   });
 };
 const detectCanMerge = () => {
-  canMergeRequest(prStore.id).then(res => {
-    canMergeDetectLoaded.value = true;
-    canMergeDetect.value = res.data;
+  canMergeDetectLoaded.value = false;
+  nextTick(() => {
+    canMergeRequest(prStore.id).then(res => {
+      canMergeDetectLoaded.value = true;
+      canMergeDetect.value = res.data;
+      if (!res.data.canMerge) {
+        if (res.data.gitCommitCount === 0) {
+          cannotMergeReason.value = "无任何代码提交";
+        } else if (
+          res.data.gitConflictFiles &&
+          res.data.gitConflictFiles.length > 0
+        ) {
+          cannotMergeReason.value = "存在冲突文件";
+        } else if (
+          res.data.protectedBranchCfg?.reviewCountWhenCreatePr &&
+          res.data.protectedBranchCfg.reviewCountWhenCreatePr >
+            res.data.reviewCount
+        ) {
+          cannotMergeReason.value = "评审数量不足";
+        }
+      }
+    });
   });
 };
 if (prStore.id === 0 || prStore.id !== parseInt(route.params.prId)) {
@@ -265,7 +373,6 @@ const diffRefs = () => {
   if (prStore.id === 0) {
     return;
   }
-  diffRefsLoaded.value = true;
   let req = {
     repoId,
     targetType: prStore.targetType,
@@ -359,6 +466,42 @@ const scrollToComment = id => {
 const cancelReply = () => {
   replyItem.replyFrom = 0;
 };
+const canReview = () => {
+  canReviewLoaded.value = false;
+  nextTick(() => {
+    canReviewRequest(prStore.id).then(res => {
+      canReviewLoaded.value = true;
+      canReviewState.canReview = res.data.canReview;
+      canReviewState.isInReviewerList = res.data.isInReviewerList;
+      canReviewState.isProtectedBranch = res.data.isProtectedBranch;
+      canReviewState.reviewerList = res.data.reviewerList;
+      canReviewState.hasAgree = res.data.hasAgree;
+      if (
+        res.data.canReview &&
+        res.data.isProtectedBranch &&
+        res.data.reviewerList.length === 0
+      ) {
+        canReviewMsg.value = "无指定任何评审人, 你可以评审该合并请求";
+      } else if (
+        canReviewState.canReview &&
+        canReviewState.isProtectedBranch &&
+        canReviewState.reviewerList.length > 0 &&
+        canReviewState.isInReviewerList
+      ) {
+        canReviewMsg.value = "你在指定评审名单里, 你可以评审该合并请求";
+      } else if (
+        canReviewState.canReview &&
+        !canReviewState.isProtectedBranch
+      ) {
+        canReviewMsg.value = "非保护分支, 你可以评审该合并请求";
+      } else if (!canReviewState.canReview && canReviewState.hasAgree) {
+        canReviewMsg.value = "你已同意合并该请求";
+      } else if (!canReviewState.canReview) {
+        canReviewMsg.value = "你不可以评审该合并请求";
+      }
+    });
+  });
+};
 const addComment = () => {
   if (!prCommentRegexp.test(replyItem.replyComment)) {
     message.warn("评论格式不合法");
@@ -411,6 +554,13 @@ const mergePr = () => {
         });
     },
     onCancel() {}
+  });
+};
+const agreeReview = () => {
+  agreeReviewRequest(prStore.id).then(() => {
+    message.success("操作成功");
+    canReview();
+    listReview();
   });
 };
 </script>
@@ -473,12 +623,11 @@ const mergePr = () => {
   color: gray;
   position: relative;
   border-left: 4px solid gray;
-  padding: 6px 10px;
+  padding: 0 10px;
   cursor: pointer;
 }
 .comment-text {
   font-size: 14px;
-  padding: 10px;
 }
 .timeline {
   width: 100%;
@@ -521,5 +670,12 @@ const mergePr = () => {
 }
 .cancel-reply:hover {
   color: gray;
+}
+.can-not-merge-reason {
+  font-size: 14px;
+  color: darkred;
+}
+.can-not-merge-reason + .can-not-merge-reason {
+  margin-top: 10px;
 }
 </style>

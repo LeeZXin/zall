@@ -30,7 +30,7 @@ func InitApi() {
 			// merge合并请求
 			group.PUT("/merge/:prId", mergePullRequest)
 			// review
-			group.POST("/review", reviewPullRequest)
+			group.PUT("/agreeReview/:prId", agreeReviewPullRequest)
 			// 展示时间轴
 			group.GET("/listTimeline/:prId", listTimeline)
 			// 添加评论
@@ -39,10 +39,10 @@ func InitApi() {
 			group.DELETE("/deleteComment/:commentId", deleteComment)
 			// 是否可合并
 			group.GET("/canMerge/:prId", canMergePullRequest)
+			// 是否可评审
+			group.GET("/canReview/:prId", canReviewPullRequest)
 			// 获取review列表
-			group.POST("/listReview")
-			// 修改review
-			group.POST("/updateReview")
+			group.GET("/listReview/:prId", listReview)
 		}
 	})
 }
@@ -59,15 +59,34 @@ func canMergePullRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, ginutil.DataResp[CanMergePullRequestRespVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data: CanMergePullRequestRespVO{
-			CanMerge:                respDTO.CanMerge,
-			IsProtectedBranch:       respDTO.IsProtectedBranch,
-			ReviewCountWhenCreatePr: respDTO.ReviewCountWhenCreatePr,
-			ReviewerList:            respDTO.ReviewerList,
-			DirectPushList:          respDTO.DirectPushList,
-			ReviewCount:             respDTO.ReviewCount,
-			GitCanMerge:             respDTO.GitCanMerge,
-			GitConflictFiles:        respDTO.GitConflictFiles,
-			GitCommitCount:          respDTO.GitCommitCount,
+			CanMerge:           respDTO.CanMerge,
+			IsProtectedBranch:  respDTO.IsProtectedBranch,
+			ProtectedBranchCfg: respDTO.ProtectedBranchCfg,
+			ReviewCount:        respDTO.ReviewCount,
+			GitCanMerge:        respDTO.GitCanMerge,
+			GitConflictFiles:   respDTO.GitConflictFiles,
+			GitCommitCount:     respDTO.GitCommitCount,
+		},
+	})
+}
+
+func canReviewPullRequest(c *gin.Context) {
+	respDTO, err := pullrequestsrv.Outer.CanReviewPullRequest(c, pullrequestsrv.CanReviewPullRequestReqDTO{
+		PrId:     getPrId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[CanReviewPullRequestRespVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: CanReviewPullRequestRespVO{
+			CanReview:         respDTO.CanReview,
+			IsProtectedBranch: respDTO.IsProtectedBranch,
+			ReviewerList:      respDTO.ReviewerList,
+			IsInReviewerList:  respDTO.IsInReviewerList,
+			HasAgree:          respDTO.HasAgree,
 		},
 	})
 }
@@ -121,6 +140,29 @@ func listTimeline(c *gin.Context) {
 		}, nil
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]TimelineVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func listReview(c *gin.Context) {
+	reviews, err := pullrequestsrv.Outer.ListReview(c, pullrequestsrv.ListReviewReqDTO{
+		PrId:     getPrId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(reviews, func(t pullrequestsrv.ReviewDTO) (ReviewVO, error) {
+		return ReviewVO{
+			Id:           t.Id,
+			Reviewer:     t.Reviewer,
+			ReviewStatus: t.ReviewStatus.Readable(),
+			Updated:      t.Updated.Format(time.DateTime),
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]ReviewVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     data,
 	})
@@ -261,21 +303,16 @@ func mergePullRequest(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func reviewPullRequest(c *gin.Context) {
-	var req ReviewPullRequestReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := pullrequestsrv.Outer.ReviewPullRequest(c, pullrequestsrv.ReviewPullRequestReqDTO{
-			PrId:      req.Id,
-			Status:    req.Status,
-			ReviewMsg: req.ReviewMsg,
-			Operator:  apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+func agreeReviewPullRequest(c *gin.Context) {
+	err := pullrequestsrv.Outer.AgreeReviewPullRequest(c, pullrequestsrv.AgreeReviewPullRequestReqDTO{
+		PrId:     getPrId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
 func getPrId(c *gin.Context) int64 {

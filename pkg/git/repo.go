@@ -96,11 +96,11 @@ func InitRepository(ctx context.Context, opts InitRepoOpts) error {
 }
 
 func initTemporaryRepository(ctx context.Context, tmpDir string, opts InitRepoOpts) error {
-	if _, err := NewCommand("clone", opts.RepoPath, tmpDir).Run(ctx); err != nil {
+	if _, err := NewCommand("clone").AddDynamicArgs(opts.RepoPath, tmpDir).Run(ctx); err != nil {
 		return fmt.Errorf("failed to clone original repository %s: %w", opts.RepoPath, err)
 	}
 	if opts.AddReadme {
-		util.WriteFile(filepath.Join(tmpDir, "README.md"), []byte(fmt.Sprintf("# %s  ", opts.RepoName)))
+		util.WriteFile(filepath.Join(tmpDir, "README.md"), []byte(fmt.Sprintf("# %s  \n", opts.RepoName)))
 	}
 	if opts.GitIgnoreName != "" {
 		content, err := os.ReadFile(filepath.Join(gitIgnoreResourcesPath, opts.GitIgnoreName))
@@ -127,7 +127,7 @@ func SetDefaultBranch(ctx context.Context, repoPath, branch string) error {
 	if !strings.HasPrefix(branch, BranchPrefix) {
 		branch = BranchPrefix + branch
 	}
-	cmd := NewCommand("symbolic-ref", "HEAD", branch)
+	cmd := NewCommand("symbolic-ref", "HEAD").AddDynamicArgs(branch)
 	_, err := cmd.Run(ctx, WithDir(repoPath))
 	return err
 }
@@ -163,7 +163,7 @@ func commitAndPushRepository(ctx context.Context, opts CommitAndPushOpts) error 
 	if err != nil {
 		return fmt.Errorf("git commit failed repo:%s err: %v", opts.RepoPath, err)
 	}
-	_, err = NewCommand("push", "origin", "HEAD:"+opts.Branch).
+	_, err = NewCommand("push", "origin").AddDynamicArgs("HEAD:"+opts.Branch).
 		Run(
 			ctx,
 			WithDir(opts.RepoPath),
@@ -185,7 +185,7 @@ func GetRepoUserEmail(repoPath string) (string, error) {
 }
 
 func getRepoProperty(name, repoPath string) (string, error) {
-	run, err := NewCommand("config", "--get", name).Run(nil, WithDir(repoPath))
+	run, err := NewCommand("config", "--get").AddDynamicArgs(name).Run(nil, WithDir(repoPath))
 	if err != nil {
 		return "", err
 	}

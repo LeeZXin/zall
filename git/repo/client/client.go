@@ -10,6 +10,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/rpcheader"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
@@ -93,22 +94,40 @@ func DeleteBranch(ctx context.Context, req reqvo.DeleteBranchReq) error {
 	return nil
 }
 
-// GetAllBranchAndLastCommit 获取所有的分支+最后提交信息
-func GetAllBranchAndLastCommit(ctx context.Context, req reqvo.GetAllBranchesReq) ([]reqvo.RefCommitVO, error) {
-	var resp ginutil.DataResp[[]reqvo.RefCommitVO]
+// PageBranchAndLastCommit 分页获取分支+最后提交信息
+func PageBranchAndLastCommit(ctx context.Context, req reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
+	var resp ginutil.Page2Resp[reqvo.RefCommitVO]
 	err := postHttp(
 		ctx,
-		"/api/v1/git/store/getAllBranchAndLastCommit",
+		"/api/v1/git/store/pageBranchAndLastCommit",
 		req,
 		&resp,
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if !resp.IsSuccess() {
-		return nil, bizerr.NewBizErr(resp.Code, resp.Message)
+		return nil, 0, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
-	return resp.Data, nil
+	return resp.Data, resp.TotalCount, nil
+}
+
+// PageTagAndCommit 分页获取tag+提交信息
+func PageTagAndCommit(ctx context.Context, req reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
+	var resp ginutil.Page2Resp[reqvo.RefCommitVO]
+	err := postHttp(
+		ctx,
+		"/api/v1/git/store/pageTagAndCommit",
+		req,
+		&resp,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	if !resp.IsSuccess() {
+		return nil, 0, bizerr.NewBizErr(resp.Code, resp.Message)
+	}
+	return resp.Data, resp.TotalCount, nil
 }
 
 // GetAllTags 获取所有的tag
@@ -270,6 +289,23 @@ func InitRepoHook(ctx context.Context, req reqvo.InitRepoHookReq) error {
 	return nil
 }
 
+func DeleteTag(ctx context.Context, req reqvo.DeleteTagReqVO) error {
+	var resp ginutil.BaseResp
+	err := postHttp(
+		ctx,
+		"/api/v1/git/store/deleteTag",
+		req,
+		&resp,
+	)
+	if err != nil {
+		return err
+	}
+	if !resp.IsSuccess() {
+		return bizerr.NewBizErr(resp.Code, resp.Message)
+	}
+	return nil
+}
+
 func EntriesRepo(ctx context.Context, req reqvo.EntriesRepoReq) ([]reqvo.BlobVO, error) {
 	var resp ginutil.DataResp[[]reqvo.BlobVO]
 	err := postHttp(
@@ -388,6 +424,14 @@ func LfsDownload(req reqvo.LfsDownloadReq) error {
 	)
 }
 
+func CreateArchive(req reqvo.CreateArchiveReq) error {
+	return proxyHttp(
+		"/api/v1/git/store/archive/"+req.RepoPath+"/"+req.FileName,
+		req.C,
+		nil,
+	)
+}
+
 func LfsExists(ctx context.Context, req reqvo.LfsExistsReq) (bool, error) {
 	var resp ginutil.DataResp[bool]
 	err := postHttp(
@@ -481,7 +525,9 @@ func postHttp(ctx context.Context, path string, req, resp any) error {
 	err = httputil.Post(ctx,
 		httpClient,
 		httpUrl+path,
-		nil,
+		map[string]string{
+			rpcheader.TraceId: rpcheader.GetHeaders(ctx).Get(rpcheader.TraceId),
+		},
 		req,
 		resp,
 	)
@@ -506,6 +552,7 @@ func proxyHttp(path string, ctx *gin.Context, headers map[string]string) error {
 	for k, v := range headers {
 		proxyReq.Header.Set(k, v)
 	}
+	proxyReq.Header.Set(rpcheader.TraceId, rpcheader.GetHeaders(ctx).Get(rpcheader.TraceId))
 	proxyResp, err := httpClient.Do(proxyReq)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

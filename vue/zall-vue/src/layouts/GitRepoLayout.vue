@@ -21,7 +21,7 @@
             <branches-outlined />
             <span>分支列表</span>
           </a-menu-item>
-          <a-menu-item key="/team/gitRepo/tags">
+          <a-menu-item key="/tag/list">
             <tag-outlined />
             <span>标签列表</span>
           </a-menu-item>
@@ -29,15 +29,19 @@
             <cloud-upload-outlined />
             <span>提交历史</span>
           </a-menu-item>
-          <a-menu-item key="/team/gitRepo/opLogs">
+          <a-menu-item key="/protectedBranch/list">
+            <branches-outlined />
+            <span>保护分支</span>
+          </a-menu-item>
+          <a-menu-item key="/team/gitRepo/opLogs" v-if="isAdmin">
             <calendar-outlined />
             <span>操作日志</span>
           </a-menu-item>
-          <a-menu-item key="/team/gitRepo/accessToken">
+          <a-menu-item key="/team/gitRepo/accessToken" v-if="isAdmin">
             <key-outlined />
             <span>访问令牌</span>
           </a-menu-item>
-          <a-menu-item key="/team/gitRepo/settings">
+          <a-menu-item key="/team/gitRepo/settings" v-if="isAdmin">
             <setting-outlined />
             <span>设置</span>
           </a-menu-item>
@@ -71,6 +75,7 @@ import {
   CloudUploadOutlined
 } from "@ant-design/icons-vue";
 import { getRepoRequest } from "@/api/git/repoApi";
+import { isTeamAdminRequest } from "@/api/team/teamApi";
 import { useRepoStore } from "@/pinia/repoStore";
 const { t } = useI18n();
 const collapsed = ref(false);
@@ -81,13 +86,16 @@ const selectedKeys = ref([]);
 const routeKey = `/gitRepo/${route.params.repoId}`;
 const routerActive = ref(true);
 const container = ref(null);
+const isAdmin = ref(false);
 // 为了子页面能体现在导航栏
 const pagesMap = {
   "/index": "/index",
   "/tree": "/index",
   "/pullRequest": "/pullRequest/list",
   "/branch": "/branch/list",
-  "/commit": "/commit/list"
+  "/commit": "/commit/list",
+  "/tag": "/tag/list",
+  "/protectedBranch": "/protectedBranch/list"
 };
 const switchRepo = () => {
   router.push(`/team/${repo.teamId}/gitRepo/list`);
@@ -98,12 +106,20 @@ const clickPage = event => {
     force: true
   });
 };
+const getIsTeamAdmin = () => {
+  isTeamAdminRequest(repo.teamId).then(res => {
+    isAdmin.value = res.data;
+  });
+};
 if (repo.repoId === 0) {
   getRepoRequest(parseInt(route.params.repoId)).then(res => {
     repo.repoId = res.data.repoId;
     repo.name = res.data.name;
     repo.teamId = res.data.teamId;
+    getIsTeamAdmin();
   });
+} else {
+  getIsTeamAdmin();
 }
 const changeSelectedKey = path => {
   const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");

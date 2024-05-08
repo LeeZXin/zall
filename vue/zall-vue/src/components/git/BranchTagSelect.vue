@@ -155,6 +155,10 @@ watch(
 .branch-tag-select-text {
   padding: 0px 4px;
 }
+.branch-tag-list {
+  max-height: 400px;
+  overflow: scroll;
+}
 .branch-tag-list > li {
   padding: 6px 0px;
 }

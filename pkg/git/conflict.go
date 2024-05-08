@@ -59,7 +59,7 @@ func findConflictFiles(ctx context.Context, repoPath string, originHead, targetC
 	if err := prepare4Merge(ctx, repoPath, tempDir, originHead, targetCommitId); err != nil {
 		return nil, err
 	}
-	_, err := NewCommand("read-tree", "-m", mergeBase, MergeBranch, TrackingBranch).
+	_, err := NewCommand("read-tree", "-m").AddDynamicArgs(mergeBase, MergeBranch, TrackingBranch).
 		Run(ctx, WithDir(tempDir))
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func findConflictFiles(ctx context.Context, repoPath string, originHead, targetC
 }
 
 func lsFiles(ctx context.Context, repoPath string, args ...string) ([]lsFileLine, error) {
-	readPipe := NewCommand("ls-files").AddArgs(args...).RunWithReadPipe(ctx, WithDir(repoPath))
+	readPipe := NewCommand("ls-files").AddDynamicArgs(args...).RunWithReadPipe(ctx, WithDir(repoPath))
 	ret := make([]lsFileLine, 0)
 	if err := readPipe.RangeStringLines(func(_ int, line string) (bool, error) {
 		fields := strings.Fields(line)
@@ -137,7 +137,7 @@ func readUnMergedFiles(ctx context.Context, repoPath string) ([]unmergedFile, er
 }
 
 func UnPackFile(ctx context.Context, repoPath, sha string) (string, error) {
-	result, err := NewCommand("unpack-file", sha).Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("unpack-file").AddDynamicArgs(sha).Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return "", err
 	}

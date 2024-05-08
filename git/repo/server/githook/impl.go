@@ -69,16 +69,10 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 			name = strings.TrimPrefix(name, git.BranchPrefix)
 			for _, pb := range pbList {
 				// 通配符匹配 是保护分支
-				if wildcard.Match(pb.Branch, name) {
+				if wildcard.Match(pb.Pattern, name) {
 					// 只有可推送名单里面才能直接push
-					if opts.PrId > 0 && pb.Cfg != nil && len(pb.Cfg.DirectPushList) > 0 {
-						// prId为空说明不是来自合并请求的push
-						contains, _ := listutil.Contains(pb.Cfg.DirectPushList, func(account string) (bool, error) {
-							return account == opts.PusherAccount, nil
-						})
-						if !contains {
-							return util.NewBizErr(apicode.ForcePushForbiddenCode, i18n.ProtectedBranchNotAllowDirectPush)
-						}
+					if opts.PrId > 0 && pb.Cfg != nil {
+						//
 					}
 					// 不允许删除保护分支
 					if info.NewCommitId == git.ZeroCommitId {

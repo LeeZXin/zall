@@ -65,7 +65,7 @@ func (*outerImpl) CreateTeam(ctx context.Context, reqDTO CreateTeamReqDTO) (err 
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	if !reqDTO.Operator.IsAdmin {
-		// 判断是否允许用户自行创建项目
+		// 判断是否允许用户自行创建团队
 		sysCfg, b := cfgsrv.Inner.GetSysCfg(ctx)
 		if !b || !sysCfg.AllowUserCreateTeam {
 			err = util.UnauthorizedError()
@@ -138,6 +138,9 @@ func (*outerImpl) IsAdmin(ctx context.Context, reqDTO IsAdminReqDTO) (bool, erro
 	if err := reqDTO.IsValid(); err != nil {
 		return false, err
 	}
+	if reqDTO.Operator.IsAdmin {
+		return true, nil
+	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	detail, b, err := teammd.GetUserPermDetail(ctx, reqDTO.TeamId, reqDTO.Operator.Account)
@@ -187,9 +190,32 @@ func (*outerImpl) GetTeam(ctx context.Context, reqDTO GetTeamReqDTO) (teammd.Tea
 	team, _, err := teammd.GetByTeamId(ctx, reqDTO.TeamId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return teammd.Team{}, err
+		return teammd.Team{}, util.InternalError(err)
 	}
 	return team, nil
+}
+
+// ListAccount 获取成员账号
+func (*outerImpl) ListAccount(ctx context.Context, reqDTO ListAccountReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, b, err := teammd.GetUserPermDetail(ctx, reqDTO.TeamId, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, err
+	}
+	if !b {
+		return nil, nil
+	}
+	accounts, err := teammd.ListAccountByTeamId(ctx, reqDTO.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return accounts, nil
 }
 
 func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDTO, int64, error) {

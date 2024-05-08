@@ -151,7 +151,7 @@ func setGlobalConfig(k, v string) error {
 }
 
 func setGlobalConfigCheckOverwrite(k, v string, overwrite bool) error {
-	result, err := NewCommand("config", "--global", "--get").AddArgs(k).Run(nil)
+	result, err := NewCommand("config", "--global", "--get", k).Run(nil)
 	// fatal error
 	if err != nil && !IsExitCode(err, 1) {
 		return fmt.Errorf("failed to get git config %s, err: %w", k, err)
@@ -168,7 +168,7 @@ func setGlobalConfigCheckOverwrite(k, v string, overwrite bool) error {
 	if currValue == v {
 		return nil
 	}
-	_, err = NewCommand("config", "--global").AddArgs(k, v).Run(nil)
+	_, err = NewCommand("config", "--global").AddDynamicArgs(k, v).Run(nil)
 	if err != nil {
 		return fmt.Errorf("failed to set git global config %s, err: %w", k, err)
 	}
@@ -176,12 +176,12 @@ func setGlobalConfigCheckOverwrite(k, v string, overwrite bool) error {
 }
 
 func addGlobalConfigIfAbsent(k, v string) error {
-	_, err := NewCommand("config", "--global", "--get").AddArgs(k, regexp.QuoteMeta(v)).Run(nil)
+	_, err := NewCommand("config", "--global", "--get", k, regexp.QuoteMeta(v)).Run(nil)
 	if err == nil {
 		return nil
 	}
 	if IsExitCode(err, 1) {
-		_, err = NewCommand("config", "--global", "--add").AddArgs(k, v).Run(nil)
+		_, err = NewCommand("config", "--global", "--add").AddDynamicArgs(k, v).Run(nil)
 		if err != nil {
 			return fmt.Errorf("failed to add git global config %s, err: %w", k, err)
 		}
@@ -199,9 +199,9 @@ func setLocalConfig(ctx context.Context, repoPath, k, v string) error {
 }
 
 func unsetAllGlobalConfig(k, v string) error {
-	_, err := NewCommand("config", "--global", "--get").AddArgs(k).Run(nil)
+	_, err := NewCommand("config", "--global", "--get").AddDynamicArgs(k).Run(nil)
 	if err == nil {
-		_, err = NewCommand("config", "--global", "--unset-all").AddArgs(k, regexp.QuoteMeta(v)).Run(nil)
+		_, err = NewCommand("config", "--global", "--unset-all").AddDynamicArgs(k, regexp.QuoteMeta(v)).Run(nil)
 		if err != nil {
 			return fmt.Errorf("failed to unset git global config %s, err: %w", k, err)
 		}
@@ -215,7 +215,7 @@ func unsetAllGlobalConfig(k, v string) error {
 
 // IsReferenceExist returns true if given reference exists in the repository.
 func IsReferenceExist(ctx context.Context, repoPath, name string) bool {
-	_, err := NewCommand("show-ref", "--verify", "--", name).Run(ctx, WithDir(repoPath))
+	_, err := NewCommand("show-ref", "--verify", "--").AddDynamicArgs(name).Run(ctx, WithDir(repoPath))
 	return err == nil
 }
 
@@ -237,7 +237,7 @@ func HashObjectByStdin(ctx context.Context, repoPath string, reader io.Reader) (
 }
 
 func HashObjectByPath(ctx context.Context, repoPath, relativePath, absolutePath string) (string, error) {
-	result, err := NewCommand("hash-object", "-w", "--path", relativePath, absolutePath).Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("hash-object", "-w", "--path").AddDynamicArgs(relativePath, absolutePath).Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return "", err
 	}
@@ -245,7 +245,7 @@ func HashObjectByPath(ctx context.Context, repoPath, relativePath, absolutePath 
 }
 
 func AddObjectToIndex(ctx context.Context, repoPath, mode, object, filename string) error {
-	_, err := NewCommand("update-index", "--add", "--replace", "--cacheinfo", mode, object, filename).
+	_, err := NewCommand("update-index", "--add", "--replace", "--cacheinfo").AddDynamicArgs(mode, object, filename).
 		Run(ctx, WithDir(repoPath))
 	return err
 }
@@ -281,7 +281,7 @@ type CommitTreeOpts struct {
 
 // CommitTree creates a commit from a given tree id for the user with provided message
 func CommitTree(ctx context.Context, repoPath string, tree Tree, opts CommitTreeOpts) (string, error) {
-	cmd := NewCommand("commit-tree", tree.Id, "--no-gpg-sign")
+	cmd := NewCommand("commit-tree", "--no-gpg-sign").AddDynamicArgs(tree.Id)
 	for _, parent := range opts.Parents {
 		cmd.AddArgs("-p", parent)
 	}

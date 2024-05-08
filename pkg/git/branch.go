@@ -6,8 +6,8 @@ import (
 )
 
 type Ref struct {
-	LastCommitId string
-	Name         string
+	Sha  string
+	Name string
 }
 
 func GetAllBranchList(ctx context.Context, repoPath string) ([]Ref, error) {
@@ -18,8 +18,8 @@ func GetAllBranchList(ctx context.Context, repoPath string) ([]Ref, error) {
 		fields := strings.Fields(strings.TrimSpace(line))
 		if len(fields) == 2 {
 			ret = append(ret, Ref{
-				LastCommitId: fields[0],
-				Name:         strings.TrimPrefix(fields[1], BranchPrefix),
+				Sha:  fields[0],
+				Name: strings.TrimPrefix(fields[1], BranchPrefix),
 			})
 		}
 		return true, nil
@@ -34,19 +34,11 @@ func CheckRefIsBranch(ctx context.Context, repoPath string, branch string) bool 
 	return CheckExists(ctx, repoPath, branch)
 }
 
-func CheckCommitIfInBranch(ctx context.Context, repoPath, commitId, branch string) (bool, error) {
-	result, err := NewCommand("branch", "--contains", commitId, branch).Run(ctx, WithDir(repoPath))
-	if err != nil {
-		return false, err
-	}
-	return len(strings.TrimSpace(result.ReadAsString())) > 0, nil
-}
-
 func DeleteBranch(ctx context.Context, repoPath, branch string, force bool) error {
 	deleteCmd := "-d"
 	if force {
 		deleteCmd = "-D"
 	}
-	_, err := NewCommand("branch", deleteCmd, "--", branch).Run(ctx, WithDir(repoPath))
+	_, err := NewCommand("branch", deleteCmd, "--").AddDynamicArgs(branch).Run(ctx, WithDir(repoPath))
 	return err
 }

@@ -11,7 +11,7 @@ var (
 		pathCache: util.NewGoCache(),
 		idCache:   util.NewGoCache(),
 	}
-	Outer OuterService = new(outerImpl)
+	Outer = newOuterImpl()
 )
 
 type InnerService interface {
@@ -58,8 +58,14 @@ type OuterService interface {
 	TransferTeam(context.Context, TransferTeamReqDTO) error
 	// Blame 获取每一行提交信息
 	Blame(context.Context, BlameReqDTO) ([]BlameLineDTO, error)
-	// AllBranchCommits 所有的分支+提交信息
-	AllBranchCommits(context.Context, AllBranchCommitsReqDTO) ([]BranchCommitDTO, error)
+	// PageBranchCommits 分页获取分支+提交信息
+	PageBranchCommits(context.Context, PageRefCommitsReqDTO) ([]BranchCommitDTO, int64, error)
+	// PageTagCommits 分页获取tag+提交信息
+	PageTagCommits(context.Context, PageRefCommitsReqDTO) ([]TagCommitDTO, int64, error)
 	// DeleteBranch 删除分支
 	DeleteBranch(context.Context, DeleteBranchReqDTO) error
+	// CreateArchive 下载代码
+	CreateArchive(context.Context, CreateArchiveReqDTO) error
+	// DeleteTag 删除tag
+	DeleteTag(context.Context, DeleteTagReqDTO) error
 }

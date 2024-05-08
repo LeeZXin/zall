@@ -96,7 +96,6 @@ func InsertReview(ctx context.Context, reqDTO InsertReviewReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&Review{
 		PrId:         reqDTO.PrId,
 		Reviewer:     reqDTO.Reviewer,
-		ReviewMsg:    reqDTO.ReviewMsg,
 		ReviewStatus: reqDTO.Status,
 	})
 	return err
@@ -117,6 +116,7 @@ func ListReview(ctx context.Context, prId int64) ([]Review, error) {
 	ret := make([]Review, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("pr_id = ?", prId).
+		OrderBy("id desc").
 		Find(&ret)
 	return ret, err
 }

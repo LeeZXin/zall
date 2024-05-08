@@ -12,6 +12,8 @@ const repoDescRegexp = /^.{0,255}$/;
 // 合并请求校验
 const prTitleRegexp = /^.{1,255}$/;
 const prCommentRegexp = /^.{1,1024}$/;
+// 保护分支
+const protectedBranchPatternRegexp = /^\S{1,32}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -22,5 +24,6 @@ export {
     defaultBranchRegexp,
     repoDescRegexp,
     prTitleRegexp,
-    prCommentRegexp
+    prCommentRegexp,
+    protectedBranchPatternRegexp
 }

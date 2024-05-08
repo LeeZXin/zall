@@ -28,13 +28,18 @@
         <span v-else>{{dataItem[dataIndex]}}</span>
       </template>
     </ZTable>
-    <div v-else class="no-data">
-      <span v-if="canCreateRepo">暂无仓库数据, 你可点击上方"创建仓库"</span>
-      <span v-else>暂无仓库数据, 管理员已禁用“创建仓库”权限</span>
-    </div>
+    <ZNoData v-else>
+      <template #desc>
+        <div class="no-data">
+          <span v-if="canCreateRepo">暂无仓库数据, 你可点击上方"创建仓库"</span>
+          <span v-else>暂无仓库数据, 管理员已禁用“创建仓库”权限</span>
+        </div>
+      </template>
+    </ZNoData>
   </div>
 </template>
 <script setup>
+import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import { EyeOutlined } from "@ant-design/icons-vue";
 import { ref } from "vue";
@@ -118,11 +123,7 @@ const checkRepo = item => {
 </script>
 <style scoped>
 .no-data {
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  line-height: 80px;
   font-size: 16px;
   text-align: center;
-  color: gray;
 }
 </style>

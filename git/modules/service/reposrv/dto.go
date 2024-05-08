@@ -7,6 +7,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
+	"github.com/gin-gonic/gin"
 	"regexp"
 	"strings"
 	"time"
@@ -236,6 +237,10 @@ type CommitDTO struct {
 	CommitMsg     string   `json:"commitMsg"`
 	CommitId      string   `json:"commitId"`
 	ShortId       string   `json:"shortId"`
+	Tagger        UserDTO  `json:"tagger"`
+	TaggerTime    int64    `json:"taggerTime"`
+	ShortTagId    string   `json:"shortTagId"`
+	TagCommitMsg  string   `json:"tagCommitMsg"`
 	Verified      bool     `json:"verified"`
 }
 
@@ -650,13 +655,17 @@ type BlameLineDTO struct {
 	Commit CommitDTO `json:"commit"`
 }
 
-type AllBranchCommitsReqDTO struct {
+type PageRefCommitsReqDTO struct {
 	RepoId   int64               `json:"repoId"`
+	PageNum  int                 `json:"pageNum"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *AllBranchCommitsReqDTO) IsValid() error {
+func (r *PageRefCommitsReqDTO) IsValid() error {
 	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -666,9 +675,15 @@ func (r *AllBranchCommitsReqDTO) IsValid() error {
 }
 
 type BranchCommitDTO struct {
-	Name            string          `json:"name"`
-	LastCommit      CommitDTO       `json:"lastCommit"`
-	LastPullRequest *PullRequestDTO `json:"lastPullRequest,omitempty"`
+	Name              string          `json:"name"`
+	IsProtectedBranch bool            `json:"isProtectedBranch"`
+	LastCommit        CommitDTO       `json:"lastCommit"`
+	LastPullRequest   *PullRequestDTO `json:"lastPullRequest,omitempty"`
+}
+
+type TagCommitDTO struct {
+	Name   string    `json:"name"`
+	Commit CommitDTO `json:"commit"`
 }
 
 type PullRequestDTO struct {
@@ -692,6 +707,48 @@ func (r *DeleteBranchReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DeleteTagReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	Tag      string              `json:"tag"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *DeleteTagReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.Tag == "" {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type CreateArchiveReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	FileName string              `json:"fileName"`
+	C        *gin.Context        `json:"-"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *CreateArchiveReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.FileName == "" {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.C == nil {
 		return util.InvalidArgsError()
 	}
 	return nil

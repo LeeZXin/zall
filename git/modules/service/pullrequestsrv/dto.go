@@ -3,6 +3,7 @@ package pullrequestsrv
 import (
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
@@ -72,18 +73,13 @@ func (r *MergePullRequestReqDTO) IsValid() error {
 	return nil
 }
 
-type ReviewPullRequestReqDTO struct {
-	PrId      int64                      `json:"prId"`
-	Status    pullrequestmd.ReviewStatus `json:"status"`
-	ReviewMsg string                     `json:"reviewMsg"`
-	Operator  apisession.UserInfo        `json:"operator"`
+type AgreeReviewPullRequestReqDTO struct {
+	PrId     int64               `json:"prId"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ReviewPullRequestReqDTO) IsValid() error {
-	if len(r.ReviewMsg) > 255 {
-		return util.InvalidArgsError()
-	}
-	if !r.Status.IsValid() {
+func (r *AgreeReviewPullRequestReqDTO) IsValid() error {
+	if r.PrId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -253,14 +249,57 @@ func (r *CanMergePullRequestReqDTO) IsValid() error {
 	return nil
 }
 
+type ListReviewReqDTO struct {
+	PrId     int64               `json:"prId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListReviewReqDTO) IsValid() error {
+	if r.PrId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type CanReviewPullRequestReqDTO struct {
+	PrId     int64               `json:"prId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *CanReviewPullRequestReqDTO) IsValid() error {
+	if r.PrId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type CanMergePullRequestRespDTO struct {
-	CanMerge                bool
-	IsProtectedBranch       bool
-	ReviewCountWhenCreatePr int
-	ReviewerList            []string
-	DirectPushList          []string
-	ReviewCount             int
-	GitCanMerge             bool
-	GitConflictFiles        []string
-	GitCommitCount          int
+	CanMerge           bool
+	IsProtectedBranch  bool
+	ProtectedBranchCfg branch.ProtectedBranchCfg
+	ReviewCount        int
+	GitCanMerge        bool
+	GitConflictFiles   []string
+	GitCommitCount     int
+}
+
+type CanReviewPullRequestRespDTO struct {
+	CanReview         bool
+	IsProtectedBranch bool
+	ReviewerList      []string
+	IsInReviewerList  bool
+	HasAgree          bool
+}
+
+type ReviewDTO struct {
+	Id           int64
+	Reviewer     string
+	ReviewStatus pullrequestmd.ReviewStatus
+	Updated      time.Time
 }

@@ -7,7 +7,7 @@ export default {
     switchTeam: "switch team",
     notFound: "The page is lost",
     backToIndex: "Back to index page",
-    lastPage: "Last",
+    previousPage: "Previous",
     nextPage: "Next",
     system: {
         requestFailed: "something wrong happened, please retry in a while",

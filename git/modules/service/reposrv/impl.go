@@ -2,6 +2,7 @@ package reposrv
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/git/modules/model/branchmd"
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/service/gpgkeysrv"
@@ -16,17 +17,20 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/git/signature"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/limiter"
 	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/strutil"
 	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/patrickmn/go-cache"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -34,8 +38,9 @@ import (
 
 const (
 	accessRepo = iota
-	updateToken
+	updateRepo
 	accessToken
+	updateToken
 )
 
 const (
@@ -111,6 +116,17 @@ func (*innerImpl) CheckRepoToken(ctx context.Context, reqDTO CheckRepoTokenReqDT
 }
 
 type outerImpl struct {
+	CreateArchiveLimiter limiter.Limiter
+}
+
+func newOuterImpl() OuterService {
+	limit := static.GetInt64("createArchiveLimit")
+	if limit <= 0 {
+		limit = 10
+	}
+	return &outerImpl{
+		CreateArchiveLimiter: limiter.NewCountLimiter(limit),
+	}
 }
 
 // GetRepo 获取仓库信息
@@ -203,6 +219,9 @@ func (*outerImpl) ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]repomd
 			return nil, util.InternalError(err)
 		}
 	}
+	sort.SliceStable(repoList, func(i, j int) bool {
+		return repoList[i].LastOperated.After(repoList[j].LastOperated)
+	})
 	return repoList, nil
 }
 
@@ -496,13 +515,47 @@ func (s *outerImpl) DeleteBranch(ctx context.Context, reqDTO DeleteBranchReqDTO)
 	if !b {
 		return util.InvalidArgsError()
 	}
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err := checkPermByRepo(ctx, repo, reqDTO.Operator, updateRepo)
 	if err != nil {
 		return err
+	}
+	branches, err := branchmd.ListProtectedBranch(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if b, _ = branches.IsProtectedBranch(reqDTO.Branch); b {
+		return util.InvalidArgsError()
 	}
 	err = client.DeleteBranch(ctx, reqvo.DeleteBranchReq{
 		RepoPath: repo.Path,
 		Branch:   reqDTO.Branch,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// DeleteTag 删除tag
+func (s *outerImpl) DeleteTag(ctx context.Context, reqDTO DeleteTagReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	if !b {
+		return util.InvalidArgsError()
+	}
+	err := checkPermByRepo(ctx, repo, reqDTO.Operator, updateRepo)
+	if err != nil {
+		return err
+	}
+	err = client.DeleteTag(ctx, reqvo.DeleteTagReqVO{
+		RepoPath: repo.Path,
+		Tag:      reqDTO.Tag,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -761,22 +814,29 @@ func (s *outerImpl) DiffFile(ctx context.Context, reqDTO DiffFileReqDTO) (DiffFi
 	return ret, nil
 }
 
-func commit2Dto(commit reqvo.CommitVO) CommitDTO {
+func commit2Dto(c reqvo.CommitVO) CommitDTO {
 	return CommitDTO{
-		Parent: commit.Parent,
+		Parent: c.Parent,
 		Author: UserDTO{
-			Account: commit.Author.Account,
-			Email:   commit.Author.Email,
+			Account: c.Author.Account,
+			Email:   c.Author.Email,
 		},
 		Committer: UserDTO{
-			Account: commit.Committer.Account,
-			Email:   commit.Committer.Email,
+			Account: c.Committer.Account,
+			Email:   c.Committer.Email,
 		},
-		AuthoredTime:  commit.AuthoredTime,
-		CommittedTime: commit.CommittedTime,
-		CommitMsg:     commit.CommitMsg,
-		CommitId:      commit.CommitId,
-		ShortId:       util.LongCommitId2ShortId(commit.CommitId),
+		AuthoredTime:  c.AuthoredTime,
+		CommittedTime: c.CommittedTime,
+		CommitMsg:     c.CommitMsg,
+		CommitId:      c.CommitId,
+		ShortId:       util.LongCommitId2ShortId(c.CommitId),
+		Tagger: UserDTO{
+			Account: c.Tagger.Account,
+			Email:   c.Tagger.Email,
+		},
+		TaggerTime:   c.TaggerTime,
+		ShortTagId:   c.ShortTagId,
+		TagCommitMsg: c.TagCommitMsg,
 	}
 }
 
@@ -1035,6 +1095,8 @@ func checkPermByRepo(ctx context.Context, repo repomd.Repo, operator apisession.
 	switch permCode {
 	case accessRepo:
 		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo
+	case updateRepo:
+		pass = p.PermDetail.GetRepoPerm(repo.Id).CanUpdateRepo
 	case accessToken:
 		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessToken
 	case updateToken:
@@ -1137,47 +1199,60 @@ func (*outerImpl) TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (
 	return
 }
 
-// AllBranchCommits 所有的分支+提交信息
-func (*outerImpl) AllBranchCommits(ctx context.Context, reqDTO AllBranchCommitsReqDTO) ([]BranchCommitDTO, error) {
+// PageBranchCommits 分页获取分支+提交信息
+func (*outerImpl) PageBranchCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]BranchCommitDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
 	if !b {
-		return nil, util.InvalidArgsError()
+		return nil, 0, util.InvalidArgsError()
 	}
 	// 校验权限
 	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	branches, err := client.GetAllBranchAndLastCommit(ctx, reqvo.GetAllBranchesReq{
+	branches, totalCount, err := client.PageBranchAndLastCommit(ctx, reqvo.PageRefCommitsReq{
 		RepoPath: repo.Path,
+		PageNum:  reqDTO.PageNum,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
+		return nil, 0, util.InternalError(err)
 	}
-	heads, _ := listutil.Map(branches, func(t reqvo.RefCommitVO) (string, error) {
-		return t.Name, nil
-	})
-	pullRequests, err := pullrequestmd.GetLastPullRequestByRepoIdAndHead(ctx, reqDTO.RepoId, heads)
+	var prMap map[string]pullrequestmd.PullRequest
+	if len(branches) > 0 {
+		heads, _ := listutil.Map(branches, func(t reqvo.RefCommitVO) (string, error) {
+			return t.Name, nil
+		})
+		pullRequests, err := pullrequestmd.GetLastPullRequestByRepoIdAndHead(ctx, reqDTO.RepoId, heads)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, 0, util.InternalError(err)
+		}
+		prMap, _ = listutil.CollectToMap(pullRequests, func(t pullrequestmd.PullRequest) (string, error) {
+			return t.Head, nil
+		}, func(t pullrequestmd.PullRequest) (pullrequestmd.PullRequest, error) {
+			return t, nil
+		})
+	} else {
+		prMap = map[string]pullrequestmd.PullRequest{}
+	}
+	pbList, err := branchmd.ListProtectedBranch(ctx, reqDTO.RepoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
+		return nil, 0, util.InternalError(err)
 	}
-	prMap, _ := listutil.CollectToMap(pullRequests, func(t pullrequestmd.PullRequest) (string, error) {
-		return t.Head, nil
-	}, func(t pullrequestmd.PullRequest) (pullrequestmd.PullRequest, error) {
-		return t, nil
-	})
-	return listutil.Map(branches, func(t reqvo.RefCommitVO) (BranchCommitDTO, error) {
+	data, _ := listutil.Map(branches, func(t reqvo.RefCommitVO) (BranchCommitDTO, error) {
 		pr, b := prMap[t.Name]
+		isProtectedBranch, _ := pbList.IsProtectedBranch(t.Name)
 		ret := BranchCommitDTO{
-			Name:       t.Name,
-			LastCommit: commit2Dto(t.LastCommit),
+			Name:              t.Name,
+			LastCommit:        commit2Dto(t.Commit),
+			IsProtectedBranch: isProtectedBranch,
 		}
 		if b {
 			ret.LastPullRequest = &PullRequestDTO{
@@ -1189,4 +1264,70 @@ func (*outerImpl) AllBranchCommits(ctx context.Context, reqDTO AllBranchCommitsR
 		}
 		return ret, nil
 	})
+	return data, totalCount, nil
+}
+
+// PageTagCommits 分页获取tag+提交信息
+func (*outerImpl) PageTagCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]TagCommitDTO, int64, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, 0, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	if !b {
+		return nil, 0, util.InvalidArgsError()
+	}
+	// 校验权限
+	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return nil, 0, err
+	}
+	tags, totalCount, err := client.PageTagAndCommit(ctx, reqvo.PageRefCommitsReq{
+		RepoPath: repo.Path,
+		PageNum:  reqDTO.PageNum,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	data, _ := listutil.Map(tags, func(t reqvo.RefCommitVO) (TagCommitDTO, error) {
+		return TagCommitDTO{
+			Name:   t.Name,
+			Commit: commit2Dto(t.Commit),
+		}, nil
+	})
+	return data, totalCount, nil
+}
+
+// CreateArchive 下载代码
+func (s *outerImpl) CreateArchive(ctx context.Context, reqDTO CreateArchiveReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	if !b {
+		return util.InvalidArgsError()
+	}
+	// 校验权限
+	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return err
+	}
+	if s.CreateArchiveLimiter.Borrow() {
+		defer s.CreateArchiveLimiter.Return()
+		err = client.CreateArchive(reqvo.CreateArchiveReq{
+			RepoPath: repo.Path,
+			FileName: reqDTO.FileName,
+			C:        reqDTO.C,
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		return nil
+	}
+	return util.NewBizErrWithMsg(apicode.TooManyOperationCode, i18n.GetByKey(i18n.SystemTooManyOperation))
 }

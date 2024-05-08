@@ -214,11 +214,11 @@ func doMerge(ctx context.Context, repoPath string, pr DiffRefsInfo, opts MergeRe
 		Run(ctx, WithDir(tempDir)); err != nil {
 		return fmt.Errorf("git merge err: %v", err)
 	}
-	mergeCmd := NewCommand("commit", "--no-gpg-sign", "-m", opts.Message)
+	mergeCmd := NewCommand("commit", "--no-gpg-sign", "-m").AddArgs(opts.Message)
 	if _, err = mergeCmd.Run(ctx, WithDir(tempDir)); err != nil {
 		return err
 	}
-	if _, err = NewCommand("push", "origin", MergeBranch+":"+pr.Head).
+	if _, err = NewCommand("push", "origin").AddDynamicArgs(MergeBranch+":"+pr.Head).
 		Run(ctx,
 			WithDir(tempDir),
 			WithEnv(
@@ -242,7 +242,10 @@ func prepare4Merge(ctx context.Context, repoPath string, tempDir string, originH
 	if err := initEmptyRepository(ctx, tempDir, false); err != nil {
 		return err
 	}
-	if _, err := NewCommand("remote", "add", "-t", originHead, "-m", originHead, "origin", repoPath).
+	if _, err := NewCommand("remote", "add", "-t").
+		AddDynamicArgs(originHead).
+		AddArgs("-m").
+		AddDynamicArgs(originHead, "origin", repoPath).
 		Run(ctx, WithDir(tempDir)); err != nil {
 		return errors.New("add remote failed")
 	}
@@ -251,14 +254,18 @@ func prepare4Merge(ctx context.Context, repoPath string, tempDir string, originH
 	if CheckGitVersionAtLeast("2.25.0") == nil {
 		fetchArgs = append(fetchArgs, "--no-write-commit-graph")
 	}
-	if _, err := NewCommand("fetch", "origin", originHead+":"+MergeBranch, originHead+":original_"+originHead).AddArgs(fetchArgs...).
+	if _, err := NewCommand("fetch", "origin").
+		AddDynamicArgs(originHead+":"+MergeBranch, originHead+":original_"+originHead).
+		AddArgs(fetchArgs...).
 		Run(ctx, WithDir(tempDir)); err != nil {
 		return err
 	}
 	if err := SetDefaultBranch(ctx, tempDir, MergeBranch); err != nil {
 		return err
 	}
-	if _, err := NewCommand("fetch", "origin", targetCommitId+":"+TrackingBranch).AddArgs(fetchArgs...).
+	if _, err := NewCommand("fetch", "origin").
+		AddDynamicArgs(targetCommitId+":"+TrackingBranch).
+		AddArgs(fetchArgs...).
 		Run(ctx, WithDir(tempDir)); err != nil {
 		return err
 	}
@@ -266,7 +273,8 @@ func prepare4Merge(ctx context.Context, repoPath string, tempDir string, originH
 }
 
 func getDiffTreeForMerge(ctx context.Context, repoPath, target, head string) ([]string, error) {
-	diffTreeResult, err := NewCommand("diff-tree", "--no-commit-id", "--name-only", "-r", "-r", "-z", "--root", target, head).
+	diffTreeResult, err := NewCommand("diff-tree", "--no-commit-id", "--name-only", "-r", "-r", "-z", "--root").
+		AddDynamicArgs(target, head).
 		Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return nil, fmt.Errorf("unable to diff tree in tmpBasePath: %w", err)
@@ -283,7 +291,7 @@ func getDiffTreeForMerge(ctx context.Context, repoPath, target, head string) ([]
 }
 
 func MergeBase(ctx context.Context, repoPath, target, head string) (string, error) {
-	result, err := NewCommand("merge-base", "--", target, head).Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("merge-base", "--").AddDynamicArgs(target, head).Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return "", err
 	}
@@ -291,6 +299,6 @@ func MergeBase(ctx context.Context, repoPath, target, head string) (string, erro
 }
 
 func MergeFile(ctx context.Context, repoPath string, files ...string) error {
-	_, err := NewCommand("merge-file").AddArgs(files...).Run(ctx, WithDir(repoPath))
+	_, err := NewCommand("merge-file").AddDynamicArgs(files...).Run(ctx, WithDir(repoPath))
 	return err
 }

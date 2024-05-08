@@ -1,25 +1,23 @@
 package branchapi
 
 import (
-	"github.com/LeeZXin/zall/git/modules/model/branchmd"
+	"github.com/LeeZXin/zall/pkg/branch"
 )
 
 type InsertProtectedBranchReqVO struct {
-	RepoId int64                       `json:"repoId"`
-	Branch string                      `json:"branch"`
-	Cfg    branchmd.ProtectedBranchCfg `json:"cfg"`
-}
-
-type DeleteProtectedBranchReqVO struct {
-	Id int64 `json:"id"`
-}
-
-type ListProtectedBranchReqVO struct {
-	RepoId int64 `json:"repoId"`
+	RepoId  int64                     `json:"repoId"`
+	Pattern string                    `json:"pattern"`
+	Cfg     branch.ProtectedBranchCfg `json:"cfg"`
 }
 
 type ProtectedBranchVO struct {
-	Id     int64  `json:"id"`
-	Branch string `json:"branch"`
-	Cfg    branchmd.ProtectedBranchCfg
+	Id      int64                     `json:"id"`
+	Pattern string                    `json:"pattern"`
+	Cfg     branch.ProtectedBranchCfg `json:"cfg"`
+}
+
+type UpdateProtectedBranchVO struct {
+	ProtectedBranchId int64                     `json:"protectedBranchId"`
+	Pattern           string                    `json:"pattern"`
+	Cfg               branch.ProtectedBranchCfg `json:"cfg"`
 }

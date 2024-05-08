@@ -47,6 +47,10 @@ type CommitVO struct {
 	CommitId      string   `json:"commitId"`
 	ShortId       string   `json:"shortId"`
 	Verified      bool     `json:"verified"`
+	Tagger        *UserVO  `json:"tagger,omitempty"`
+	TaggerTime    *string  `json:"taggerTime,omitempty"`
+	ShortTagId    *string  `json:"shortTagId,omitempty"`
+	TagCommitMsg  *string  `json:"tagCommitMsg,omitempty"`
 }
 
 type FileVO struct {
@@ -247,12 +251,33 @@ type PullRequestVO struct {
 }
 
 type BranchCommitVO struct {
-	Name            string         `json:"name"`
-	LastCommit      CommitVO       `json:"lastCommit"`
-	LastPullRequest *PullRequestVO `json:"lastPullRequest,omitempty"`
+	Name              string         `json:"name"`
+	IsProtectedBranch bool           `json:"isProtectedBranch"`
+	LastCommit        CommitVO       `json:"lastCommit"`
+	LastPullRequest   *PullRequestVO `json:"lastPullRequest,omitempty"`
+}
+
+type TagCommitVO struct {
+	Name   string   `json:"name"`
+	Commit CommitVO `json:"commit"`
 }
 
 type DeleteBranchReqVO struct {
 	RepoId int64  `json:"repoId"`
 	Branch string `json:"branch"`
+}
+
+type PageRefCommitsReqVO struct {
+	RepoId  int64 `json:"repoId"`
+	PageNum int   `json:"pageNum"`
+}
+
+type CreateArchiveReqVO struct {
+	RepoId   int64  `json:"repoId"`
+	FileName string `json:"fileName"`
+}
+
+type DeleteTagReqVO struct {
+	RepoId int64  `json:"repoId"`
+	Tag    string `json:"tag"`
 }

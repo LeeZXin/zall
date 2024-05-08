@@ -18,8 +18,14 @@ const addCommentRequest = (data) => request.post("/api/pullRequest/addComment", 
 const deleteCommentRequest = (commentId) => request.delete("/api/pullRequest/deleteComment/" + commentId);
 // 是否可提交合并请求
 const canMergeRequest = (prId) => request.get("/api/pullRequest/canMerge/" + prId);
+// 是否可评审合并请求
+const canReviewRequest = (prId) => request.get("/api/pullRequest/canReview/" + prId);
+// 同意合并请求
+const agreeReviewRequest = (prId) => request.put("/api/pullRequest/agreeReview/" + prId);
 // 提交合并请求
 const mergePullRequestRequest = (prId) => request.put("/api/pullRequest/merge/" + prId);
+// 评审记录 
+const listReviewRequest = (prId) => request.get("/api/pullRequest/listReview/" + prId);
 export {
     submitPullRequestRequest,
     listPullRequestRequest,
@@ -30,5 +36,8 @@ export {
     addCommentRequest,
     deleteCommentRequest,
     canMergeRequest,
-    mergePullRequestRequest
+    mergePullRequestRequest,
+    canReviewRequest,
+    agreeReviewRequest,
+    listReviewRequest
 }

@@ -61,8 +61,6 @@ type Commit struct {
 	AuthorSigTime time.Time
 	Committer     User
 	CommitSigTime time.Time
-	Tagger        User
-	TagSigTime    time.Time
 	CommitSig     signature.CommitSig
 	CommitMsg     string
 	Tag           *Tag
@@ -115,8 +113,8 @@ func NewTree(id string) Tree {
 	}
 }
 
-func GetRefCommitId(ctx context.Context, repoPath string, name string) (string, error) {
-	cmd := NewCommand("rev-parse", "--verify", name)
+func GetBranchCommitId(ctx context.Context, repoPath string, name string) (string, error) {
+	cmd := NewCommand("rev-parse", "--verify").AddDynamicArgs(name)
 	result, err := cmd.Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return "", err
@@ -159,7 +157,7 @@ func GetCommitByCommitId(ctx context.Context, repoPath string, commitId string) 
 		case CommitType.String():
 			return genCommit(io.LimitReader(reader, size), &c)
 		default:
-			return fmt.Errorf("unsupported type: %s", typ)
+			return nil
 		}
 	})
 }
@@ -186,7 +184,7 @@ func GetCommitByTag(ctx context.Context, repoPath string, tag string) (c Commit,
 			}
 			id, typ, size, err = readBatchLine(string(line))
 			if err != nil {
-				return fmt.Errorf("readBatchLine err: %v", err)
+				return fmt.Errorf("%s readBatchLine err: %v", tag, err)
 			}
 			break
 		}
@@ -207,7 +205,7 @@ func GetCommitByTag(ctx context.Context, repoPath string, tag string) (c Commit,
 			c.Tag = t
 			return err
 		default:
-			return fmt.Errorf("unsupported type: %s", typ)
+			return nil
 		}
 	})
 	return
@@ -287,8 +285,6 @@ func genCommit(r io.Reader, commit *Commit) error {
 			commit.Parent = append(commit.Parent, fields[1])
 		case "author":
 			commit.Author, commit.AuthorSigTime = parseUserAndTime(fields[1:])
-		case "tagger":
-			commit.Tagger, commit.TagSigTime = parseUserAndTime(fields[1:])
 		case "committer":
 			commit.Committer, commit.CommitSigTime = parseUserAndTime(fields[1:])
 		case "gpgsig":
@@ -368,7 +364,7 @@ func GetFullShaCommitId(ctx context.Context, repoPath, short string) (string, er
 }
 
 func GetGitDiffCommitList(ctx context.Context, repoPath, target, head string) ([]Commit, error) {
-	result, err := NewCommand("log", PrettyLogFormat, head+".."+target, "--max-count=100", "--").
+	result, err := NewCommand("log", PrettyLogFormat).AddDynamicArgs(head+".."+target).AddArgs("--max-count=100", "--").
 		Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return nil, err
@@ -380,13 +376,12 @@ func GetGitDiffCommitList(ctx context.Context, repoPath, target, head string) ([
 }
 
 func GetGitLogCommitList(ctx context.Context, repoPath, ref string, skip, limit int) ([]Commit, error) {
-	result, err := NewCommand(
-		"log",
-		PrettyLogFormat,
-		ref,
-		fmt.Sprintf("--max-count=%d", limit),
-		fmt.Sprintf("--skip=%d", skip), "--",
-	).Run(ctx, WithDir(repoPath))
+	result, err := NewCommand("log", PrettyLogFormat).
+		AddDynamicArgs(ref).
+		AddArgs(
+			fmt.Sprintf("--max-count=%d", limit),
+			fmt.Sprintf("--skip=%d", skip), "--",
+		).Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +392,7 @@ func GetGitLogCommitList(ctx context.Context, repoPath, ref string, skip, limit 
 }
 
 func GetFileLatestCommit(ctx context.Context, repoPath, ref, filePath string) (Commit, error) {
-	result, err := NewCommand("log", PrettyLogFormat, "-1", ref, "--", filePath).
+	result, err := NewCommand("log", PrettyLogFormat, "-1").AddDynamicArgs(ref).AddArgs("--").AddDynamicArgs(filePath).
 		Run(ctx, WithDir(repoPath))
 	if err != nil {
 		return Commit{}, err
@@ -418,7 +413,7 @@ func GetCommit(ctx context.Context, repoPath string, ref string) (Commit, string
 		if !strings.HasPrefix(ref, BranchPrefix) {
 			ref = BranchPrefix + ref
 		}
-		commitId, err := GetRefCommitId(ctx, repoPath, ref)
+		commitId, err := GetBranchCommitId(ctx, repoPath, ref)
 		if err != nil {
 			return Commit{}, "", err
 		}
@@ -439,7 +434,8 @@ type DetectForcePushEnv struct {
 }
 
 func DetectForcePush(ctx context.Context, repoPath, oldCommitId, newCommitId string, env DetectForcePushEnv) (bool, error) {
-	result, err := NewCommand("rev-list", "--max-count=1", oldCommitId, "^"+newCommitId).
+	result, err := NewCommand("rev-list", "--max-count=1").
+		AddDynamicArgs(oldCommitId, "^"+newCommitId).
 		Run(ctx, WithDir(repoPath),
 			WithEnv(util.JoinFields(
 				gitenv.EnvObjectDirectory, env.ObjectDirectory,

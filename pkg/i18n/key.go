@@ -33,6 +33,10 @@ var (
 		Id:         "system.operationFailed",
 		DefaultRet: "操作失败",
 	}
+	SystemTooManyOperation = KeyItem{
+		Id:         "system.tooManyOperation",
+		DefaultRet: "太多人操作了，请稍后",
+	}
 )
 
 var (
@@ -212,13 +216,17 @@ var (
 		Id:         "pullRequest.mergeMessage",
 		DefaultRet: "合并请求: %v, 申请人: %s, 合并人: %s",
 	}
-	PullRequestAgreeMergeStatus = KeyItem{
+	PullRequestAgreeReviewStatus = KeyItem{
 		Id:         "pullRequest.agreeMerge",
 		DefaultRet: "同意合并",
 	}
 	PullRequestDisagreeMergeStatus = KeyItem{
 		Id:         "pullRequest.disagreeMerge",
 		DefaultRet: "不同意合并",
+	}
+	PullRequestCanceledReviewStatus = KeyItem{
+		Id:         "pullRequest.canceledMerge",
+		DefaultRet: "被撤销",
 	}
 	PullRequestUnknownReviewStatus = KeyItem{
 		Id:         "pullRequest.unknownReviewStatus",

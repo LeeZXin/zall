@@ -2,6 +2,7 @@ package pullrequestapi
 
 import (
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
+	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 )
@@ -14,12 +15,6 @@ type SubmitPullRequestReqVO struct {
 	HeadType   git.RefType `json:"headType"`
 	Title      string      `json:"title"`
 	Comment    string      `json:"comment"`
-}
-
-type ReviewPullRequestReqVO struct {
-	Id        int64                      `json:"id"`
-	Status    pullrequestmd.ReviewStatus `json:"status"`
-	ReviewMsg string                     `json:"reviewMsg"`
 }
 
 type ListPullRequestReqVO struct {
@@ -64,6 +59,13 @@ type TimelineVO struct {
 	Created string               `json:"created"`
 }
 
+type ReviewVO struct {
+	Id           int64  `json:"id"`
+	Reviewer     string `json:"reviewer"`
+	ReviewStatus string `json:"reviewStatus"`
+	Updated      string `json:"updated"`
+}
+
 type AddCommentReqVO struct {
 	PrId      int64  `json:"prId"`
 	ReplyFrom int64  `json:"replyFrom"`
@@ -72,13 +74,19 @@ type AddCommentReqVO struct {
 }
 
 type CanMergePullRequestRespVO struct {
-	CanMerge                bool     `json:"canMerge"`
-	IsProtectedBranch       bool     `json:"isProtectedBranch"`
-	ReviewCountWhenCreatePr int      `json:"reviewCountWhenCreatePr"`
-	ReviewerList            []string `json:"reviewerList"`
-	DirectPushList          []string `json:"directPushList"`
-	ReviewCount             int      `json:"reviewCount"`
-	GitCanMerge             bool     `json:"gitCanMerge"`
-	GitConflictFiles        []string `json:"gitConflictFiles"`
-	GitCommitCount          int      `json:"gitCommitCount"`
+	CanMerge           bool                      `json:"canMerge"`
+	IsProtectedBranch  bool                      `json:"isProtectedBranch"`
+	ProtectedBranchCfg branch.ProtectedBranchCfg `json:"protectedBranchCfg"`
+	ReviewCount        int                       `json:"reviewCount"`
+	GitCanMerge        bool                      `json:"gitCanMerge"`
+	GitConflictFiles   []string                  `json:"gitConflictFiles"`
+	GitCommitCount     int                       `json:"gitCommitCount"`
+}
+
+type CanReviewPullRequestRespVO struct {
+	CanReview         bool     `json:"canReview"`
+	IsProtectedBranch bool     `json:"isProtectedBranch"`
+	ReviewerList      []string `json:"reviewerList"`
+	IsInReviewerList  bool     `json:"isInReviewerList"`
+	HasAgree          bool     `json:"hasAgree"`
 }

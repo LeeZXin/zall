@@ -116,6 +116,26 @@ const router = createRouter({
                 path: "/gitRepo/:repoId(\\d+)/commit/diff/:commitId",
                 component: () =>
                     import ("../pages/team/gitRepo/DiffCommitsPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/tag/list",
+                component: () =>
+                    import ("../pages/team/gitRepo/TagsPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/protectedBranch/list",
+                component: () =>
+                    import ("../pages/team/gitRepo/ProtectedBranchesPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/protectedBranch/create",
+                component: () =>
+                    import ("../pages/team/gitRepo/HandleProtectedBranchPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/protectedBranch/:protectedBranchId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/gitRepo/HandleProtectedBranchPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/protectedBranch/:protectedBranchId(\\d+)/view",
+                component: () =>
+                    import ("../pages/team/gitRepo/HandleProtectedBranchPage")
             }]
         },
         {

@@ -23,6 +23,7 @@ const (
 	MethodUnImplementedCode
 	ThereHasBugErrCode
 	OperationFailedErrCode
+	TooManyOperationCode
 )
 
 func (c Code) Int() int {

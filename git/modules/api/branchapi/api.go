@@ -8,6 +8,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
 	"net/http"
 )
 
@@ -17,19 +18,23 @@ func InitApi() {
 		group := e.Group("/api/protectedBranch", apisession.CheckLogin)
 		{
 			// 新增保护分支
-			group.POST("/insert", insertProtectedBranch)
-			group.POST("/delete", deleteProtectedBranch)
-			group.POST("/list", listProtectedBranch)
+			group.POST("/create", createProtectedBranch)
+			// 删除保护分支
+			group.DELETE("/delete/:id", deleteProtectedBranch)
+			// 查看保护分支
+			group.GET("/list/:repoId", listProtectedBranch)
+			// 编辑保护分支
+			group.POST("/update", updateProtectedBranch)
 		}
 	})
 }
 
-func insertProtectedBranch(c *gin.Context) {
+func createProtectedBranch(c *gin.Context) {
 	var req InsertProtectedBranchReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := branchsrv.Outer.InsertProtectedBranch(c, branchsrv.InsertProtectedBranchReqDTO{
+		err := branchsrv.Outer.CreateProtectedBranch(c, branchsrv.CreateProtectedBranchReqDTO{
 			RepoId:   req.RepoId,
-			Branch:   req.Branch,
+			Pattern:  req.Pattern,
 			Cfg:      req.Cfg,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -41,12 +46,14 @@ func insertProtectedBranch(c *gin.Context) {
 	}
 }
 
-func deleteProtectedBranch(c *gin.Context) {
-	var req DeleteProtectedBranchReqVO
+func updateProtectedBranch(c *gin.Context) {
+	var req UpdateProtectedBranchVO
 	if util.ShouldBindJSON(&req, c) {
-		err := branchsrv.Outer.DeleteProtectedBranch(c, branchsrv.DeleteProtectedBranchReqDTO{
-			Id:       req.Id,
-			Operator: apisession.MustGetLoginUser(c),
+		err := branchsrv.Outer.UpdateProtectedBranch(c, branchsrv.UpdateProtectedBranchReqDTO{
+			ProtectedBranchId: req.ProtectedBranchId,
+			Pattern:           req.Pattern,
+			Cfg:               req.Cfg,
+			Operator:          apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -56,27 +63,36 @@ func deleteProtectedBranch(c *gin.Context) {
 	}
 }
 
-func listProtectedBranch(c *gin.Context) {
-	var req ListProtectedBranchReqVO
-	if util.ShouldBindJSON(&req, c) {
-		branchList, err := branchsrv.Outer.ListProtectedBranch(c, branchsrv.ListProtectedBranchReqDTO{
-			RepoId:   req.RepoId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		data, _ := listutil.Map(branchList, func(t branchsrv.ProtectedBranchDTO) (ProtectedBranchVO, error) {
-			return ProtectedBranchVO{
-				Id:     t.Id,
-				Branch: t.Branch,
-				Cfg:    t.Cfg,
-			}, nil
-		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]ProtectedBranchVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     data,
-		})
+func deleteProtectedBranch(c *gin.Context) {
+	err := branchsrv.Outer.DeleteProtectedBranch(c, branchsrv.DeleteProtectedBranchReqDTO{
+		ProtectedBranchId: cast.ToInt64(c.Param("id")),
+		Operator:          apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
+}
+
+func listProtectedBranch(c *gin.Context) {
+	branchList, err := branchsrv.Outer.ListProtectedBranch(c, branchsrv.ListProtectedBranchReqDTO{
+		RepoId:   cast.ToInt64(c.Param("repoId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(branchList, func(t branchsrv.ProtectedBranchDTO) (ProtectedBranchVO, error) {
+		return ProtectedBranchVO{
+			Id:      t.Id,
+			Pattern: t.Pattern,
+			Cfg:     t.Cfg,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]ProtectedBranchVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }
