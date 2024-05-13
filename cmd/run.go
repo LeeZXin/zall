@@ -8,7 +8,6 @@ import (
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
-	"github.com/LeeZXin/zall/git/modules/api/gitnodeapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
 	"github.com/LeeZXin/zall/git/modules/api/lfsapi"
 	"github.com/LeeZXin/zall/git/modules/api/pullrequestapi"
@@ -74,7 +73,6 @@ func runZall(*cli.Context) error {
 		repoapi.InitApi()
 		sshkeyapi.InitApi()
 		gpgkeyapi.InitApi()
-		gitnodeapi.InitApi()
 		webhookapi.InitApi()
 		lifeCycles = append(lifeCycles, sshproxy.InitProxy())
 		if static.GetBool("git.repo.server.enabled") {

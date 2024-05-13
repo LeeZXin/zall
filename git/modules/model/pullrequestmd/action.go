@@ -8,11 +8,16 @@ const (
 	CommentType ActionType = iota + 1
 	ReplyType
 	PrType
+	WorkflowType
 )
 
 type Pr struct {
 	Id     int64    `json:"id"`
 	Status PrStatus `json:"status"`
+}
+
+type Workflow struct {
+	TaskId int64 `json:"taskId"`
 }
 
 type Reply struct {
@@ -30,6 +35,7 @@ type Action struct {
 	Comment    *Comment   `json:"comment,omitempty"`
 	Reply      *Reply     `json:"reply,omitempty"`
 	Pr         *Pr        `json:"pr,omitempty"`
+	Workflow   *Workflow  `json:"workflow,omitempty"`
 	ActionType ActionType `json:"actionType"`
 }
 
@@ -72,5 +78,14 @@ func NewPrAction(prId int64, status PrStatus) Action {
 			Status: status,
 		},
 		ActionType: PrType,
+	}
+}
+
+func NewWorkflowAction(taskId int64) Action {
+	return Action{
+		Workflow: &Workflow{
+			TaskId: taskId,
+		},
+		ActionType: WorkflowType,
 	}
 }

@@ -95,6 +95,7 @@ func (t StepStatus) Readable() string {
 type Step struct {
 	Id         int64      `json:"id" xorm:"pk autoincr"`
 	TaskId     int64      `json:"taskId"`
+	WorkflowId int64      `json:"workflowId"`
 	JobName    string     `json:"jobName"`
 	StepName   string     `json:"stepName"`
 	StepIndex  int        `json:"stepIndex"`

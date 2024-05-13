@@ -6,7 +6,10 @@
     <ul class="workflow-list" v-if="workflowList.length > 0">
       <li v-for="item in workflowList" v-bind:key="item.id">
         <div class="workflow-header">
-          <div class="name">{{item.name}}</div>
+          <a-tooltip placement="top">
+            <template #title>{{item.name}}</template>
+            <div class="name">{{item.name}}</div>
+          </a-tooltip>
           <span>
             <a-tooltip placement="top" v-if="!item.lastTask || item.lastTask.taskStatus !== 1">
               <template #title>手动执行</template>

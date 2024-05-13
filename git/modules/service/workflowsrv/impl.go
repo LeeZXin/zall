@@ -2,6 +2,7 @@ package workflowsrv
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
@@ -27,7 +28,7 @@ const (
 
 type innerImpl struct{}
 
-func (s *innerImpl) FindAndExecute(repoId int64, operator string, triggerType workflowmd.TriggerType, branch string, source workflowmd.SourceType) {
+func (s *innerImpl) FindAndExecute(repoId int64, operator string, triggerType workflowmd.TriggerType, branch string, source workflowmd.SourceType, prId int64) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	workflowList, err := workflowmd.ListWorkflow(ctx, repoId)
@@ -39,29 +40,40 @@ func (s *innerImpl) FindAndExecute(repoId int64, operator string, triggerType wo
 		if !wf.Source.MatchBranchBySource(source, branch) {
 			continue
 		}
-		s.Execute(&wf, operator, triggerType, branch)
+		taskId, err := s.Execute(&wf, operator, triggerType, branch)
+		if err == nil {
+			// by case 让合并请求和工作流关联
+			pullrequestmd.BatchInsertTimeline(ctx, []pullrequestmd.InsertTimelineReqDTO{
+				{
+					PrId:    prId,
+					Action:  pullrequestmd.NewWorkflowAction(taskId),
+					Account: operator,
+				},
+			})
+		}
 	}
 }
 
-func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerType workflowmd.TriggerType, branch string) {
+func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerType workflowmd.TriggerType, branch string) (int64, error) {
 	var p action.GraphCfg
 	// 解析yaml
 	err := yaml.Unmarshal([]byte(wf.YamlContent), &p)
 	if err != nil {
-		return
+		return 0, err
 	}
 	graph, err := p.ConvertToGraph()
 	if err != nil {
-		logger.Logger.Errorf("can not convert workflow graph: %v", err)
-		return
+		logger.Logger.Errorf("%v can not convert workflow graph: %v", wf.Id, err)
+		return 0, err
 	}
 	// 先插入记录
 	taskId, err := s.insertTaskRecord(graph, wf, operator, triggerType, branch)
 	if err != nil {
-		return
+		return 0, err
 	}
 	// 执行任务
 	go s.runGraph(graph, taskId, *wf.Agent, branch)
+	return taskId, nil
 }
 
 func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, agentCfg zssh.AgentCfg, branch string) {
@@ -189,6 +201,7 @@ func (*innerImpl) insertTaskRecord(graph *action.Graph, wf *workflowmd.Workflow,
 		for _, job := range infos {
 			for _, step := range job.Steps {
 				stepsReq = append(stepsReq, workflowmd.InsertStepReqDTO{
+					WorkflowId: wf.Id,
 					TaskId:     taskId,
 					JobName:    job.Name,
 					StepName:   step.Name,
@@ -285,7 +298,17 @@ func (*outerImpl) DeleteWorkflow(ctx context.Context, reqDTO DeleteWorkflowReqDT
 	if err != nil {
 		return
 	}
-	_, err = workflowmd.DeleteWorkflow(ctx, reqDTO.WorkflowId)
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		_, err2 := workflowmd.DeleteWorkflow(ctx, reqDTO.WorkflowId)
+		if err2 != nil {
+			return err2
+		}
+		err2 = workflowmd.DeleteTasksByWorkflowId(ctx, reqDTO.WorkflowId)
+		if err2 != nil {
+			return err2
+		}
+		return workflowmd.DeleteStepsByWorkflowId(ctx, reqDTO.WorkflowId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -477,6 +500,7 @@ func task2Dto(t workflowmd.Task) (TaskDTO, error) {
 		Branch:      t.Branch,
 		Operator:    t.Operator,
 		Created:     t.Created,
+		Id:          t.Id,
 	}, nil
 }
 

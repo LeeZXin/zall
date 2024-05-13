@@ -12,9 +12,9 @@ var (
 
 type InnerService interface {
 	// FindAndExecute 匹配仓库id 寻找并执行工作流
-	FindAndExecute(int64, string, workflowmd.TriggerType, string, workflowmd.SourceType)
+	FindAndExecute(int64, string, workflowmd.TriggerType, string, workflowmd.SourceType, int64)
 	// Execute 执行工作流
-	Execute(*workflowmd.Workflow, string, workflowmd.TriggerType, string)
+	Execute(*workflowmd.Workflow, string, workflowmd.TriggerType, string) (int64, error)
 }
 type OuterService interface {
 	// CreateWorkflow 创建工作流

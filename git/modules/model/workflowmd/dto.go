@@ -14,6 +14,7 @@ type InsertTaskReqDTO struct {
 }
 
 type InsertStepReqDTO struct {
+	WorkflowId int64
 	TaskId     int64
 	JobName    string
 	StepName   string

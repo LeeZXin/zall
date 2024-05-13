@@ -43,6 +43,7 @@ func BatchInsertSteps(ctx context.Context, reqDTO []InsertStepReqDTO) ([]Step, e
 	ret, _ := listutil.Map(reqDTO, func(t InsertStepReqDTO) (*Step, error) {
 		return &Step{
 			TaskId:     t.TaskId,
+			WorkflowId: t.WorkflowId,
 			JobName:    t.JobName,
 			StepName:   t.StepName,
 			StepIndex:  t.StepIndex,
@@ -169,4 +170,14 @@ func UpdateLastTaskIdByWorkflowId(ctx context.Context, workflowId int64, lastTas
 			LastTaskId: lastTaskId,
 		})
 	return rows == 1, err
+}
+
+func DeleteTasksByWorkflowId(ctx context.Context, workflowId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).Where("workflow_id = ?", workflowId).Delete(new(Task))
+	return err
+}
+
+func DeleteStepsByWorkflowId(ctx context.Context, workflowId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).Where("workflow_id = ?", workflowId).Delete(new(Step))
+	return err
 }

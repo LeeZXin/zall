@@ -844,6 +844,8 @@ func triggerMergePrWorkflow(operator apisession.UserInfo, pr pullrequestmd.PullR
 			operator.Account,
 			workflowmd.HookTriggerType,
 			pr.Head,
-			workflowmd.PullRequestTriggerSource)
+			workflowmd.PullRequestTriggerSource,
+			pr.Id,
+		)
 	}()
 }
