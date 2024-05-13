@@ -157,13 +157,13 @@ listWorkflow();
 .workflow-list > li {
   border: 1px solid #d9d9d9;
   border-radius: 4px;
-  width: calc(25% - 8px);
+  width: calc(50% - 6px);
   padding: 14px 20px;
 }
-.workflow-list > li:not(:nth-child(4n + 1)) {
-  margin-left: 8px;
+.workflow-list > li:not(:nth-child(2n + 1)) {
+  margin-left: 12px;
 }
-.workflow-list > li:nth-child(n + 5) {
+.workflow-list > li:nth-child(n + 3) {
   margin-top: 10px;
 }
 .workflow-header {

@@ -264,8 +264,8 @@ const selectTab = key => {
     case "review":
       if (prStore.prStatus === 1) {
         canReview();
-        listReview();
       }
+      listReview();
       break;
     case "timeline":
       if (prStore.prStatus === 1) {
