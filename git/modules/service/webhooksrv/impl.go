@@ -2,21 +2,24 @@ package webhooksrv
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
-	"github.com/LeeZXin/zall/git/modules/service/reposrv"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"time"
 )
 
 type outerImpl struct{}
 
-func (*outerImpl) InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) (err error) {
+// CreateWebhook 新增webhook
+func (*outerImpl) CreateWebhook(ctx context.Context, reqDTO CreateWebhookReqDTO) (err error) {
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
@@ -34,12 +37,10 @@ func (*outerImpl) InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO)
 		return
 	}
 	if err = webhookmd.InsertWebhook(ctx, webhookmd.InsertWebhookReqDTO{
-		RepoId:      reqDTO.RepoId,
-		HookUrl:     reqDTO.HookUrl,
-		HttpHeaders: reqDTO.HttpHeaders,
-		HookType:    reqDTO.HookType,
-		WildBranch:  reqDTO.WildBranch,
-		WildTag:     reqDTO.WildTag,
+		RepoId:  reqDTO.RepoId,
+		HookUrl: reqDTO.HookUrl,
+		Secret:  reqDTO.Secret,
+		Events:  reqDTO.Events,
 	}); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -61,16 +62,16 @@ func (*outerImpl) UpdateWebhook(ctx context.Context, reqDTO UpdateWebhookReqDTO)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err = checkPermByHookId(ctx, reqDTO.Id, reqDTO.Operator); err != nil {
+	if _, err = checkPermByHookId(ctx, reqDTO.WebhookId, reqDTO.Operator); err != nil {
 		return
 	}
-	if _, err = webhookmd.UpdateWebhook(ctx, webhookmd.UpdateWebhookReqDTO{
-		Id:          reqDTO.Id,
-		HookUrl:     reqDTO.HookUrl,
-		HttpHeaders: reqDTO.HttpHeaders,
-		WildBranch:  reqDTO.WildBranch,
-		WildTag:     reqDTO.WildTag,
-	}); err != nil {
+	_, err = webhookmd.UpdateWebhook(ctx, webhookmd.UpdateWebhookReqDTO{
+		Id:      reqDTO.WebhookId,
+		HookUrl: reqDTO.HookUrl,
+		Secret:  reqDTO.Secret,
+		Events:  reqDTO.Events,
+	})
+	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 	}
@@ -91,20 +92,10 @@ func (*outerImpl) DeleteWebhook(ctx context.Context, reqDTO DeleteWebhookReqDTO)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	hook, b, err := webhookmd.GetById(ctx, reqDTO.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
+	if _, err = checkPermByHookId(ctx, reqDTO.WebhookId, reqDTO.Operator); err != nil {
 		return
 	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	if err = checkPerm(ctx, hook.RepoId, reqDTO.Operator); err != nil {
-		return
-	}
-	if _, err = webhookmd.DeleteById(ctx, reqDTO.Id); err != nil {
+	if _, err = webhookmd.DeleteById(ctx, reqDTO.WebhookId); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 		return
@@ -121,38 +112,45 @@ func (*outerImpl) ListWebhook(ctx context.Context, reqDTO ListWebhookReqDTO) ([]
 	if err := checkPerm(ctx, reqDTO.RepoId, reqDTO.Operator); err != nil {
 		return nil, err
 	}
-	webhookList, err := webhookmd.ListWebhook(ctx, reqDTO.RepoId, reqDTO.HookType)
+	webhookList, err := webhookmd.ListWebhook(ctx, reqDTO.RepoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
 	return listutil.Map(webhookList, func(t webhookmd.Webhook) (WebhookDTO, error) {
 		return WebhookDTO{
-			Id:          t.Id,
-			RepoId:      t.RepoId,
-			HookUrl:     t.HookUrl,
-			HttpHeaders: t.HttpHeaders,
-			HookType:    t.HookType,
-			WildBranch:  t.WildBranch,
-			WildTag:     t.WildTag,
+			Id:      t.Id,
+			RepoId:  t.RepoId,
+			HookUrl: t.HookUrl,
+			Secret:  t.Secret,
+			Events:  *t.Events,
 		}, nil
 	})
 }
 
-func checkPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) error {
-	repo, b := reposrv.Inner.GetByRepoId(ctx, repoId)
-	if !b {
-		return util.InvalidArgsError()
+// PingWebhook ping
+func (*outerImpl) PingWebhook(ctx context.Context, reqDTO PingWebhookReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
-	if !b || !p.PermDetail.GetRepoPerm(repo.Id).CanHandleWebhook {
-		return util.UnauthorizedError()
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	hook, err := checkPermByHookId(ctx, reqDTO.WebhookId, reqDTO.Operator)
+	if err != nil {
+		return err
+	}
+	req := &webhook.PingEventReq{
+		EventTime: time.Now().UnixMilli(),
+	}
+	err = webhook.Post(ctx, hook.HookUrl, hook.Secret, req)
+	if err != nil {
+		return util.OperationFailedError()
 	}
 	return nil
 }
 
-func checkPermByHookId(ctx context.Context, hookId int64, operator apisession.UserInfo) error {
-	hook, b, err := webhookmd.GetById(ctx, hookId)
+func checkPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) error {
+	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -160,5 +158,28 @@ func checkPermByHookId(ctx context.Context, hookId int64, operator apisession.Us
 	if !b {
 		return util.InvalidArgsError()
 	}
-	return checkPerm(ctx, hook.RepoId, operator)
+	if operator.IsAdmin {
+		return nil
+	}
+	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b || (!p.IsAdmin && !p.PermDetail.GetRepoPerm(repo.Id).CanHandleWebhook) {
+		return util.UnauthorizedError()
+	}
+	return nil
+}
+
+func checkPermByHookId(ctx context.Context, hookId int64, operator apisession.UserInfo) (webhookmd.Webhook, error) {
+	hook, b, err := webhookmd.GetById(ctx, hookId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return webhookmd.Webhook{}, util.InternalError(err)
+	}
+	if !b {
+		return webhookmd.Webhook{}, util.InvalidArgsError()
+	}
+	return hook, checkPerm(ctx, hook.RepoId, operator)
 }

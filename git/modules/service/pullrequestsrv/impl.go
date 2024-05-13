@@ -7,7 +7,9 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
+	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
+	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
@@ -15,7 +17,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/branch"
-	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
@@ -227,8 +228,8 @@ func (s *outerImpl) SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequ
 		return
 	}
 	// 触发webhook
-	triggerWebhook(repo, reqDTO.Operator, pr, "submit")
-	return nil
+	triggerWebhook(repo, reqDTO.Operator, pr, webhook.SubmitAction)
+	return
 }
 
 // GetPullRequest 查询合并请求
@@ -294,7 +295,7 @@ func (*outerImpl) ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestR
 	}
 	if b {
 		// 触发webhook
-		triggerWebhook(repo, reqDTO.Operator, pr, "close")
+		triggerWebhook(repo, reqDTO.Operator, pr, webhook.CloseAction)
 	}
 	return
 }
@@ -476,7 +477,9 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 	}
 	if merged {
 		// 触发webhook
-		triggerWebhook(repo, reqDTO.Operator, pr, "merge")
+		triggerWebhook(repo, reqDTO.Operator, pr, webhook.MergeAction)
+		// 触发工作流
+		triggerMergePrWorkflow(reqDTO.Operator, pr)
 	}
 	return nil
 }
@@ -583,7 +586,7 @@ func (s *outerImpl) AgreeReviewPullRequest(ctx context.Context, reqDTO AgreeRevi
 		return
 	}
 	// 触发webhook
-	triggerWebhook(repo, reqDTO.Operator, pr, "review")
+	triggerWebhook(repo, reqDTO.Operator, pr, webhook.ReviewAction)
 	return
 }
 
@@ -805,32 +808,42 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 	return repo, nil
 }
 
-func triggerWebhook(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, actionType string) {
+func triggerWebhook(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action webhook.PullRequestAction) {
 	go func() {
 		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		// 触发webhook
-		hookList, err := webhookmd.ListWebhook(ctx, repo.Id, webhookmd.PullRequestHook)
+		hookList, err := webhookmd.ListWebhook(ctx, repo.Id)
 		if err == nil {
-			req := webhook.PullRequestHook{
-				PrId:       pr.Id,
-				RepoId:     repo.Id,
-				RepoName:   repo.Name,
-				TargetRef:  pr.Target,
-				HeadRef:    pr.Head,
-				EventTime:  time.Now().UnixMilli(),
-				ActionType: actionType,
-				Operator: git.User{
-					Account: operator.Account,
-					Email:   operator.Email,
+			req := &webhook.PullRequestEventReq{
+				PrId:    pr.Id,
+				PrTitle: pr.PrTitle,
+				Action:  action,
+				BaseRepoReq: webhook.BaseRepoReq{
+					RepoId:    repo.Id,
+					RepoName:  repo.Name,
+					Account:   operator.Account,
+					EventTime: time.Now().UnixMilli(),
 				},
 			}
 			for _, hook := range hookList {
-				webhook.TriggerPrHook(hook.HookUrl, hook.HttpHeaders, req)
+				if hook.Events.Has(webhook.PullRequestEvent) {
+					webhook.TriggerWebhook(hook.HookUrl, hook.Secret, req)
+				}
 			}
 		} else {
 			logger.Logger.Error(err)
 		}
 	}()
+}
 
+// triggerMergePrWorkflow 触发合并请求的工作流
+func triggerMergePrWorkflow(operator apisession.UserInfo, pr pullrequestmd.PullRequest) {
+	go func() {
+		workflowsrv.Inner.FindAndExecute(pr.RepoId,
+			operator.Account,
+			workflowmd.HookTriggerType,
+			pr.Head,
+			workflowmd.PullRequestTriggerSource)
+	}()
 }

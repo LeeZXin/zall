@@ -39,7 +39,9 @@
                 <li></li>
               </ul>
             </template>
-            <div class="op-icon">...</div>
+            <div class="op-icon">
+              <EllipsisOutlined/>
+            </div>
           </a-popover>
         </template>
       </template>
@@ -71,7 +73,8 @@ import { useRoute, useRouter } from "vue-router";
 import {
   DeleteOutlined,
   ControlOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  EllipsisOutlined
 } from "@ant-design/icons-vue";
 import {
   pageBranchCommitsRequest,

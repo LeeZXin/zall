@@ -125,21 +125,21 @@ var (
 		},
 	}
 
-	ActionSrvKeysVO = ActionSrvKeys{
-		InsertAction: KeyItem{
-			Id:         "repoSrv.InsertAction",
+	WorkflowSrvKeysVO = ActionSrvKeys{
+		CreateWorkflow: KeyItem{
+			Id:         "repoSrv.CreateWorkflow",
 			DefaultRet: "新增action",
 		},
-		DeleteAction: KeyItem{
-			Id:         "repoSrv.DeleteAction",
+		DeleteWorkflow: KeyItem{
+			Id:         "repoSrv.DeleteWorkflow",
 			DefaultRet: "删除action",
 		},
-		UpdateAction: KeyItem{
-			Id:         "repoSrv.UpdateAction",
+		UpdateWorkflow: KeyItem{
+			Id:         "repoSrv.UpdateWorkflow",
 			DefaultRet: "编辑action",
 		},
 		TriggerAction: KeyItem{
-			Id:         "repoSrv.TriggerAction",
+			Id:         "repoSrv.TriggerWorkflow",
 			DefaultRet: "手动触发action",
 		},
 	}
@@ -217,7 +217,7 @@ var (
 
 	WebhookSrvKeysVO = WebhookSrvKeys{
 		InsertWebhook: KeyItem{
-			Id:         "webhookSrv.InsertWebhook",
+			Id:         "webhookSrv.CreateWebhook",
 			DefaultRet: "新增webhook",
 		},
 		UpdateWebhook: KeyItem{
@@ -535,10 +535,10 @@ type RepoSrvKeys struct {
 }
 
 type ActionSrvKeys struct {
-	InsertAction  KeyItem
-	DeleteAction  KeyItem
-	UpdateAction  KeyItem
-	TriggerAction KeyItem
+	CreateWorkflow KeyItem
+	DeleteWorkflow KeyItem
+	UpdateWorkflow KeyItem
+	TriggerAction  KeyItem
 }
 
 type PullRequestSrvKeys struct {

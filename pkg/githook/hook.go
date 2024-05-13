@@ -8,7 +8,7 @@ const (
 type RevInfo struct {
 	OldCommitId string `json:"oldCommitId"`
 	NewCommitId string `json:"newCommitId"`
-	RefName     string `json:"refName"`
+	Ref         string `json:"ref"`
 }
 
 type Opts struct {

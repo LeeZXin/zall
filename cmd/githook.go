@@ -89,7 +89,7 @@ func scanStdinAndDoHttp(ctx context.Context, httpUrl string) error {
 			infoList = append(infoList, githook.RevInfo{
 				OldCommitId: fields[0],
 				NewCommitId: fields[1],
-				RefName:     fields[2],
+				Ref:         fields[2],
 			})
 		}
 	}

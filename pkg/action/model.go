@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/executor/completable"
@@ -195,8 +196,7 @@ func (c *JobCfg) convertToJob(jobName string) *Job {
 }
 
 type RunOpts struct {
-	AgentHost      string
-	AgentToken     string
+	AgentCfg       zssh.AgentCfg
 	Workdir        string
 	StepOutputFunc func(StepOutputStat)
 	StepAfterFunc  func(error, StepRunStat)
@@ -301,7 +301,7 @@ func (s *Step) replaceStr(args map[string]string, str string) string {
 
 func (s *Step) Run(opts *RunOpts, _ context.Context, j *Job, index int) error {
 	beginTime := time.Now()
-	ac := NewAgentCommand(opts.AgentHost, opts.AgentToken, opts.Workdir)
+	ac := zssh.NewAgentCommand(opts.AgentCfg, opts.Workdir)
 	output, err := ac.Execute(strings.NewReader(s.replaceStr(opts.Args, s.script)), s.with)
 	if err != nil {
 		output = err.Error()

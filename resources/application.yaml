@@ -4,9 +4,10 @@ application:
 ssh:
   proxy:
     port: 2222
-
-actions:
-  enabled: true
+  agent:
+    enabled: true
+    port: 6666
+    token: nihao
 
 app:
   url: http://127.0.0.1

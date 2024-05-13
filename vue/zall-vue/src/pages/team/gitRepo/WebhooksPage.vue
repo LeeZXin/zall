@@ -1,14 +1,15 @@
 <template>
   <div style="padding:14px">
     <div class="header">
-      <a-button type="primary" @click="gotoCreatePage">添加保护分支</a-button>
+      <a-button type="primary" @click="gotoCreatePage">添加Webhook</a-button>
     </div>
-    <ul class="branch-list" v-if="branches.length > 0">
-      <li v-for="item in branches" v-bind:key="item.id">
-        <div class="branch-pattern no-wrap">{{item.pattern}}</div>
+    <ul class="webhook-list" v-if="webhooks.length > 0">
+      <li v-for="item in webhooks" v-bind:key="item.id">
+        <div class="webhook-pattern no-wrap">{{item.hookUrl}}</div>
         <ul class="op-btns">
-          <li class="update-btn" @click="handleProtectedBranch(item)">编辑</li>
-          <li class="del-btn" @click="deleteProtectedBranch(item)">删除</li>
+          <li class="ping-btn" @click="pingWebhook(item)">ping</li>
+          <li class="update-btn" @click="handleWebhook(item)">编辑</li>
+          <li class="del-btn" @click="deleteWebhook(item)">删除</li>
         </ul>
       </li>
     </ul>
@@ -16,7 +17,7 @@
       <template #desc>
         <div
           class="no-data-text"
-        >Define a protected branch rule to disable force pushing, prevent branches from being deleted, and optionally require status checks before merging</div>
+        >Webhooks allow external services to be notified when certain events happen. When the specified events happen, we'll send a POST request to each of the URLs you provide. Learn more in our Webhooks Guide.</div>
       </template>
     </ZNoData>
   </div>
@@ -25,65 +26,67 @@
 import { ref, createVNode } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import ZNoData from "@/components/common/ZNoData";
-import {
-  listProtectedBranchRequest,
-  deleteProtectedBranchRequest
-} from "@/api/git/branchApi";
+import { deleteWebhookRequest } from "@/api/git/webhookApi";
+import { listWebhookRequest, pingWebhookRequest } from "@/api/git/webhookApi";
 import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
-import { useProtectedBranchStore } from "@/pinia/protectedBranchStore";
+import { useWebhookStore } from "@/pinia/webhookStore";
 const router = useRouter();
 const route = useRoute();
-const branches = ref([]);
-const protectedBranchStore = useProtectedBranchStore();
+const webhooks = ref([]);
+const webhookStore = useWebhookStore();
 const gotoCreatePage = () => {
-  router.push(`/gitRepo/${route.params.repoId}/protectedBranch/create`);
+  router.push(`/gitRepo/${route.params.repoId}/webhook/create`);
 };
-const deleteProtectedBranch = item => {
+const deleteWebhook = item => {
   Modal.confirm({
-    title: `你确定要删除${item.pattern}吗?`,
+    title: `你确定要删除${item.hookUrl}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteProtectedBranchRequest(item.id).then(() => {
+      deleteWebhookRequest(item.id).then(() => {
         message.success("删除成功");
-        listProtectedBranch();
+        listWebhook();
       });
     },
     onCancel() {}
   });
 };
-const listProtectedBranch = () => {
-  listProtectedBranchRequest(route.params.repoId).then(res => {
-    branches.value = res.data;
+const listWebhook = () => {
+  listWebhookRequest(route.params.repoId).then(res => {
+    webhooks.value = res.data;
   });
 };
-const handleProtectedBranch = item => {
-  protectedBranchStore.id = item.id;
-  protectedBranchStore.pattern = item.pattern;
-  protectedBranchStore.cfg = item.cfg;
-  router.push(
-    `/gitRepo/${route.params.repoId}/protectedBranch/${item.id}/update`
-  );
+const handleWebhook = item => {
+  webhookStore.id = item.id;
+  webhookStore.hookUrl = item.hookUrl;
+  webhookStore.events = item.events;
+  webhookStore.secret = item.secret;
+  router.push(`/gitRepo/${route.params.repoId}/webhook/${item.id}/update`);
 };
-listProtectedBranch();
+const pingWebhook = item => {
+  pingWebhookRequest(item.id).then(()=>{
+      message.success("成功");
+  })
+};
+listWebhook();
 </script>
 <style scoped>
-.branch-list {
+.webhook-list {
   border: 1px solid #d9d9d9;
   border-radius: 4px;
 }
-.branch-list > li {
+.webhook-list > li {
   padding: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.branch-list > li + li {
+.webhook-list > li + li {
   border-top: 1px solid #d9d9d9;
 }
-.branch-pattern {
+.webhook-pattern {
   font-size: 14px;
   line-height: 32px;
   width: 60%;
@@ -137,7 +140,7 @@ listProtectedBranch();
   background-color: darkred;
 }
 .update-btn:hover,
-.view-btn:hover {
+.ping-btn:hover {
   background-color: #f0f0f0;
 }
 .no-data-text {

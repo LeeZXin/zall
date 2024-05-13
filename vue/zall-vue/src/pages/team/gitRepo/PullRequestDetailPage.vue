@@ -257,10 +257,9 @@ const canReviewLoaded = ref(false);
 const selectTab = key => {
   switch (key) {
     case "diff":
-      if (prStore.prStatus === 1) {
+      if (prStore.prStatus === 1 || prStore.prStatus === 3) {
         diffRefs();
       }
-      listTimeline();
       break;
     case "review":
       if (prStore.prStatus === 1) {

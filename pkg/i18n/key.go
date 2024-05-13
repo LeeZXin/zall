@@ -283,7 +283,7 @@ var (
 )
 
 var (
-	InvalidActionContent = KeyItem{
+	InvalidWorkflowContent = KeyItem{
 		Id:         "action.invalidContent",
 		DefaultRet: "action yaml不合法",
 	}
@@ -399,51 +399,51 @@ var (
 )
 
 var (
-	ActionWebhookTriggerType = KeyItem{
-		Id:         "action.webhookTriggerType",
+	WorkflowHookTriggerType = KeyItem{
+		Id:         "action.hookTriggerType",
 		DefaultRet: "webhook触发",
 	}
-	ActionManualTriggerType = KeyItem{
+	WorkflowManualTriggerType = KeyItem{
 		Id:         "action.manualTriggerType",
 		DefaultRet: "手动触发",
 	}
-	ActionUnknownTriggerType = KeyItem{
+	WorkflowUnknownTriggerType = KeyItem{
 		Id:         "action.unknownTriggerType",
 		DefaultRet: "未知类型触发",
 	}
-	ActionTaskRunningStatus = KeyItem{
+	WorkflowTaskRunningStatus = KeyItem{
 		Id:         "action.taskRunningStatus",
 		DefaultRet: "执行中",
 	}
-	ActionTaskSuccessStatus = KeyItem{
+	WorkflowTaskSuccessStatus = KeyItem{
 		Id:         "action.taskSuccessStatus",
 		DefaultRet: "执行成功",
 	}
-	ActionTaskFailStatus = KeyItem{
+	WorkflowTaskFailStatus = KeyItem{
 		Id:         "action.taskFailStatus",
 		DefaultRet: "执行失败",
 	}
-	ActionTaskUnknownStatus = KeyItem{
+	WorkflowTaskUnknownStatus = KeyItem{
 		Id:         "action.taskUnknownStatus",
 		DefaultRet: "未知状态",
 	}
-	ActionStepWaitingStatus = KeyItem{
+	WorkflowStepWaitingStatus = KeyItem{
 		Id:         "action.stepWaitingStatus",
 		DefaultRet: "未执行",
 	}
-	ActionStepRunningStatus = KeyItem{
+	WorkflowStepRunningStatus = KeyItem{
 		Id:         "action.stepRunningStatus",
 		DefaultRet: "执行中",
 	}
-	ActionStepSuccessStatus = KeyItem{
+	WorkflowStepSuccessStatus = KeyItem{
 		Id:         "action.stepSuccessStatus",
 		DefaultRet: "执行成功",
 	}
-	ActionStepFailStatus = KeyItem{
+	WorkflowStepFailStatus = KeyItem{
 		Id:         "action.stepFailStatus",
 		DefaultRet: "执行失败",
 	}
-	ActionStepUnknownStatus = KeyItem{
+	WorkflowStepUnknownStatus = KeyItem{
 		Id:         "action.stepUnknownStatus",
 		DefaultRet: "未知状态",
 	}

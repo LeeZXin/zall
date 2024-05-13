@@ -518,9 +518,9 @@ func exportDb(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.Header("Content-Type", "application/octet-stream")
-		c.Header("Content-Disposition", "attachment; filename=\"data-"+strconv.FormatInt(time.Now().Unix(), 10)+".csv\"")
-		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
+		c.Header("YamlContent-Type", "application/octet-stream")
+		c.Header("YamlContent-Disposition", "attachment; filename=\"data-"+strconv.FormatInt(time.Now().Unix(), 10)+".csv\"")
+		c.Header("Access-Control-Expose-Headers", "YamlContent-Disposition")
 		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.WriteHeaderNow()
 		writer := csv.NewWriter(c.Writer)

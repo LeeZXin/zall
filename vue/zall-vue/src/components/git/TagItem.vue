@@ -3,10 +3,14 @@
     <div class="tag-title">
       <div class="flex-center no-wrap" style="max-width: 60%">
         <span class="tag-name">{{props.data.name}}</span>
-        <div class="toggle-arrow">
-          <DownOutlined v-show="showCommitMsg" @click="setShowCommitMsg(false)" />
-          <RightOutlined v-show="!showCommitMsg" @click="setShowCommitMsg(true)" />
-        </div>
+        <a-tooltip placement="top">
+          <template #title>
+            查看提交信息
+          </template>
+          <div class="toggle-dot">
+            <EllipsisOutlined @click="toggleShowCommitMsg" />
+          </div>
+        </a-tooltip>
       </div>
       <div class="flex-center">
         <a-popover placement="bottomRight" trigger="hover">
@@ -18,7 +22,9 @@
               </li>
             </ul>
           </template>
-          <div class="op-icon">...</div>
+          <div class="op-icon">
+            <EllipsisOutlined />
+          </div>
         </a-popover>
       </div>
     </div>
@@ -53,10 +59,9 @@ import {
   LinkOutlined,
   FileZipOutlined,
   ClockCircleOutlined,
-  DownOutlined,
-  RightOutlined,
   DeleteOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  EllipsisOutlined
 } from "@ant-design/icons-vue";
 import { ref, defineProps, createVNode, defineEmits } from "vue";
 import { readableTimeComparingNow } from "@/utils/time";
@@ -66,8 +71,8 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 const emit = defineEmits(["delete"]);
 const showCommitMsg = ref(false);
-const setShowCommitMsg = show => {
-  showCommitMsg.value = show;
+const toggleShowCommitMsg = () => {
+  showCommitMsg.value = !showCommitMsg.value;
 };
 const props = defineProps(["data", "repoId"]);
 const download = path => {
@@ -132,11 +137,11 @@ const deleteTag = tag => {
 .tag-commit-msg > pre {
   font-size: 14px;
 }
-.toggle-arrow {
-  padding: 4px;
+.toggle-dot {
+  padding: 0 4px;
   border-radius: 4px;
   display: inline-block;
-  font-size: 12px;
+  font-size: 16px;
   cursor: pointer;
 }
 </style>

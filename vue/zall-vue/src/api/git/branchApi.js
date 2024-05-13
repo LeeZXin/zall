@@ -7,10 +7,10 @@ const listProtectedBranchRequest = (repoId) => request.get("/api/protectedBranch
 // 删除保护分支
 const deleteProtectedBranchRequest = (id) => request.delete("/api/protectedBranch/delete/" + id);
 // 编辑保护分支
-const updateProtecteddBranchRequest = (data) => request.post("/api/protectedBranch/update", data);
+const updateProtectedBranchRequest = (data) => request.post("/api/protectedBranch/update", data);
 export {
     createProtectedBranchRequest,
     listProtectedBranchRequest,
     deleteProtectedBranchRequest,
-    updateProtecteddBranchRequest
+    updateProtectedBranchRequest
 }

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/LeeZXin/zall/action/modules/api/actionapi"
 	"github.com/LeeZXin/zall/alert/modules/api/alertapi"
 	"github.com/LeeZXin/zall/alert/modules/service/alertsrv"
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
@@ -17,6 +16,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/api/smartapi"
 	"github.com/LeeZXin/zall/git/modules/api/sshkeyapi"
 	"github.com/LeeZXin/zall/git/modules/api/webhookapi"
+	"github.com/LeeZXin/zall/git/modules/api/workflowapi"
 	"github.com/LeeZXin/zall/git/modules/sshproxy"
 	reposerver "github.com/LeeZXin/zall/git/repo/server"
 	"github.com/LeeZXin/zall/meta/modules/api/appapi"
@@ -24,8 +24,8 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
-	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/git"
+	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"github.com/LeeZXin/zall/promagent/agent"
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/prop/modules/api/propapi"
@@ -85,10 +85,10 @@ func runZall(*cli.Context) error {
 	}
 	// for action
 	{
-		actionapi.InitApi()
-		if static.GetBool("action.agent.enabled") {
-			logger.Logger.Info("action agent enabled")
-			lifeCycles = append(lifeCycles, action.NewAgentServer())
+		workflowapi.InitApi()
+		if static.GetBool("ssh.agent.enabled") {
+			logger.Logger.Info("ssh agent enabled")
+			lifeCycles = append(lifeCycles, zssh.NewAgentServer())
 		}
 	}
 	// for timer

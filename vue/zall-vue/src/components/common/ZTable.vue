@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="z-table-section">
     <div v-if="props.label" class="z-label">{{props.label}}</div>
     <div class="z-table" :style="props.style">
       <table>
@@ -29,6 +29,9 @@ const CellRender = event => {
 };
 </script>
 <style scoped>
+.z-table-section + .z-table-section {
+  margin-top: 10px;
+}
 .z-table {
   margin-top: 10px;
   border-radius: 4px;
@@ -80,6 +83,6 @@ const CellRender = event => {
 .z-label {
   font-size: 16px;
   font-weight: bold;
-  line-height: 32px;
+  margin-bottom: 10px;
 }
 </style>

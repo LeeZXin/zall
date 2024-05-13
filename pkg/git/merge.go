@@ -139,7 +139,7 @@ func CanMerge(ctx context.Context, repoPath, target, head string) (bool, error) 
 		return false, err
 	}
 	// 这里要反过来 git log 查看target的提交记录 不是head的提交记录
-	commits, err := GetGitDiffCommitList(ctx, repoPath, headCommit.Id, targetCommit.Id)
+	commits, err := GetGitDiffCommitList(ctx, repoPath, targetCommit.Id, headCommit.Id)
 	if err != nil {
 		return false, err
 	}

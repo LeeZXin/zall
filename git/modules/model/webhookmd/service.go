@@ -7,12 +7,10 @@ import (
 
 func InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) error {
 	hook := Webhook{
-		RepoId:      reqDTO.RepoId,
-		HookUrl:     reqDTO.HookUrl,
-		HookType:    reqDTO.HookType,
-		WildBranch:  reqDTO.WildBranch,
-		WildTag:     reqDTO.WildTag,
-		HttpHeaders: reqDTO.HttpHeaders,
+		RepoId:  reqDTO.RepoId,
+		HookUrl: reqDTO.HookUrl,
+		Secret:  reqDTO.Secret,
+		Events:  &reqDTO.Events,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&hook)
 	return err
@@ -20,15 +18,13 @@ func InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) error {
 
 func UpdateWebhook(ctx context.Context, reqDTO UpdateWebhookReqDTO) (bool, error) {
 	hook := &Webhook{
-		HookUrl:     reqDTO.HookUrl,
-		WildTag:     reqDTO.WildTag,
-		WildBranch:  reqDTO.WildBranch,
-		HttpHeaders: reqDTO.HttpHeaders,
+		HookUrl: reqDTO.HookUrl,
+		Secret:  reqDTO.Secret,
+		Events:  &reqDTO.Events,
 	}
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("hook_url", "http_headers", "wild_branch", "wild_tag").
-		Limit(1).
+		Cols("hook_url", "secret", "events").
 		Update(hook)
 	return rows == 1, err
 }
@@ -41,16 +37,12 @@ func DeleteById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
-func ListWebhook(ctx context.Context, repoId int64, hookType HookType) ([]Webhook, error) {
+func ListWebhook(ctx context.Context, repoId int64) ([]Webhook, error) {
 	ret := make([]Webhook, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("repo_id = ?", repoId).
-		And("hook_type = ?", hookType).
 		Find(&ret)
-	if err != nil {
-		return nil, err
-	}
-	return ret, nil
+	return ret, err
 }
 
 func GetById(ctx context.Context, id int64) (Webhook, bool, error) {

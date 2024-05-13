@@ -392,7 +392,7 @@ func ReceivePack(req reqvo.ReceivePackReq, repoId int64, pusherAccount, pusherEm
 		"/api/v1/git/smart/"+req.RepoPath+"/git-receive-pack",
 		req.C,
 		map[string]string{
-			"Repo-TeamId":    strconv.FormatInt(repoId, 10),
+			"Repo-RepoId":    strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
 			"AppId-HostUrl":  appUrl,

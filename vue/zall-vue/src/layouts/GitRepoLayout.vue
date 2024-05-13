@@ -29,9 +29,17 @@
             <cloud-upload-outlined />
             <span>提交历史</span>
           </a-menu-item>
-          <a-menu-item key="/protectedBranch/list">
+          <a-menu-item key="/workflow/list">
+            <node-index-outlined />
+            <span>工作流</span>
+          </a-menu-item>
+          <a-menu-item key="/protectedBranch/list" v-if="isAdmin">
             <branches-outlined />
             <span>保护分支</span>
+          </a-menu-item>
+          <a-menu-item key="/webhook/list" v-if="isAdmin">
+            <api-outlined />
+            <span>Webhook</span>
           </a-menu-item>
           <a-menu-item key="/team/gitRepo/opLogs" v-if="isAdmin">
             <calendar-outlined />
@@ -72,7 +80,9 @@ import {
   SettingOutlined,
   CalendarOutlined,
   KeyOutlined,
-  CloudUploadOutlined
+  CloudUploadOutlined,
+  ApiOutlined,
+  NodeIndexOutlined
 } from "@ant-design/icons-vue";
 import { getRepoRequest } from "@/api/git/repoApi";
 import { isTeamAdminRequest } from "@/api/team/teamApi";
@@ -95,7 +105,9 @@ const pagesMap = {
   "/branch": "/branch/list",
   "/commit": "/commit/list",
   "/tag": "/tag/list",
-  "/protectedBranch": "/protectedBranch/list"
+  "/protectedBranch": "/protectedBranch/list",
+  "/webhook": "/webhook/list",
+  "/workflow": "/workflow/list"
 };
 const switchRepo = () => {
   router.push(`/team/${repo.teamId}/gitRepo/list`);

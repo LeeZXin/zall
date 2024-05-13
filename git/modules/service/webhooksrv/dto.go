@@ -1,53 +1,62 @@
 package webhooksrv
 
 import (
-	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"net/url"
+	"strings"
 )
 
-type InsertWebhookReqDTO struct {
-	RepoId      int64               `json:"repoId"`
-	HookUrl     string              `json:"hookUrl"`
-	HttpHeaders map[string]string   `json:"httpHeaders"`
-	HookType    webhookmd.HookType  `json:"hookType"`
-	WildBranch  string              `json:"wildBranch"`
-	WildTag     string              `json:"wildTag"`
-	Operator    apisession.UserInfo `json:"operator"`
+type CreateWebhookReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	HookUrl  string              `json:"hookUrl"`
+	Secret   string              `json:"secret"`
+	Events   webhook.Events      `json:"events"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertWebhookReqDTO) IsValid() error {
-	_, err := url.Parse(r.HookUrl)
-	if err != nil {
+func (r *CreateWebhookReqDTO) IsValid() error {
+	parsedUrl, err := url.Parse(r.HookUrl)
+	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !r.HookType.IsValid() {
+	if len(r.Secret) == 0 || len(r.Secret) > 1024 {
 		return util.InvalidArgsError()
 	}
-	switch r.HookType {
-	case webhookmd.PushHook:
-		if len(r.WildBranch) == 0 || len(r.WildBranch) > 32 {
-			return util.InvalidArgsError()
-		}
-	case webhookmd.TagHook:
-		if len(r.WildTag) == 0 || len(r.WildTag) > 32 {
-			return util.InvalidArgsError()
-		}
-	case webhookmd.PullRequestHook:
+	if !r.Events.IsValid() {
+		return util.InvalidArgsError()
 	}
 	return nil
 }
 
 type DeleteWebhookReqDTO struct {
-	Id       int64               `json:"id"`
-	Operator apisession.UserInfo `json:"operator"`
+	WebhookId int64               `json:"webhookId"`
+	Operator  apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteWebhookReqDTO) IsValid() error {
+	if r.WebhookId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type PingWebhookReqDTO struct {
+	WebhookId int64               `json:"webhookId"`
+	Operator  apisession.UserInfo `json:"operator"`
+}
+
+func (r *PingWebhookReqDTO) IsValid() error {
+	if r.WebhookId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -56,64 +65,51 @@ func (r *DeleteWebhookReqDTO) IsValid() error {
 
 type ListWebhookReqDTO struct {
 	RepoId   int64               `json:"repoId"`
-	HookType webhookmd.HookType  `json:"hookType"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListWebhookReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
+	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !r.HookType.IsValid() {
+	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
 type WebhookDTO struct {
-	Id          int64
-	RepoId      int64
-	HookUrl     string
-	HttpHeaders webhookmd.HttpHeaders
-	HookType    webhookmd.HookType
-	WildBranch  string
-	WildTag     string
+	Id      int64
+	RepoId  int64
+	HookUrl string
+	Secret  string
+	Events  webhook.Events
 }
 
 type UpdateWebhookReqDTO struct {
-	Id          int64               `json:"id"`
-	HookUrl     string              `json:"hookUrl"`
-	HttpHeaders map[string]string   `json:"httpHeaders"`
-	HookType    webhookmd.HookType  `json:"hookType"`
-	WildBranch  string              `json:"wildBranch"`
-	WildTag     string              `json:"wildTag"`
-	Operator    apisession.UserInfo `json:"operator"`
+	WebhookId int64               `json:"webhookId"`
+	HookUrl   string              `json:"hookUrl"`
+	Secret    string              `json:"secret"`
+	Events    webhook.Events      `json:"events"`
+	Operator  apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdateWebhookReqDTO) IsValid() error {
-	if r.Id <= 0 {
+	if r.WebhookId <= 0 {
 		return util.InvalidArgsError()
 	}
-	_, err := url.Parse(r.HookUrl)
-	if err != nil {
+	parsedUrl, err := url.Parse(r.HookUrl)
+	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !r.HookType.IsValid() {
+	if len(r.Secret) > 1024 {
 		return util.InvalidArgsError()
 	}
-	switch r.HookType {
-	case webhookmd.PushHook:
-		if len(r.WildBranch) == 0 || len(r.WildBranch) > 32 {
-			return util.InvalidArgsError()
-		}
-	case webhookmd.TagHook:
-		if len(r.WildTag) == 0 || len(r.WildTag) > 32 {
-			return util.InvalidArgsError()
-		}
-	case webhookmd.PullRequestHook:
+	if !r.Events.IsValid() {
+		return util.InvalidArgsError()
 	}
 	return nil
 }

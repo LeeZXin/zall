@@ -7,9 +7,9 @@ import (
 	"github.com/LeeZXin/zall/fileserv/modules/model/productmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
-	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/deploy"
+	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
@@ -225,7 +225,7 @@ func deployProcessService(config *deploymd.Config, p *deploy.ProcessConfig, prod
 		script = strings.ReplaceAll(script, "{{configId}}", strconv.FormatInt(config.Id, 10))
 		script = strings.ReplaceAll(script, "{{appId}}", config.AppId)
 		script = strings.ReplaceAll(script, "{{productVersion}}", productVersion)
-		command := action.NewServiceCommand(p.AgentHost, p.AgentToken, config.AppId)
+		command := zssh.NewServiceCommand(p.Agent, config.AppId)
 		result, err := command.Execute(strings.NewReader(script), nil)
 		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
@@ -301,7 +301,7 @@ func stopProcessService(config *deploymd.Config, p *deploy.ProcessConfig, servic
 		script = strings.ReplaceAll(script, "{{configId}}", strconv.FormatInt(config.Id, 10))
 		script = strings.ReplaceAll(script, "{{appId}}", config.AppId)
 		script = strings.ReplaceAll(script, "{{productVersion}}", service.CurrProductVersion)
-		command := action.NewServiceCommand(p.AgentHost, p.AgentToken, config.AppId)
+		command := zssh.NewServiceCommand(p.Agent, config.AppId)
 		result, err := command.Execute(strings.NewReader(script), nil)
 		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
@@ -370,7 +370,7 @@ func restartProcessService(config *deploymd.Config, p *deploy.ProcessConfig, ser
 		script = strings.ReplaceAll(script, "{{configId}}", strconv.FormatInt(config.Id, 10))
 		script = strings.ReplaceAll(script, "{{appId}}", config.AppId)
 		script = strings.ReplaceAll(script, "{{productVersion}}", service.CurrProductVersion)
-		command := action.NewServiceCommand(p.AgentHost, p.AgentToken, config.AppId)
+		command := zssh.NewServiceCommand(p.Agent, config.AppId)
 		result, err := command.Execute(strings.NewReader(script), nil)
 		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()

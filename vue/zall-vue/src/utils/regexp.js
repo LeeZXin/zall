@@ -14,6 +14,15 @@ const prTitleRegexp = /^.{1,255}$/;
 const prCommentRegexp = /^.{1,1024}$/;
 // 保护分支
 const protectedBranchPatternRegexp = /^\S{1,32}$/;
+// webhook
+const webhookUrlRegexp = /^https?:\/\/.+$/;
+const webhookSecretRegexp = /^.{1,1024}$/;
+// 工作流
+const workflowNameRegexp = /^.{1,32}$/;
+const workflowWildBranchRegexp = /^.{1,1024}$/;
+const workflowAgentHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
+const workflowAgentTokenRegexp = /^.{1,1024}$/;
+const workflowDescRegexp = /^.{1,1024}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -25,5 +34,12 @@ export {
     repoDescRegexp,
     prTitleRegexp,
     prCommentRegexp,
-    protectedBranchPatternRegexp
+    protectedBranchPatternRegexp,
+    webhookUrlRegexp,
+    webhookSecretRegexp,
+    workflowNameRegexp,
+    workflowWildBranchRegexp,
+    workflowAgentHostRegexp,
+    workflowAgentTokenRegexp,
+    workflowDescRegexp
 }

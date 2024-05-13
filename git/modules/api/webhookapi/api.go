@@ -3,11 +3,15 @@ package webhookapi
 import (
 	"github.com/LeeZXin/zall/git/modules/service/webhooksrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zsf/logger"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
+	"io"
 	"net/http"
 )
 
@@ -15,25 +19,47 @@ func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/webhook", apisession.CheckLogin)
 		{
-			group.GET("/list", listWebhook)
-			group.POST("/insert", insertWebhook)
+			// 展示webhook列表
+			group.GET("/list/:repoId", listWebhook)
+			// 新增
+			group.POST("/create", createWebhook)
+			// 编辑
 			group.POST("/update", updateWebhook)
-			group.POST("/delete", deleteWebhook)
+			// 删除
+			group.DELETE("/delete/:webhookId", deleteWebhook)
+			// ping
+			group.PUT("/ping/:webhookId", pingWebhook)
+		}
+		group = e.Group("/api/webhook")
+		{
+			group.POST("/demo", demoWebhook)
 		}
 	})
 }
 
-func insertWebhook(c *gin.Context) {
-	var req InsertWebhookReqVO
+func demoWebhook(c *gin.Context) {
+	defer c.Request.Body.Close()
+	logger.Logger.WithContext(c).Info("event-type: ", c.GetHeader(webhook.XEventType))
+	signature := c.GetHeader(webhook.XSignature)
+	logger.Logger.WithContext(c).Info("signature:", signature)
+	all, _ := io.ReadAll(c.Request.Body)
+	mySecret := "hello world"
+	mySignature := webhook.CreateSignature(all, mySecret)
+	logger.Logger.WithContext(c).Info("mySignature: ", mySignature)
+	logger.Logger.WithContext(c).Infof("mySignature is equal with signature = %v", mySignature == signature)
+	logger.Logger.WithContext(c).Info("request: ", string(all))
+	c.String(http.StatusOK, "ok")
+}
+
+func createWebhook(c *gin.Context) {
+	var req CreateWebhookReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := webhooksrv.Outer.InsertWebhook(c, webhooksrv.InsertWebhookReqDTO{
-			RepoId:      req.RepoId,
-			HookUrl:     req.HookUrl,
-			HttpHeaders: req.Headers,
-			HookType:    req.HookType,
-			WildBranch:  req.WildBranch,
-			WildTag:     req.WildTag,
-			Operator:    apisession.MustGetLoginUser(c),
+		err := webhooksrv.Outer.CreateWebhook(c, webhooksrv.CreateWebhookReqDTO{
+			RepoId:   req.RepoId,
+			HookUrl:  req.HookUrl,
+			Secret:   req.Secret,
+			Events:   req.Events,
+			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -47,13 +73,11 @@ func updateWebhook(c *gin.Context) {
 	var req UpdateWebhookReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := webhooksrv.Outer.UpdateWebhook(c, webhooksrv.UpdateWebhookReqDTO{
-			Id:          req.Id,
-			HookUrl:     req.HookUrl,
-			HttpHeaders: req.HttpHeaders,
-			HookType:    req.HookType,
-			WildBranch:  req.WildBranch,
-			WildTag:     req.WildTag,
-			Operator:    apisession.MustGetLoginUser(c),
+			WebhookId: req.WebhookId,
+			HookUrl:   req.HookUrl,
+			Secret:    req.Secret,
+			Events:    req.Events,
+			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -64,46 +88,49 @@ func updateWebhook(c *gin.Context) {
 }
 
 func deleteWebhook(c *gin.Context) {
-	var req DeleteWebhookReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := webhooksrv.Outer.DeleteWebhook(c, webhooksrv.DeleteWebhookReqDTO{
-			Id:       req.Id,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+	err := webhooksrv.Outer.DeleteWebhook(c, webhooksrv.DeleteWebhookReqDTO{
+		WebhookId: cast.ToInt64(c.Param("webhookId")),
+		Operator:  apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
+}
+
+func pingWebhook(c *gin.Context) {
+	err := webhooksrv.Outer.PingWebhook(c, webhooksrv.PingWebhookReqDTO{
+		WebhookId: cast.ToInt64(c.Param("webhookId")),
+		Operator:  apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
 }
 
 func listWebhook(c *gin.Context) {
-	var req ListWebhookReqVO
-	if util.ShouldBindJSON(&req, c) {
-		hookList, err := webhooksrv.Outer.ListWebhook(c, webhooksrv.ListWebhookReqDTO{
-			RepoId:   req.RepoId,
-			HookType: req.HookType,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		data, _ := listutil.Map(hookList, func(t webhooksrv.WebhookDTO) (WebhookVO, error) {
-			return WebhookVO{
-				Id:          t.Id,
-				RepoId:      t.RepoId,
-				HookUrl:     t.HookUrl,
-				HttpHeaders: t.HttpHeaders,
-				HookType:    t.HookType.Readable(),
-				WildBranch:  t.WildBranch,
-				WildTag:     t.WildTag,
-			}, nil
-		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]WebhookVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     data,
-		})
+	hookList, err := webhooksrv.Outer.ListWebhook(c, webhooksrv.ListWebhookReqDTO{
+		RepoId:   cast.ToInt64(c.Param("repoId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	data, _ := listutil.Map(hookList, func(t webhooksrv.WebhookDTO) (WebhookVO, error) {
+		return WebhookVO{
+			Id:      t.Id,
+			RepoId:  t.RepoId,
+			HookUrl: t.HookUrl,
+			Secret:  t.Secret,
+			Events:  t.Events,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]WebhookVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }

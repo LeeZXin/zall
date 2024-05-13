@@ -129,3 +129,19 @@ ul {
 .section+.section {
     margin-top: 10px;
 }
+
+.input-desc {
+    font-size: 13px;
+    color: gray;
+    margin-top: 10px;
+    line-height: 20px;
+    word-break: break-all;
+}
+
+.checkbox-desc {
+    font-size: 13px;
+    color: gray;
+    line-height: 20px;
+    word-break: break-all;
+    padding-left: 24px;
+}

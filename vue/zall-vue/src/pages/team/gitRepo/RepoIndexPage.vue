@@ -38,7 +38,13 @@
             </a-tab-pane>
           </a-tabs>
           <div>
-            <a-button type="primary" ghost style="width:100%" @click="downloadZip" v-if="branches.length > 0 && selectedRef.refType === 'branch'">下载zip</a-button>
+            <a-button
+              type="primary"
+              ghost
+              style="width:100%"
+              @click="downloadZip"
+              v-if="branches.length > 0 && selectedRef.refType === 'branch'"
+            >下载zip</a-button>
           </div>
         </template>
         <a-button type="primary" style="float:right">
@@ -66,7 +72,10 @@
               <span>{{item.path}}</span>
             </div>
             <div class="dir-line-item">{{item.commit.commitMsg}}</div>
-            <div class="dir-line-item" style="text-align:right">{{readableTimeComparingNow(item.commit.committedTime)}}</div>
+            <div
+              class="dir-line-item"
+              style="text-align:right"
+            >{{readableTimeComparingNow(item.commit.committedTime)}}</div>
           </div>
         </div>
         <div class="dir-table">
@@ -121,6 +130,8 @@ import {
 } from "@ant-design/icons-vue";
 import VMdEditor from "@kangc/v-md-editor";
 import "@kangc/v-md-editor/lib/style/base-editor.css";
+import todoList from "@kangc/v-md-editor/lib/plugins/todo-list/index";
+import "@kangc/v-md-editor/lib/plugins/todo-list/todo-list.css";
 import githubTheme from "@kangc/v-md-editor/lib/theme/github.js";
 import "@kangc/v-md-editor/lib/theme/style/github.css";
 import BranchTagSelect from "@/components/git/BranchTagSelect";
@@ -131,6 +142,7 @@ import { readableTimeComparingNow } from "@/utils/time";
 const route = useRoute();
 const router = useRouter();
 VMdEditor.use(githubTheme);
+VMdEditor.use(todoList());
 const readmeContent = ref("");
 const cloneDownloadVisible = ref(false);
 const showAddReadmeContent = ref(false);
@@ -208,8 +220,10 @@ const toRepoTree = path => {
   );
 };
 const downloadZip = () => {
-  window.open(`/api/gitRepo/archive?repoId=${repoId}&fileName=${selectedRef.ref}.zip`);
-}
+  window.open(
+    `/api/gitRepo/archive?repoId=${repoId}&fileName=${selectedRef.ref}.zip`
+  );
+};
 </script>
 <style scoped>
 .dir-table {

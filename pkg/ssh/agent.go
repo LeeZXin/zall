@@ -1,12 +1,12 @@
-package action
+package ssh
 
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/pkg/git/process"
-	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf/logger"
@@ -38,7 +38,7 @@ var (
 )
 
 func NewAgentServer() zsf.LifeCycle {
-	agentToken = static.GetString("action.agent.token")
+	agentToken = static.GetString("ssh.agent.token")
 	handlerMap = map[string]handler{
 		"execute": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
 			cmdPath := filepath.Join(tempDir, idutil.RandomUuid())
@@ -76,15 +76,15 @@ func NewAgentServer() zsf.LifeCycle {
 	pwdDir = pwd
 	serviceDir = filepath.Join(pwd, "data", "services")
 	util.MkdirAll(serviceDir)
-	agentPort := static.GetInt("action.agent.port")
+	agentPort := static.GetInt("ssh.agent.port")
 	if agentPort <= 0 {
 		agentPort = 6666
 	}
-	serv, err := zssh.NewServer(&zssh.ServerOpts{
+	serv, err := NewServer(&ServerOpts{
 		Port:    agentPort,
 		HostKey: filepath.Join(pwd, "data", "ssh", "agent.rsa"),
 		PublicKeyHandler: func(ctx ssh.Context, key ssh.PublicKey) bool {
-			if ctx.User() != "action" {
+			if ctx.User() != "workflow" {
 				return false
 			}
 			return true
@@ -301,20 +301,19 @@ func executeAsync(sshHost, command string, cmd io.Reader, envs map[string]string
 }
 
 type ServiceCommand struct {
-	appId   string
-	sshHost string
-	token   string
+	appId string
+	cfg   AgentCfg
 }
 
 func (c *ServiceCommand) Execute(cmd io.Reader, envs map[string]string) (string, error) {
-	return execute(c.sshHost, fmt.Sprintf("execute -s %s -t %s", c.appId, c.token), cmd, envs)
+	return execute(c.cfg.Host, fmt.Sprintf("execute -s %s -t %s", c.appId, c.cfg.Token), cmd, envs)
 }
 
 func (c *ServiceCommand) ExecuteAsync(cmd io.Reader, envs map[string]string) (io.Reader, error) {
-	return executeAsync(c.sshHost, fmt.Sprintf("execute -s %s -t %s", c.appId, c.token), cmd, envs)
+	return executeAsync(c.cfg.Host, fmt.Sprintf("execute -s %s -t %s", c.appId, c.cfg.Token), cmd, envs)
 }
 
-func initCfg() {
+func initClientCfg() {
 	clientOnce.Do(func() {
 		pwd, err := os.Getwd()
 		if err != nil {
@@ -332,39 +331,55 @@ func initCfg() {
 		if err != nil {
 			logger.Logger.Fatal(err)
 		}
-		clientCfg = zssh.NewCommonClientConfig("action", keySigner)
+		clientCfg = NewCommonClientConfig("workflow", keySigner)
 	})
 }
 
-func NewServiceCommand(sshHost, token, appId string) *ServiceCommand {
-	initCfg()
+func NewServiceCommand(cfg AgentCfg, appId string) *ServiceCommand {
+	initClientCfg()
 	return &ServiceCommand{
-		appId:   appId,
-		sshHost: sshHost,
-		token:   token,
+		appId: appId,
+		cfg:   cfg,
 	}
 }
 
 type AgentCommand struct {
 	workdir string
-	sshHost string
-	token   string
+	cfg     AgentCfg
 }
 
-func NewAgentCommand(sshHost, token, workdir string) *AgentCommand {
-	initCfg()
+func NewAgentCommand(cfg AgentCfg, workdir string) *AgentCommand {
+	initClientCfg()
 	return &AgentCommand{
 		workdir: workdir,
-		sshHost: sshHost,
-		token:   token,
+		cfg:     cfg,
 	}
 }
 
 func (c *AgentCommand) Execute(cmd io.Reader, envs map[string]string) (string, error) {
-	return execute(c.sshHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.token), cmd, envs)
+	return execute(c.cfg.Host, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.cfg.Token), cmd, envs)
 }
 
 func (c *AgentCommand) ExecuteAsync(cmd io.Reader, envs map[string]string) (io.Reader, error) {
-	return executeAsync(c.sshHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.token), cmd, envs)
+	return executeAsync(c.cfg.Host, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.cfg.Token), cmd, envs)
+}
 
+type AgentCfg struct {
+	Host  string `json:"host"`
+	Token string `json:"token"`
+}
+
+func (c *AgentCfg) IsValid() bool {
+	return util.IpPortPattern.MatchString(c.Host) && len(c.Token) <= 1024
+}
+
+func (c *AgentCfg) FromDB(content []byte) error {
+	if c == nil {
+		*c = AgentCfg{}
+	}
+	return json.Unmarshal(content, c)
+}
+
+func (c *AgentCfg) ToDB() ([]byte, error) {
+	return json.Marshal(c)
 }
