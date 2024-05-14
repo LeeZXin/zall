@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
@@ -20,28 +19,96 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
-	"time"
+	"syscall"
 )
 
 type handler func(ssh.Session, map[string]string, string, string)
 
 var (
-	agentToken string
 	serviceDir string
 	pwdDir     string
-	handlerMap map[string]handler
 )
+
+func init() {
+	pwd, err := os.Getwd()
+	if err != nil {
+		logger.Logger.Fatalf("os.Getwd err: %v", err)
+	}
+	pwdDir = pwd
+	serviceDir = filepath.Join(pwd, "data", "services")
+	util.MkdirAll(serviceDir)
+}
 
 var (
 	clientCfg  *gossh.ClientConfig
 	clientOnce sync.Once
 )
 
+type cmdMap struct {
+	sync.Mutex
+	container map[string]*exec.Cmd
+}
+
+func newCmdMap() *cmdMap {
+	return &cmdMap{
+		container: make(map[string]*exec.Cmd),
+	}
+}
+
+func (m *cmdMap) PutIfAbsent(id string, cmd *exec.Cmd) bool {
+	m.Lock()
+	defer m.Unlock()
+	_, b := m.container[id]
+	if b {
+		return false
+	}
+	m.container[id] = cmd
+	return true
+}
+
+func (m *cmdMap) GetById(id string) *exec.Cmd {
+	m.Lock()
+	defer m.Unlock()
+	return m.container[id]
+}
+
+func (m *cmdMap) Remove(id string) {
+	m.Lock()
+	defer m.Unlock()
+	delete(m.container, id)
+}
+
+type Agent struct {
+	*Server
+	token      string
+	cmdMap     *cmdMap
+	handlerMap map[string]handler
+}
+
 func NewAgentServer() zsf.LifeCycle {
-	agentToken = static.GetString("ssh.agent.token")
-	handlerMap = map[string]handler{
+	agent := new(Agent)
+	agent.token = static.GetString("ssh.agent.token")
+	agent.cmdMap = newCmdMap()
+	agent.handlerMap = map[string]handler{
+		"kill": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
+			id := args["i"]
+			cmd := agent.cmdMap.GetById(id)
+			if cmd == nil {
+				util.ExitWithErrMsg(session, "unknown id:"+id)
+				return
+			}
+			// 杀死子进程 带负数的pid
+			err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
+			}
+			agent.cmdMap.Remove(id)
+			session.Exit(0)
+		},
 		"execute": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
-			cmdPath := filepath.Join(tempDir, idutil.RandomUuid())
+			id := idutil.RandomUuid()
+			cmdPath := filepath.Join(tempDir, id)
 			file, err := os.OpenFile(cmdPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 			if err != nil {
 				util.ExitWithErrMsg(session, err.Error())
@@ -58,10 +125,25 @@ func NewAgentServer() zsf.LifeCycle {
 			}
 			err = executeCommand("chmod +x "+cmdPath, session, workdir)
 			if err != nil {
+				util.ExitWithErrMsg(session, "1"+err.Error())
+				return
+			}
+			cmd, err := newCommand("bash -c "+cmdPath, session, workdir)
+			if err != nil {
+				util.ExitWithErrMsg(session, "2"+err.Error())
+				return
+			}
+			err = cmd.Start()
+			if err != nil {
 				util.ExitWithErrMsg(session, err.Error())
 				return
 			}
-			err = executeCommand("bash -c "+cmdPath, session, workdir)
+			if !agent.cmdMap.PutIfAbsent(id, cmd) {
+				util.ExitWithErrMsg(session, "duplicated id")
+				return
+			}
+			err = cmd.Wait()
+			agent.cmdMap.Remove(id)
 			if err != nil {
 				util.ExitWithErrMsg(session, err.Error())
 				return
@@ -69,20 +151,13 @@ func NewAgentServer() zsf.LifeCycle {
 			session.Exit(0)
 		},
 	}
-	pwd, err := os.Getwd()
-	if err != nil {
-		logger.Logger.Fatalf("os.Getwd err: %v", err)
-	}
-	pwdDir = pwd
-	serviceDir = filepath.Join(pwd, "data", "services")
-	util.MkdirAll(serviceDir)
 	agentPort := static.GetInt("ssh.agent.port")
 	if agentPort <= 0 {
 		agentPort = 6666
 	}
 	serv, err := NewServer(&ServerOpts{
 		Port:    agentPort,
-		HostKey: filepath.Join(pwd, "data", "ssh", "agent.rsa"),
+		HostKey: filepath.Join(pwdDir, "data", "ssh", "agent.rsa"),
 		PublicKeyHandler: func(ctx ssh.Context, key ssh.PublicKey) bool {
 			if ctx.User() != "workflow" {
 				return false
@@ -95,13 +170,13 @@ func NewAgentServer() zsf.LifeCycle {
 				util.ExitWithErrMsg(session, err.Error())
 				return
 			}
-			fn, b := handlerMap[cmd.Operation]
+			fn, b := agent.handlerMap[cmd.Operation]
 			if !b {
 				util.ExitWithErrMsg(session, "unrecognized command")
 				return
 			}
 			// token校验
-			if cmd.Args["t"] != agentToken {
+			if cmd.Args["t"] != agent.token {
 				util.ExitWithErrMsg(session, "invalid token")
 				return
 			}
@@ -165,7 +240,8 @@ func NewAgentServer() zsf.LifeCycle {
 	if err != nil {
 		logger.Logger.Fatal(err)
 	}
-	return serv
+	agent.Server = serv
+	return agent
 }
 
 func mkdir(dir string) error {
@@ -183,26 +259,32 @@ func mkdir(dir string) error {
 }
 
 func executeCommand(line string, session ssh.Session, workdir string) error {
-	ctx, cancelFunc := context.WithTimeout(session.Context(), time.Hour)
-	defer cancelFunc()
-	fields, err := shellquote.Split(line)
+	cmd, err := newCommand(line, session, workdir)
 	if err != nil {
 		return err
 	}
+	return cmd.Run()
+}
+
+func newCommand(line string, session ssh.Session, workdir string) (*exec.Cmd, error) {
+	fields, err := shellquote.Split(line)
+	if err != nil {
+		return nil, err
+	}
 	var cmd *exec.Cmd
 	if len(fields) > 1 {
-		cmd = exec.CommandContext(ctx, fields[0], fields[1:]...)
+		cmd = exec.CommandContext(session.Context(), fields[0], fields[1:]...)
 	} else if len(fields) == 1 {
-		cmd = exec.CommandContext(ctx, fields[0])
+		cmd = exec.CommandContext(session.Context(), fields[0])
 	} else {
-		return nil
+		return nil, fmt.Errorf("empty command")
 	}
 	process.SetSysProcAttribute(cmd)
 	cmd.Env = append(os.Environ(), session.Environ()...)
 	cmd.Dir = workdir
 	cmd.Stdout = session
 	cmd.Stderr = session
-	return cmd.Run()
+	return cmd, nil
 }
 
 type command struct {
