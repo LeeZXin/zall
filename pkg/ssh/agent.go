@@ -7,7 +7,6 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/pkg/git/process"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/zsf"
@@ -107,7 +106,12 @@ func NewAgentServer() zsf.LifeCycle {
 			session.Exit(0)
 		},
 		"execute": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
-			id := idutil.RandomUuid()
+			id := args["i"]
+			cmd := agent.cmdMap.GetById(id)
+			if cmd != nil {
+				util.ExitWithErrMsg(session, "duplicated id:"+id)
+				return
+			}
 			cmdPath := filepath.Join(tempDir, id)
 			file, err := os.OpenFile(cmdPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 			if err != nil {
@@ -128,7 +132,7 @@ func NewAgentServer() zsf.LifeCycle {
 				util.ExitWithErrMsg(session, "1"+err.Error())
 				return
 			}
-			cmd, err := newCommand("bash -c "+cmdPath, session, workdir)
+			cmd, err = newCommand("bash -c "+cmdPath, session, workdir)
 			if err != nil {
 				util.ExitWithErrMsg(session, "2"+err.Error())
 				return
