@@ -18,8 +18,8 @@ const (
 	PullRequestCannotMergeCode
 	TeamUserGroupHasUserWhenDelCode
 	CannotUpdateTeamUserAdminGroupCode
-	InvalidReviewCountWhenCreatePrCode
 	ForcePushForbiddenCode
+	ProtectedBranchNotAllowPushCode
 	MethodUnImplementedCode
 	ThereHasBugErrCode
 	OperationFailedErrCode

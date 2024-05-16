@@ -260,11 +260,11 @@ var (
 	}
 	ProtectedBranchNotAllowDelete = KeyItem{
 		Id:         "protectedBranch.notAllowDelete",
-		DefaultRet: "保护分支禁止删除",
+		DefaultRet: "保护分支不可删除",
 	}
-	ProtectedBranchNotAllowDirectPush = KeyItem{
-		Id:         "protectedBranch.notAllowDirectPush",
-		DefaultRet: "保护分支不可直接push",
+	ProtectedBranchNotAllowPush = KeyItem{
+		Id:         "protectedBranch.notAllowPush",
+		DefaultRet: "保护分支不可推送",
 	}
 )
 

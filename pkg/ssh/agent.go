@@ -2,9 +2,11 @@ package ssh
 
 import (
 	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
+	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
+	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/git/process"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
@@ -12,13 +14,20 @@ import (
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/gliderlabs/ssh"
 	"github.com/kballard/go-shellquote"
+	"github.com/spf13/cast"
 	gossh "golang.org/x/crypto/ssh"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"syscall"
+)
+
+var (
+	validCommandIdRegexp = regexp.MustCompile(`^\S+$`)
 )
 
 type handler func(ssh.Session, map[string]string, string, string)
@@ -77,9 +86,44 @@ func (m *cmdMap) Remove(id string) {
 	delete(m.container, id)
 }
 
+type graphMap struct {
+	sync.Mutex
+	container map[int64]*action.Graph
+}
+
+func newGraphMap() *graphMap {
+	return &graphMap{
+		container: make(map[int64]*action.Graph),
+	}
+}
+
+func (m *graphMap) PutIfAbsent(id int64, graph *action.Graph) bool {
+	m.Lock()
+	defer m.Unlock()
+	_, b := m.container[id]
+	if b {
+		return false
+	}
+	m.container[id] = graph
+	return true
+}
+
+func (m *graphMap) GetById(id int64) *action.Graph {
+	m.Lock()
+	defer m.Unlock()
+	return m.container[id]
+}
+
+func (m *graphMap) Remove(id int64) {
+	m.Lock()
+	defer m.Unlock()
+	delete(m.container, id)
+}
+
 type Agent struct {
 	*Server
 	token      string
+	graphMap   *graphMap
 	cmdMap     *cmdMap
 	handlerMap map[string]handler
 }
@@ -87,10 +131,51 @@ type Agent struct {
 func NewAgentServer() zsf.LifeCycle {
 	agent := new(Agent)
 	agent.token = static.GetString("ssh.agent.token")
+	agent.graphMap = newGraphMap()
 	agent.cmdMap = newCmdMap()
 	agent.handlerMap = map[string]handler{
+		"executeWorkflow": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
+			input, err := io.ReadAll(session)
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
+			}
+			envs := util.CutEnv(session.Environ())
+			req := executeWorkflowReq{
+				PrId:        cast.ToInt64(envs[action.ActionPrId]),
+				WfId:        cast.ToInt64(envs[action.ActionWfId]),
+				Operator:    envs[action.ActionOperator],
+				TriggerType: workflowmd.TriggerType(cast.ToInt(envs[action.ActionTriggerType])),
+				Branch:      envs[action.ActionBranch],
+				YamlContent: string(input),
+			}
+			if !req.IsValid() {
+				util.ExitWithErrMsg(session, "invalid request")
+				return
+			}
+			err = executeWorkflow(req, agent.graphMap)
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
+			}
+		},
+		"killWorkflow": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
+			id := cast.ToInt64(args["i"])
+			graph := agent.graphMap.GetById(id)
+			if graph != nil {
+				util.ExitWithErrMsg(session, "unknown id:"+args["i"])
+				return
+			}
+			graph.Cancel()
+			agent.graphMap.Remove(id)
+			session.Exit(0)
+		},
 		"kill": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
 			id := args["i"]
+			if !validCommandIdRegexp.MatchString(id) {
+				util.ExitWithErrMsg(session, "invalid id")
+				return
+			}
 			cmd := agent.cmdMap.GetById(id)
 			if cmd == nil {
 				util.ExitWithErrMsg(session, "unknown id:"+id)
@@ -107,6 +192,10 @@ func NewAgentServer() zsf.LifeCycle {
 		},
 		"execute": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
 			id := args["i"]
+			if !validCommandIdRegexp.MatchString(id) {
+				util.ExitWithErrMsg(session, "invalid id")
+				return
+			}
 			cmd := agent.cmdMap.GetById(id)
 			if cmd != nil {
 				util.ExitWithErrMsg(session, "duplicated id:"+id)
@@ -118,27 +207,26 @@ func NewAgentServer() zsf.LifeCycle {
 				util.ExitWithErrMsg(session, err.Error())
 				return
 			}
-			defer func() {
-				file.Close()
-				util.RemoveAll(cmdPath)
-			}()
+			defer util.RemoveAll(cmdPath)
 			_, err = io.Copy(file, session)
+			file.Close()
 			if err != nil {
 				util.ExitWithErrMsg(session, err.Error())
 				return
 			}
 			err = executeCommand("chmod +x "+cmdPath, session, workdir)
 			if err != nil {
-				util.ExitWithErrMsg(session, "1"+err.Error())
+				util.ExitWithErrMsg(session, err.Error())
 				return
 			}
-			cmd, err = newCommand("bash -c "+cmdPath, session, workdir)
+			cmd, err = newCommand(session.Context(), "bash -c "+cmdPath, session, session, workdir)
 			if err != nil {
-				util.ExitWithErrMsg(session, "2"+err.Error())
+				util.ExitWithErrMsg(session, err.Error())
 				return
 			}
 			err = cmd.Start()
 			if err != nil {
+				logger.Logger.Info()
 				util.ExitWithErrMsg(session, err.Error())
 				return
 			}
@@ -263,31 +351,31 @@ func mkdir(dir string) error {
 }
 
 func executeCommand(line string, session ssh.Session, workdir string) error {
-	cmd, err := newCommand(line, session, workdir)
+	cmd, err := newCommand(session.Context(), line, session, session, workdir)
 	if err != nil {
 		return err
 	}
 	return cmd.Run()
 }
 
-func newCommand(line string, session ssh.Session, workdir string) (*exec.Cmd, error) {
+func newCommand(ctx context.Context, line string, stdout, stderr io.Writer, workdir string) (*exec.Cmd, error) {
 	fields, err := shellquote.Split(line)
 	if err != nil {
 		return nil, err
 	}
 	var cmd *exec.Cmd
 	if len(fields) > 1 {
-		cmd = exec.CommandContext(session.Context(), fields[0], fields[1:]...)
+		cmd = exec.CommandContext(ctx, fields[0], fields[1:]...)
 	} else if len(fields) == 1 {
-		cmd = exec.CommandContext(session.Context(), fields[0])
+		cmd = exec.CommandContext(ctx, fields[0])
 	} else {
 		return nil, fmt.Errorf("empty command")
 	}
 	process.SetSysProcAttribute(cmd)
-	cmd.Env = append(os.Environ(), session.Environ()...)
+	cmd.Env = os.Environ()
 	cmd.Dir = workdir
-	cmd.Stdout = session
-	cmd.Stderr = session
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	return cmd, nil
 }
 
@@ -354,7 +442,7 @@ func execute(sshHost, command string, cmd io.Reader, envs map[string]string) (st
 	return output.String(), nil
 }
 
-func executeAsync(sshHost, command string, cmd io.Reader, envs map[string]string) (io.Reader, error) {
+func executeAsync(sshHost, command string, cmd io.Reader, envs map[string]string) (io.ReadCloser, error) {
 	client, err := gossh.Dial("tcp", sshHost, clientCfg)
 	if err != nil {
 		return nil, err
@@ -387,16 +475,17 @@ func executeAsync(sshHost, command string, cmd io.Reader, envs map[string]string
 }
 
 type ServiceCommand struct {
-	appId string
-	cfg   AgentCfg
+	appId      string
+	agentHost  string
+	agentToken string
 }
 
 func (c *ServiceCommand) Execute(cmd io.Reader, envs map[string]string) (string, error) {
-	return execute(c.cfg.Host, fmt.Sprintf("execute -s %s -t %s", c.appId, c.cfg.Token), cmd, envs)
+	return execute(c.agentHost, fmt.Sprintf("execute -s %s -t %s", c.appId, c.agentToken), cmd, envs)
 }
 
 func (c *ServiceCommand) ExecuteAsync(cmd io.Reader, envs map[string]string) (io.Reader, error) {
-	return executeAsync(c.cfg.Host, fmt.Sprintf("execute -s %s -t %s", c.appId, c.cfg.Token), cmd, envs)
+	return executeAsync(c.agentHost, fmt.Sprintf("execute -s %s -t %s", c.appId, c.agentToken), cmd, envs)
 }
 
 func initClientCfg() {
@@ -421,51 +510,48 @@ func initClientCfg() {
 	})
 }
 
-func NewServiceCommand(cfg AgentCfg, appId string) *ServiceCommand {
+func NewServiceCommand(agentHost, agentToken, appId string) *ServiceCommand {
 	initClientCfg()
 	return &ServiceCommand{
-		appId: appId,
-		cfg:   cfg,
+		appId:      appId,
+		agentHost:  agentHost,
+		agentToken: agentToken,
 	}
 }
 
 type AgentCommand struct {
-	workdir string
-	cfg     AgentCfg
+	workdir    string
+	agentHost  string
+	agentToken string
 }
 
-func NewAgentCommand(cfg AgentCfg, workdir string) *AgentCommand {
+func NewAgentCommand(agentHost, agentToken, workdir string) *AgentCommand {
 	initClientCfg()
 	return &AgentCommand{
-		workdir: workdir,
-		cfg:     cfg,
+		workdir:    workdir,
+		agentHost:  agentHost,
+		agentToken: agentToken,
 	}
 }
 
 func (c *AgentCommand) Execute(cmd io.Reader, envs map[string]string) (string, error) {
-	return execute(c.cfg.Host, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.cfg.Token), cmd, envs)
+	return execute(c.agentHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.agentToken), cmd, envs)
 }
 
 func (c *AgentCommand) ExecuteAsync(cmd io.Reader, envs map[string]string) (io.Reader, error) {
-	return executeAsync(c.cfg.Host, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.cfg.Token), cmd, envs)
+	return executeAsync(c.agentHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.agentToken), cmd, envs)
 }
 
-type AgentCfg struct {
-	Host  string `json:"host"`
-	Token string `json:"token"`
-}
-
-func (c *AgentCfg) IsValid() bool {
-	return util.IpPortPattern.MatchString(c.Host) && len(c.Token) <= 1024
-}
-
-func (c *AgentCfg) FromDB(content []byte) error {
-	if c == nil {
-		*c = AgentCfg{}
+func (c *AgentCommand) ExecuteWorkflowAsync(content string, envs map[string]string) error {
+	reader, err := executeAsync(c.agentHost,
+		fmt.Sprintf("executeWorkflow -w %s -t %s", c.workdir, c.agentToken),
+		strings.NewReader(content),
+		envs,
+	)
+	if err != nil {
+		return err
 	}
-	return json.Unmarshal(content, c)
-}
-
-func (c *AgentCfg) ToDB() ([]byte, error) {
-	return json.Marshal(c)
+	// read nothing
+	reader.Close()
+	return nil
 }

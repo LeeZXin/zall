@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
+	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/git/gitenv"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/common"
@@ -196,11 +198,15 @@ func (s *storeImpl) DiffRefs(ctx context.Context, req reqvo.DiffRefsReq) (reqvo.
 	if !git.CheckExists(ctx, repoPath, target) {
 		return reqvo.DiffRefsResp{}, util.InvalidArgsError()
 	}
-	info, err := git.GetDiffRefsInfo(ctx, repoPath, target, head)
+	info, err := git.GetDiffRefsInfo(ctx, repoPath, req.Target, req.Head)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.DiffRefsResp{}, util.InternalError(err)
 	}
+	return diffResToResp(info), nil
+}
+
+func diffResToResp(info git.DiffRefsInfo) reqvo.DiffRefsResp {
 	ret := reqvo.DiffRefsResp{
 		Target:       info.Target,
 		Head:         info.Head,
@@ -226,7 +232,7 @@ func (s *storeImpl) DiffRefs(ctx context.Context, req reqvo.DiffRefsReq) (reqvo.
 		return commit2Vo(t), nil
 	})
 	ret.CanMerge = info.IsMergeAble()
-	return ret, nil
+	return ret
 }
 
 // DiffCommits 对比两个提交差异
@@ -578,9 +584,9 @@ func (s *storeImpl) InfoRefs(ctx context.Context, req reqvo.InfoRefsReq) {
 }
 
 // Merge 合并两个分支
-func (s *storeImpl) Merge(ctx context.Context, req reqvo.MergeReq) error {
+func (s *storeImpl) Merge(ctx context.Context, req reqvo.MergeReq) (reqvo.DiffRefsResp, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	err := git.Merge(ctx, repoPath, req.Target, req.Head, git.MergeRepoOpts{
+	info, err := git.Merge(ctx, repoPath, req.Target, req.Head, git.MergeRepoOpts{
 		RepoId:        req.MergeOpts.RepoId,
 		PrId:          req.MergeOpts.PrId,
 		PusherAccount: req.MergeOpts.PusherAccount,
@@ -588,10 +594,13 @@ func (s *storeImpl) Merge(ctx context.Context, req reqvo.MergeReq) error {
 		AppUrl:        req.MergeOpts.AppUrl,
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "can not merge") {
+			return diffResToResp(info), util.NewBizErr(apicode.PullRequestCannotMergeCode, i18n.PullRequestCannotMerge)
+		}
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return reqvo.DiffRefsResp{}, util.InternalError(err)
 	}
-	return nil
+	return diffResToResp(info), nil
 }
 
 // Blame git blame获取每一行提交人和时间

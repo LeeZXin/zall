@@ -2,7 +2,6 @@ package workflowsrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
@@ -17,7 +16,7 @@ import (
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"gopkg.in/yaml.v3"
-	"io"
+	"strconv"
 )
 
 const (
@@ -40,188 +39,20 @@ func (s *innerImpl) FindAndExecute(repoId int64, operator string, triggerType wo
 		if !wf.Source.MatchBranchBySource(source, branch) {
 			continue
 		}
-		taskId, err := s.Execute(&wf, operator, triggerType, branch)
-		if err == nil {
-			// by case 让合并请求和工作流关联
-			pullrequestmd.BatchInsertTimeline(ctx, []pullrequestmd.InsertTimelineReqDTO{
-				{
-					PrId:    prId,
-					Action:  pullrequestmd.NewWorkflowAction(taskId),
-					Account: operator,
-				},
-			})
-		}
+		s.Execute(&wf, operator, triggerType, branch, prId)
 	}
 }
 
-func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerType workflowmd.TriggerType, branch string) (int64, error) {
-	var p action.GraphCfg
-	// 解析yaml
-	err := yaml.Unmarshal([]byte(wf.YamlContent), &p)
-	if err != nil {
-		return 0, err
-	}
-	graph, err := p.ConvertToGraph()
-	if err != nil {
-		logger.Logger.Errorf("%v can not convert workflow graph: %v", wf.Id, err)
-		return 0, err
-	}
-	// 先插入记录
-	taskId, err := s.insertTaskRecord(graph, wf, operator, triggerType, branch)
-	if err != nil {
-		return 0, err
-	}
-	// 执行任务
-	go s.runGraph(graph, taskId, *wf.Agent, branch)
-	return taskId, nil
-}
-
-func (s *innerImpl) runGraph(graph *action.Graph, taskId int64, agentCfg zssh.AgentCfg, branch string) {
-	err := graph.Run(action.RunOpts{
-		Args: map[string]string{
-			"git.branch": branch,
-		},
-		AgentCfg: agentCfg,
-		StepOutputFunc: func(stat action.StepOutputStat) {
-			defer stat.Output.Close()
-			if _, err := s.updateStepStatusWithOldStatus(
-				taskId,
-				stat.JobName,
-				stat.Index,
-				workflowmd.StepWaitingStatus,
-				workflowmd.StepRunningStatus,
-			); err != nil {
-				return
-			}
-			// 记录日志信息
-			logContent, err := io.ReadAll(stat.Output)
-			if err != nil {
-				logger.Logger.Error(err)
-				return
-			}
-			ctx, closer := xormstore.Context(context.Background())
-			defer closer.Close()
-			_, err = workflowmd.UpdateStepLogContent(ctx, taskId, stat.JobName, stat.Index, string(logContent))
-			if err != nil {
-				logger.Logger.Error(err)
-				return
-			}
-		},
-		StepAfterFunc: func(err error, stat action.StepRunStat) {
-			// step状态置为success/fail
-			if err != nil {
-				s.updateStepStatusWithOldStatus(
-					taskId,
-					stat.JobName,
-					stat.Index,
-					workflowmd.StepRunningStatus,
-					workflowmd.StepFailStatus,
-				)
-			} else {
-				s.updateStepStatusWithOldStatus(
-					taskId,
-					stat.JobName,
-					stat.Index,
-					workflowmd.StepRunningStatus,
-					workflowmd.StepSuccessStatus,
-				)
-			}
-		},
-	})
-	if err != nil {
-		// 任务执行失败
-		s.updateTaskStatusWithOldStatus(
-			taskId,
-			workflowmd.TaskRunningStatus,
-			workflowmd.TaskFailStatus,
-		)
-	} else {
-		// 任务执行成功
-		s.updateTaskStatusWithOldStatus(
-			taskId,
-			workflowmd.TaskRunningStatus,
-			workflowmd.TaskSuccessStatus,
-		)
-	}
-}
-
-func (s *innerImpl) updateTaskStatusWithOldStatus(taskId int64, oldStatus, newStatus workflowmd.TaskStatus) (bool, error) {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	b, err := workflowmd.UpdateTaskStatusWithOldStatus(
-		ctx,
-		taskId,
-		oldStatus,
-		newStatus,
-	)
-	if err != nil {
-		logger.Logger.Error(err)
-	}
-	return b, err
-}
-
-func (s *innerImpl) updateStepStatusWithOldStatus(taskId int64, jobName string, index int, oldStatus, newStatus workflowmd.StepStatus) (bool, error) {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	b, err := workflowmd.UpdateStepStatus(
-		ctx,
-		taskId,
-		jobName,
-		index,
-		oldStatus,
-		newStatus,
-	)
-	if err != nil {
-		logger.Logger.Error(err)
-	}
-	return b, err
-}
-
-func (*innerImpl) insertTaskRecord(graph *action.Graph, wf *workflowmd.Workflow, operator string, triggerType workflowmd.TriggerType, branch string) (int64, error) {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	var taskId int64
-	infos := graph.ListJobInfo()
-	err := xormstore.WithTx(ctx, func(ctx context.Context) error {
-		// 插入一条任务记录
-		task, err := workflowmd.InsertTask(ctx, workflowmd.InsertTaskReqDTO{
-			WorkflowId:  wf.Id,
-			TaskStatus:  workflowmd.TaskRunningStatus,
-			TriggerType: triggerType,
-			Operator:    operator,
-			Branch:      branch,
-			Workflow:    wf.GetWorkflowCfg(),
+func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerType workflowmd.TriggerType, branch string, prId int64) error {
+	err := zssh.NewAgentCommand(wf.AgentHost, wf.AgentToken, "").
+		ExecuteWorkflowAsync(wf.YamlContent, map[string]string{
+			action.ActionWfId:        strconv.FormatInt(wf.Id, 10),
+			action.ActionOperator:    operator,
+			action.ActionTriggerType: strconv.Itoa(int(triggerType)),
+			action.ActionBranch:      branch,
+			action.ActionPrId:        strconv.FormatInt(prId, 10),
 		})
-		if err != nil {
-			return err
-		}
-		taskId = task.Id
-		// 插入job记录
-		stepsReq := make([]workflowmd.InsertStepReqDTO, 0)
-		for _, job := range infos {
-			for _, step := range job.Steps {
-				stepsReq = append(stepsReq, workflowmd.InsertStepReqDTO{
-					WorkflowId: wf.Id,
-					TaskId:     taskId,
-					JobName:    job.Name,
-					StepName:   step.Name,
-					StepIndex:  step.Index,
-					StepStatus: workflowmd.StepRunningStatus,
-				})
-			}
-		}
-		_, err = workflowmd.BatchInsertSteps(ctx, stepsReq)
-		if err != nil {
-			return err
-		}
-		// 更新最新任务id
-		_, err = workflowmd.UpdateLastTaskIdByWorkflowId(ctx, wf.Id, taskId)
-		return err
-	})
-	if err != nil {
-		logger.Logger.Error(err)
-	}
-	return taskId, err
+	return err
 }
 
 type outerImpl struct{}
@@ -256,7 +87,8 @@ func (*outerImpl) CreateWorkflow(ctx context.Context, reqDTO CreateWorkflowReqDT
 		RepoId:      reqDTO.RepoId,
 		Name:        reqDTO.Name,
 		YamlContent: string(yamlOut),
-		Agent:       reqDTO.Agent,
+		AgentHost:   reqDTO.AgentHost,
+		AgentToken:  reqDTO.AgentToken,
 		Source:      reqDTO.Source,
 		Desc:        reqDTO.Desc,
 	})
@@ -398,10 +230,11 @@ func (*outerImpl) UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDT
 	}
 	yamlOut, _ := yaml.Marshal(graph)
 	_, err = workflowmd.UpdateWorkflow(ctx, workflowmd.UpdateWorkflowReqDTO{
-		Id:      reqDTO.WorkflowId,
-		Name:    reqDTO.Name,
-		Content: string(yamlOut),
-		Agent:   reqDTO.Agent,
+		Id:         reqDTO.WorkflowId,
+		Name:       reqDTO.Name,
+		Content:    string(yamlOut),
+		AgentHost:  reqDTO.AgentHost,
+		AgentToken: reqDTO.AgentToken,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -430,7 +263,7 @@ func (*outerImpl) TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReq
 	if err != nil {
 		return err
 	}
-	Inner.Execute(&wf, reqDTO.Operator.Account, workflowmd.ManualTriggerType, reqDTO.Branch)
+	Inner.Execute(&wf, reqDTO.Operator.Account, workflowmd.ManualTriggerType, reqDTO.Branch, 0)
 	return nil
 }
 
@@ -496,10 +329,10 @@ func task2Dto(t workflowmd.Task) (TaskDTO, error) {
 	return TaskDTO{
 		TaskStatus:  t.TaskStatus,
 		TriggerType: t.TriggerType,
-		YamlContent: t.Workflow.YamlContent,
 		Branch:      t.Branch,
 		Operator:    t.Operator,
 		Created:     t.Created,
+		YamlContent: t.YamlContent,
 		Id:          t.Id,
 	}, nil
 }

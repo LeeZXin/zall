@@ -4,14 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	zssh "github.com/LeeZXin/zall/pkg/ssh"
+	"github.com/LeeZXin/zall/pkg/git/process"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/executor/completable"
+	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf/logger"
+	"github.com/kballard/go-shellquote"
 	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 )
 
@@ -39,7 +45,7 @@ func (c *GraphCfg) IsValid() error {
 		}
 		// 有重复的名字
 		if allJobNames.Contains(k) {
-			return fmt.Errorf("job has duplicated name: %v", k)
+			return fmt.Errorf("job has duplicated Name: %v", k)
 		}
 		allJobNames.Add(k)
 	}
@@ -119,12 +125,11 @@ func (c *GraphCfg) dfs(path []string, t *jobTemp, all map[string]*jobTemp) error
 }
 
 func (c *GraphCfg) ConvertToGraph() (*Graph, error) {
-	if err := c.IsValid(); err != nil {
-		logger.Logger.Error(err)
-		return nil, err
+	if c.IsValid() != nil {
+		return nil, errors.New("invalid action yaml content")
 	}
 	// 转换jobs
-	jobs := make([]*Job, 0, len(c.Jobs))
+	jobs := make([]*job, 0, len(c.Jobs))
 	for k, j := range c.Jobs {
 		jobs = append(jobs, j.convertToJob(k))
 	}
@@ -140,21 +145,21 @@ type StepCfg struct {
 	Script string            `json:"script" yaml:"script"`
 }
 
-func (c *StepCfg) convertToStep() *Step {
+func (c *StepCfg) convertToStep() *step {
 	cpyMap := make(map[string]string, len(c.With))
 	for k, v := range c.With {
 		cpyMap[k] = v
 	}
-	return &Step{
-		name:   c.Name,
-		with:   cpyMap,
-		script: c.Script,
+	return &step{
+		Name:   c.Name,
+		With:   cpyMap,
+		Script: c.Script,
 	}
 }
 
 func (c *StepCfg) IsValid() error {
 	if c.Script == "" {
-		return errors.New("empty script")
+		return errors.New("empty Script")
 	}
 	return nil
 }
@@ -181,22 +186,30 @@ func (c *JobCfg) IsValid() error {
 	return nil
 }
 
-func (c *JobCfg) convertToJob(jobName string) *Job {
-	steps := make([]*Step, 0, len(c.Steps))
+func (c *JobCfg) convertToJob(jobName string) *job {
+	steps := make([]*step, 0, len(c.Steps))
 	for _, s := range c.Steps {
 		steps = append(steps, s.convertToStep())
 	}
-	return &Job{
-		name:    jobName,
-		timeout: time.Duration(c.Timeout) * time.Second,
-		steps:   steps,
-		needs:   hashset.NewHashSet[*Job](),
-		next:    hashset.NewHashSet[*Job](),
+	ctx := context.Background()
+	timout := time.Duration(c.Timeout) * time.Second
+	var cancelFn context.CancelFunc
+	if timout > 0 {
+		ctx, cancelFn = context.WithTimeout(ctx, timout)
+	} else {
+		ctx, cancelFn = context.WithCancel(ctx)
+	}
+	return &job{
+		name:     jobName,
+		steps:    steps,
+		needs:    hashset.NewHashSet[*job](),
+		next:     hashset.NewHashSet[*job](),
+		ctx:      ctx,
+		cancelFn: cancelFn,
 	}
 }
 
 type RunOpts struct {
-	AgentCfg       zssh.AgentCfg
 	Workdir        string
 	StepOutputFunc func(StepOutputStat)
 	StepAfterFunc  func(error, StepRunStat)
@@ -218,16 +231,16 @@ type StepOutputStat struct {
 }
 
 type Graph struct {
-	allJobs []*Job
+	allJobs []*job
 }
 
 func (g *Graph) ListJobInfo() []JobInfo {
-	ret, _ := listutil.Map(g.allJobs, func(t *Job) (JobInfo, error) {
+	ret, _ := listutil.Map(g.allJobs, func(t *job) (JobInfo, error) {
 		steps := make([]StepInfo, 0, len(t.steps))
 		for i, step := range t.steps {
 			steps = append(steps, StepInfo{
 				Index: i,
-				Name:  step.name,
+				Name:  step.Name,
 			})
 		}
 		return JobInfo{
@@ -239,12 +252,19 @@ func (g *Graph) ListJobInfo() []JobInfo {
 }
 
 func (g *Graph) Run(opts RunOpts) error {
+	if opts.Workdir != "" {
+		err := util.Mkdir(opts.Workdir)
+		if err != nil {
+			return err
+		}
+		defer util.RemoveAll(opts.Workdir)
+	}
 	futures := make(map[string]completable.Future[any])
 	// 找到最后一层节点
-	layers, _ := listutil.Filter(g.allJobs, func(j *Job) (bool, error) {
+	layers, _ := listutil.Filter(g.allJobs, func(j *job) (bool, error) {
 		return j.next.Size() == 0, nil
 	})
-	finalFutures, _ := listutil.Map(layers, func(t *Job) (completable.IBase, error) {
+	finalFutures, _ := listutil.Map(layers, func(t *job) (completable.IBase, error) {
 		return loadJob(futures, t, &opts), nil
 	})
 	if len(finalFutures) > 0 {
@@ -257,8 +277,14 @@ func (g *Graph) Run(opts RunOpts) error {
 	return ThereHasBug
 }
 
+func (g *Graph) Cancel() {
+	for _, j := range g.allJobs {
+		j.Cancel()
+	}
+}
+
 // loadJob 递归调用 从后置节点往前置节点递归整个graph
-func loadJob(all map[string]completable.Future[any], j *Job, opts *RunOpts) completable.Future[any] {
+func loadJob(all map[string]completable.Future[any], j *job, opts *RunOpts) completable.Future[any] {
 	// 防止重复执行
 	f, b := all[j.name]
 	if b {
@@ -270,7 +296,7 @@ func loadJob(all map[string]completable.Future[any], j *Job, opts *RunOpts) comp
 		})
 	} else {
 		needs := make([]completable.IBase, 0, j.needs.Size())
-		j.needs.Range(func(j *Job) {
+		j.needs.Range(func(j *job) {
 			needs = append(needs, loadJob(all, j, opts))
 		})
 		all[j.name] = completable.CallAsync(func() (any, error) {
@@ -286,69 +312,153 @@ func loadJob(all map[string]completable.Future[any], j *Job, opts *RunOpts) comp
 	return all[j.name]
 }
 
-type Step struct {
-	name   string
-	with   map[string]string
-	script string
+type step struct {
+	Name   string
+	With   map[string]string
+	Script string
+	sync.Mutex
+	curr *exec.Cmd
 }
 
-func (s *Step) replaceStr(args map[string]string, str string) string {
+func (s *step) GetReplacedScript(args map[string]string) string {
+	script := s.Script
 	for k, v := range args {
-		str = strings.ReplaceAll(str, "{{"+k+"}}", v)
+		script = strings.ReplaceAll(script, "{{"+k+"}}", v)
 	}
-	return str
+	return script
 }
 
-func (s *Step) Run(opts *RunOpts, _ context.Context, j *Job, index int) error {
-	beginTime := time.Now()
-	ac := zssh.NewAgentCommand(opts.AgentCfg, opts.Workdir)
-	output, err := ac.Execute(strings.NewReader(s.replaceStr(opts.Args, s.script)), s.with)
-	if err != nil {
-		output = err.Error()
+func (s *step) SetCurr(cmd *exec.Cmd) {
+	s.Lock()
+	defer s.Unlock()
+	s.curr = cmd
+}
+
+func (s *step) Kill() {
+	s.Lock()
+	defer s.Unlock()
+	if s.curr != nil {
+		if s.curr.Process != nil {
+			syscall.Kill(-s.curr.Process.Pid, syscall.SIGKILL)
+		}
 	}
+}
+
+func (s *step) Run(opts *RunOpts, j *job, index int) error {
+	err := j.ctx.Err()
+	beginTime := time.Now()
+	reader, writer := io.Pipe()
 	go opts.StepOutputFunc(StepOutputStat{
 		JobName:   j.name,
 		Index:     index,
 		EventTime: beginTime,
-		Output:    io.NopCloser(strings.NewReader(output)),
+		Output:    reader,
 	})
-	endTime := time.Now()
-	if opts.StepAfterFunc != nil {
-		opts.StepAfterFunc(err, StepRunStat{
-			JobName:   j.name,
-			Index:     index,
-			Duration:  endTime.Sub(beginTime),
-			EventTime: beginTime,
-		})
+	if err == nil {
+		cmdPath := filepath.Join(opts.Workdir, idutil.RandomUuid())
+		err = util.WriteFile(cmdPath, []byte(s.GetReplacedScript(opts.Args)))
+		if err == nil {
+			defer util.RemoveAll(cmdPath)
+			err = executeCommand(j.ctx, "chmod +x "+cmdPath, nil, nil, opts.Workdir, nil)
+			if err == nil {
+				var cmd *exec.Cmd
+				cmd, err = newCommand(j.ctx, "bash -c "+cmdPath, writer, writer, opts.Workdir, mergeEnvs(s.With))
+				if err == nil {
+					s.SetCurr(cmd)
+					err = cmd.Run()
+				}
+			}
+		}
 	}
+	if err != nil {
+		writer.Write([]byte(err.Error()))
+	}
+	writer.Close()
+	s.SetCurr(nil)
+	endTime := time.Now()
+	opts.StepAfterFunc(err, StepRunStat{
+		JobName:   j.name,
+		Index:     index,
+		Duration:  endTime.Sub(beginTime),
+		EventTime: beginTime,
+	})
 	return err
 }
 
-type Job struct {
-	name    string
-	steps   []*Step
-	needs   *hashset.HashSet[*Job]
-	next    *hashset.HashSet[*Job]
-	timeout time.Duration
+func mergeEnvs(args map[string]string) []string {
+	ret := make([]string, 0, len(args))
+	for k, v := range args {
+		ret = append(ret, k+"="+v)
+	}
+	return ret
 }
 
-func (j *Job) Run(opts *RunOpts) error {
-	ctx := context.Background()
-	if j.timeout > 0 {
-		var cancelFn context.CancelFunc
-		ctx, cancelFn = context.WithTimeout(ctx, j.timeout)
-		defer cancelFn()
+func executeCommand(ctx context.Context, line string, stdout, stderr io.Writer, workdir string, envs []string) error {
+	cmd, err := newCommand(ctx, line, stdout, stderr, workdir, envs)
+	if err != nil {
+		return err
 	}
+	return cmd.Run()
+}
+
+func newCommand(ctx context.Context, line string, stdout, stderr io.Writer, workdir string, envs []string) (*exec.Cmd, error) {
+	fields, err := shellquote.Split(line)
+	if err != nil {
+		return nil, err
+	}
+	var cmd *exec.Cmd
+	if len(fields) > 1 {
+		cmd = exec.CommandContext(ctx, fields[0], fields[1:]...)
+	} else if len(fields) == 1 {
+		cmd = exec.CommandContext(ctx, fields[0])
+	} else {
+		return nil, fmt.Errorf("empty command")
+	}
+	process.SetSysProcAttribute(cmd)
+	if len(envs) > 0 {
+		cmd.Env = append(os.Environ(), envs...)
+	} else {
+		cmd.Env = os.Environ()
+	}
+	cmd.Dir = workdir
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	return cmd, nil
+}
+
+type job struct {
+	name     string
+	steps    []*step
+	needs    *hashset.HashSet[*job]
+	next     *hashset.HashSet[*job]
+	ctx      context.Context
+	cancelFn context.CancelFunc
+}
+
+func (j *job) Run(opts *RunOpts) error {
+	defer j.Cancel()
 	for i, s := range j.steps {
-		if err := s.Run(opts, ctx, j, i); err != nil {
+		err := j.ctx.Err()
+		if err != nil {
+			return err
+		}
+		err = s.Run(opts, j, i)
+		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func graphJobs(jobs []*Job, c map[string]JobCfg) {
-	m := make(map[string]*Job)
+func (j *job) Cancel() {
+	j.cancelFn()
+	for _, s := range j.steps {
+		s.Kill()
+	}
+}
+
+func graphJobs(jobs []*job, c map[string]JobCfg) {
+	m := make(map[string]*job)
 	for _, j := range jobs {
 		m[j.name] = j
 	}

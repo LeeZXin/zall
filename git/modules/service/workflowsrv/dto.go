@@ -3,7 +3,6 @@ package workflowsrv
 import (
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"time"
@@ -13,7 +12,8 @@ type CreateWorkflowReqDTO struct {
 	Name        string              `json:"name"`
 	RepoId      int64               `json:"repoId"`
 	YamlContent string              `json:"yamlContent"`
-	Agent       zssh.AgentCfg       `json:"agent"`
+	AgentHost   string              `json:"agentHost"`
+	AgentToken  string              `json:"agentToken"`
 	Source      workflowmd.Source   `json:"source"`
 	Desc        string              `json:"desc"`
 	Operator    apisession.UserInfo `json:"operator"`
@@ -32,7 +32,10 @@ func (r *CreateWorkflowReqDTO) IsValid() error {
 	if r.YamlContent == "" {
 		return util.InvalidArgsError()
 	}
-	if !r.Agent.IsValid() {
+	if !util.IpPortPattern.MatchString(r.AgentHost) {
+		return util.InvalidArgsError()
+	}
+	if len(r.AgentToken) > 1024 {
 		return util.InvalidArgsError()
 	}
 	if !r.Source.IsValid() {
@@ -78,7 +81,8 @@ type UpdateWorkflowReqDTO struct {
 	WorkflowId  int64               `json:"workflowId"`
 	Name        string              `json:"name"`
 	YamlContent string              `json:"yamlContent"`
-	Agent       zssh.AgentCfg       `json:"agent"`
+	AgentHost   string              `json:"agentHost"`
+	AgentToken  string              `json:"agentToken"`
 	Source      workflowmd.Source   `json:"source"`
 	Operator    apisession.UserInfo `json:"operator"`
 }
@@ -96,7 +100,10 @@ func (r *UpdateWorkflowReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !r.Agent.IsValid() {
+	if !util.IpPortPattern.MatchString(r.AgentHost) {
+		return util.InvalidArgsError()
+	}
+	if len(r.AgentToken) > 1024 {
 		return util.InvalidArgsError()
 	}
 	if !r.Source.IsValid() {

@@ -9,6 +9,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
 	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
+	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/githook"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -65,8 +66,26 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 					return util.InternalError(err)
 				}
 			}
-			isProtectedBranch, _ := pbList.IsProtectedBranch(strings.TrimPrefix(ref, git.BranchPrefix))
+			isProtectedBranch, protectedBranch := pbList.IsProtectedBranch(strings.TrimPrefix(ref, git.BranchPrefix))
 			if isProtectedBranch {
+				// 检查该分支是否可推送
+				cfg := protectedBranch.GetCfg()
+				switch cfg.PushOption {
+				case branch.NotAllowPush:
+					return util.NewBizErr(apicode.ProtectedBranchNotAllowPushCode, i18n.ProtectedBranchNotAllowPush)
+				case branch.WhiteListPush:
+					has := false
+					for _, account := range cfg.PushWhiteList {
+						if account == opts.PusherAccount {
+							has = true
+							break
+						}
+					}
+					if !has {
+						return util.NewBizErr(apicode.ProtectedBranchNotAllowPushCode, i18n.ProtectedBranchNotAllowPush)
+					}
+				case branch.AllowPush:
+				}
 				// 不允许删除保护分支
 				if info.NewCommitId == git.ZeroCommitId {
 					return util.NewBizErr(apicode.ForcePushForbiddenCode, i18n.ProtectedBranchNotAllowDelete)
@@ -148,7 +167,7 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 			if refType == "commit" {
 				branch := strings.TrimPrefix(revInfo.Ref, git.BranchPrefix)
 				if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, branch) {
-					workflowsrv.Inner.Execute(&wf, opts.PusherAccount, workflowmd.HookTriggerType, branch)
+					workflowsrv.Inner.Execute(&wf, opts.PusherAccount, workflowmd.HookTriggerType, branch, 0)
 				}
 			}
 		}

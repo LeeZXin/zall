@@ -51,7 +51,7 @@ type Store interface {
 	// InfoRefs smart http infoRefs
 	InfoRefs(context.Context, reqvo.InfoRefsReq)
 	// Merge 合并两个分支
-	Merge(context.Context, reqvo.MergeReq) error
+	Merge(context.Context, reqvo.MergeReq) (reqvo.DiffRefsResp, error)
 	// Blame git blame获取每一行提交人和时间
 	Blame(context.Context, reqvo.BlameReq) ([]reqvo.BlameLineVO, error)
 	// CreateArchive 下载压缩包

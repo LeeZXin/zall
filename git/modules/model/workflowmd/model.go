@@ -1,9 +1,7 @@
 package workflowmd
 
 import (
-	"encoding/json"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"time"
 )
 
@@ -22,6 +20,15 @@ func (t TriggerType) Readable() string {
 		return i18n.GetByKey(i18n.WorkflowManualTriggerType)
 	default:
 		return i18n.GetByKey(i18n.WorkflowUnknownTriggerType)
+	}
+}
+
+func (t TriggerType) IsValid() bool {
+	switch t {
+	case HookTriggerType, ManualTriggerType:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -53,15 +60,16 @@ const (
 )
 
 type Task struct {
-	Id          int64        `json:"id" xorm:"pk autoincr"`
-	WorkflowId  int64        `json:"workflowId"`
-	TaskStatus  TaskStatus   `json:"taskStatus"`
-	TriggerType TriggerType  `json:"triggerType"`
-	Workflow    *WorkflowCfg `json:"workflow"`
-	Branch      string       `json:"branch"`
-	Operator    string       `json:"operator"`
-	Created     time.Time    `json:"created" xorm:"created"`
-	Updated     time.Time    `json:"updated" xorm:"updated"`
+	Id          int64       `json:"id" xorm:"pk autoincr"`
+	WorkflowId  int64       `json:"workflowId"`
+	TaskStatus  TaskStatus  `json:"taskStatus"`
+	TriggerType TriggerType `json:"triggerType"`
+	YamlContent string      `json:"yamlContent"`
+	Branch      string      `json:"branch"`
+	Operator    string      `json:"operator"`
+	PrId        int64       `json:"prId"`
+	Created     time.Time   `json:"created" xorm:"created"`
+	Updated     time.Time   `json:"updated" xorm:"updated"`
 }
 
 func (*Task) TableName() string {
@@ -110,43 +118,19 @@ func (*Step) TableName() string {
 }
 
 type Workflow struct {
-	Id          int64          `json:"id" xorm:"pk autoincr"`
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	RepoId      int64          `json:"repoId"`
-	YamlContent string         `json:"yamlContent"`
-	Source      *Source        `json:"source"`
-	Agent       *zssh.AgentCfg `json:"agent"`
-	LastTaskId  int64          `json:"lastTaskId"`
-	Created     time.Time      `json:"created" xorm:"created"`
-	Updated     time.Time      `json:"updated" xorm:"updated"`
+	Id          int64     `json:"id" xorm:"pk autoincr"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	RepoId      int64     `json:"repoId"`
+	YamlContent string    `json:"yamlContent"`
+	Source      *Source   `json:"source"`
+	AgentHost   string    `json:"agentHost"`
+	AgentToken  string    `json:"agentToken"`
+	LastTaskId  int64     `json:"lastTaskId"`
+	Created     time.Time `json:"created" xorm:"created"`
+	Updated     time.Time `json:"updated" xorm:"updated"`
 }
 
 func (*Workflow) TableName() string {
 	return WorkflowTableName
-}
-
-func (f *Workflow) GetWorkflowCfg() WorkflowCfg {
-	return WorkflowCfg{
-		YamlContent: f.YamlContent,
-		Source:      *f.Source,
-		Agent:       *f.Agent,
-	}
-}
-
-type WorkflowCfg struct {
-	YamlContent string        `json:"yamlContent"`
-	Source      Source        `json:"source"`
-	Agent       zssh.AgentCfg `json:"agent"`
-}
-
-func (c *WorkflowCfg) FromDB(content []byte) error {
-	if c == nil {
-		*c = WorkflowCfg{}
-	}
-	return json.Unmarshal(content, c)
-}
-
-func (c *WorkflowCfg) ToDB() ([]byte, error) {
-	return json.Marshal(c)
 }

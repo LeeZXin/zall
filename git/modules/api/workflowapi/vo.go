@@ -2,7 +2,6 @@ package workflowapi
 
 import (
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
-	zssh "github.com/LeeZXin/zall/pkg/ssh"
 )
 
 type CreateWorkflowReqVO struct {
@@ -10,7 +9,8 @@ type CreateWorkflowReqVO struct {
 	RepoId      int64             `json:"repoId"`
 	YamlContent string            `json:"yamlContent"`
 	Source      workflowmd.Source `json:"source"`
-	Agent       zssh.AgentCfg     `json:"agent"`
+	AgentHost   string            `json:"agentHost"`
+	AgentToken  string            `json:"agentToken"`
 	Desc        string            `json:"desc"`
 }
 
@@ -19,7 +19,8 @@ type UpdateWorkflowReqVO struct {
 	Name        string            `json:"name"`
 	YamlContent string            `json:"yamlContent"`
 	Source      workflowmd.Source `json:"source"`
-	Agent       zssh.AgentCfg     `json:"agent"`
+	AgentHost   string            `json:"agentHost"`
+	AgentToken  string            `json:"agentToken"`
 }
 
 type WorkflowWithLastTaskVO struct {

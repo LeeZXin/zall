@@ -36,7 +36,6 @@ type DiffRefsInfo struct {
 	MergeBase     string           `json:"mergeBase"`
 	DiffNumsStats DiffNumsStatInfo `json:"diffNumsStats"`
 	ConflictFiles []string         `json:"conflictFiles"`
-	CanMerge      bool             `json:"canMerge"`
 }
 
 type DiffCommitsInfo struct {
@@ -47,7 +46,7 @@ type DiffCommitsInfo struct {
 
 // IsMergeAble 是否可合并
 func (i *DiffRefsInfo) IsMergeAble() bool {
-	if !strings.HasPrefix(i.OriginHead, BranchPrefix) {
+	if !strings.HasPrefix(i.Head, BranchPrefix) {
 		return false
 	}
 	return len(i.Commits) > 0 && len(i.ConflictFiles) == 0
@@ -91,7 +90,7 @@ func GetDiffRefsInfo(ctx context.Context, repoPath, target, head string) (DiffRe
 	if err != nil {
 		return DiffRefsInfo{}, err
 	}
-	if strings.HasPrefix(pr.OriginHead, BranchPrefix) {
+	if strings.HasPrefix(pr.Head, BranchPrefix) {
 		pr.ConflictFiles, err = findConflictFiles(ctx, repoPath, pr.OriginHead, pr.TargetCommit.Id, pr.MergeBase)
 		if err != nil {
 			return DiffRefsInfo{}, err
@@ -157,17 +156,17 @@ func CanMerge(ctx context.Context, repoPath, target, head string) (bool, error) 
 	return false, nil
 }
 
-func Merge(ctx context.Context, repoPath, target, head string, opts MergeRepoOpts) error {
+func Merge(ctx context.Context, repoPath, target, head string, opts MergeRepoOpts) (DiffRefsInfo, error) {
 	info, err := GetDiffRefsInfo(ctx, repoPath, target, head)
 	if err != nil {
-		return err
+		return info, err
 	}
-	return doMerge(ctx, repoPath, info, opts)
+	return info, doMerge(ctx, repoPath, info, opts)
 }
 
 func doMerge(ctx context.Context, repoPath string, pr DiffRefsInfo, opts MergeRepoOpts) error {
-	if len(pr.Commits) == 0 {
-		return errors.New("nothing to commit")
+	if !pr.IsMergeAble() {
+		return errors.New("can not merge")
 	}
 	tempDir := filepath.Join(TempDir(), "merge-"+util.RandomIdWithTime())
 	defer util.RemoveAll(tempDir)

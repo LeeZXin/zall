@@ -447,40 +447,20 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 		err = util.NewBizErr(apicode.PullRequestCannotMergeCode, i18n.PullRequestReviewerCountLowerThanCfg)
 		return
 	}
-	var info reqvo.DiffRefsResp
-	info, err = client.DiffRefs(ctx, reqvo.DiffRefsReq{
-		RepoPath:   repo.Path,
-		Target:     pr.Target,
-		TargetType: pr.TargetType,
-		Head:       pr.Head,
-		HeadType:   pr.HeadType,
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	// 不可合并
-	if !info.CanMerge {
-		err = util.NewBizErr(apicode.PullRequestCannotMergeCode, i18n.PullRequestCannotMerge)
-		return
-	}
-	var merged bool
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		var err2 error
-		merged, err2 = s.mergeWithTx(ctx, pr, info, repo, reqDTO.Operator, fmt.Sprintf("merge %s from %s", info.Head, info.Target))
-		return err2
+		return s.mergeWithTx(ctx, pr, repo, reqDTO.Operator)
 	})
 	if err != nil {
+		if bizerr.IsBizErr(err) {
+			return err
+		}
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if merged {
-		// 触发webhook
-		triggerWebhook(repo, reqDTO.Operator, pr, webhook.MergeAction)
-		// 触发工作流
-		triggerMergePrWorkflow(reqDTO.Operator, pr)
-	}
+	// 触发webhook
+	triggerWebhook(repo, reqDTO.Operator, pr, webhook.MergeAction)
+	// 触发工作流
+	triggerMergePrWorkflow(reqDTO.Operator, pr)
 	return nil
 }
 
@@ -505,8 +485,40 @@ func (*outerImpl) detectCanMergePullRequest(ctx context.Context, pr pullrequestm
 	return true, isProtectedBranch, cfg, 0, nil
 }
 
-func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullRequest, info reqvo.DiffRefsResp, repo repomd.Repo, operator apisession.UserInfo, message string) (bool, error) {
-	b, err := pullrequestmd.MergePrStatus(
+func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullRequest, repo repomd.Repo, operator apisession.UserInfo) error {
+	err := pullrequestmd.BatchInsertTimeline(ctx, []pullrequestmd.InsertTimelineReqDTO{
+		{
+			PrId:    pr.Id,
+			Action:  pullrequestmd.NewPrAction(pr.Id, pullrequestmd.PrMergedStatus),
+			Account: operator.Account,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	info, err := client.Merge(ctx, reqvo.MergeReq{
+		RepoPath: repo.Path,
+		Target:   pr.Target,
+		Head:     pr.Head,
+		MergeOpts: struct {
+			RepoId        int64  `json:"repoId"`
+			PrId          int64  `json:"prId"`
+			PusherAccount string `json:"pusherAccount"`
+			PusherEmail   string `json:"pusherEmail"`
+			Message       string `json:"message"`
+			AppUrl        string `json:"appUrl"`
+		}{
+			RepoId:        repo.Id,
+			PrId:          pr.Id,
+			PusherAccount: operator.Account,
+			PusherEmail:   operator.Email,
+			Message:       fmt.Sprintf("merge %s from %s", pr.Head, pr.Target),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	_, err = pullrequestmd.MergePrStatus(
 		ctx,
 		pr.Id,
 		pullrequestmd.PrOpenStatus,
@@ -514,44 +526,7 @@ func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullReques
 		info.HeadCommit.CommitId,
 		operator.Account,
 	)
-	if err != nil {
-		return false, err
-	}
-	if b {
-		err = pullrequestmd.BatchInsertTimeline(ctx, []pullrequestmd.InsertTimelineReqDTO{
-			{
-				PrId:    pr.Id,
-				Action:  pullrequestmd.NewPrAction(pr.Id, pullrequestmd.PrMergedStatus),
-				Account: operator.Account,
-			},
-		})
-		if err != nil {
-			return false, err
-		}
-		err = client.Merge(ctx, reqvo.MergeReq{
-			RepoPath: repo.Path,
-			Target:   pr.Target,
-			Head:     pr.Head,
-			MergeOpts: struct {
-				RepoId        int64  `json:"repoId"`
-				PrId          int64  `json:"prId"`
-				PusherAccount string `json:"pusherAccount"`
-				PusherEmail   string `json:"pusherEmail"`
-				Message       string `json:"message"`
-				AppUrl        string `json:"appUrl"`
-			}{
-				RepoId:        repo.Id,
-				PrId:          pr.Id,
-				PusherAccount: operator.Account,
-				PusherEmail:   operator.Email,
-				Message:       message,
-			},
-		})
-		if err != nil {
-			return false, err
-		}
-	}
-	return b, nil
+	return err
 }
 
 func (s *outerImpl) AgreeReviewPullRequest(ctx context.Context, reqDTO AgreeReviewPullRequestReqDTO) (err error) {

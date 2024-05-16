@@ -86,11 +86,8 @@ func (c *Command) RunWithStdout(ctx context.Context, output io.Writer, ros ...Ru
 func (c *Command) RunWithReadPipe(ctx context.Context, ros ...RunOpts) *ReadPipeResult {
 	reader, writer := io.Pipe()
 	go func() {
-		if err := c.run(ctx, append(ros, withStdOut(writer))...); err != nil {
-			writer.CloseWithError(err)
-		} else {
-			writer.Close()
-		}
+		err := c.run(ctx, append(ros, withStdOut(writer))...)
+		writer.CloseWithError(err)
 	}()
 	return &ReadPipeResult{
 		reader: reader,

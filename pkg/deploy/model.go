@@ -3,7 +3,6 @@ package deploy
 import (
 	"encoding/json"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"github.com/LeeZXin/zall/util"
 	"net/url"
 	"strings"
@@ -102,19 +101,23 @@ func (c *DetectConfig) ToDB() ([]byte, error) {
 }
 
 type ProcessConfig struct {
-	Host          string        `json:"host"`
-	Agent         zssh.AgentCfg `json:"agent"`
-	DetectConfig  DetectConfig  `json:"detectConfig"`
-	DeployScript  string        `json:"deployScript"`
-	StopScript    string        `json:"stopScript"`
-	RestartScript string        `json:"restartScript"`
+	Host          string       `json:"host"`
+	AgentHost     string       `json:"agentHost"`
+	AgentToken    string       `json:"agentToken"`
+	DetectConfig  DetectConfig `json:"detectConfig"`
+	DeployScript  string       `json:"deployScript"`
+	StopScript    string       `json:"stopScript"`
+	RestartScript string       `json:"restartScript"`
 }
 
 func (c *ProcessConfig) IsValid() bool {
 	if !util.IpPattern.MatchString(c.Host) {
 		return false
 	}
-	if !c.Agent.IsValid() {
+	if !util.IpPortPattern.MatchString(c.AgentHost) {
+		return false
+	}
+	if len(c.AgentToken) > 1024 {
 		return false
 	}
 	if !c.DetectConfig.IsValid() {

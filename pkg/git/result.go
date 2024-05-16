@@ -58,7 +58,7 @@ func (r *ReadPipeResult) RangeStringLines(rangeFn func(int, string) (bool, error
 			return nil
 		}
 		if err != nil {
-			return nil
+			return err
 		}
 		if isPrefix {
 			continue

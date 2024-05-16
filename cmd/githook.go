@@ -9,7 +9,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/git/gitenv"
 	"github.com/LeeZXin/zall/pkg/githook"
-	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/httputil"
@@ -17,7 +16,6 @@ import (
 	"github.com/urfave/cli/v2"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -60,7 +58,6 @@ func runPreReceive(c *cli.Context) error {
 		if bizerr.IsBizErr(err) {
 			return err
 		}
-		writeLogFile(err.Error())
 		return errors.New("internal error")
 	}
 	return nil
@@ -125,7 +122,6 @@ func runPostReceive(c *cli.Context) error {
 		if bizerr.IsBizErr(err) {
 			return err
 		}
-		writeLogFile(err.Error())
 		return errors.New("internal error")
 	}
 	return nil
@@ -165,19 +161,4 @@ func newHttpClient() *http.Client {
 		},
 		Timeout: 5 * time.Second,
 	}
-}
-
-// writeLogFile 这里的异常日志看不到
-func writeLogFile(content string) error {
-	loggerPath, err := filepath.Abs("logs")
-	if err != nil {
-		return err
-	}
-	err = os.MkdirAll(loggerPath, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	loggerPath = filepath.Join(loggerPath, "git-error.log")
-	content = fmt.Sprintf("%s %s\n", time.Now().Format("2006-01-02 15:04:05.000"), content)
-	return util.AppendFile(loggerPath, []byte(content))
 }

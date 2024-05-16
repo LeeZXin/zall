@@ -78,7 +78,7 @@ func findConflictFiles(ctx context.Context, repoPath string, originHead, targetC
 }
 
 func lsFiles(ctx context.Context, repoPath string, args ...string) ([]lsFileLine, error) {
-	readPipe := NewCommand("ls-files").AddDynamicArgs(args...).RunWithReadPipe(ctx, WithDir(repoPath))
+	readPipe := NewCommand("ls-files").AddArgs(args...).RunWithReadPipe(ctx, WithDir(repoPath))
 	ret := make([]lsFileLine, 0)
 	if err := readPipe.RangeStringLines(func(_ int, line string) (bool, error) {
 		fields := strings.Fields(line)

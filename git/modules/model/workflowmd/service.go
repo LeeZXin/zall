@@ -19,9 +19,10 @@ func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 		WorkflowId:  reqDTO.WorkflowId,
 		TaskStatus:  reqDTO.TaskStatus,
 		TriggerType: reqDTO.TriggerType,
-		Workflow:    &reqDTO.Workflow,
 		Operator:    reqDTO.Operator,
 		Branch:      reqDTO.Branch,
+		YamlContent: reqDTO.YamlContent,
+		PrId:        reqDTO.PrId,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
@@ -88,12 +89,13 @@ func UpdateStepLogContent(ctx context.Context, taskId int64, jobName string, ste
 
 func InsertWorkflow(ctx context.Context, reqDTO InsertWorkflowReqDTO) error {
 	ret := Workflow{
+		Name:        reqDTO.Name,
+		Description: reqDTO.Desc,
 		RepoId:      reqDTO.RepoId,
 		YamlContent: reqDTO.YamlContent,
-		Agent:       &reqDTO.Agent,
-		Name:        reqDTO.Name,
 		Source:      &reqDTO.Source,
-		Description: reqDTO.Desc,
+		AgentHost:   reqDTO.AgentHost,
+		AgentToken:  reqDTO.AgentToken,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return err
@@ -102,10 +104,11 @@ func InsertWorkflow(ctx context.Context, reqDTO InsertWorkflowReqDTO) error {
 func UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("content", "agent_host", "agent_secret", "name").
+		Cols("content", "agent_host", "agent_token", "name").
 		Update(&Workflow{
 			YamlContent: reqDTO.Content,
-			Agent:       &reqDTO.Agent,
+			AgentHost:   reqDTO.AgentHost,
+			AgentToken:  reqDTO.AgentToken,
 			Name:        reqDTO.Name,
 		})
 	return rows == 1, err

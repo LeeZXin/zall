@@ -12,10 +12,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func ExitWithErrMsg(session ssh.Session, msg string) {
-	fmt.Fprint(session.Stderr(), msg+"\n")
+	fmt.Fprintf(session.Stderr(), "[%s] %s\n", time.Now().Format(time.DateTime), msg)
 	session.Exit(1)
 }
 

@@ -2,7 +2,8 @@
   <div style="padding:14px">
     <div class="container">
       <div class="title">
-        <span>创建工作流</span>
+        <span v-if="mode === 'create'">创建工作流</span>
+        <span v-if="mode === 'update'">编辑工作流</span>
       </div>
       <div class="section">
         <div class="section-title">工作流名称</div>
@@ -13,10 +14,7 @@
       <div class="section">
         <div class="section-title">工作流描述</div>
         <div class="section-body">
-          <a-textarea
-            :auto-size="{ minRows: 3, maxRows: 5 }"
-            v-model:value="formState.desc"
-          />
+          <a-textarea :auto-size="{ minRows: 3, maxRows: 5 }" v-model:value="formState.desc" />
           <div class="input-desc">简单的话来描述工作流的作用</div>
         </div>
       </div>
@@ -88,6 +86,11 @@ import {
   workflowDescRegexp
 } from "@/utils/regexp";
 const route = useRoute();
+const getMode = () => {
+  let s = route.path.split("/");
+  return s[s.length - 1];
+};
+const mode = getMode();
 const router = useRouter();
 const extensions = [yaml(), oneDark];
 const codemirroStyle = { height: "380px", width: "100%" };
@@ -194,10 +197,8 @@ const createOrUpdateWorkflow = () => {
     name: formState.name,
     repoId: parseInt(route.params.repoId),
     source: source,
-    agent: {
-      host: formState.agentHost,
-      token: formState.agentToken
-    },
+    agentHost: formState.agentHost,
+    agentToken: formState.agentToken,
     yamlContent: formState.yamlContent,
     desc: formState.desc
   };

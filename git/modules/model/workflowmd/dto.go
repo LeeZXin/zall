@@ -1,16 +1,13 @@
 package workflowmd
 
-import (
-	zssh "github.com/LeeZXin/zall/pkg/ssh"
-)
-
 type InsertTaskReqDTO struct {
 	WorkflowId  int64
 	TaskStatus  TaskStatus
 	TriggerType TriggerType
+	YamlContent string
 	Operator    string
 	Branch      string
-	Workflow    WorkflowCfg
+	PrId        int64
 }
 
 type InsertStepReqDTO struct {
@@ -26,16 +23,18 @@ type InsertWorkflowReqDTO struct {
 	RepoId      int64
 	Name        string
 	YamlContent string
-	Agent       zssh.AgentCfg
+	AgentHost   string
+	AgentToken  string
 	Source      Source
 	Desc        string
 }
 
 type UpdateWorkflowReqDTO struct {
-	Id      int64
-	Name    string
-	Content string
-	Agent   zssh.AgentCfg
+	Id         int64
+	Name       string
+	Content    string
+	AgentHost  string
+	AgentToken string
 }
 
 type ListTaskByWorkflowIdReqDTO struct {

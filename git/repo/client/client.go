@@ -357,8 +357,8 @@ func IndexRepo(ctx context.Context, req reqvo.IndexRepoReq) (reqvo.IndexRepoResp
 	return resp.Data, nil
 }
 
-func Merge(ctx context.Context, req reqvo.MergeReq) error {
-	var resp ginutil.BaseResp
+func Merge(ctx context.Context, req reqvo.MergeReq) (reqvo.DiffRefsResp, error) {
+	var resp ginutil.DataResp[reqvo.DiffRefsResp]
 	err := postHttp(
 		ctx,
 		"/api/v1/git/store/merge",
@@ -366,12 +366,12 @@ func Merge(ctx context.Context, req reqvo.MergeReq) error {
 		&resp,
 	)
 	if err != nil {
-		return err
+		return reqvo.DiffRefsResp{}, err
 	}
 	if !resp.IsSuccess() {
-		return bizerr.NewBizErr(resp.Code, resp.Message)
+		return reqvo.DiffRefsResp{}, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
-	return nil
+	return resp.Data, nil
 }
 
 func UploadPack(req reqvo.UploadPackReq, repoId int64, pusherAccount, pusherEmail, appUrl string) error {

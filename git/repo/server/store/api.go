@@ -366,12 +366,15 @@ func infoRefs(c *gin.Context) {
 func merge(c *gin.Context) {
 	var req reqvo.MergeReq
 	if util.ShouldBindJSON(&req, c) {
-		err := storeSrv.Merge(c, req)
+		resp, err := storeSrv.Merge(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		util.DefaultOkResponse(c)
+		c.JSON(http.StatusOK, ginutil.DataResp[reqvo.DiffRefsResp]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     resp,
+		})
 	}
 }
 
