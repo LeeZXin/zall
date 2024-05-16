@@ -100,7 +100,7 @@ func (r *ReadWritePipeResult) RangeStringLines(rangeFn func(int, string) (bool, 
 			return nil
 		}
 		if err != nil {
-			return nil
+			return err
 		}
 		if isPrefix {
 			continue
