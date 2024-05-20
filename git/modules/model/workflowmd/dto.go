@@ -8,6 +8,9 @@ type InsertTaskReqDTO struct {
 	Operator    string
 	Branch      string
 	PrId        int64
+	AgentHost   string
+	AgentToken  string
+	BizId       string
 }
 
 type InsertStepReqDTO struct {
@@ -35,6 +38,7 @@ type UpdateWorkflowReqDTO struct {
 	Content    string
 	AgentHost  string
 	AgentToken string
+	Desc       string
 }
 
 type ListTaskByWorkflowIdReqDTO struct {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/LeeZXin/zall/pkg/git/process"
+	"github.com/LeeZXin/zall/pkg/process"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/executor/completable"
@@ -15,14 +15,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
 
 var (
-	ThereHasBug = errors.New("there has bug")
+	ThereHasBug        = errors.New("there has bug")
+	ValidJobNameRegexp = regexp.MustCompile(`^\S+$`)
+	TaskCancelErr      = errors.New("task cancelled")
 )
 
 type GraphCfg struct {
@@ -39,15 +43,18 @@ func (c *GraphCfg) IsValid() error {
 	}
 	allJobNames := hashset.NewHashSet[string]()
 	// 检查是否有重复的jobName
-	for k, cfg := range c.Jobs {
+	for jobName, cfg := range c.Jobs {
+		if !ValidJobNameRegexp.MatchString(jobName) {
+			return fmt.Errorf("invalid jobName: %s", jobName)
+		}
 		if err := cfg.IsValid(); err != nil {
 			return err
 		}
 		// 有重复的名字
-		if allJobNames.Contains(k) {
-			return fmt.Errorf("job has duplicated Name: %v", k)
+		if allJobNames.Contains(jobName) {
+			return fmt.Errorf("job has duplicated Name: %v", jobName)
 		}
-		allJobNames.Add(k)
+		allJobNames.Add(jobName)
 	}
 	// 检查job needs
 	for k, cfg := range c.Jobs {
@@ -167,7 +174,7 @@ func (c *StepCfg) IsValid() error {
 type JobCfg struct {
 	Needs   []string  `json:"needs" yaml:"needs"`
 	Steps   []StepCfg `json:"steps" yaml:"steps"`
-	Timeout int64     `json:"timeout" yaml:"timeout"`
+	Timeout string    `json:"timeout" yaml:"timeout"`
 }
 
 func (c *JobCfg) String() string {
@@ -192,10 +199,12 @@ func (c *JobCfg) convertToJob(jobName string) *job {
 		steps = append(steps, s.convertToStep())
 	}
 	ctx := context.Background()
-	timout := time.Duration(c.Timeout) * time.Second
-	var cancelFn context.CancelFunc
-	if timout > 0 {
-		ctx, cancelFn = context.WithTimeout(ctx, timout)
+	timeout, _ := time.ParseDuration(c.Timeout)
+	var (
+		cancelFn context.CancelFunc
+	)
+	if timeout > 0 {
+		ctx, cancelFn = context.WithTimeout(ctx, timeout)
 	} else {
 		ctx, cancelFn = context.WithCancel(ctx)
 	}
@@ -211,6 +220,7 @@ func (c *JobCfg) convertToJob(jobName string) *job {
 
 type RunOpts struct {
 	Workdir        string
+	JobAfterFunc   func(error, JobRunStat)
 	StepOutputFunc func(StepOutputStat)
 	StepAfterFunc  func(error, StepRunStat)
 	Args           map[string]string
@@ -220,27 +230,35 @@ type StepRunStat struct {
 	JobName   string
 	Index     int
 	Duration  time.Duration
-	EventTime time.Time
+	BeginTime time.Time
 }
 
 type StepOutputStat struct {
 	JobName   string
 	Index     int
-	EventTime time.Time
+	BeginTime time.Time
 	Output    io.ReadCloser
 }
 
+type JobRunStat struct {
+	JobName   string
+	Duration  time.Duration
+	BeginTime time.Time
+}
+
 type Graph struct {
-	allJobs []*job
+	allJobs   []*job
+	lock      sync.Mutex
+	beginTime atomic.Value
 }
 
 func (g *Graph) ListJobInfo() []JobInfo {
 	ret, _ := listutil.Map(g.allJobs, func(t *job) (JobInfo, error) {
 		steps := make([]StepInfo, 0, len(t.steps))
-		for i, step := range t.steps {
+		for i, s := range t.steps {
 			steps = append(steps, StepInfo{
 				Index: i,
-				Name:  step.Name,
+				Name:  s.Name,
 			})
 		}
 		return JobInfo{
@@ -252,6 +270,8 @@ func (g *Graph) ListJobInfo() []JobInfo {
 }
 
 func (g *Graph) Run(opts RunOpts) error {
+	// 记录开始时间
+	g.beginTime.Store(time.Now())
 	if opts.Workdir != "" {
 		err := util.Mkdir(opts.Workdir)
 		if err != nil {
@@ -277,9 +297,17 @@ func (g *Graph) Run(opts RunOpts) error {
 	return ThereHasBug
 }
 
-func (g *Graph) Cancel() {
+func (g *Graph) SinceBeginTime() time.Duration {
+	val := g.beginTime.Load()
+	if val == nil {
+		return 0
+	}
+	return time.Since(val.(time.Time))
+}
+
+func (g *Graph) Cancel(err error) {
 	for _, j := range g.allJobs {
-		j.Cancel()
+		j.Cancel(err)
 	}
 }
 
@@ -351,7 +379,7 @@ func (s *step) Run(opts *RunOpts, j *job, index int) error {
 	go opts.StepOutputFunc(StepOutputStat{
 		JobName:   j.name,
 		Index:     index,
-		EventTime: beginTime,
+		BeginTime: beginTime,
 		Output:    reader,
 	})
 	if err == nil {
@@ -380,7 +408,7 @@ func (s *step) Run(opts *RunOpts, j *job, index int) error {
 		JobName:   j.name,
 		Index:     index,
 		Duration:  endTime.Sub(beginTime),
-		EventTime: beginTime,
+		BeginTime: beginTime,
 	})
 	return err
 }
@@ -427,34 +455,64 @@ func newCommand(ctx context.Context, line string, stdout, stderr io.Writer, work
 }
 
 type job struct {
-	name     string
-	steps    []*step
-	needs    *hashset.HashSet[*job]
-	next     *hashset.HashSet[*job]
-	ctx      context.Context
-	cancelFn context.CancelFunc
+	name       string
+	steps      []*step
+	needs      *hashset.HashSet[*job]
+	next       *hashset.HashSet[*job]
+	ctx        context.Context
+	customErr  atomic.Value
+	cancelFn   context.CancelFunc
+	cancelOnce sync.Once
 }
 
 func (j *job) Run(opts *RunOpts) error {
-	defer j.Cancel()
+	defer j.Cancel(nil)
+	var err error
+	beginTime := time.Now()
+	// 是否配置了超时
+	_, b := j.ctx.Deadline()
+	if b {
+		go func() {
+			select {
+			case <-j.ctx.Done():
+				if j.ctx.Err() == context.DeadlineExceeded {
+					j.Cancel(context.DeadlineExceeded)
+				}
+			}
+		}()
+	}
 	for i, s := range j.steps {
-		err := j.ctx.Err()
-		if err != nil {
-			return err
-		}
-		err = s.Run(opts, j, i)
-		if err != nil {
-			return err
+		err = j.ctx.Err()
+		if err == nil {
+			err = s.Run(opts, j, i)
+			if err != nil {
+				break
+			}
+		} else {
+			break
 		}
 	}
-	return nil
+	val := j.customErr.Load()
+	if val != nil {
+		err = val.(error)
+	}
+	opts.JobAfterFunc(err, JobRunStat{
+		JobName:   j.name,
+		Duration:  time.Since(beginTime),
+		BeginTime: beginTime,
+	})
+	return err
 }
 
-func (j *job) Cancel() {
-	j.cancelFn()
-	for _, s := range j.steps {
-		s.Kill()
-	}
+func (j *job) Cancel(err error) {
+	j.cancelOnce.Do(func() {
+		if err != nil {
+			j.customErr.Store(err)
+		}
+		for _, s := range j.steps {
+			s.Kill()
+		}
+	})
 }
 
 func graphJobs(jobs []*job, c map[string]JobCfg) {

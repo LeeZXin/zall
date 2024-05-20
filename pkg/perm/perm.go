@@ -21,6 +21,9 @@ var (
 		CanHandleWebhook:     true,
 		CanAccessToken:       true,
 		CanUpdateToken:       true,
+		CanAccessWorkflow:    true,
+		CanUpdateWorkflow:    true,
+		CanTriggerWorkflow:   true,
 	}
 	DefaultPermDetail = Detail{
 		TeamPerm:        DefaultTeamPerm,
@@ -86,6 +89,12 @@ type RepoPerm struct {
 	CanAccessToken bool `json:"canAccessToken"`
 	// 是否可编辑Token
 	CanUpdateToken bool `json:"canUpdateToken"`
+	// 查看工作流
+	CanAccessWorkflow bool `json:"canAccessWorkflow"`
+	// 编辑工作流
+	CanUpdateWorkflow bool `json:"canUpdateWorkflow"`
+	// 触发工作流
+	CanTriggerWorkflow bool `json:"canTriggerWorkflow"`
 }
 
 type TeamPerm struct {

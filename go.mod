@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/42wim/sshsig v0.0.0-20211121163825-841cf5bbc121
 	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
-	github.com/LeeZXin/zsf v1.1.68
+	github.com/LeeZXin/zsf v1.1.69
 	github.com/LeeZXin/zsf-utils v1.0.58
 	github.com/PaesslerAG/gval v1.2.2
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548
@@ -29,6 +29,7 @@ require (
 	golang.org/x/crypto v0.18.0
 	golang.org/x/sys v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
+	xorm.io/builder v0.3.11-0.20220531020008-1bd24a7dc978
 )
 
 require (
@@ -111,6 +112,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/strutil v1.2.0 // indirect
-	xorm.io/builder v0.3.11-0.20220531020008-1bd24a7dc978 // indirect
 	xorm.io/xorm v1.3.2 // indirect
 )

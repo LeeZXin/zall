@@ -19,13 +19,13 @@
 import { defineProps, h, useSlots } from "vue";
 const props = defineProps(["columns", "dataSource", "style", "label"]);
 const slots = useSlots();
-const CellRender = event => {
+const CellRender = params => {
   return slots.bodyCell
     ? slots.bodyCell({
-        dataIndex: event.dataIndex,
-        dataItem: event.dataItem
+        dataIndex: params.dataIndex,
+        dataItem: params.dataItem
       })
-    : h("span", null, event.dataItem[event.dataIndex]);
+    : h("span", null, params.dataItem[params.dataIndex]);
 };
 </script>
 <style scoped>

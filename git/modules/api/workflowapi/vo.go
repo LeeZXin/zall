@@ -21,6 +21,7 @@ type UpdateWorkflowReqVO struct {
 	Source      workflowmd.Source `json:"source"`
 	AgentHost   string            `json:"agentHost"`
 	AgentToken  string            `json:"agentToken"`
+	Desc        string            `json:"desc"`
 }
 
 type WorkflowWithLastTaskVO struct {
@@ -44,14 +45,32 @@ type TaskVO struct {
 	Operator    string                 `json:"operator"`
 	Created     string                 `json:"created"`
 	Branch      string                 `json:"branch"`
+	PrId        int64                  `json:"prId"`
+	Duration    int64                  `json:"duration"`
 }
 
 type StepVO struct {
-	JobName    string `json:"jobName"`
-	StepName   string `json:"stepName"`
-	StepIndex  int    `json:"stepIndex"`
-	LogContent string `json:"logContent"`
-	StepStatus string `json:"stepStatus"`
-	Created    string `json:"created"`
-	Updated    string `json:"updated"`
+	JobName    string                `json:"jobName"`
+	StepName   string                `json:"stepName"`
+	StepIndex  int                   `json:"stepIndex"`
+	LogContent string                `json:"logContent"`
+	StepStatus workflowmd.StepStatus `json:"stepStatus"`
+	Created    string                `json:"created"`
+	Duration   int64                 `json:"duration"`
+}
+
+type WorkflowVO struct {
+	Id          int64             `json:"id"`
+	Name        string            `json:"name"`
+	Desc        string            `json:"desc"`
+	RepoId      int64             `json:"repoId"`
+	YamlContent string            `json:"yamlContent"`
+	Source      workflowmd.Source `json:"source"`
+	AgentHost   string            `json:"agentHost"`
+	AgentToken  string            `json:"agentToken"`
+}
+
+type TaskWithStepsVO struct {
+	TaskVO
+	Steps []StepVO `json:"steps"`
 }

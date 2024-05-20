@@ -24,7 +24,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/git"
-	zssh "github.com/LeeZXin/zall/pkg/ssh"
+	"github.com/LeeZXin/zall/pkg/workflow"
 	"github.com/LeeZXin/zall/promagent/agent"
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/prop/modules/api/propapi"
@@ -84,9 +84,9 @@ func runZall(*cli.Context) error {
 	// for action
 	{
 		workflowapi.InitApi()
-		if static.GetBool("ssh.agent.enabled") {
-			logger.Logger.Info("ssh agent enabled")
-			lifeCycles = append(lifeCycles, zssh.NewAgentServer())
+		if static.GetBool("workflow.agent.enabled") {
+			logger.Logger.Info("workflow agent enabled")
+			lifeCycles = append(lifeCycles, workflow.NewAgentServer())
 		}
 	}
 	// for timer

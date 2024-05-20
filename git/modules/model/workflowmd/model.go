@@ -38,20 +38,9 @@ const (
 	TaskRunningStatus TaskStatus = iota + 1
 	TaskSuccessStatus
 	TaskFailStatus
+	TaskCancelStatus
+	TaskTimeoutStatus
 )
-
-func (t TaskStatus) Readable() string {
-	switch t {
-	case TaskRunningStatus:
-		return i18n.GetByKey(i18n.WorkflowTaskRunningStatus)
-	case TaskSuccessStatus:
-		return i18n.GetByKey(i18n.WorkflowTaskSuccessStatus)
-	case TaskFailStatus:
-		return i18n.GetByKey(i18n.WorkflowTaskFailStatus)
-	default:
-		return i18n.GetByKey(i18n.WorkflowTaskUnknownStatus)
-	}
-}
 
 const (
 	TaskTableName     = "zgit_workflow_task"
@@ -65,9 +54,13 @@ type Task struct {
 	TaskStatus  TaskStatus  `json:"taskStatus"`
 	TriggerType TriggerType `json:"triggerType"`
 	YamlContent string      `json:"yamlContent"`
+	AgentHost   string      `json:"agentHost"`
+	AgentToken  string      `json:"agentToken"`
 	Branch      string      `json:"branch"`
 	Operator    string      `json:"operator"`
 	PrId        int64       `json:"prId"`
+	Duration    int64       `json:"duration"`
+	BizId       string      `json:"bizId"`
 	Created     time.Time   `json:"created" xorm:"created"`
 	Updated     time.Time   `json:"updated" xorm:"updated"`
 }
@@ -109,6 +102,7 @@ type Step struct {
 	StepIndex  int        `json:"stepIndex"`
 	LogContent string     `json:"logContent"`
 	StepStatus StepStatus `json:"stepStatus"`
+	Duration   int64      `json:"duration"`
 	Created    time.Time  `json:"created" xorm:"created"`
 	Updated    time.Time  `json:"updated" xorm:"updated"`
 }

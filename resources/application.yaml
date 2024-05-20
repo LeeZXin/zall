@@ -4,6 +4,11 @@ application:
 ssh:
   proxy:
     port: 2222
+
+workflow:
+  callback:
+    url: http://127.0.0.1/api/v1/workflow/internal/taskCallBack
+    token: 123
   agent:
     enabled: true
     port: 6666

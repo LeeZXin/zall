@@ -593,7 +593,7 @@ const agreeReview = () => {
 .message-card > .text {
   padding: 14px;
 }
-.message-card:before {
+.message-card::before {
   content: " ";
   position: absolute;
   width: 10px;

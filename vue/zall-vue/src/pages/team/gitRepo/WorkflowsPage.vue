@@ -1,7 +1,7 @@
 <template>
   <div style="padding:14px">
     <div style="margin-bottom:10px">
-      <a-button type="primary" @click="gotoCreatePage">创建工作流</a-button>
+      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建工作流</a-button>
     </div>
     <ul class="workflow-list" v-if="workflowList.length > 0">
       <li v-for="item in workflowList" v-bind:key="item.id">
@@ -13,13 +13,13 @@
           <span>
             <a-tooltip placement="top" v-if="!item.lastTask || item.lastTask.taskStatus !== 1">
               <template #title>手动执行</template>
-              <span class="op">
+              <span class="op" @click="showBranchModal(item)">
                 <PlayCircleFilled />
               </span>
             </a-tooltip>
             <a-tooltip placement="top" v-if="item.lastTask?.taskStatus === 1">
-              <template #title>暂停执行</template>
-              <span class="op">
+              <template #title>停止执行</template>
+              <span class="op" @click="killTask(item)">
                 <PauseOutlined />
               </span>
             </a-tooltip>
@@ -30,11 +30,11 @@
                     <DeleteOutlined />
                     <span style="margin-left:4px">删除工作流</span>
                   </li>
-                  <li @click="deleteWorkflow(item)">
+                  <li @click="gotoDetailPage(item.id)">
                     <EditOutlined />
                     <span style="margin-left:4px">编辑工作流</span>
                   </li>
-                  <li @click="gotoDetailPage(item.id)">
+                  <li @click="gotoTasksPage(item)">
                     <EyeOutlined />
                     <span style="margin-left:4px">查看任务</span>
                   </li>
@@ -55,6 +55,10 @@
             <CloseCircleFilled style="color:darkred" />
             <span style="margin-left: 6px">执行失败</span>
           </div>
+          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 4">
+            <CloseCircleFilled style="color:darkred" />
+            <span style="margin-left: 6px">执行中止</span>
+          </div>
           <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 1">
             <LoadingOutlined />
             <span style="margin-left: 6px">执行中</span>
@@ -67,7 +71,7 @@
             class="no-wrap"
             style="margin-top:10px;"
             v-if="item.lastTask"
-          >{{item.lastTask.operator}}推送{{item.lastTask.branch}}触发</div>
+          >{{item.lastTask.operator}}推送{{item.lastTask.branch}}触发 {{readableTimeComparingNow(item.lastTask.created)}}</div>
           <div style="margin-top:6px;height:14px" v-else></div>
         </div>
       </li>
@@ -79,6 +83,18 @@
         </div>
       </template>
     </ZNoData>
+    <a-modal
+      v-model:open="branchModalOpen"
+      :title="branchModalTitle"
+      @ok="triggerWorkflow"
+      okText="立即触发"
+      cancelText="取消"
+    >
+      <div class="flex-center">
+        <div style="line-height:32px;font-size:14px;width:80px">分支:</div>
+        <a-input style="100%" v-model:value="triggerBranch" />
+      </div>
+    </a-modal>
   </div>
 </template>
 <script setup>
@@ -93,19 +109,30 @@ import {
   CloseCircleFilled,
   LoadingOutlined,
   ClockCircleOutlined,
-  PauseOutlined
+  PauseOutlined,
+  PlusOutlined
 } from "@ant-design/icons-vue";
 import ZNoData from "@/components/common/ZNoData";
-import { ref, createVNode } from "vue";
+import { ref, createVNode, onUnmounted, h } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
   listWorkflowRequest,
-  DeleteWorkflowRequest
+  deleteWorkflowRequest,
+  triggerWorkflowRequest,
+  killWorkflowTaskRequest
 } from "@/api/git/workflowApi";
 import { Modal, message } from "ant-design-vue";
+import { workflowBranchRegexp } from "@/utils/regexp";
+import { readableTimeComparingNow } from "@/utils/time";
+import { useWorkflowStore } from "@/pinia/workflowStore";
+const workflowStore = useWorkflowStore();
 const router = useRouter();
 const route = useRoute();
 const workflowList = ref([]);
+const branchModalOpen = ref(false);
+const branchModalTitle = ref("");
+const triggerBranch = ref("");
+const triggerWfId = ref(0);
 const gotoCreatePage = () => {
   router.push(`/gitRepo/${route.params.repoId}/workflow/create`);
 };
@@ -115,7 +142,19 @@ const listWorkflow = () => {
   });
 };
 const gotoDetailPage = id => {
-  router.push(`/gitRepo/${route.params.repoId}/workflow/${id}/tasks`);
+  router.push(`/gitRepo/${route.params.repoId}/workflow/${id}/update`);
+};
+const gotoTasksPage = item => {
+  workflowStore.id = item.id;
+  workflowStore.name = item.name;
+  workflowStore.desc = item.desc;
+  router.push(`/gitRepo/${route.params.repoId}/workflow/${item.id}/tasks`);
+};
+const showBranchModal = item => {
+  branchModalOpen.value = true;
+  triggerBranch.value = "";
+  branchModalTitle.value = item.name;
+  triggerWfId.value = item.id;
 };
 const deleteWorkflow = item => {
   Modal.confirm({
@@ -124,7 +163,7 @@ const deleteWorkflow = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      DeleteWorkflowRequest(item.id).then(() => {
+      deleteWorkflowRequest(item.id).then(() => {
         message.success("删除成功");
         listWorkflow();
       });
@@ -132,7 +171,40 @@ const deleteWorkflow = item => {
     onCancel() {}
   });
 };
+const triggerWorkflow = () => {
+  if (!workflowBranchRegexp.test(triggerBranch.value)) {
+    message.warn("分支格式错误");
+    return;
+  }
+  triggerWorkflowRequest(triggerWfId.value, triggerBranch.value).then(() => {
+    message.success("操作成功");
+    listWorkflow();
+    branchModalOpen.value = false;
+    return;
+  });
+};
 listWorkflow();
+const listInterval = setInterval(() => {
+  listWorkflow();
+}, 5000);
+onUnmounted(() => {
+  clearInterval(listInterval);
+});
+const killTask = item => {
+  Modal.confirm({
+    title: `你确定要停止${item.name}吗?`,
+    icon: createVNode(ExclamationCircleOutlined),
+    okText: "ok",
+    cancelText: "cancel",
+    onOk() {
+      killWorkflowTaskRequest(item.lastTask.id).then(() => {
+        message.success("停止成功");
+        listWorkflow();
+      });
+    },
+    onCancel() {}
+  });
+};
 </script>
 <style scoped>
 .op {

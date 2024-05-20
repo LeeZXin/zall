@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/LeeZXin/zall/pkg/git/process"
+	"github.com/LeeZXin/zall/pkg/process"
 	"github.com/LeeZXin/zsf/logger"
 	"io"
 	"os"

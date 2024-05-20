@@ -30,7 +30,7 @@ func (s *PullRequestSource) IsValid() bool {
 		return false
 	}
 	for _, branch := range s.Branches {
-		if len(branch) > 32 {
+		if len(branch) == 0 || len(branch) > 1024 {
 			return false
 		}
 	}
@@ -44,7 +44,7 @@ func (s BranchSource) IsValid() bool {
 		return false
 	}
 	for _, branch := range s {
-		if len(branch) > 32 {
+		if len(branch) == 0 || len(branch) > 1024 {
 			return false
 		}
 	}

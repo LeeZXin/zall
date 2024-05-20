@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
+	"time"
 )
 
 func IsWorkflowNameValid(name string) bool {
@@ -19,23 +20,27 @@ func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 		WorkflowId:  reqDTO.WorkflowId,
 		TaskStatus:  reqDTO.TaskStatus,
 		TriggerType: reqDTO.TriggerType,
-		Operator:    reqDTO.Operator,
-		Branch:      reqDTO.Branch,
 		YamlContent: reqDTO.YamlContent,
+		AgentHost:   reqDTO.AgentHost,
+		AgentToken:  reqDTO.AgentToken,
+		Branch:      reqDTO.Branch,
+		Operator:    reqDTO.Operator,
 		PrId:        reqDTO.PrId,
+		BizId:       reqDTO.BizId,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
 }
 
-func UpdateTaskStatusWithOldStatus(ctx context.Context, taskId int64, oldStatus, newStatus TaskStatus) (bool, error) {
+func UpdateTaskStatusAndDuration(ctx context.Context, taskId int64, oldStatus, newStatus TaskStatus, duration time.Duration) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", taskId).
 		And("task_status = ?", oldStatus).
-		Cols("task_status").
+		Cols("task_status", "duration").
 		Limit(1).
 		Update(&Task{
 			TaskStatus: newStatus,
+			Duration:   duration.Milliseconds(),
 		})
 	return rows == 1, err
 }
@@ -58,6 +63,21 @@ func BatchInsertSteps(ctx context.Context, reqDTO []InsertStepReqDTO) ([]Step, e
 	return listutil.Map(ret, func(t *Step) (Step, error) {
 		return *t, nil
 	})
+}
+
+func UpdateStepStatusAndDuration(ctx context.Context, taskId int64, jobName string, stepIndex int, oldStatus, newStatus StepStatus, duration time.Duration) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("task_id = ?", taskId).
+		And("job_name = ?", jobName).
+		And("step_status = ?", oldStatus).
+		And("step_index = ?", stepIndex).
+		Cols("step_status", "duration").
+		Limit(1).
+		Update(&Step{
+			StepStatus: newStatus,
+			Duration:   duration.Milliseconds(),
+		})
+	return rows == 1, err
 }
 
 func UpdateStepStatus(ctx context.Context, taskId int64, jobName string, stepIndex int, oldStatus, newStatus StepStatus) (bool, error) {
@@ -104,12 +124,13 @@ func InsertWorkflow(ctx context.Context, reqDTO InsertWorkflowReqDTO) error {
 func UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("content", "agent_host", "agent_token", "name").
+		Cols("yaml_content", "agent_host", "agent_token", "name", "description").
 		Update(&Workflow{
 			YamlContent: reqDTO.Content,
 			AgentHost:   reqDTO.AgentHost,
 			AgentToken:  reqDTO.AgentToken,
 			Name:        reqDTO.Name,
+			Description: reqDTO.Desc,
 		})
 	return rows == 1, err
 }
@@ -183,4 +204,10 @@ func DeleteTasksByWorkflowId(ctx context.Context, workflowId int64) error {
 func DeleteStepsByWorkflowId(ctx context.Context, workflowId int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).Where("workflow_id = ?", workflowId).Delete(new(Step))
 	return err
+}
+
+func GetTaskByBizId(ctx context.Context, bizId string) (Task, bool, error) {
+	var ret Task
+	b, err := xormutil.MustGetXormSession(ctx).Where("biz_id = ?", bizId).Get(&ret)
+	return ret, b, err
 }

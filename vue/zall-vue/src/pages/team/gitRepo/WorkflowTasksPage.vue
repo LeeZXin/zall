@@ -1,19 +1,31 @@
 <template>
   <div style="padding:14px">
-    <ZTable :columns="columns" :dataSource="taskList" label="任务列表" style="margin-top:10px" v-if="taskList.length > 0">
+    <div class="workflow-name">{{workflowStore.name}}</div>
+    <div class="workflow-desc">{{workflowStore.desc}}</div>
+    <ZTable
+      :columns="columns"
+      :dataSource="taskList"
+      label="任务列表"
+      style="margin-top:10px"
+      v-if="taskList.length > 0"
+    >
       <template #bodyCell="{dataIndex, dataItem}">
-        <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
+        <span v-if="dataIndex === 'created'">{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
+        <span v-else-if="dataIndex === 'triggerType'">{{triggerTypeMap[dataItem[dataIndex]]}}</span>
+        <PrIdRender v-else-if="dataIndex === 'prId'" :prId="dataItem[dataIndex]" />
+        <TaskStatusTag :status="dataItem[dataIndex]" v-else-if="dataIndex === 'taskStatus'" />
+        <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <a-popover placement="bottomRight" trigger="click">
             <template #content>
               <ul class="op-list">
                 <li>
                   <eye-outlined />
-                  <span style="margin-left:4px" @click="gotoTaskDetail">查看</span>
+                  <span style="margin-left:4px" @click="gotoTaskDetail(dataItem.id)">查看详情</span>
                 </li>
-                <li>
+                <li v-if="dataItem.taskStatus === 1" @click="killTask(dataItem.id)">
                   <close-outlined />
-                  <span style="margin-left:4px">停止</span>
+                  <span style="margin-left:4px">停止任务</span>
                 </li>
               </ul>
             </template>
@@ -24,7 +36,7 @@
         </div>
       </template>
     </ZTable>
-    <ZNoData v-else/>
+    <ZNoData v-else />
     <a-pagination
       v-model:current="currPage"
       :total="totalCount"
@@ -32,33 +44,51 @@
       :pageSize="pageSize"
       style="margin-top:10px"
       v-show="totalCount > pageSize"
-      @change="()=>listBranch()"
+      @change="()=>paginationChange()"
     />
-    
   </div>
 </template>
 <script setup>
+import PrIdTag from "@/components/git/PrIdTag";
+import TaskStatusTag from "@/components/git/TaskStatusTag";
 import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import {
+  listTaskRequest,
+  killWorkflowTaskRequest
+} from "@/api/git/workflowApi";
+import {
   EyeOutlined,
   CloseOutlined,
-  EllipsisOutlined
+  EllipsisOutlined,
+  ExclamationCircleOutlined
 } from "@ant-design/icons-vue";
-import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { ref, createVNode, h, onUnmounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { readableTimeComparingNow } from "@/utils/time";
+import { Modal, message } from "ant-design-vue";
+import { useWorkflowStore } from "@/pinia/workflowStore";
+const workflowStore = useWorkflowStore();
 const totalCount = ref(0);
 const pageSize = 10;
 const currPage = ref(1);
+const route = useRoute();
 const router = useRouter();
 const taskList = ref([]);
-
+const triggerTypeMap = {
+  1: "自动触发",
+  2: "手动触发"
+};
+const PrIdRender = params => {
+  return params.prId > 0
+    ? h(PrIdTag, {
+        repoId: route.params.repoId,
+        prId: params.prId
+      })
+    : h("span");
+};
+const listInterval = ref(null);
 const columns = ref([
-  {
-    title: "工作流名称",
-    dataIndex: "name",
-    key: "name"
-  },
   {
     title: "触发方式",
     dataIndex: "triggerType",
@@ -80,22 +110,91 @@ const columns = ref([
     key: "created"
   },
   {
+    title: "触发分支",
+    dataIndex: "branch",
+    key: "branch"
+  },
+  {
+    title: "关联合并请求",
+    dataIndex: "prId",
+    key: "prId"
+  },
+  {
     title: "操作",
     dataIndex: "operation",
     key: "operation"
   }
 ]);
-const gotoTaskDetail = () => {
-  router.push("/");
+const gotoTaskDetail = id => {
+  router.push(`/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/${id}/steps`);
 };
+const listTask = () => {
+  listTaskRequest(route.params.workflowId, {
+    pageNum: currPage.value,
+    pageSize
+  }).then(res => {
+    totalCount.value = res.totalCount;
+    let runningTask = res.data.find(item => {
+      return item.taskStatus === 1;
+    });
+    if (runningTask) {
+      if (!listInterval.value) {
+        listInterval.value = setInterval(listTask, 5000);
+      }
+    } else {
+      clearListInterval();
+    }
+    taskList.value = res.data.map(item => {
+      return {
+        ...item,
+        key: item.id
+      };
+    });
+  });
+};
+const killTask = id => {
+  Modal.confirm({
+    title: `你确定要停止${workflowStore.name}吗?`,
+    icon: createVNode(ExclamationCircleOutlined),
+    okText: "ok",
+    cancelText: "cancel",
+    onOk() {
+      killWorkflowTaskRequest(id).then(() => {
+        message.success("停止成功");
+        listTask();
+      });
+    },
+    onCancel() {}
+  });
+};
+const clearListInterval = () => {
+  if (listInterval.value) {
+    clearInterval(listInterval.value);
+    listInterval.value = null;
+  }
+};
+const paginationChange = () => {
+  clearListInterval();
+  listTask();
+};
+onUnmounted(() => {
+  clearListInterval();
+});
+if (workflowStore.id === 0) {
+  router.push(`/gitRepo/${route.params.repoId}/workflow/list`)
+} else {
+  listTask();
+}
+
 </script>
 <style scoped>
-.header {
-  font-size: 14px;
-  cursor: pointer;
+.workflow-name {
+  font-size: 16px;
   margin-bottom: 10px;
 }
-.header:hover {
-  color: #1677ff;
+.workflow-desc {
+  font-size: 12px;
+  color: gray;
+  margin-bottom: 20px;
 }
 </style>

@@ -14,7 +14,7 @@
         @nodes-initialized="layoutGraph"
       >
         <template #node-custom="nodeProps">
-          <ActionNode v-bind="nodeProps" />
+          <WorkflowNode v-bind="nodeProps" />
         </template>
       </VueFlow>
     </div>
@@ -31,7 +31,7 @@
 </template>
 <script setup>
 import ActionSteps from "@/components/action/ActionSteps";
-import ActionNode from "@/components/vueflow/ActionNode";
+import WorkflowNode from "@/components/vueflow/WorkflowNode";
 import { ArrowLeftOutlined } from "@ant-design/icons-vue";
 import { ref, nextTick } from "vue";
 import { useRouter } from "vue-router";

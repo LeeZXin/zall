@@ -3,10 +3,12 @@ package workflowapi
 import (
 	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/workflow"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zsf/property/static"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
 	"net/http"
@@ -28,15 +30,68 @@ func InitApi() {
 			// 手动触发工作流
 			group.PUT("/trigger/:workflowId", triggerWorkflow)
 			// 工作流详情
-			//group.GET("/detail/:workflowId", getWorkflowDetail)
+			group.GET("/detail/:workflowId", getWorkflowDetail)
 		}
 		group = e.Group("/api/workflowTask", apisession.CheckLogin)
 		{
+			// 停止工作流
+			group.PUT("/kill/:taskId", killWorkflowTask)
+			// 获取任务详情
+			group.GET("/detail/:taskId", getWorkflowTask)
 			// 获取执行任务列表
 			group.GET("/list/:workflowId", listTask)
 			// 获取执行任务详情
 			group.GET("/steps/:taskId", getTaskSteps)
 		}
+		e.POST("/api/v1/workflow/internal/taskCallBack", internalTaskCallback)
+	})
+}
+
+func internalTaskCallback(c *gin.Context) {
+	if c.GetHeader("Authorization") != static.GetString("workflow.callback.token") {
+		c.String(http.StatusForbidden, "invalid token")
+		return
+	}
+	var req workflow.TaskStatus
+	if ginutil.ShouldBind(&req, c) {
+		workflowsrv.Inner.TaskCallback(c.Query("taskId"), req)
+		c.String(http.StatusOK, "")
+	}
+}
+
+func killWorkflowTask(c *gin.Context) {
+	err := workflowsrv.Outer.KillWorkflowTask(c, workflowsrv.KillWorkflowTaskReqDTO{
+		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
+}
+
+func getWorkflowDetail(c *gin.Context) {
+	detail, err := workflowsrv.Outer.GetWorkflowDetail(c, workflowsrv.GetWorkflowDetailReqDTO{
+		WorkflowId: cast.ToInt64(c.Param("workflowId")),
+		Operator:   apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[WorkflowVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: WorkflowVO{
+			Id:          detail.Id,
+			Name:        detail.Name,
+			Desc:        detail.Desc,
+			RepoId:      detail.RepoId,
+			YamlContent: detail.YamlContent,
+			Source:      detail.Source,
+			AgentHost:   detail.AgentHost,
+			AgentToken:  detail.AgentToken,
+		},
 	})
 }
 
@@ -110,6 +165,7 @@ func updateWorkflow(c *gin.Context) {
 			AgentHost:   req.AgentHost,
 			AgentToken:  req.AgentToken,
 			Source:      req.Source,
+			Desc:        req.Desc,
 			Operator:    apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -123,6 +179,7 @@ func updateWorkflow(c *gin.Context) {
 func triggerWorkflow(c *gin.Context) {
 	err := workflowsrv.Outer.TriggerWorkflow(c, workflowsrv.TriggerWorkflowReqDTO{
 		WorkflowId: cast.ToInt64(c.Param("workflowId")),
+		Branch:     c.Query("branch"),
 		Operator:   apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -161,10 +218,12 @@ func task2Vo(t workflowsrv.TaskDTO) (TaskVO, error) {
 		Id:          t.Id,
 		TaskStatus:  t.TaskStatus,
 		TriggerType: t.TriggerType,
-		YamlContent: t.YamlContent,
 		Operator:    t.Operator,
+		YamlContent: t.YamlContent,
 		Created:     t.Created.Format(time.DateTime),
 		Branch:      t.Branch,
+		PrId:        t.PrId,
+		Duration:    t.Duration,
 	}, nil
 }
 
@@ -177,19 +236,41 @@ func getTaskSteps(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(steps, func(t workflowsrv.StepDTO) (StepVO, error) {
-		return StepVO{
-			JobName:    t.JobName,
-			StepName:   t.StepName,
-			StepIndex:  t.StepIndex,
-			LogContent: t.LogContent,
-			StepStatus: t.StepStatus.Readable(),
-			Created:    t.Created.Format(time.DateTime),
-			Updated:    t.Updated.Format(time.DateTime),
-		}, nil
-	})
+	data, _ := listutil.Map(steps, step2Vo)
 	c.JSON(http.StatusOK, ginutil.DataResp[[]StepVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     data,
+	})
+}
+
+func step2Vo(t workflowsrv.StepDTO) (StepVO, error) {
+	return StepVO{
+		JobName:    t.JobName,
+		StepName:   t.StepName,
+		StepIndex:  t.StepIndex,
+		LogContent: t.LogContent,
+		StepStatus: t.StepStatus,
+		Created:    t.Created.Format(time.DateTime),
+		Duration:   t.Duration,
+	}, nil
+}
+
+func getWorkflowTask(c *gin.Context) {
+	detail, err := workflowsrv.Outer.GetTaskDetail(c, workflowsrv.GetTaskDetailReqDTO{
+		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	taskVo, _ := task2Vo(detail.TaskDTO)
+	stepVos, _ := listutil.Map(detail.Steps, step2Vo)
+	c.JSON(http.StatusOK, ginutil.DataResp[TaskWithStepsVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: TaskWithStepsVO{
+			TaskVO: taskVo,
+			Steps:  stepVos,
+		},
 	})
 }

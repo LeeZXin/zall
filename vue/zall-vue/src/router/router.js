@@ -153,9 +153,17 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/gitRepo/HandleWorkflowPage")
             }, {
+                path: "/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/gitRepo/HandleWorkflowPage")
+            }, {
                 path: "/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/tasks",
                 component: () =>
                     import ("../pages/team/gitRepo/WorkflowTasksPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/:taskId(\\d+)/steps",
+                component: () =>
+                    import ("../pages/team/gitRepo/WorkflowStepsPage")
             }]
         },
         {

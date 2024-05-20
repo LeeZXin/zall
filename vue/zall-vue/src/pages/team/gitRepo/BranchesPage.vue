@@ -4,10 +4,7 @@
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'pullRequest'">
           <template v-if="dataItem[dataIndex]">
-            <a-button
-              type="link"
-              @click="toPrDetail(dataItem[dataIndex].id)"
-            >#{{dataItem[dataIndex].id}}</a-button>
+            <PrIdTag :repoId="route.params.repoId" :prId="dataItem[dataIndex].id"/>
             <PrStatusTag :status="dataItem[dataIndex].prStatus" />
           </template>
         </template>
@@ -66,6 +63,7 @@
   </div>
 </template>
 <script setup>
+import PrIdTag from "@/components/git/PrIdTag";
 import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import { ref, createVNode } from "vue";
@@ -150,9 +148,6 @@ const deleteBranch = branch => {
     },
     onCancel() {}
   });
-};
-const toPrDetail = id => {
-  router.push(`/gitRepo/${route.params.repoId}/pullRequest/${id}/detail`);
 };
 const goToHistoryCommits = branch => {
   router.push(`/gitRepo/${route.params.repoId}/commit/list/${branch}`);

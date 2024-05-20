@@ -5,19 +5,22 @@
 import { defineProps } from "vue";
 const props = defineProps(["status"]);
 const colorMap = {
-  1: "green",
-  2: "red",
-  3: "purple"
+  1: "purple",
+  2: "green",
+  3: "red",
+  4: "red"
 };
 // 转化请求状态
 const convertStatus = status => {
   switch (status) {
     case 1:
-      return "已打开";
+      return "执行中";
     case 2:
-      return "已关闭";
+      return "成功";
     case 3:
-      return "已合并";
+      return "失败";
+    case 4:
+        return "中止";
     default:
       return "未知";
   }

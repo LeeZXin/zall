@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Handle type="target" :position="Position.Left" />
+    <Handle type="target" :position="Position.Left" v-if="props.data.hasLeftHandle"/>
     <div class="node" :class="{
         'node-selected': props.selected
     }">
@@ -25,7 +25,7 @@
         <span style="padding-left:6px">失败</span>
       </div>
     </div>
-    <Handle type="source" :position="Position.Right" />
+    <Handle type="source" :position="Position.Right" v-if="props.data.hasRightHandle"/>
   </div>
 </template>
 <script setup>
@@ -39,32 +39,32 @@ import {
 } from "@ant-design/icons-vue";
 
 // props were passed from the slot using `v-bind="customNodeProps"`
-const props = defineProps(["label", "selected"]);
+const props = defineProps(["label", "selected", "data"]);
 </script>
 <style scoped>
 .node {
   border-radius: 4px;
   border: 1px solid #d9d9d9;
-  padding: 6px;
-  width: 160px;
+  padding: 10px;
+  width: 240px;
   background-color: white;
 }
 .node-selected {
   border-color: black;
 }
 .node > .label {
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .node > .status {
-  font-size: 10px;
+  font-size: 14px;
 }
 .label-duration {
   float: right;
   color: gray;
-  font-size: 10px;
+  font-size: 14px;
 }
 </style>

@@ -76,7 +76,11 @@ import { yaml } from "@codemirror/lang-yaml";
 import { oneDark } from "@codemirror/theme-one-dark";
 import jsyaml from "js-yaml";
 import { Modal, message } from "ant-design-vue";
-import { createWorkflowRequest } from "@/api/git/workflowApi";
+import {
+  createWorkflowRequest,
+  getWorkflowDetailRequest,
+  updateWorkflowRequest
+} from "@/api/git/workflowApi";
 import { useRouter, useRoute } from "vue-router";
 import {
   workflowNameRegexp,
@@ -99,6 +103,7 @@ const radioStyle = reactive({
   alignItems: "flex-start"
 });
 const formState = reactive({
+  id: 0,
   name: "",
   agentHost: "",
   agentToken: "",
@@ -193,19 +198,51 @@ const createOrUpdateWorkflow = () => {
       };
       break;
   }
-  let httpReq = {
-    name: formState.name,
-    repoId: parseInt(route.params.repoId),
-    source: source,
-    agentHost: formState.agentHost,
-    agentToken: formState.agentToken,
-    yamlContent: formState.yamlContent,
-    desc: formState.desc
-  };
-  createWorkflowRequest(httpReq).then(() => {
-    router.push(`/gitRepo/${route.params.repoId}/workflow/list`);
-  });
+  if (mode === "update") {
+    let httpReq = {
+      name: formState.name,
+      workflowId: formState.id,
+      source: source,
+      agentHost: formState.agentHost,
+      agentToken: formState.agentToken,
+      yamlContent: formState.yamlContent,
+      desc: formState.desc
+    };
+    updateWorkflowRequest(httpReq).then(() => {
+      message.success("操作成功");
+    });
+  } else if (mode === "create") {
+    let httpReq = {
+      name: formState.name,
+      repoId: parseInt(route.params.repoId),
+      source: source,
+      agentHost: formState.agentHost,
+      agentToken: formState.agentToken,
+      yamlContent: formState.yamlContent,
+      desc: formState.desc
+    };
+    createWorkflowRequest(httpReq).then(() => {
+      router.push(`/gitRepo/${route.params.repoId}/workflow/list`);
+    });
+  }
 };
+if (mode === "update") {
+  getWorkflowDetailRequest(route.params.workflowId).then(res => {
+    let wf = res.data;
+    formState.id = wf.id;
+    formState.name = wf.name;
+    formState.agentHost = wf.agentHost;
+    formState.agentToken = wf.agentToken;
+    formState.yamlContent = wf.yamlContent;
+    if (wf.source.sourceType === 1) {
+      formState.wildBranches = wf.source.branchSource.join(";");
+    } else if (wf.source.sourceType === 2) {
+      formState.wildBranches = wf.source.pullRequestSource.branches.join(";");
+    }
+    formState.desc = wf.desc;
+    formState.source = wf.source.sourceType;
+  });
+}
 </script>
 <style scoped>
 .format-yaml-text {

@@ -242,7 +242,7 @@ const props = defineProps(["stat", "head", "target", "repoId"]);
   background-color: #ffd7d5;
   border-color: #cf222e;
 }
-.blob-code-marker:before {
+.blob-code-marker::before {
   position: absolute;
   top: 1px;
   left: 8px;
