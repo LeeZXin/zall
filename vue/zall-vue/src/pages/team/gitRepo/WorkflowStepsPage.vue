@@ -26,7 +26,11 @@
       <li>
         <div class="info-name">关联合并请求</div>
         <div class="info-value">
-          <PrIdTag :prId="taskStore.prId" :repoId="route.params.repoId" v-if="taskStore.prId && taskStore.prId > 0"/>
+          <PrIdTag
+            :prId="taskStore.prId"
+            :repoId="route.params.repoId"
+            v-if="taskStore.prId && taskStore.prId > 0"
+          />
         </div>
       </li>
     </ul>
@@ -39,7 +43,7 @@
             <check-circle-filled style="color:green" v-else-if="taskInfo.status === 'success'" />
             <close-circle-filled
               style="color:red"
-              v-else-if="['fail', 'timeout', 'queue', 'cancel'].indexOf(taskInfo.status)"
+              v-else-if="['fail', 'timeout', 'cancel'].find(item=>item===taskInfo.status)"
             />
             <play-circle-outlined v-else />
             <span style="padding-left:6px">{{t(statusMap[taskInfo.status])}}</span>
@@ -83,7 +87,7 @@
           >{{job}}</li>
         </ul>
       </div>
-      <div class="right" v-if="jobInfo.status.length > 0">
+      <div class="right" v-if="jobInfo.status.length > 0 && jobInfo.status !== 'unknown'">
         <div class="run-status">
           <span>{{t(statusMap[jobInfo.status])}}</span>
           <span style="margin-left:8px">{{readableDurationWrap(jobInfo.duration)}}</span>
@@ -167,11 +171,11 @@ const { findNode } = useVueFlow();
 const { t } = useI18n();
 const taskStore = useWorkflowTaskStore();
 const taskInfo = reactive({
-  status: "",
+  status: "unknown",
   duration: 0
 });
 const jobInfo = reactive({
-  status: "",
+  status: "unknown",
   duration: 0
 });
 const router = useRouter();
