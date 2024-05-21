@@ -547,14 +547,42 @@ func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO)
 	if err != nil {
 		return workflow.TaskStatus{}, err
 	}
-	status, err := workflow.
+	ret, err := workflow.
 		NewAgentCommand(task.AgentHost, task.AgentToken, "").
 		GetWorkflowTaskStatus(task.BizId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return workflow.TaskStatus{}, util.InternalError(err)
 	}
-	return status, nil
+	// 检查结果和数据库是否一致
+	{
+		remoteStatus := mapTaskStatus(ret.Status)
+		if remoteStatus > -1 && remoteStatus != task.TaskStatus {
+			duration, _ := time.ParseDuration(fmt.Sprintf("%dms", ret.Duration))
+			workflowmd.UpdateTaskStatusAndDuration(
+				ctx, task.Id, task.TaskStatus, remoteStatus, duration)
+		}
+	}
+	return ret, nil
+}
+
+func mapTaskStatus(status string) workflowmd.TaskStatus {
+	switch status {
+	case workflow.SuccessStatus:
+		return workflowmd.TaskSuccessStatus
+	case workflow.QueueStatus:
+		return workflowmd.TaskQueueStatus
+	case workflow.CancelStatus:
+		return workflowmd.TaskCancelStatus
+	case workflow.TimeoutStatus:
+		return workflowmd.TaskTimeoutStatus
+	case workflow.FailStatus:
+		return workflowmd.TaskFailStatus
+	case workflow.RunningStatus:
+		return workflowmd.TaskRunningStatus
+	default:
+		return -1
+	}
 }
 
 // GetLogContent 获取日志内容
