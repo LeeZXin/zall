@@ -1,31 +1,35 @@
 <template>
   <div>
-    <Handle type="target" :position="Position.Left" v-if="props.data.hasLeftHandle"/>
+    <Handle type="target" :position="Position.Left" v-if="props.data.hasLeftHandle" />
     <div class="node" :class="{
         'node-selected': props.selected
     }">
       <div class="label">
         <span style="font-weight:bold;">{{ props.label }}</span>
-        <span class="label-duration">1m12s</span>
+        <span class="label-duration">{{props.data.duration}}</span>
       </div>
-      <div class="status" v-if="props.data === 1">
+      <div class="status" v-if="props.data.status === 'running'">
         <rocket-outlined />
         <span style="padding-left:6px">运行中</span>
       </div>
-      <div class="status" v-if="props.data === 2">
-        <play-circle-outlined />
-        <span style="padding-left:6px">未执行</span>
-      </div>
-      <div class="status" v-if="props.data === 3">
+      <div class="status" v-else-if="props.data.status === 'success'">
         <check-circle-filled style="color:green" />
         <span style="padding-left:6px">成功</span>
       </div>
-      <div class="status">
+      <div class="status" v-else-if="props.data.status === 'fail'">
         <close-circle-filled style="color:red" />
         <span style="padding-left:6px">失败</span>
       </div>
+      <div class="status" v-else-if="props.data.status === 'timeout'">
+        <close-circle-filled style="color:red" />
+        <span style="padding-left:6px">超时</span>
+      </div>
+      <div class="status" v-else>
+        <play-circle-outlined />
+        <span style="padding-left:6px">未执行</span>
+      </div>
     </div>
-    <Handle type="source" :position="Position.Right" v-if="props.data.hasRightHandle"/>
+    <Handle type="source" :position="Position.Right" v-if="props.data.hasRightHandle" />
   </div>
 </template>
 <script setup>
@@ -37,7 +41,6 @@ import {
   CheckCircleFilled,
   CloseCircleFilled
 } from "@ant-design/icons-vue";
-
 // props were passed from the slot using `v-bind="customNodeProps"`
 const props = defineProps(["label", "selected", "data"]);
 </script>

@@ -2,6 +2,7 @@ package workflowsrv
 
 import (
 	"context"
+	"fmt"
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
@@ -15,11 +16,13 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"gopkg.in/yaml.v3"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,7 +35,7 @@ const (
 type innerImpl struct{}
 
 // TaskCallback 工作流回调
-func (s *innerImpl) TaskCallback(taskId string, task workflow.TaskStatus) {
+func (s *innerImpl) TaskCallback(taskId string, task workflow.TaskStatusCallbackReq) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	taskmd, b, err := workflowmd.GetTaskByBizId(ctx, taskId)
@@ -43,21 +46,29 @@ func (s *innerImpl) TaskCallback(taskId string, task workflow.TaskStatus) {
 	if !b {
 		return
 	}
-	var finalStatus workflowmd.TaskStatus
+	var (
+		oldStatus, finalStatus workflowmd.TaskStatus
+	)
 	switch task.Status {
 	case workflow.SuccessStatus:
+		oldStatus = workflowmd.TaskRunningStatus
 		finalStatus = workflowmd.TaskSuccessStatus
 	case workflow.FailStatus:
+		oldStatus = workflowmd.TaskRunningStatus
 		finalStatus = workflowmd.TaskFailStatus
 	case workflow.TimeoutStatus:
+		oldStatus = workflowmd.TaskRunningStatus
 		finalStatus = workflowmd.TaskTimeoutStatus
+	case workflow.RunningStatus:
+		oldStatus = workflowmd.TaskQueueStatus
+		finalStatus = workflowmd.TaskRunningStatus
 	default:
 		return
 	}
 	duration, _ := time.ParseDuration(strconv.FormatInt(task.Duration, 10) + "ms")
 	_, err = workflowmd.UpdateTaskStatusAndDuration(ctx,
 		taskmd.Id,
-		workflowmd.TaskRunningStatus,
+		oldStatus,
 		finalStatus,
 		duration,
 	)
@@ -89,7 +100,7 @@ func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerTyp
 	bizId := now.Format("2006010215") + idutil.RandomUuid()
 	task, err := workflowmd.InsertTask(ctx, workflowmd.InsertTaskReqDTO{
 		WorkflowId:  wf.Id,
-		TaskStatus:  workflowmd.TaskRunningStatus,
+		TaskStatus:  workflowmd.TaskQueueStatus,
 		TriggerType: triggerType,
 		YamlContent: wf.YamlContent,
 		Operator:    operator,
@@ -103,26 +114,33 @@ func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerTyp
 		logger.Logger.Error(err)
 		return err
 	}
-	_, err = workflowmd.UpdateLastTaskIdByWorkflowId(ctx, wf.Id, task.Id)
-	if err != nil {
-		logger.Logger.Error(err)
-		return err
+	url := static.GetString("workflow.callback.url")
+	if url == "" {
+		url = fmt.Sprintf("http://%s%d/api/v1/workflow/internal/taskCallBack", common.GetLocalIP(), common.HttpServerPort())
 	}
-	// 把合并请求和工作流关联起来
-	if prId > 0 {
-		pullrequestmd.BatchInsertTimeline(ctx, []pullrequestmd.InsertTimelineReqDTO{
-			{
-				PrId:    prId,
-				Action:  pullrequestmd.NewWorkflowAction(task.Id),
-				Account: operator,
-			},
-		})
-	}
-	return workflow.NewAgentCommand(wf.AgentHost, wf.AgentToken, "").
+	err = workflow.NewAgentCommand(wf.AgentHost, wf.AgentToken, "").
 		ExecuteWorkflow(wf.YamlContent, bizId, map[string]string{
-			action.EnvCallBackUrl:   static.GetString("workflow.callback.url"),
+			action.EnvCallBackUrl:   url,
 			action.EnvCallBackToken: static.GetString("workflow.callback.token"),
 		})
+	if err != nil {
+		if strings.Contains(err.Error(), "out of capacity") {
+			workflowmd.DeleteTaskById(ctx, task.Id)
+		}
+	} else {
+		workflowmd.UpdateLastTaskIdByWorkflowId(ctx, wf.Id, task.Id)
+		// 把合并请求和工作流关联起来
+		if prId > 0 {
+			pullrequestmd.BatchInsertTimeline(ctx, []pullrequestmd.InsertTimelineReqDTO{
+				{
+					PrId:    prId,
+					Action:  pullrequestmd.NewWorkflowAction(task.Id),
+					Account: operator,
+				},
+			})
+		}
+	}
+	return err
 }
 
 type outerImpl struct{}
@@ -152,11 +170,10 @@ func (*outerImpl) CreateWorkflow(ctx context.Context, reqDTO CreateWorkflowReqDT
 		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.InvalidWorkflowContent)
 		return
 	}
-	yamlOut, _ := yaml.Marshal(graph)
 	err = workflowmd.InsertWorkflow(ctx, workflowmd.InsertWorkflowReqDTO{
 		RepoId:      reqDTO.RepoId,
 		Name:        reqDTO.Name,
-		YamlContent: string(yamlOut),
+		YamlContent: reqDTO.YamlContent,
 		AgentHost:   reqDTO.AgentHost,
 		AgentToken:  reqDTO.AgentToken,
 		Source:      reqDTO.Source,
@@ -298,14 +315,14 @@ func (*outerImpl) UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDT
 		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.InvalidWorkflowContent)
 		return
 	}
-	yamlOut, _ := yaml.Marshal(graph)
 	_, err = workflowmd.UpdateWorkflow(ctx, workflowmd.UpdateWorkflowReqDTO{
 		Id:         reqDTO.WorkflowId,
 		Name:       reqDTO.Name,
-		Content:    string(yamlOut),
+		Content:    reqDTO.YamlContent,
 		AgentHost:  reqDTO.AgentHost,
 		AgentToken: reqDTO.AgentToken,
 		Desc:       reqDTO.Desc,
+		Source:     reqDTO.Source,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -337,6 +354,9 @@ func (*outerImpl) TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReq
 	err = Inner.Execute(&wf, reqDTO.Operator.Account, workflowmd.ManualTriggerType, reqDTO.Branch, 0)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
+		if strings.Contains(err.Error(), "out of capacity") {
+			return util.NewBizErr(apicode.OutOfWorkflowCapacityErrCode, i18n.SystemTooManyOperation)
+		}
 		return util.InternalError(err)
 	}
 	return nil
@@ -428,53 +448,6 @@ func task2Dto(t workflowmd.Task) (TaskDTO, error) {
 	}, nil
 }
 
-func (*outerImpl) ListStep(ctx context.Context, reqDTO ListStepReqDTO) ([]StepDTO, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	task, b, err := workflowmd.GetTaskById(ctx, reqDTO.TaskId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	if !b {
-		return nil, util.InvalidArgsError()
-	}
-	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	if !b {
-		return nil, util.InvalidArgsError()
-	}
-	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
-	if err != nil {
-		return nil, err
-	}
-	steps, err := workflowmd.GetStepByTaskId(ctx, reqDTO.TaskId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	return listutil.Map(steps, step2Dto)
-}
-
-func step2Dto(t workflowmd.Step) (StepDTO, error) {
-	return StepDTO{
-		JobName:    t.JobName,
-		StepName:   t.StepName,
-		StepIndex:  t.StepIndex,
-		LogContent: t.LogContent,
-		StepStatus: t.StepStatus,
-		Created:    t.Created,
-		Duration:   t.Duration,
-	}, nil
-}
-
 // GetWorkflowDetail 获取工作流详情
 func (*outerImpl) GetWorkflowDetail(ctx context.Context, reqDTO GetWorkflowDetailReqDTO) (WorkflowDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
@@ -513,7 +486,7 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 	if b && task.TaskStatus == workflowmd.TaskCancelStatus {
 		return nil
 	}
-	if !b || task.TaskStatus != workflowmd.TaskRunningStatus {
+	if !b || (task.TaskStatus != workflowmd.TaskRunningStatus && task.TaskStatus != workflowmd.TaskQueueStatus) {
 		return util.InvalidArgsError()
 	}
 	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
@@ -535,7 +508,7 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 	}
 	_, err = workflowmd.UpdateTaskStatusAndDuration(ctx,
 		reqDTO.TaskId,
-		workflowmd.TaskRunningStatus,
+		task.TaskStatus,
 		workflowmd.TaskCancelStatus,
 		time.Since(task.Created),
 	)
@@ -546,45 +519,80 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 	return nil
 }
 
-// GetTaskDetail 获取工作流任务详情
-func (*outerImpl) GetTaskDetail(ctx context.Context, reqDTO GetTaskDetailReqDTO) (TaskWithStepsDTO, error) {
+// GetTaskStatus 获取任务状态
+func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO) (workflow.TaskStatus, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return TaskWithStepsDTO{}, err
+		return workflow.TaskStatus{}, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	task, b, err := workflowmd.GetTaskById(ctx, reqDTO.TaskId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return TaskWithStepsDTO{}, util.InternalError(err)
+		return workflow.TaskStatus{}, util.InternalError(err)
 	}
 	if !b {
-		return TaskWithStepsDTO{}, util.InvalidArgsError()
+		return workflow.TaskStatus{}, util.InvalidArgsError()
 	}
 	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return TaskWithStepsDTO{}, util.InternalError(err)
+		return workflow.TaskStatus{}, util.InternalError(err)
 	}
 	if !b {
-		return TaskWithStepsDTO{}, util.ThereHasBugErr()
+		return workflow.TaskStatus{}, util.ThereHasBugErr()
 	}
 	// 校验权限
 	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
 	if err != nil {
-		return TaskWithStepsDTO{}, err
+		return workflow.TaskStatus{}, err
 	}
-	steps, err := workflowmd.GetStepByTaskId(ctx, reqDTO.TaskId)
+	status, err := workflow.
+		NewAgentCommand(task.AgentHost, task.AgentToken, "").
+		GetWorkflowTaskStatus(task.BizId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return TaskWithStepsDTO{}, util.InternalError(err)
+		return workflow.TaskStatus{}, util.InternalError(err)
 	}
-	taskDto, _ := task2Dto(task)
-	stepDtos, _ := listutil.Map(steps, step2Dto)
-	return TaskWithStepsDTO{
-		TaskDTO: taskDto,
-		Steps:   stepDtos,
-	}, nil
+	return status, nil
+}
+
+// GetLogContent 获取日志内容
+func (*outerImpl) GetLogContent(ctx context.Context, reqDTO GetLogContentReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	task, b, err := workflowmd.GetTaskById(ctx, reqDTO.TaskId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
+	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.ThereHasBugErr()
+	}
+	// 校验权限
+	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	if err != nil {
+		return nil, err
+	}
+	logContent, err := workflow.
+		NewAgentCommand(task.AgentHost, task.AgentToken, "").
+		GetLogContent(task.BizId, reqDTO.JobName, reqDTO.StepIndex)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return []string{}, nil
+	}
+	return strings.Split(logContent, "\n"), nil
 }
 
 func workflow2Dto(wf workflowmd.Workflow) WorkflowDTO {

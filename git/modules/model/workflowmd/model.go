@@ -35,7 +35,8 @@ func (t TriggerType) IsValid() bool {
 type TaskStatus int
 
 const (
-	TaskRunningStatus TaskStatus = iota + 1
+	TaskQueueStatus TaskStatus = iota
+	TaskRunningStatus
 	TaskSuccessStatus
 	TaskFailStatus
 	TaskCancelStatus

@@ -178,11 +178,6 @@ type TaskDTO struct {
 	Duration    int64
 }
 
-type TaskWithStepsDTO struct {
-	TaskDTO
-	Steps []StepDTO
-}
-
 type StepDTO struct {
 	JobName    string
 	StepName   string
@@ -248,6 +243,44 @@ type GetTaskDetailReqDTO struct {
 
 func (r *GetTaskDetailReqDTO) IsValid() error {
 	if r.TaskId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type GetTaskStatusReqDTO struct {
+	TaskId   int64               `json:"taskId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetTaskStatusReqDTO) IsValid() error {
+	if r.TaskId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type GetLogContentReqDTO struct {
+	TaskId    int64               `json:"taskId"`
+	JobName   string              `json:"jobName"`
+	StepIndex int                 `json:"stepIndex"`
+	Operator  apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetLogContentReqDTO) IsValid() error {
+	if r.TaskId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.JobName == "" {
+		return util.InvalidArgsError()
+	}
+	if r.StepIndex < 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

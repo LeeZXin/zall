@@ -124,13 +124,14 @@ func InsertWorkflow(ctx context.Context, reqDTO InsertWorkflowReqDTO) error {
 func UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("yaml_content", "agent_host", "agent_token", "name", "description").
+		Cols("yaml_content", "agent_host", "agent_token", "name", "description", "source").
 		Update(&Workflow{
 			YamlContent: reqDTO.Content,
 			AgentHost:   reqDTO.AgentHost,
 			AgentToken:  reqDTO.AgentToken,
 			Name:        reqDTO.Name,
 			Description: reqDTO.Desc,
+			Source:      &reqDTO.Source,
 		})
 	return rows == 1, err
 }
@@ -210,4 +211,11 @@ func GetTaskByBizId(ctx context.Context, bizId string) (Task, bool, error) {
 	var ret Task
 	b, err := xormutil.MustGetXormSession(ctx).Where("biz_id = ?", bizId).Get(&ret)
 	return ret, b, err
+}
+
+func DeleteTaskById(ctx context.Context, id int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Delete(new(Task))
+	return rows == 1, err
 }

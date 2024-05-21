@@ -36,12 +36,12 @@ func InitApi() {
 		{
 			// 停止工作流
 			group.PUT("/kill/:taskId", killWorkflowTask)
-			// 获取任务详情
-			group.GET("/detail/:taskId", getWorkflowTask)
 			// 获取执行任务列表
 			group.GET("/list/:workflowId", listTask)
 			// 获取执行任务详情
-			group.GET("/steps/:taskId", getTaskSteps)
+			group.GET("/status/:taskId", getTaskStatus)
+			// 获取日志详情
+			group.GET("/log/:taskId", getLogContent)
 		}
 		e.POST("/api/v1/workflow/internal/taskCallBack", internalTaskCallback)
 	})
@@ -52,7 +52,7 @@ func internalTaskCallback(c *gin.Context) {
 		c.String(http.StatusForbidden, "invalid token")
 		return
 	}
-	var req workflow.TaskStatus
+	var req workflow.TaskStatusCallbackReq
 	if ginutil.ShouldBind(&req, c) {
 		workflowsrv.Inner.TaskCallback(c.Query("taskId"), req)
 		c.String(http.StatusOK, "")
@@ -227,8 +227,8 @@ func task2Vo(t workflowsrv.TaskDTO) (TaskVO, error) {
 	}, nil
 }
 
-func getTaskSteps(c *gin.Context) {
-	steps, err := workflowsrv.Outer.ListStep(c, workflowsrv.ListStepReqDTO{
+func getTaskStatus(c *gin.Context) {
+	status, err := workflowsrv.Outer.GetTaskStatus(c, workflowsrv.GetTaskStatusReqDTO{
 		TaskId:   cast.ToInt64(c.Param("taskId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -236,41 +236,25 @@ func getTaskSteps(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(steps, step2Vo)
-	c.JSON(http.StatusOK, ginutil.DataResp[[]StepVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[workflow.TaskStatus]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
+		Data:     status,
 	})
 }
 
-func step2Vo(t workflowsrv.StepDTO) (StepVO, error) {
-	return StepVO{
-		JobName:    t.JobName,
-		StepName:   t.StepName,
-		StepIndex:  t.StepIndex,
-		LogContent: t.LogContent,
-		StepStatus: t.StepStatus,
-		Created:    t.Created.Format(time.DateTime),
-		Duration:   t.Duration,
-	}, nil
-}
-
-func getWorkflowTask(c *gin.Context) {
-	detail, err := workflowsrv.Outer.GetTaskDetail(c, workflowsrv.GetTaskDetailReqDTO{
-		TaskId:   cast.ToInt64(c.Param("taskId")),
-		Operator: apisession.MustGetLoginUser(c),
+func getLogContent(c *gin.Context) {
+	logs, err := workflowsrv.Outer.GetLogContent(c, workflowsrv.GetLogContentReqDTO{
+		TaskId:    cast.ToInt64(c.Param("taskId")),
+		JobName:   c.Query("jobName"),
+		StepIndex: cast.ToInt(c.Query("stepIndex")),
+		Operator:  apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
 		return
 	}
-	taskVo, _ := task2Vo(detail.TaskDTO)
-	stepVos, _ := listutil.Map(detail.Steps, step2Vo)
-	c.JSON(http.StatusOK, ginutil.DataResp[TaskWithStepsVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data: TaskWithStepsVO{
-			TaskVO: taskVo,
-			Steps:  stepVos,
-		},
+		Data:     logs,
 	})
 }

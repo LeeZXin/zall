@@ -49,16 +49,6 @@ type TaskVO struct {
 	Duration    int64                  `json:"duration"`
 }
 
-type StepVO struct {
-	JobName    string                `json:"jobName"`
-	StepName   string                `json:"stepName"`
-	StepIndex  int                   `json:"stepIndex"`
-	LogContent string                `json:"logContent"`
-	StepStatus workflowmd.StepStatus `json:"stepStatus"`
-	Created    string                `json:"created"`
-	Duration   int64                 `json:"duration"`
-}
-
 type WorkflowVO struct {
 	Id          int64             `json:"id"`
 	Name        string            `json:"name"`
@@ -68,9 +58,4 @@ type WorkflowVO struct {
 	Source      workflowmd.Source `json:"source"`
 	AgentHost   string            `json:"agentHost"`
 	AgentToken  string            `json:"agentToken"`
-}
-
-type TaskWithStepsVO struct {
-	TaskVO
-	Steps []StepVO `json:"steps"`
 }

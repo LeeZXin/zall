@@ -39,6 +39,7 @@ type UpdateWorkflowReqDTO struct {
 	AgentHost  string
 	AgentToken string
 	Desc       string
+	Source     Source
 }
 
 type ListTaskByWorkflowIdReqDTO struct {

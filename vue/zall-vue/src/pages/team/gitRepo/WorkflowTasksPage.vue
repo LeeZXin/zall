@@ -21,7 +21,7 @@
               <ul class="op-list">
                 <li>
                   <eye-outlined />
-                  <span style="margin-left:4px" @click="gotoTaskDetail(dataItem.id)">查看详情</span>
+                  <span style="margin-left:4px" @click="gotoTaskDetail(dataItem)">查看详情</span>
                 </li>
                 <li v-if="dataItem.taskStatus === 1" @click="killTask(dataItem.id)">
                   <close-outlined />
@@ -43,7 +43,8 @@
       show-less-items
       :pageSize="pageSize"
       style="margin-top:10px"
-      v-show="totalCount > pageSize"
+      :hideOnSinglePage="true"
+      :showSizeChanger="false"
       @change="()=>paginationChange()"
     />
   </div>
@@ -68,7 +69,9 @@ import { useRouter, useRoute } from "vue-router";
 import { readableTimeComparingNow } from "@/utils/time";
 import { Modal, message } from "ant-design-vue";
 import { useWorkflowStore } from "@/pinia/workflowStore";
+import { useWorkflowTaskStore } from "@/pinia/workflowTaskStore";
 const workflowStore = useWorkflowStore();
+const taskStore = useWorkflowTaskStore();
 const totalCount = ref(0);
 const pageSize = 10;
 const currPage = ref(1);
@@ -125,8 +128,15 @@ const columns = ref([
     key: "operation"
   }
 ]);
-const gotoTaskDetail = id => {
-  router.push(`/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/${id}/steps`);
+const gotoTaskDetail = item => {
+  taskStore.id = item.id;
+  taskStore.triggerType = item.triggerType;
+  taskStore.operator = item.operator;
+  taskStore.created = item.created;
+  taskStore.branch = item.branch;
+  taskStore.prId = item.prId;
+  taskStore.yamlContent = item.yamlContent;
+  router.push(`/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/${item.id}/steps`);
 };
 const listTask = () => {
   listTaskRequest(route.params.workflowId, {
@@ -135,7 +145,7 @@ const listTask = () => {
   }).then(res => {
     totalCount.value = res.totalCount;
     let runningTask = res.data.find(item => {
-      return item.taskStatus === 1;
+      return item.taskStatus === 1 || item.taskStatus === 0;
     });
     if (runningTask) {
       if (!listInterval.value) {

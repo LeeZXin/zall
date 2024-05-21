@@ -29,11 +29,25 @@ const readableTimeComparingNow = dateTimeStr => {
     return sub + t("secondBefore");
 }
 
-const yy = () => {
-    console.log(day, t("ss"));
+const readableDuration = duration => {
+    const second = 1000;
+    const minute = 60 * second;
+    const hour = 60 * minute;
+    if (duration >= hour) {
+        let m = duration % hour;
+        return parseInt(duration / hour) + "h" + parseInt(m / minute) + "m";
+    }
+    if (duration >= minute) {
+        let m = duration % minute;
+        return parseInt(duration / minute) + "m" + parseInt(m / second) + "s";
+    }
+    if (duration >= second) {
+        return parseInt(duration / second) + "s";
+    }
+    return duration + "ms";
 }
 
 export {
     readableTimeComparingNow,
-    yy
+    readableDuration
 }

@@ -24,6 +24,7 @@ const (
 	ThereHasBugErrCode
 	OperationFailedErrCode
 	TooManyOperationCode
+	OutOfWorkflowCapacityErrCode
 )
 
 func (c Code) Int() int {

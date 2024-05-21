@@ -220,6 +220,7 @@ func (c *JobCfg) convertToJob(jobName string) *job {
 
 type RunOpts struct {
 	Workdir        string
+	JobBeforeFunc  func(JobBeforeStat) error
 	JobAfterFunc   func(error, JobRunStat)
 	StepOutputFunc func(StepOutputStat)
 	StepAfterFunc  func(error, StepRunStat)
@@ -243,6 +244,11 @@ type StepOutputStat struct {
 type JobRunStat struct {
 	JobName   string
 	Duration  time.Duration
+	BeginTime time.Time
+}
+
+type JobBeforeStat struct {
+	JobName   string
 	BeginTime time.Time
 }
 
@@ -345,7 +351,8 @@ type step struct {
 	With   map[string]string
 	Script string
 	sync.Mutex
-	curr *exec.Cmd
+	curr   *exec.Cmd
+	killed bool
 }
 
 func (s *step) GetReplacedScript(args map[string]string) string {
@@ -356,15 +363,19 @@ func (s *step) GetReplacedScript(args map[string]string) string {
 	return script
 }
 
-func (s *step) SetCurr(cmd *exec.Cmd) {
+func (s *step) SetCurr(cmd *exec.Cmd) bool {
 	s.Lock()
 	defer s.Unlock()
-	s.curr = cmd
+	if !s.killed {
+		s.curr = cmd
+	}
+	return !s.killed
 }
 
 func (s *step) Kill() {
 	s.Lock()
 	defer s.Unlock()
+	s.killed = true
 	if s.curr != nil {
 		if s.curr.Process != nil {
 			syscall.Kill(-s.curr.Process.Pid, syscall.SIGKILL)
@@ -373,7 +384,7 @@ func (s *step) Kill() {
 }
 
 func (s *step) Run(opts *RunOpts, j *job, index int) error {
-	err := j.ctx.Err()
+	err := j.getErr()
 	beginTime := time.Now()
 	reader, writer := io.Pipe()
 	go opts.StepOutputFunc(StepOutputStat{
@@ -392,8 +403,11 @@ func (s *step) Run(opts *RunOpts, j *job, index int) error {
 				var cmd *exec.Cmd
 				cmd, err = newCommand(j.ctx, "bash -c "+cmdPath, writer, writer, opts.Workdir, mergeEnvs(s.With))
 				if err == nil {
-					s.SetCurr(cmd)
-					err = cmd.Run()
+					if s.SetCurr(cmd) {
+						err = cmd.Run()
+					} else {
+						err = TaskCancelErr
+					}
 				}
 			}
 		}
@@ -465,42 +479,56 @@ type job struct {
 	cancelOnce sync.Once
 }
 
-func (j *job) Run(opts *RunOpts) error {
-	defer j.Cancel(nil)
-	var err error
-	beginTime := time.Now()
-	// 是否配置了超时
-	_, b := j.ctx.Deadline()
-	if b {
-		go func() {
-			select {
-			case <-j.ctx.Done():
-				if j.ctx.Err() == context.DeadlineExceeded {
-					j.Cancel(context.DeadlineExceeded)
-				}
-			}
-		}()
-	}
-	for i, s := range j.steps {
-		err = j.ctx.Err()
-		if err == nil {
-			err = s.Run(opts, j, i)
-			if err != nil {
-				break
-			}
-		} else {
-			break
-		}
-	}
+func (j *job) getErr() error {
 	val := j.customErr.Load()
 	if val != nil {
-		err = val.(error)
+		return val.(error)
 	}
-	opts.JobAfterFunc(err, JobRunStat{
+	return j.ctx.Err()
+}
+
+func (j *job) Run(opts *RunOpts) error {
+	var err error
+	beginTime := time.Now()
+	err = opts.JobBeforeFunc(JobBeforeStat{
 		JobName:   j.name,
-		Duration:  time.Since(beginTime),
 		BeginTime: beginTime,
 	})
+	if err == nil {
+		// 是否配置了超时
+		_, b := j.ctx.Deadline()
+		if b {
+			go func() {
+				select {
+				case <-j.ctx.Done():
+					if j.ctx.Err() == context.DeadlineExceeded {
+						j.Cancel(context.DeadlineExceeded)
+					}
+				}
+			}()
+		}
+		for i, s := range j.steps {
+			err = j.getErr()
+			if err == nil {
+				err = s.Run(opts, j, i)
+				if err != nil {
+					break
+				}
+			} else {
+				break
+			}
+		}
+		val := j.customErr.Load()
+		if val != nil {
+			err = val.(error)
+		}
+		opts.JobAfterFunc(err, JobRunStat{
+			JobName:   j.name,
+			Duration:  time.Since(beginTime),
+			BeginTime: beginTime,
+		})
+	}
+	j.Cancel(err)
 	return err
 }
 

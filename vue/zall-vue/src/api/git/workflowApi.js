@@ -18,6 +18,10 @@ const triggerWorkflowRequest = (workflowId, branch) => request.put(`/api/workflo
 const killWorkflowTaskRequest = (taskId) => request.put(`/api/workflowTask/kill/${taskId}`);
 // 获取任务详情
 const getTaskDetailRequest = (taskId) => request.get("/api/workflowTask/detail/" + taskId);
+// 获取任务详情
+const getTaskStatusRequest = (taskId) => request.get("/api/workflowTask/status/" + taskId);
+// 获取日志内容
+const getLogContentRequest = (taskId, jobName, stepIndex) => request.get(`/api/workflowTask/log/${taskId}`, { params: { jobName, stepIndex } });
 export {
     createWorkflowRequest,
     listWorkflowRequest,
@@ -27,5 +31,7 @@ export {
     updateWorkflowRequest,
     triggerWorkflowRequest,
     killWorkflowTaskRequest,
-    getTaskDetailRequest
+    getTaskDetailRequest,
+    getTaskStatusRequest,
+    getLogContentRequest
 }

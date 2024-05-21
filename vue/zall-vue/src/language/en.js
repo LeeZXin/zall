@@ -79,6 +79,19 @@ export default {
     createTeam: {
         teamName: "Team name* (excluding special characters, the length must not exceed 32)"
     },
+    workflow: {
+        manualTriggerType: "Manual",
+        hookTriggerType: "Automatic",
+        status: {
+            success: "Successful",
+            fail: "Failed",
+            cancel: "Cancelled",
+            timeout: "Timeout",
+            running: "Running",
+            queue: "Queued",
+            unknown: "Unknown"
+        }
+    },
     secondBefore: " second ago",
     minuteBefore: " minute ago",
     hourBefore: " hour ago",

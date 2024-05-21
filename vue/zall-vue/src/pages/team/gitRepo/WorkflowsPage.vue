@@ -11,13 +11,13 @@
             <div class="name">{{item.name}}</div>
           </a-tooltip>
           <span>
-            <a-tooltip placement="top" v-if="!item.lastTask || item.lastTask.taskStatus !== 1">
+            <a-tooltip placement="top" v-if="!item.lastTask || (item.lastTask.taskStatus !== 1 && item.lastTask.taskStatus !== 0)">
               <template #title>手动执行</template>
               <span class="op" @click="showBranchModal(item)">
                 <PlayCircleFilled />
               </span>
             </a-tooltip>
-            <a-tooltip placement="top" v-if="item.lastTask?.taskStatus === 1">
+            <a-tooltip placement="top" v-else>
               <template #title>停止执行</template>
               <span class="op" @click="killTask(item)">
                 <PauseOutlined />
@@ -47,7 +47,15 @@
           </span>
         </div>
         <div class="workflow-status">
-          <div class="no-wrap" v-if="item.lastTask?.taskStatus === 2">
+          <div class="no-wrap" v-if="item.lastTask?.taskStatus === 0">
+            <LoadingOutlined />
+            <span style="margin-left: 6px">排队中</span>
+          </div>
+          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 1">
+            <LoadingOutlined />
+            <span style="margin-left: 6px">执行中</span>
+          </div>
+          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 2">
             <CheckCircleFilled style="color:green" />
             <span style="margin-left: 6px">执行成功</span>
           </div>
@@ -59,9 +67,13 @@
             <CloseCircleFilled style="color:darkred" />
             <span style="margin-left: 6px">执行中止</span>
           </div>
-          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 1">
-            <LoadingOutlined />
-            <span style="margin-left: 6px">执行中</span>
+          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 5">
+            <CloseCircleFilled style="color:darkred" />
+            <span style="margin-left: 6px">执行超时</span>
+          </div>
+          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 6">
+            <CloseCircleFilled style="color:darkred" />
+            <span style="margin-left: 6px">超出系统负载</span>
           </div>
           <div class="no-wrap" v-else>
             <ClockCircleOutlined />

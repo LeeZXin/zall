@@ -19,7 +19,7 @@ export function useLayout() {
         const isHorizontal = direction === 'LR'
         dagreGraph.setGraph({ rankdir: 'LR' })
         for (const node of nodes) {
-            const graphNode = findNode(node.id)
+            const graphNode = findNode(node.id);
             dagreGraph.setNode(node.id, { width: graphNode.dimensions.width || 150, height: graphNode.dimensions.height || 50 })
         }
         for (const edge of edges) {

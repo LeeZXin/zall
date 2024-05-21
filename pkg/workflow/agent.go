@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -10,6 +9,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/process"
 	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf/logger"
@@ -32,23 +32,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-)
-
-const (
-	RunningStatus = "running"
-	SuccessStatus = "success"
-	FailStatus    = "fail"
-	TimeoutStatus = "timeout"
-	CancelStatus  = "cancel"
-	UnknownStatus = "unknown"
-)
-
-const (
-	originFileName = "origin"
-	statusFileName = "status"
-	beginFileName  = "begin"
-	errLogFileName = "error.log"
-	logFileName    = "log"
 )
 
 var (
@@ -159,11 +142,12 @@ func (m *graphMap) Remove(id string) {
 
 type Agent struct {
 	*zssh.Server
-	token       string
-	graphMap    *graphMap
-	cmdMap      *cmdMap
-	handlerMap  map[string]handler
-	workflowDir string
+	token            string
+	graphMap         *graphMap
+	cmdMap           *cmdMap
+	handlerMap       map[string]handler
+	workflowDir      string
+	workflowExecutor *executor.Executor
 }
 
 func (a *Agent) GetWorkflowBaseDir(taskId string) string {
@@ -202,6 +186,11 @@ type JobStatus struct {
 type StepStatus struct {
 	StepName string `json:"stepName"`
 	BaseStatus
+}
+
+type TaskStatusCallbackReq struct {
+	Status   string `json:"status"`
+	Duration int64  `json:"duration"`
 }
 
 func getBaseStatus(dir string) BaseStatus {
@@ -258,40 +247,29 @@ func getStepStatus(baseDir string, jobName string, index int, stepName string) S
 }
 
 func getTaskStatus(baseDir string) TaskStatus {
+	var ret TaskStatus
 	origin, err := os.ReadFile(filepath.Join(baseDir, originFileName))
-	if err != nil {
-		return TaskStatus{}
+	if err == nil {
+		var p action.GraphCfg
+		// 解析yaml
+		err = yaml.Unmarshal(origin, &p)
+		if err != nil || p.IsValid() != nil {
+			return TaskStatus{}
+		}
+		ret.JobStatus = make([]JobStatus, 0, len(p.Jobs))
+		for jobName, jobCfg := range p.Jobs {
+			ret.JobStatus = append(ret.JobStatus, getJobStatus(baseDir, jobName, jobCfg))
+		}
+		sort.SliceStable(ret.JobStatus, func(i, j int) bool {
+			return ret.JobStatus[i].JobName < ret.JobStatus[j].JobName
+		})
 	}
-	var (
-		p   action.GraphCfg
-		ret TaskStatus
-	)
-	// 解析yaml
-	err = yaml.Unmarshal(origin, &p)
-	if err != nil || p.IsValid() != nil {
-		return TaskStatus{}
-	}
-	ret.JobStatus = make([]JobStatus, 0, len(p.Jobs))
-	for jobName, jobCfg := range p.Jobs {
-		ret.JobStatus = append(ret.JobStatus, getJobStatus(baseDir, jobName, jobCfg))
-	}
-	sort.SliceStable(ret.JobStatus, func(i, j int) bool {
-		return ret.JobStatus[i].JobName < ret.JobStatus[j].JobName
-	})
 	ret.BaseStatus = getBaseStatus(baseDir)
 	return ret
 }
 
 func mkdir(dir string) bool {
 	return util.Mkdir(dir) == nil
-}
-
-func toStatusMsg(status string, duration time.Duration) string {
-	return fmt.Sprintf("%s %d", status, duration.Milliseconds())
-}
-
-func toStatusMsgBytes(status string, duration time.Duration) []byte {
-	return []byte(toStatusMsg(status, duration))
 }
 
 func convertStatusFileContent(content []byte) (string, int64) {
@@ -302,8 +280,30 @@ func convertStatusFileContent(content []byte) (string, int64) {
 	return fields[0], cast.ToInt64(fields[1])
 }
 
+func notifyCallback(callbackUrl, token, taskId string, req any) {
+	// 通知回调
+	httputil.Post(context.Background(),
+		http.DefaultClient,
+		callbackUrl+"?taskId="+taskId,
+		map[string]string{
+			"Authorization": token,
+		},
+		req,
+		nil,
+	)
+}
+
 func NewAgentServer() zsf.LifeCycle {
 	agent := new(Agent)
+	poolSize := static.GetInt("workflow.agent.poolSize")
+	if poolSize <= 0 {
+		poolSize = 1
+	}
+	queueSize := static.GetInt("workflow.agent.queueSize")
+	if queueSize <= 0 {
+		queueSize = 1024
+	}
+	agent.workflowExecutor, _ = executor.NewExecutor(poolSize, queueSize, time.Minute, executor.AbortStrategy)
 	agent.token = static.GetString("workflow.agent.token")
 	agent.graphMap = newGraphMap()
 	agent.cmdMap = newCmdMap()
@@ -388,6 +388,8 @@ func NewAgentServer() zsf.LifeCycle {
 			}
 			// 环境变量
 			envs := util.CutEnv(session.Environ())
+			callbackUrl := envs[action.EnvCallBackUrl]
+			token := envs[action.EnvCallBackToken]
 			now := time.Now()
 			logDir := agent.GetWorkflowBaseDir(taskId)
 			exist, err := util.IsExist(logDir)
@@ -404,120 +406,122 @@ func NewAgentServer() zsf.LifeCycle {
 				util.ExitWithErrMsg(session, err.Error())
 				return
 			}
-			go func() {
-				if !agent.graphMap.PutIfAbsent(taskId, graph) {
-					graph.Cancel(action.TaskCancelErr)
-					return
-				}
+			if !agent.graphMap.PutIfAbsent(taskId, graph) {
+				// 不太可能会发生
+				graph.Cancel(action.TaskCancelErr)
+				util.ExitWithErrMsg(session, "duplicated biz id")
+				return
+			}
+			taskStore := newFileStore(logDir)
+			// 首先置为排队状态
+			taskStore.StoreStatus(QueueStatus, 0)
+			if rErr := agent.workflowExecutor.Execute(func() {
 				defer agent.graphMap.Remove(taskId)
 				// 写入开始时间
-				if err := util.WriteFile(filepath.Join(logDir, beginFileName), []byte(strconv.FormatInt(now.UnixMilli(), 10))); err != nil {
-					return
-				}
+				taskStore.StoreBeginTime(now)
 				// 写入原始内容
-				if err := util.WriteFile(filepath.Join(logDir, originFileName), input); err != nil {
-					return
-				}
-				// 初始状态
-				if err := util.WriteFile(filepath.Join(logDir, statusFileName), toStatusMsgBytes(RunningStatus, 0)); err != nil {
-					return
-				}
+				taskStore.StoreOrigin(input)
+				// 初始状态 执行状态
+				taskStore.StoreStatus(RunningStatus, 0)
+				// 通知回调
+				notifyCallback(callbackUrl, token, taskId, TaskStatusCallbackReq{
+					Status: RunningStatus,
+				})
 				err := graph.Run(action.RunOpts{
 					Workdir: filepath.Join(agent.workflowDir, "temp", taskId),
 					StepOutputFunc: func(stat action.StepOutputStat) {
 						defer stat.Output.Close()
 						stepDir := filepath.Join(logDir, stat.JobName, strconv.Itoa(stat.Index))
 						if mkdir(stepDir) {
-							var logFile *os.File
-							// 记录日志
-							logFile, err = os.OpenFile(filepath.Join(stepDir, logFileName), os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
-							if err == nil {
-								defer logFile.Close()
-								// 增加缓存
-								writer := bufio.NewWriter(logFile)
-								defer writer.Flush()
-								io.Copy(writer, stat.Output)
-							}
+							newFileStore(stepDir).StoreLog(stat.Output)
 						}
+					},
+					JobBeforeFunc: func(stat action.JobBeforeStat) error {
+						jobDir := filepath.Join(logDir, stat.JobName)
+						err := util.Mkdir(jobDir)
+						if err == nil {
+							jobStore := newFileStore(jobDir)
+							// 记录job开始时间
+							jobStore.StoreBeginTime(stat.BeginTime)
+							// 设置初始状态
+							jobStore.StoreStatus(RunningStatus, 0)
+						}
+						return err
 					},
 					JobAfterFunc: func(err error, stat action.JobRunStat) {
 						jobDir := filepath.Join(logDir, stat.JobName)
-						if mkdir(jobDir) {
-							// 记录job开始时间
-							util.WriteFile(filepath.Join(jobDir, beginFileName), []byte(strconv.FormatInt(stat.BeginTime.UnixMilli(), 10)))
-							var (
-								taskContent []byte
-							)
-							if err == nil {
-								taskContent = toStatusMsgBytes(SuccessStatus, stat.Duration)
+						jobStore := newFileStore(jobDir)
+						if err == nil {
+							jobStore.StoreStatus(SuccessStatus, stat.Duration)
+						} else {
+							if err == context.DeadlineExceeded {
+								jobStore.StoreStatus(TimeoutStatus, stat.Duration)
 							} else {
-								if err == context.DeadlineExceeded {
-									taskContent = toStatusMsgBytes(TimeoutStatus, stat.Duration)
-								} else {
-									taskContent = toStatusMsgBytes(FailStatus, stat.Duration)
-								}
-								util.WriteFile(filepath.Join(jobDir, errLogFileName), []byte(err.Error()))
+								jobStore.StoreStatus(FailStatus, stat.Duration)
 							}
-							util.WriteFile(filepath.Join(jobDir, statusFileName), taskContent)
+							jobStore.StoreErrLog(err)
 						}
 					},
 					StepAfterFunc: func(err error, stat action.StepRunStat) {
 						stepDir := filepath.Join(logDir, stat.JobName, strconv.Itoa(stat.Index))
 						if mkdir(stepDir) {
+							stepStore := newFileStore(stepDir)
 							// 记录step开始时间
-							util.WriteFile(filepath.Join(stepDir, beginFileName), []byte(strconv.FormatInt(stat.BeginTime.UnixMilli(), 10)))
-							var stepContent []byte
+							stepStore.StoreBeginTime(stat.BeginTime)
 							if err == nil {
-								stepContent = toStatusMsgBytes(SuccessStatus, stat.Duration)
+								stepStore.StoreStatus(SuccessStatus, stat.Duration)
 							} else {
-								stepContent = toStatusMsgBytes(FailStatus, stat.Duration)
-								util.WriteFile(filepath.Join(stepDir, errLogFileName), []byte(err.Error()))
+								stepStore.StoreStatus(FailStatus, stat.Duration)
+								stepStore.StoreErrLog(err)
 							}
-							util.WriteFile(filepath.Join(stepDir, statusFileName), stepContent)
 						}
 					},
 					Args: args,
 				})
-				var content []byte
+				if err != nil {
+					graph.Cancel(action.TaskCancelErr)
+				}
+				var status string
 				if err == nil {
-					content = toStatusMsgBytes(SuccessStatus, graph.SinceBeginTime())
+					status = SuccessStatus
 				} else {
 					switch err {
 					case context.DeadlineExceeded:
-						content = toStatusMsgBytes(TimeoutStatus, graph.SinceBeginTime())
+						status = TimeoutStatus
 					case action.TaskCancelErr:
-						content = toStatusMsgBytes(CancelStatus, graph.SinceBeginTime())
+						status = CancelStatus
 					default:
-						content = toStatusMsgBytes(FailStatus, graph.SinceBeginTime())
+						status = FailStatus
 					}
-					util.WriteFile(filepath.Join(logDir, errLogFileName), []byte(err.Error()))
+					taskStore.StoreErrLog(err)
 				}
-				util.WriteFile(filepath.Join(logDir, statusFileName), content)
-				callbackUrl := envs[action.EnvCallBackUrl]
-				token := envs[action.EnvCallBackToken]
+				duration := graph.SinceBeginTime()
+				taskStore.StoreStatus(status, duration)
 				if callbackUrl != "" {
-					// 通知回调
-					httputil.Post(context.Background(),
-						http.DefaultClient,
-						callbackUrl+"?taskId="+taskId,
-						map[string]string{
-							"Authorization": token,
-						},
-						getTaskStatus(logDir),
-						nil,
-					)
+					if callbackUrl != "" {
+						// 通知回调
+						notifyCallback(callbackUrl, token, taskId, TaskStatusCallbackReq{
+							Status:   status,
+							Duration: duration.Milliseconds(),
+						})
+					}
 				}
-			}()
-			session.Exit(0)
-		},
-		"killWorkflow": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
-			id := args["i"]
-			graph := agent.graphMap.GetById(id)
-			if graph == nil {
-				util.ExitWithErrMsg(session, "unknown id: "+args["i"])
+			}); rErr != nil {
+				util.ExitWithErrMsg(session, "out of capacity")
 				return
 			}
-			logger.Logger.Infof("cancel task: %s", id)
+			session.Exit(0)
+		},
+		"killWorkflow": func(session ssh.Session, args map[string]string, _, _ string) {
+			taskId := args["i"]
+			graph := agent.graphMap.GetById(taskId)
+			if graph == nil {
+				util.ExitWithErrMsg(session, "unknown taskId: "+args["i"])
+				return
+			}
+			taskStore := newFileStore(agent.GetWorkflowBaseDir(taskId))
+			taskStore.StoreStatus(CancelStatus, graph.SinceBeginTime())
+			logger.Logger.Infof("cancel task: %s", taskId)
 			graph.Cancel(action.TaskCancelErr)
 			session.Exit(0)
 		},
@@ -876,6 +880,10 @@ func (c *AgentCommand) Execute(cmd io.Reader, envs map[string]string) (string, e
 	return execute(c.agentHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.agentToken), cmd, envs)
 }
 
+func (c *AgentCommand) Kill(cmd io.Reader, envs map[string]string) (string, error) {
+	return execute(c.agentHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.agentToken), cmd, envs)
+}
+
 func (c *AgentCommand) ExecuteAsync(cmd io.Reader, envs map[string]string) (io.Reader, error) {
 	return executeAsync(c.agentHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.agentToken), cmd, envs)
 }
@@ -887,6 +895,28 @@ func (c *AgentCommand) ExecuteWorkflow(content, bizId string, envs map[string]st
 		envs,
 	)
 	return err
+}
+
+func (c *AgentCommand) GetWorkflowTaskStatus(taskId string) (TaskStatus, error) {
+	result, err := execute(c.agentHost,
+		fmt.Sprintf("getWorkflowTaskStatus -t %s -i %s", c.agentToken, taskId),
+		nil,
+		nil,
+	)
+	if err != nil {
+		return TaskStatus{}, err
+	}
+	var ret TaskStatus
+	json.Unmarshal([]byte(result), &ret)
+	return ret, nil
+}
+
+func (c *AgentCommand) GetLogContent(taskId string, jobName string, stepIndex int) (string, error) {
+	return execute(c.agentHost,
+		fmt.Sprintf("getWorkflowStepLog -t %s -i %s -j %s -n %d", c.agentToken, taskId, jobName, stepIndex),
+		nil,
+		nil,
+	)
 }
 
 func (c *AgentCommand) KillWorkflow(taskId string) error {

@@ -1,5 +1,5 @@
 <template>
-  <a-button type="link" @click="toPrDetail">#{{props.prId}}</a-button>
+  <span class="link" @click="toPrDetail">#{{props.prId}}</span>
 </template>
 <script setup>
 import { defineProps } from "vue";
@@ -10,3 +10,10 @@ const toPrDetail = () => {
   router.push(`/gitRepo/${props.repoId}/pullRequest/${props.prId}/detail`);
 };
 </script>
+<style scoped>
+.link {
+    font-size: 14px;
+    color: #1677ff;
+    cursor: pointer;
+}
+</style>

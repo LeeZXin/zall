@@ -79,6 +79,19 @@ export default {
     createTeam: {
         teamName: "团队名称*(不包含特殊字符,长度不得超过32)"
     },
+    workflow: {
+        manualTriggerType: "手动触发",
+        hookTriggerType: "自动触发",
+        status: {
+            success: "成功",
+            fail: "失败",
+            cancel: "中止",
+            timeout: "超时",
+            running: "运行中",
+            queue: "排队中",
+            unknown: "未知"
+        }
+    },
     secondBefore: "秒前",
     minuteBefore: "分钟前",
     hourBefore: "小时前",
