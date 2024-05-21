@@ -2,7 +2,6 @@ package workflowmd
 
 import (
 	"context"
-	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
 )
@@ -41,68 +40,6 @@ func UpdateTaskStatusAndDuration(ctx context.Context, taskId int64, oldStatus, n
 		Update(&Task{
 			TaskStatus: newStatus,
 			Duration:   duration.Milliseconds(),
-		})
-	return rows == 1, err
-}
-
-func BatchInsertSteps(ctx context.Context, reqDTO []InsertStepReqDTO) ([]Step, error) {
-	ret, _ := listutil.Map(reqDTO, func(t InsertStepReqDTO) (*Step, error) {
-		return &Step{
-			TaskId:     t.TaskId,
-			WorkflowId: t.WorkflowId,
-			JobName:    t.JobName,
-			StepName:   t.StepName,
-			StepIndex:  t.StepIndex,
-			StepStatus: t.StepStatus,
-		}, nil
-	})
-	_, err := xormutil.MustGetXormSession(ctx).Insert(ret)
-	if err != nil {
-		return nil, err
-	}
-	return listutil.Map(ret, func(t *Step) (Step, error) {
-		return *t, nil
-	})
-}
-
-func UpdateStepStatusAndDuration(ctx context.Context, taskId int64, jobName string, stepIndex int, oldStatus, newStatus StepStatus, duration time.Duration) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("task_id = ?", taskId).
-		And("job_name = ?", jobName).
-		And("step_status = ?", oldStatus).
-		And("step_index = ?", stepIndex).
-		Cols("step_status", "duration").
-		Limit(1).
-		Update(&Step{
-			StepStatus: newStatus,
-			Duration:   duration.Milliseconds(),
-		})
-	return rows == 1, err
-}
-
-func UpdateStepStatus(ctx context.Context, taskId int64, jobName string, stepIndex int, oldStatus, newStatus StepStatus) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("task_id = ?", taskId).
-		And("job_name = ?", jobName).
-		And("step_status = ?", oldStatus).
-		And("step_index = ?", stepIndex).
-		Cols("step_status").
-		Limit(1).
-		Update(&Step{
-			StepStatus: newStatus,
-		})
-	return rows == 1, err
-}
-
-func UpdateStepLogContent(ctx context.Context, taskId int64, jobName string, stepIndex int, content string) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("task_id = ?", taskId).
-		And("job_name = ?", jobName).
-		And("step_index = ?", stepIndex).
-		Cols("log_content").
-		Limit(1).
-		Update(&Step{
-			LogContent: content,
 		})
 	return rows == 1, err
 }
@@ -181,12 +118,6 @@ func GetTasksByIdList(ctx context.Context, idList []int64) ([]Task, error) {
 	return ret, err
 }
 
-func GetStepByTaskId(ctx context.Context, taskId int64) ([]Step, error) {
-	ret := make([]Step, 0)
-	err := xormutil.MustGetXormSession(ctx).Where("task_id = ?", taskId).Find(&ret)
-	return ret, err
-}
-
 func UpdateLastTaskIdByWorkflowId(ctx context.Context, workflowId int64, lastTaskId int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", workflowId).
@@ -199,11 +130,6 @@ func UpdateLastTaskIdByWorkflowId(ctx context.Context, workflowId int64, lastTas
 
 func DeleteTasksByWorkflowId(ctx context.Context, workflowId int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).Where("workflow_id = ?", workflowId).Delete(new(Task))
-	return err
-}
-
-func DeleteStepsByWorkflowId(ctx context.Context, workflowId int64) error {
-	_, err := xormutil.MustGetXormSession(ctx).Where("workflow_id = ?", workflowId).Delete(new(Step))
 	return err
 }
 

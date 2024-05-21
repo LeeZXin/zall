@@ -35,14 +35,14 @@ const readableDuration = duration => {
     const hour = 60 * minute;
     if (duration >= hour) {
         let m = duration % hour;
-        return parseInt(duration / hour) + "h" + parseInt(m / minute) + "m";
+        return parseInt(Math.round(duration / hour)) + "h" + parseInt(Math.round(m / minute)) + "m";
     }
     if (duration >= minute) {
         let m = duration % minute;
-        return parseInt(duration / minute) + "m" + parseInt(m / second) + "s";
+        return parseInt(Math.round(duration / minute)) + "m" + parseInt(Math.round(m / second)) + "s";
     }
     if (duration >= second) {
-        return parseInt(duration / second) + "s";
+        return parseInt(Math.round(duration / second)) + "s";
     }
     return duration + "ms";
 }

@@ -116,7 +116,8 @@ func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerTyp
 	}
 	url := static.GetString("workflow.callback.url")
 	if url == "" {
-		url = fmt.Sprintf("http://%s%d/api/v1/workflow/internal/taskCallBack", common.GetLocalIP(), common.HttpServerPort())
+		url = fmt.Sprintf("http://%s:%d/api/v1/workflow/internal/taskCallBack", common.GetLocalIP(), common.HttpServerPort())
+		logger.Logger.Infof("callback url: %s", url)
 	}
 	err = workflow.NewAgentCommand(wf.AgentHost, wf.AgentToken, "").
 		ExecuteWorkflow(wf.YamlContent, bizId, map[string]string{
@@ -222,11 +223,7 @@ func (*outerImpl) DeleteWorkflow(ctx context.Context, reqDTO DeleteWorkflowReqDT
 		if err2 != nil {
 			return err2
 		}
-		err2 = workflowmd.DeleteTasksByWorkflowId(ctx, reqDTO.WorkflowId)
-		if err2 != nil {
-			return err2
-		}
-		return workflowmd.DeleteStepsByWorkflowId(ctx, reqDTO.WorkflowId)
+		return workflowmd.DeleteTasksByWorkflowId(ctx, reqDTO.WorkflowId)
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

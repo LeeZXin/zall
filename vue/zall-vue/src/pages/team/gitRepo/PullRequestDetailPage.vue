@@ -121,6 +121,19 @@
                   </div>
                 </div>
               </a-timeline-item>
+              <a-timeline-item>
+                <div class="message-card">
+                  <div class="card-title">触发工作流</div>
+                  <div class="card-content">
+                    <ul class="workflow-job-list">
+                      <li>
+                        <CloseCircleFilled style="color:green"/>
+                        <span style="padding-left:10px">job1</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </a-timeline-item>
             </a-timeline>
           </div>
         </a-tab-pane>
@@ -676,5 +689,18 @@ const agreeReview = () => {
 }
 .can-not-merge-reason + .can-not-merge-reason {
   margin-top: 10px;
+}
+.workflow-job-list {
+  width: 100%;
+}
+.workflow-job-list > li {
+  width: 100%;
+  line-height: 32px;
+  font-size: 14px;
+  white-space: nowrap;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 10px;
 }
 </style>

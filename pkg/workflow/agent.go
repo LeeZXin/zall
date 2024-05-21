@@ -17,7 +17,6 @@ import (
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/gliderlabs/ssh"
 	"github.com/kballard/go-shellquote"
-	"github.com/spf13/cast"
 	gossh "golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v3"
 	"io"
@@ -26,7 +25,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -193,38 +191,40 @@ type TaskStatusCallbackReq struct {
 	Duration int64  `json:"duration"`
 }
 
-func getBaseStatus(dir string) BaseStatus {
-	var ret BaseStatus
-	content, err := os.ReadFile(filepath.Join(dir, statusFileName))
+func getBaseStatus(store Store) BaseStatus {
+	var (
+		ret BaseStatus
+		err error
+	)
+	ret.Status, ret.Duration, err = store.ReadStatus()
 	if err != nil {
 		ret.Status = UnknownStatus
 	} else {
-		ret.Status, ret.Duration = convertStatusFileContent(content)
 		if ret.Status == FailStatus {
-			content, _ = os.ReadFile(filepath.Join(dir, errLogFileName))
+			content, _ := store.ReadErrLog()
 			if len(content) > 0 {
-				ret.ErrLog = string(content)
+				ret.ErrLog = content
 			}
 		}
 	}
-	content, _ = os.ReadFile(filepath.Join(dir, beginFileName))
-	if len(content) > 0 {
-		ret.BeginTime = cast.ToInt64(string(content))
+	beginTime, err := store.ReadBeginTime()
+	if err == nil {
+		ret.BeginTime = beginTime.UnixMilli()
 	}
 	return ret
 }
 
 func getJobStatus(baseDir string, jobName string, jobCfg action.JobCfg) JobStatus {
 	jobDir := filepath.Join(baseDir, jobName)
-	exist, _ := util.IsExist(jobDir)
-	if !exist {
+	store := newFileStore(jobDir)
+	if !store.IsExists() {
 		return JobStatus{
 			JobName: jobName,
 		}
 	}
 	var ret JobStatus
 	ret.JobName = jobName
-	ret.BaseStatus = getBaseStatus(jobDir)
+	ret.BaseStatus = getBaseStatus(store)
 	ret.Steps = make([]StepStatus, 0, len(jobCfg.Steps))
 	for i, step := range jobCfg.Steps {
 		ret.Steps = append(ret.Steps, getStepStatus(baseDir, jobName, i, step.Name))
@@ -234,21 +234,22 @@ func getJobStatus(baseDir string, jobName string, jobCfg action.JobCfg) JobStatu
 
 func getStepStatus(baseDir string, jobName string, index int, stepName string) StepStatus {
 	stepDir := filepath.Join(baseDir, jobName, strconv.Itoa(index))
-	exist, _ := util.IsExist(stepDir)
-	if !exist {
+	store := newFileStore(stepDir)
+	if !store.IsExists() {
 		return StepStatus{
 			StepName: stepName,
 		}
 	}
 	var ret StepStatus
 	ret.StepName = stepName
-	ret.BaseStatus = getBaseStatus(stepDir)
+	ret.BaseStatus = getBaseStatus(store)
 	return ret
 }
 
 func getTaskStatus(baseDir string) TaskStatus {
 	var ret TaskStatus
-	origin, err := os.ReadFile(filepath.Join(baseDir, originFileName))
+	store := newFileStore(baseDir)
+	origin, err := store.ReadOrigin()
 	if err == nil {
 		var p action.GraphCfg
 		// 解析yaml
@@ -257,27 +258,16 @@ func getTaskStatus(baseDir string) TaskStatus {
 			return TaskStatus{}
 		}
 		ret.JobStatus = make([]JobStatus, 0, len(p.Jobs))
-		for jobName, jobCfg := range p.Jobs {
-			ret.JobStatus = append(ret.JobStatus, getJobStatus(baseDir, jobName, jobCfg))
+		for jobName, cfg := range p.Jobs {
+			ret.JobStatus = append(ret.JobStatus, getJobStatus(baseDir, jobName, cfg))
 		}
-		sort.SliceStable(ret.JobStatus, func(i, j int) bool {
-			return ret.JobStatus[i].JobName < ret.JobStatus[j].JobName
-		})
 	}
-	ret.BaseStatus = getBaseStatus(baseDir)
+	ret.BaseStatus = getBaseStatus(store)
 	return ret
 }
 
 func mkdir(dir string) bool {
 	return util.Mkdir(dir) == nil
-}
-
-func convertStatusFileContent(content []byte) (string, int64) {
-	fields := strings.Fields(strings.TrimSpace(string(content)))
-	if len(fields) != 2 {
-		return UnknownStatus, 0
-	}
-	return fields[0], cast.ToInt64(fields[1])
 }
 
 func notifyCallback(callbackUrl, token, taskId string, req any) {
@@ -297,7 +287,7 @@ func NewAgentServer() zsf.LifeCycle {
 	agent := new(Agent)
 	poolSize := static.GetInt("workflow.agent.poolSize")
 	if poolSize <= 0 {
-		poolSize = 1
+		poolSize = 10
 	}
 	queueSize := static.GetInt("workflow.agent.queueSize")
 	if queueSize <= 0 {
@@ -331,9 +321,10 @@ func NewAgentServer() zsf.LifeCycle {
 				util.ExitWithErrMsg(session, "unknown step")
 				return
 			}
-			content, _ := os.ReadFile(filepath.Join(stepDir, logFileName))
-			if len(content) > 0 {
-				session.Write(content)
+			readCloser, err := newFileStore(stepDir).ReadLog()
+			if err == nil {
+				defer readCloser.Close()
+				io.Copy(session, readCloser)
 			}
 			session.Exit(0)
 		},
@@ -344,12 +335,12 @@ func NewAgentServer() zsf.LifeCycle {
 				return
 			}
 			baseDir := agent.GetWorkflowBaseDir(taskId)
-			file, err := os.ReadFile(filepath.Join(baseDir, originFileName))
+			origin, err := newFileStore(baseDir).ReadOrigin()
 			if err != nil {
 				util.ExitWithErrMsg(session, "unknown id")
 				return
 			}
-			session.Write(file)
+			session.Write(origin)
 			session.Exit(0)
 		},
 		"getWorkflowTaskStatus": func(session ssh.Session, args map[string]string, _ string, _ string) {

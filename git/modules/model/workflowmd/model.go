@@ -70,48 +70,6 @@ func (*Task) TableName() string {
 	return TaskTableName
 }
 
-type StepStatus int
-
-const (
-	StepWaitingStatus StepStatus = iota
-	StepRunningStatus
-	StepSuccessStatus
-	StepFailStatus
-)
-
-func (t StepStatus) Readable() string {
-	switch t {
-	case StepWaitingStatus:
-		return i18n.GetByKey(i18n.WorkflowStepWaitingStatus)
-	case StepRunningStatus:
-		return i18n.GetByKey(i18n.WorkflowStepRunningStatus)
-	case StepSuccessStatus:
-		return i18n.GetByKey(i18n.WorkflowStepSuccessStatus)
-	case StepFailStatus:
-		return i18n.GetByKey(i18n.WorkflowStepFailStatus)
-	default:
-		return i18n.GetByKey(i18n.WorkflowStepUnknownStatus)
-	}
-}
-
-type Step struct {
-	Id         int64      `json:"id" xorm:"pk autoincr"`
-	TaskId     int64      `json:"taskId"`
-	WorkflowId int64      `json:"workflowId"`
-	JobName    string     `json:"jobName"`
-	StepName   string     `json:"stepName"`
-	StepIndex  int        `json:"stepIndex"`
-	LogContent string     `json:"logContent"`
-	StepStatus StepStatus `json:"stepStatus"`
-	Duration   int64      `json:"duration"`
-	Created    time.Time  `json:"created" xorm:"created"`
-	Updated    time.Time  `json:"updated" xorm:"updated"`
-}
-
-func (*Step) TableName() string {
-	return StepTableName
-}
-
 type Workflow struct {
 	Id          int64     `json:"id" xorm:"pk autoincr"`
 	Name        string    `json:"name"`

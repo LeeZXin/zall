@@ -151,21 +151,6 @@ func (r *ListTaskReqDTO) IsValid() error {
 	return nil
 }
 
-type ListStepReqDTO struct {
-	TaskId   int64               `json:"taskId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *ListStepReqDTO) IsValid() error {
-	if r.TaskId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
 type TaskDTO struct {
 	Id          int64
 	TaskStatus  workflowmd.TaskStatus
@@ -176,16 +161,6 @@ type TaskDTO struct {
 	Operator    string
 	Created     time.Time
 	Duration    int64
-}
-
-type StepDTO struct {
-	JobName    string
-	StepName   string
-	StepIndex  int
-	LogContent string
-	StepStatus workflowmd.StepStatus
-	Created    time.Time
-	Duration   int64
 }
 
 type WorkflowWithLastTaskDTO struct {

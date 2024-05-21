@@ -202,7 +202,7 @@ const actionConfig2FlowElements = jobMap => {
       type: "custom",
       position: { x: 0, y: 0 },
       data: {
-        hasLeftHandle: jobCfg.needs.length > 0,
+        hasLeftHandle: jobCfg.needs?.length > 0,
         hasRightHandle: false,
         duration: readableDurationWrap(
           jobMap[jobName] ? jobMap[jobName].duration : 0
@@ -461,6 +461,7 @@ onUnmounted(() => {
 }
 .step-log > table > tr > td:first-child {
   text-align: center;
+  align-content: baseline;
 }
 .step-item {
   line-height: 38px;

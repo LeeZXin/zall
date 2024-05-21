@@ -31,12 +31,6 @@ type WorkflowWithLastTaskVO struct {
 	LastTask *TaskVO `json:"lastTask,omitempty"`
 }
 
-type ListTaskReqVO struct {
-	WorkflowId int64 `json:"workflowId"`
-	Cursor     int64 `json:"cursor"`
-	Limit      int   `json:"limit"`
-}
-
 type TaskVO struct {
 	Id          int64                  `json:"id"`
 	TaskStatus  workflowmd.TaskStatus  `json:"taskStatus"`
