@@ -15,5 +15,6 @@ const toPrDetail = () => {
     font-size: 14px;
     color: #1677ff;
     cursor: pointer;
+    padding: 0 4px;
 }
 </style>

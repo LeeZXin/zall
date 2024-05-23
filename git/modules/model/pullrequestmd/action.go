@@ -8,35 +8,35 @@ const (
 	CommentType ActionType = iota + 1
 	ReplyType
 	PrType
-	WorkflowType
+	ReviewType
 )
 
-type Pr struct {
+type PrAction struct {
 	Id     int64    `json:"id"`
 	Status PrStatus `json:"status"`
 }
 
-type Workflow struct {
-	TaskId int64 `json:"taskId"`
-}
-
-type Reply struct {
+type ReplyAction struct {
 	FromId       int64  `json:"fromId"`
 	FromComment  string `json:"fromComment"`
 	FromAccount  string `json:"fromAccount"`
 	ReplyComment string `json:"replyComment"`
 }
 
-type Comment struct {
+type CommentAction struct {
 	Comment string `json:"comment"`
 }
 
+type ReviewAction struct {
+	ReviewId int64 `json:"reviewId"`
+}
+
 type Action struct {
-	Comment    *Comment   `json:"comment,omitempty"`
-	Reply      *Reply     `json:"reply,omitempty"`
-	Pr         *Pr        `json:"pr,omitempty"`
-	Workflow   *Workflow  `json:"workflow,omitempty"`
-	ActionType ActionType `json:"actionType"`
+	Comment    *CommentAction `json:"comment,omitempty"`
+	Reply      *ReplyAction   `json:"reply,omitempty"`
+	Pr         *PrAction      `json:"pr,omitempty"`
+	Review     *ReviewAction  `json:"review,omitempty"`
+	ActionType ActionType     `json:"actionType"`
 }
 
 func (c *Action) FromDB(content []byte) error {
@@ -52,7 +52,7 @@ func (c *Action) ToDB() ([]byte, error) {
 
 func NewCommentAction(comment string) Action {
 	return Action{
-		Comment: &Comment{
+		Comment: &CommentAction{
 			Comment: comment,
 		},
 		ActionType: CommentType,
@@ -61,7 +61,7 @@ func NewCommentAction(comment string) Action {
 
 func NewReplyAction(fromId int64, fromAccount, fromComment, replyComment string) Action {
 	return Action{
-		Reply: &Reply{
+		Reply: &ReplyAction{
 			FromId:       fromId,
 			FromComment:  fromComment,
 			FromAccount:  fromAccount,
@@ -73,7 +73,7 @@ func NewReplyAction(fromId int64, fromAccount, fromComment, replyComment string)
 
 func NewPrAction(prId int64, status PrStatus) Action {
 	return Action{
-		Pr: &Pr{
+		Pr: &PrAction{
 			Id:     prId,
 			Status: status,
 		},
@@ -81,11 +81,11 @@ func NewPrAction(prId int64, status PrStatus) Action {
 	}
 }
 
-func NewWorkflowAction(taskId int64) Action {
+func NewReviewAction(reviewId int64) Action {
 	return Action{
-		Workflow: &Workflow{
-			TaskId: taskId,
+		Review: &ReviewAction{
+			ReviewId: reviewId,
 		},
-		ActionType: WorkflowType,
+		ActionType: ReviewType,
 	}
 }

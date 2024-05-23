@@ -89,7 +89,8 @@ export default {
             timeout: "Timeout",
             running: "Running",
             queue: "Queued",
-            unknown: "Unknown"
+            unknown: "Unknown",
+            unExecuted: "UnExecuted"
         }
     },
     secondBefore: " second ago",

@@ -74,6 +74,7 @@ type AddCommentReqVO struct {
 }
 
 type CanMergePullRequestRespVO struct {
+	StatusChange       bool                      `json:"statusChange"`
 	CanMerge           bool                      `json:"canMerge"`
 	IsProtectedBranch  bool                      `json:"isProtectedBranch"`
 	ProtectedBranchCfg branch.ProtectedBranchCfg `json:"protectedBranchCfg"`
@@ -84,9 +85,14 @@ type CanMergePullRequestRespVO struct {
 }
 
 type CanReviewPullRequestRespVO struct {
+	StatusChange      bool     `json:"statusChange"`
 	CanReview         bool     `json:"canReview"`
 	IsProtectedBranch bool     `json:"isProtectedBranch"`
 	ReviewerList      []string `json:"reviewerList"`
 	IsInReviewerList  bool     `json:"isInReviewerList"`
 	HasAgree          bool     `json:"hasAgree"`
+}
+
+type StatusChangeVO struct {
+	StatusChange bool `json:"statusChange"`
 }

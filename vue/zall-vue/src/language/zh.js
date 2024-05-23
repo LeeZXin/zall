@@ -89,7 +89,8 @@ export default {
             timeout: "超时",
             running: "运行中",
             queue: "排队中",
-            unknown: "未知"
+            unknown: "未知",
+            unExecuted: "未执行"
         }
     },
     secondBefore: "秒前",

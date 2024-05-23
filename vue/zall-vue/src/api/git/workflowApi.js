@@ -10,6 +10,8 @@ const listWorkflowRequest = (repoId) => request.get("/api/workflow/list/" + repo
 const deleteWorkflowRequest = (workflowId) => request.delete("/api/workflow/delete/" + workflowId);
 // 工作流任务列表
 const listTaskRequest = (workflowId, params) => request.get("/api/workflowTask/list/" + workflowId, { params });
+// 合并请求相关工作流任务列表
+const listTaskByPrIdRequest = (prId) => request.get("/api/workflowTask/listByPrId/" + prId);
 // 获取工作流详情
 const getWorkflowDetailRequest = (workflowId) => request.get("/api/workflow/detail/" + workflowId);
 // 触发工作流
@@ -33,5 +35,6 @@ export {
     killWorkflowTaskRequest,
     getTaskDetailRequest,
     getTaskStatusRequest,
-    getLogContentRequest
+    getLogContentRequest,
+    listTaskByPrIdRequest
 }

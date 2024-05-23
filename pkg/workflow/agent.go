@@ -9,8 +9,10 @@ import (
 	"github.com/LeeZXin/zall/pkg/process"
 	zssh "github.com/LeeZXin/zall/pkg/ssh"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/httputil"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
@@ -220,6 +222,9 @@ func getJobStatus(baseDir string, jobName string, jobCfg action.JobCfg) JobStatu
 	if !store.IsExists() {
 		return JobStatus{
 			JobName: jobName,
+			BaseStatus: BaseStatus{
+				Status: UnExecuted,
+			},
 		}
 	}
 	var ret JobStatus
@@ -257,12 +262,77 @@ func getTaskStatus(baseDir string) TaskStatus {
 		if err != nil || p.IsValid() != nil {
 			return TaskStatus{}
 		}
-		ret.JobStatus = make([]JobStatus, 0, len(p.Jobs))
-		for jobName, cfg := range p.Jobs {
-			ret.JobStatus = append(ret.JobStatus, getJobStatus(baseDir, jobName, cfg))
+		jobsMap := make(map[string]action.JobCfg, len(p.Jobs))
+		for name, cfg := range p.Jobs {
+			jobsMap[name] = cfg
 		}
+		jobsInDfsOrder := dfsOrder(p)
+		ret.JobStatus = make([]JobStatus, 0, len(p.Jobs))
+		for _, jobName := range jobsInDfsOrder {
+			ret.JobStatus = append(ret.JobStatus, getJobStatus(baseDir, jobName, jobsMap[jobName]))
+		}
+		//
 	}
 	ret.BaseStatus = getBaseStatus(store)
+	return ret
+}
+
+// 返回深度优先遍历顺序
+func dfsOrder(p action.GraphCfg) []string {
+	type jobNode struct {
+		name  string
+		next  *hashset.HashSet[string]
+		needs *hashset.HashSet[string]
+	}
+	nodesMap := make(map[string]*jobNode, len(p.Jobs))
+	// 初始化nodesMap
+	for name, cfg := range p.Jobs {
+		nodesMap[name] = &jobNode{
+			name:  name,
+			next:  hashset.NewHashSet[string](),
+			needs: hashset.NewHashSet[string](cfg.Needs...),
+		}
+	}
+	// 补充next
+	for name, cfg := range p.Jobs {
+		for _, need := range cfg.Needs {
+			n, b := nodesMap[need]
+			if b {
+				n.next.Add(name)
+			}
+		}
+	}
+	var dfs func(...*jobNode)
+	ret := make([]string, 0, len(p.Jobs))
+	visited := make(map[string]bool, len(p.Jobs))
+	noNeedsLayers := make([]*jobNode, 0)
+	for _, node := range nodesMap {
+		if node.needs.Size() == 0 {
+			noNeedsLayers = append(noNeedsLayers, node)
+		}
+	}
+	dfs = func(nodes ...*jobNode) {
+		for _, node := range nodes {
+			if visited[node.name] {
+				continue
+			}
+			ret = append(ret, node.name)
+			visited[node.name] = true
+			if node.next.Size() > 0 {
+				nextNodes := make([]*jobNode, 0, node.next.Size())
+				node.next.Range(func(n string) {
+					nextNodes = append(nextNodes, nodesMap[n])
+				})
+				nextNodes, _ = listutil.Filter(nextNodes, func(n *jobNode) (bool, error) {
+					return n != nil, nil
+				})
+				if len(nextNodes) > 0 {
+					dfs(nextNodes...)
+				}
+			}
+		}
+	}
+	dfs(noNeedsLayers...)
 	return ret
 }
 

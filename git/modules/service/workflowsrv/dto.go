@@ -151,23 +151,48 @@ func (r *ListTaskReqDTO) IsValid() error {
 	return nil
 }
 
-type TaskDTO struct {
+type ListTaskByPrIdReqDTO struct {
+	PrId     int64               `json:"prId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListTaskByPrIdReqDTO) IsValid() error {
+	if r.PrId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type TaskWithoutYamlContentDTO struct {
 	Id          int64
 	TaskStatus  workflowmd.TaskStatus
 	TriggerType workflowmd.TriggerType
-	YamlContent string
 	Branch      string
 	PrId        int64
 	Operator    string
 	Created     time.Time
 	Duration    int64
+	WorkflowId  int64
+}
+
+type TaskDTO struct {
+	TaskWithoutYamlContentDTO
+	YamlContent string
+}
+
+type WorkflowTaskDTO struct {
+	Name string
+	TaskWithoutYamlContentDTO
 }
 
 type WorkflowWithLastTaskDTO struct {
 	Id       int64
 	Name     string
 	Desc     string
-	LastTask *TaskDTO
+	LastTask *TaskWithoutYamlContentDTO
 }
 
 type WorkflowDTO struct {

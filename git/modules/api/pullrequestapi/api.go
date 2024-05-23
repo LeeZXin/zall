@@ -48,7 +48,7 @@ func InitApi() {
 }
 
 func canMergePullRequest(c *gin.Context) {
-	respDTO, err := pullrequestsrv.Outer.CanMergePullRequest(c, pullrequestsrv.CanMergePullRequestReqDTO{
+	respDTO, statusChange, err := pullrequestsrv.Outer.CanMergePullRequest(c, pullrequestsrv.CanMergePullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -59,6 +59,7 @@ func canMergePullRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, ginutil.DataResp[CanMergePullRequestRespVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data: CanMergePullRequestRespVO{
+			StatusChange:       statusChange,
 			CanMerge:           respDTO.CanMerge,
 			IsProtectedBranch:  respDTO.IsProtectedBranch,
 			ProtectedBranchCfg: respDTO.ProtectedBranchCfg,
@@ -71,7 +72,7 @@ func canMergePullRequest(c *gin.Context) {
 }
 
 func canReviewPullRequest(c *gin.Context) {
-	respDTO, err := pullrequestsrv.Outer.CanReviewPullRequest(c, pullrequestsrv.CanReviewPullRequestReqDTO{
+	respDTO, statusChange, err := pullrequestsrv.Outer.CanReviewPullRequest(c, pullrequestsrv.CanReviewPullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -87,6 +88,7 @@ func canReviewPullRequest(c *gin.Context) {
 			ReviewerList:      respDTO.ReviewerList,
 			IsInReviewerList:  respDTO.IsInReviewerList,
 			HasAgree:          respDTO.HasAgree,
+			StatusChange:      statusChange,
 		},
 	})
 }
@@ -280,7 +282,7 @@ func submitPullRequest(c *gin.Context) {
 }
 
 func closePullRequest(c *gin.Context) {
-	err := pullrequestsrv.Outer.ClosePullRequest(c, pullrequestsrv.ClosePullRequestReqDTO{
+	statusChange, err := pullrequestsrv.Outer.ClosePullRequest(c, pullrequestsrv.ClosePullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -288,11 +290,16 @@ func closePullRequest(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	util.DefaultOkResponse(c)
+	c.JSON(http.StatusOK, ginutil.DataResp[StatusChangeVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: StatusChangeVO{
+			StatusChange: statusChange,
+		},
+	})
 }
 
 func mergePullRequest(c *gin.Context) {
-	err := pullrequestsrv.Outer.MergePullRequest(c, pullrequestsrv.MergePullRequestReqDTO{
+	statusChange, err := pullrequestsrv.Outer.MergePullRequest(c, pullrequestsrv.MergePullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -300,11 +307,16 @@ func mergePullRequest(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	util.DefaultOkResponse(c)
+	c.JSON(http.StatusOK, ginutil.DataResp[StatusChangeVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: StatusChangeVO{
+			StatusChange: statusChange,
+		},
+	})
 }
 
 func agreeReviewPullRequest(c *gin.Context) {
-	err := pullrequestsrv.Outer.AgreeReviewPullRequest(c, pullrequestsrv.AgreeReviewPullRequestReqDTO{
+	statusChange, err := pullrequestsrv.Outer.AgreeReviewPullRequest(c, pullrequestsrv.AgreeReviewPullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -312,7 +324,12 @@ func agreeReviewPullRequest(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	util.DefaultOkResponse(c)
+	c.JSON(http.StatusOK, ginutil.DataResp[StatusChangeVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: StatusChangeVO{
+			StatusChange: statusChange,
+		},
+	})
 }
 
 func getPrId(c *gin.Context) int64 {

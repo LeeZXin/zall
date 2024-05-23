@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	Outer OuterService = new(outerImpl)
+	Outer = newOuterService()
+
 	Inner InnerService = new(innerImpl)
 )
 
@@ -32,7 +33,11 @@ type OuterService interface {
 	// TriggerWorkflow 手动触发工作流
 	TriggerWorkflow(context.Context, TriggerWorkflowReqDTO) error
 	// ListTask 工作流任务列表
-	ListTask(context.Context, ListTaskReqDTO) ([]TaskDTO, int64, error)
+	ListTask(context.Context, ListTaskReqDTO) ([]TaskWithoutYamlContentDTO, int64, error)
+	// ListTaskByPrId 合并请求相关工作流任务列表
+	ListTaskByPrId(context.Context, ListTaskByPrIdReqDTO) ([]WorkflowTaskDTO, error)
+	// GetTaskDetail 获取任务详情
+	GetTaskDetail(context.Context, GetTaskDetailReqDTO) (TaskDTO, error)
 	// GetWorkflowDetail 获取工作流详情
 	GetWorkflowDetail(context.Context, GetWorkflowDetailReqDTO) (WorkflowDTO, error)
 	// KillWorkflowTask 停止工作流

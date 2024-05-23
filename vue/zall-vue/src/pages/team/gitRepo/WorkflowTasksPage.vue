@@ -16,12 +16,12 @@
         <TaskStatusTag :status="dataItem[dataIndex]" v-else-if="dataIndex === 'taskStatus'" />
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
-          <a-popover placement="bottomRight" trigger="click">
+          <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
-                <li>
+                <li @click="gotoTaskDetail(dataItem)">
                   <eye-outlined />
-                  <span style="margin-left:4px" @click="gotoTaskDetail(dataItem)">查看详情</span>
+                  <span style="margin-left:4px">查看详情</span>
                 </li>
                 <li v-if="dataItem.taskStatus === 1" @click="killTask(dataItem.id)">
                   <close-outlined />
@@ -51,7 +51,7 @@
 </template>
 <script setup>
 import PrIdTag from "@/components/git/PrIdTag";
-import TaskStatusTag from "@/components/git/TaskStatusTag";
+import TaskStatusTag from "@/components/git/WorkflowTaskStatusTag";
 import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import {

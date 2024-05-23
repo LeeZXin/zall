@@ -10,6 +10,9 @@ const month = 30 * day;
 const year = 12 * month;
 
 const readableTimeComparingNow = dateTimeStr => {
+    if (!dateTimeStr) {
+        return "";
+    }
     let sub = moment().unix() - moment(dateTimeStr, "YYYY-MM-DD HH:mm:ss").unix();
     if (sub >= year) {
         return parseInt(sub / year) + t("yearBefore");
@@ -30,6 +33,9 @@ const readableTimeComparingNow = dateTimeStr => {
 }
 
 const readableDuration = duration => {
+    if (!duration) {
+        return "";
+    }
     const second = 1000;
     const minute = 60 * second;
     const hour = 60 * minute;

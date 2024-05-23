@@ -11,11 +11,14 @@ import (
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/eventbus"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/pkg/workflow"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
@@ -130,21 +133,27 @@ func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerTyp
 		}
 	} else {
 		workflowmd.UpdateLastTaskIdByWorkflowId(ctx, wf.Id, task.Id)
-		// 把合并请求和工作流关联起来
-		if prId > 0 {
-			pullrequestmd.BatchInsertTimeline(ctx, []pullrequestmd.InsertTimelineReqDTO{
-				{
-					PrId:    prId,
-					Action:  pullrequestmd.NewWorkflowAction(task.Id),
-					Account: operator,
-				},
-			})
-		}
 	}
 	return err
 }
 
 type outerImpl struct{}
+
+func newOuterService() OuterService {
+	psub.Subscribe(eventbus.PullRequestEventTopic, func(data any) {
+		event, ok := data.(eventbus.PullRequestEvent)
+		if ok && event.Action == string(webhook.MergeAction) {
+			Inner.FindAndExecute(event.RepoId,
+				event.Account,
+				workflowmd.HookTriggerType,
+				event.Ref,
+				workflowmd.PullRequestTriggerSource,
+				event.PrId,
+			)
+		}
+	})
+	return new(outerImpl)
+}
 
 func (*outerImpl) CreateWorkflow(ctx context.Context, reqDTO CreateWorkflowReqDTO) (err error) {
 	defer func() {
@@ -262,9 +271,9 @@ func (*outerImpl) ListWorkflowWithLastTask(ctx context.Context, reqDTO ListWorkf
 	}
 	taskIdMap, _ := listutil.CollectToMap(taskList, func(t workflowmd.Task) (int64, error) {
 		return t.Id, nil
-	}, func(t workflowmd.Task) (*TaskDTO, error) {
-		dto, _ := task2Dto(t)
-		return &dto, nil
+	}, func(t workflowmd.Task) (*TaskWithoutYamlContentDTO, error) {
+		task := task2WithoutYamlContentDto(t)
+		return &task, nil
 	})
 	return listutil.Map(ret, func(t workflowmd.Workflow) (WorkflowWithLastTaskDTO, error) {
 		return WorkflowWithLastTaskDTO{
@@ -399,7 +408,7 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 	return util.UnauthorizedError()
 }
 
-func (*outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]TaskDTO, int64, error) {
+func (*outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]TaskWithoutYamlContentDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
@@ -427,12 +436,55 @@ func (*outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]TaskDT
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(tasks, task2Dto)
+	data, _ := listutil.Map(tasks, func(t workflowmd.Task) (TaskWithoutYamlContentDTO, error) {
+		return task2WithoutYamlContentDto(t), nil
+	})
 	return data, total, nil
 }
 
-func task2Dto(t workflowmd.Task) (TaskDTO, error) {
-	return TaskDTO{
+// ListTaskByPrId 合并请求相关工作流任务列表
+func (*outerImpl) ListTaskByPrId(ctx context.Context, reqDTO ListTaskByPrIdReqDTO) ([]WorkflowTaskDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	pr, b, err := pullrequestmd.GetPullRequestById(ctx, reqDTO.PrId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
+	// 校验权限
+	err = checkPermByRepoId(ctx, pr.RepoId, reqDTO.Operator, accessWorkflow)
+	if err != nil {
+		return nil, err
+	}
+	tasks, err := workflowmd.ListTaskByPrId(ctx, reqDTO.PrId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	wfIdList, _ := listutil.Map(tasks, func(t workflowmd.Task) (int64, error) {
+		return t.WorkflowId, nil
+	})
+	nameMap, err := workflowmd.BatchGetWorkflowNameById(ctx, wfIdList)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(tasks, func(t workflowmd.Task) (WorkflowTaskDTO, error) {
+		return WorkflowTaskDTO{
+			Name:                      nameMap[t.WorkflowId],
+			TaskWithoutYamlContentDTO: task2WithoutYamlContentDto(t),
+		}, nil
+	})
+}
+
+func task2WithoutYamlContentDto(t workflowmd.Task) TaskWithoutYamlContentDTO {
+	return TaskWithoutYamlContentDTO{
 		TaskStatus:  t.TaskStatus,
 		TriggerType: t.TriggerType,
 		Branch:      t.Branch,
@@ -440,8 +492,15 @@ func task2Dto(t workflowmd.Task) (TaskDTO, error) {
 		Created:     t.Created,
 		Id:          t.Id,
 		PrId:        t.PrId,
-		YamlContent: t.YamlContent,
 		Duration:    t.Duration,
+		WorkflowId:  t.WorkflowId,
+	}
+}
+
+func task2Dto(t workflowmd.Task) (TaskDTO, error) {
+	return TaskDTO{
+		TaskWithoutYamlContentDTO: task2WithoutYamlContentDto(t),
+		YamlContent:               t.YamlContent,
 	}, nil
 }
 
@@ -618,6 +677,37 @@ func (*outerImpl) GetLogContent(ctx context.Context, reqDTO GetLogContentReqDTO)
 		return []string{}, nil
 	}
 	return strings.Split(logContent, "\n"), nil
+}
+
+// GetTaskDetail 获取任务详情
+func (*outerImpl) GetTaskDetail(ctx context.Context, reqDTO GetTaskDetailReqDTO) (TaskDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return TaskDTO{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	task, b, err := workflowmd.GetTaskById(ctx, reqDTO.TaskId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return TaskDTO{}, util.InternalError(err)
+	}
+	if !b {
+		return TaskDTO{}, util.InvalidArgsError()
+	}
+	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return TaskDTO{}, util.InternalError(err)
+	}
+	if !b {
+		return TaskDTO{}, util.ThereHasBugErr()
+	}
+	// 校验权限
+	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	if err != nil {
+		return TaskDTO{}, err
+	}
+	return task2Dto(task)
 }
 
 func workflow2Dto(wf workflowmd.Workflow) WorkflowDTO {

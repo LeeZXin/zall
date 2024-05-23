@@ -1,9 +1,9 @@
 <template>
-  <a-tag :color="colorMap[props.status]">{{convertStatus(props.status)}}</a-tag>
+  <a-tag :style="props.style" :color="colorMap[props.status]">{{convertStatus(props.status)}}</a-tag>
 </template>
 <script setup>
 import { defineProps } from "vue";
-const props = defineProps(["status"]);
+const props = defineProps(["status", "style"]);
 const colorMap = {
   0: "orange",
   1: "purple",

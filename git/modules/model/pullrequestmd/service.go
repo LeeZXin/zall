@@ -92,13 +92,14 @@ func GetLastPullRequestByRepoIdAndHead(ctx context.Context, repoId int64, heads 
 	return ret, err
 }
 
-func InsertReview(ctx context.Context, reqDTO InsertReviewReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&Review{
+func InsertReview(ctx context.Context, reqDTO InsertReviewReqDTO) (Review, error) {
+	ret := Review{
 		PrId:         reqDTO.PrId,
 		Reviewer:     reqDTO.Reviewer,
 		ReviewStatus: reqDTO.Status,
-	})
-	return err
+	}
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	return ret, err
 }
 
 func UpdateReview(ctx context.Context, reqDTO UpdateReviewReqDTO) (bool, error) {

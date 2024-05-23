@@ -5,7 +5,7 @@
         <template v-if="dataIndex === 'pullRequest'">
           <template v-if="dataItem[dataIndex]">
             <PrIdTag :repoId="route.params.repoId" :prId="dataItem[dataIndex].id"/>
-            <PrStatusTag :status="dataItem[dataIndex].prStatus" />
+            <PrStatusTag :status="dataItem[dataIndex].prStatus"/>
           </template>
         </template>
         <template v-else-if="dataIndex === 'isProtectedBranch'">
@@ -57,7 +57,8 @@
       show-less-items
       :pageSize="pageSize"
       style="margin-top:10px"
-      v-show="totalCount > pageSize"
+      :hideOnSinglePage="true"
+      :showSizeChanger="false"
       @change="()=>listBranch()"
     />
   </div>

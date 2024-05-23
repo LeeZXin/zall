@@ -21,6 +21,7 @@ const (
 	CancelStatus  = "cancel"
 	QueueStatus   = "queue"
 	UnknownStatus = "unknown"
+	UnExecuted    = "unExecuted"
 )
 
 const (

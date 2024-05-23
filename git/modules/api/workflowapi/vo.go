@@ -25,22 +25,32 @@ type UpdateWorkflowReqVO struct {
 }
 
 type WorkflowWithLastTaskVO struct {
-	Id       int64   `json:"id"`
-	Name     string  `json:"name"`
-	Desc     string  `json:"desc"`
-	LastTask *TaskVO `json:"lastTask,omitempty"`
+	Id       int64                     `json:"id"`
+	Name     string                    `json:"name"`
+	Desc     string                    `json:"desc"`
+	LastTask *TaskWithoutYamlContentVO `json:"lastTask,omitempty"`
 }
 
-type TaskVO struct {
+type TaskWithoutYamlContentVO struct {
 	Id          int64                  `json:"id"`
 	TaskStatus  workflowmd.TaskStatus  `json:"taskStatus"`
 	TriggerType workflowmd.TriggerType `json:"triggerType"`
-	YamlContent string                 `json:"yamlContent"`
 	Operator    string                 `json:"operator"`
 	Created     string                 `json:"created"`
 	Branch      string                 `json:"branch"`
 	PrId        int64                  `json:"prId"`
 	Duration    int64                  `json:"duration"`
+	WorkflowId  int64                  `json:"workflowId"`
+}
+
+type TaskVO struct {
+	TaskWithoutYamlContentVO
+	YamlContent string `json:"yamlContent,omitempty"`
+}
+
+type WorkflowTaskVO struct {
+	Name string `json:"name"`
+	TaskWithoutYamlContentVO
 }
 
 type WorkflowVO struct {

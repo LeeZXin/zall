@@ -6,10 +6,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
-	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
-	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
-	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
@@ -17,11 +14,13 @@ import (
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/branch"
+	"github.com/LeeZXin/zall/pkg/eventbus"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"time"
@@ -228,7 +227,7 @@ func (s *outerImpl) SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequ
 		return
 	}
 	// 触发webhook
-	triggerWebhook(repo, reqDTO.Operator, pr, webhook.SubmitAction)
+	notifyEventBus(repo, reqDTO.Operator, pr, webhook.SubmitAction)
 	return
 }
 
@@ -247,7 +246,7 @@ func (*outerImpl) GetPullRequest(ctx context.Context, reqDTO GetPullRequestReqDT
 	return pr2Dto(pr)
 }
 
-func (*outerImpl) ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestReqDTO) (err error) {
+func (*outerImpl) ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestReqDTO) (statusChange bool, err error) {
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
@@ -268,7 +267,7 @@ func (*outerImpl) ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestR
 	}
 	// 只允许从open -> closed
 	if pr.PrStatus != pullrequestmd.PrOpenStatus {
-		err = util.InvalidArgsError()
+		statusChange = true
 		return
 	}
 	var (
@@ -295,26 +294,26 @@ func (*outerImpl) ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestR
 	}
 	if b {
 		// 触发webhook
-		triggerWebhook(repo, reqDTO.Operator, pr, webhook.CloseAction)
+		notifyEventBus(repo, reqDTO.Operator, pr, webhook.CloseAction)
 	}
 	return
 }
 
 // CanMergePullRequest 是否可合并
-func (s *outerImpl) CanMergePullRequest(ctx context.Context, reqDTO CanMergePullRequestReqDTO) (CanMergePullRequestRespDTO, error) {
+func (s *outerImpl) CanMergePullRequest(ctx context.Context, reqDTO CanMergePullRequestReqDTO) (CanMergePullRequestRespDTO, bool, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return CanMergePullRequestRespDTO{}, err
+		return CanMergePullRequestRespDTO{}, false, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
 	pr, repo, err := checkPerm(ctx, reqDTO.PrId, reqDTO.Operator)
 	if err != nil {
-		return CanMergePullRequestRespDTO{}, err
+		return CanMergePullRequestRespDTO{}, false, err
 	}
 	// 只允许从open
 	if pr.PrStatus != pullrequestmd.PrOpenStatus {
-		return CanMergePullRequestRespDTO{}, util.InvalidArgsError()
+		return CanMergePullRequestRespDTO{}, true, nil
 	}
 	var (
 		reviewCanMerge, gitCanMerge, isProtectedBranch bool
@@ -326,7 +325,7 @@ func (s *outerImpl) CanMergePullRequest(ctx context.Context, reqDTO CanMergePull
 	reviewCanMerge, isProtectedBranch, cfg, reviewCount, err = s.detectCanMergePullRequest(ctx, pr)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return ret, util.InternalError(err)
+		return ret, false, util.InternalError(err)
 	}
 	ret.ProtectedBranchCfg = cfg
 	ret.IsProtectedBranch = isProtectedBranch
@@ -341,41 +340,41 @@ func (s *outerImpl) CanMergePullRequest(ctx context.Context, reqDTO CanMergePull
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return ret, util.InternalError(err)
+		return ret, false, util.InternalError(err)
 	}
 	gitCanMerge = info.CanMerge
 	ret.GitCanMerge = info.CanMerge
 	ret.GitCommitCount = len(info.Commits)
 	ret.GitConflictFiles = info.ConflictFiles
 	ret.CanMerge = reviewCanMerge && gitCanMerge
-	return ret, nil
+	return ret, false, nil
 }
 
 // CanReviewPullRequest 是否可评审代码
-func (s *outerImpl) CanReviewPullRequest(ctx context.Context, reqDTO CanReviewPullRequestReqDTO) (CanReviewPullRequestRespDTO, error) {
+func (s *outerImpl) CanReviewPullRequest(ctx context.Context, reqDTO CanReviewPullRequestReqDTO) (CanReviewPullRequestRespDTO, bool, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return CanReviewPullRequestRespDTO{}, err
+		return CanReviewPullRequestRespDTO{}, false, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, _, ret, err := s.canReview(ctx, reqDTO.PrId, reqDTO.Operator)
-	return ret, err
+	_, _, ret, statusChange, err := s.canReview(ctx, reqDTO.PrId, reqDTO.Operator)
+	return ret, statusChange, err
 }
 
-func (s *outerImpl) canReview(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, CanReviewPullRequestRespDTO, error) {
+func (s *outerImpl) canReview(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, CanReviewPullRequestRespDTO, bool, error) {
 	// 校验权限
 	pr, repo, err := checkPerm(ctx, prId, operator)
 	if err != nil {
-		return pr, repo, CanReviewPullRequestRespDTO{}, err
+		return pr, repo, CanReviewPullRequestRespDTO{}, false, err
 	}
 	// 只允许从open
 	if pr.PrStatus != pullrequestmd.PrOpenStatus {
-		return pr, repo, CanReviewPullRequestRespDTO{}, util.InvalidArgsError()
+		return pr, repo, CanReviewPullRequestRespDTO{}, true, nil
 	}
 	protectedBranches, err := branchmd.ListProtectedBranch(ctx, pr.RepoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return pr, repo, CanReviewPullRequestRespDTO{}, util.InternalError(err)
+		return pr, repo, CanReviewPullRequestRespDTO{}, false, util.InternalError(err)
 	}
 	isProtectedBranch, protectedBranch := protectedBranches.IsProtectedBranch(pr.Head)
 	reviewerList := protectedBranch.GetCfg().ReviewerList
@@ -389,7 +388,7 @@ func (s *outerImpl) canReview(ctx context.Context, prId int64, operator apisessi
 	review, b, err := pullrequestmd.GetReview(ctx, prId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return pr, repo, CanReviewPullRequestRespDTO{}, util.InternalError(err)
+		return pr, repo, CanReviewPullRequestRespDTO{}, false, util.InternalError(err)
 	}
 	hasAgree := b && review.ReviewStatus == pullrequestmd.AgreeReviewStatus
 	/*
@@ -408,11 +407,11 @@ func (s *outerImpl) canReview(ctx context.Context, prId int64, operator apisessi
 		ReviewerList:      reviewerList,
 		IsInReviewerList:  isInReviewerList,
 		HasAgree:          hasAgree,
-	}, nil
+	}, false, nil
 }
 
 // MergePullRequest 提交合并代码
-func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullRequestReqDTO) (err error) {
+func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullRequestReqDTO) (statusChange bool, err error) {
 	defer func() {
 		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
@@ -433,7 +432,7 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 	}
 	// 只允许从open -> merged
 	if pr.PrStatus != pullrequestmd.PrOpenStatus {
-		err = util.InvalidArgsError()
+		statusChange = true
 		return
 	}
 	var canMerge bool
@@ -452,16 +451,17 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
-			return err
+			return
 		}
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		err = util.InternalError(err)
+		return
 	}
-	// 触发webhook
-	triggerWebhook(repo, reqDTO.Operator, pr, webhook.MergeAction)
+	// 触发webhook和工作流
+	notifyEventBus(repo, reqDTO.Operator, pr, webhook.MergeAction)
 	// 触发工作流
 	triggerMergePrWorkflow(reqDTO.Operator, pr)
-	return nil
+	return
 }
 
 func (*outerImpl) detectCanMergePullRequest(ctx context.Context, pr pullrequestmd.PullRequest) (bool, bool, branch.ProtectedBranchCfg, int, error) {
@@ -529,40 +529,43 @@ func (s *outerImpl) mergeWithTx(ctx context.Context, pr pullrequestmd.PullReques
 	return err
 }
 
-func (s *outerImpl) AgreeReviewPullRequest(ctx context.Context, reqDTO AgreeReviewPullRequestReqDTO) (err error) {
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.PullRequestSrvKeysVO.ReviewPullRequest),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return err
+func (s *outerImpl) AgreeReviewPullRequest(ctx context.Context, reqDTO AgreeReviewPullRequestReqDTO) (bool, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return false, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	pr, repo, review, err := s.canReview(ctx, reqDTO.PrId, reqDTO.Operator)
-	if err != nil {
-		return err
+	pr, repo, review, statusChange, err := s.canReview(ctx, reqDTO.PrId, reqDTO.Operator)
+	if err != nil || statusChange {
+		return statusChange, err
 	}
 	if !review.CanReview {
-		return util.InvalidArgsError()
+		return false, util.InvalidArgsError()
 	}
-	err = pullrequestmd.InsertReview(ctx, pullrequestmd.InsertReviewReqDTO{
-		PrId:     reqDTO.PrId,
-		Status:   pullrequestmd.AgreeReviewStatus,
-		Reviewer: reqDTO.Operator.Account,
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		action, err := pullrequestmd.InsertReview(ctx, pullrequestmd.InsertReviewReqDTO{
+			PrId:     reqDTO.PrId,
+			Status:   pullrequestmd.AgreeReviewStatus,
+			Reviewer: reqDTO.Operator.Account,
+		})
+		if err != nil {
+			return err
+		}
+		return pullrequestmd.BatchInsertTimeline(ctx, []pullrequestmd.InsertTimelineReqDTO{
+			{
+				PrId:    reqDTO.PrId,
+				Action:  pullrequestmd.NewReviewAction(action.Id),
+				Account: reqDTO.Operator.Account,
+			},
+		})
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return false, util.InternalError(err)
 	}
 	// 触发webhook
-	triggerWebhook(repo, reqDTO.Operator, pr, webhook.ReviewAction)
-	return
+	notifyEventBus(repo, reqDTO.Operator, pr, webhook.ReviewAction)
+	return false, nil
 }
 
 // ListTimeline 展示时间轴
@@ -783,44 +786,34 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 	return repo, nil
 }
 
-func triggerWebhook(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action webhook.PullRequestAction) {
-	go func() {
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		// 触发webhook
-		hookList, err := webhookmd.ListWebhook(ctx, repo.Id)
-		if err == nil {
-			req := &webhook.PullRequestEventReq{
-				PrId:    pr.Id,
-				PrTitle: pr.PrTitle,
-				Action:  action,
-				BaseRepoReq: webhook.BaseRepoReq{
-					RepoId:    repo.Id,
-					RepoName:  repo.Name,
-					Account:   operator.Account,
-					EventTime: time.Now().UnixMilli(),
-				},
-			}
-			for _, hook := range hookList {
-				if hook.Events.Has(webhook.PullRequestEvent) {
-					webhook.TriggerWebhook(hook.HookUrl, hook.Secret, req)
-				}
-			}
-		} else {
-			logger.Logger.Error(err)
-		}
-	}()
+func notifyPullRequestEvent(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action webhook.PullRequestAction) {
+	psub.Publish(eventbus.PullRequestEventTopic, eventbus.PullRequestEvent{
+		PrId:      pr.Id,
+		PrTitle:   pr.PrTitle,
+		Action:    string(action),
+		RepoId:    repo.Id,
+		RepoName:  repo.Name,
+		Account:   operator.Account,
+		EventTime: time.Now(),
+	})
+}
+
+func notifyEventBus(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action webhook.PullRequestAction) {
+	psub.Publish(eventbus.PullRequestEventTopic, eventbus.PullRequestEvent{
+		PrId:      pr.Id,
+		PrTitle:   pr.PrTitle,
+		Action:    string(action),
+		RepoId:    repo.Id,
+		RepoName:  repo.Name,
+		Account:   operator.Account,
+		Ref:       pr.Head,
+		EventTime: time.Now(),
+	})
 }
 
 // triggerMergePrWorkflow 触发合并请求的工作流
 func triggerMergePrWorkflow(operator apisession.UserInfo, pr pullrequestmd.PullRequest) {
 	go func() {
-		workflowsrv.Inner.FindAndExecute(pr.RepoId,
-			operator.Account,
-			workflowmd.HookTriggerType,
-			pr.Head,
-			workflowmd.PullRequestTriggerSource,
-			pr.Id,
-		)
+
 	}()
 }

@@ -38,10 +38,14 @@ func InitApi() {
 			group.PUT("/kill/:taskId", killWorkflowTask)
 			// 获取执行任务列表
 			group.GET("/list/:workflowId", listTask)
-			// 获取执行任务详情
+			// 获取执行任务状态
 			group.GET("/status/:taskId", getTaskStatus)
 			// 获取日志详情
 			group.GET("/log/:taskId", getLogContent)
+			// 获取合并请求的关联任务
+			group.GET("/listByPrId/:prId", listTaskByPrId)
+			// 获取任务详情
+			group.GET("/detail/:taskId", getTaskDetail)
 		}
 		e.POST("/api/v1/workflow/internal/taskCallBack", internalTaskCallback)
 	})
@@ -132,7 +136,7 @@ func listWorkflow(c *gin.Context) {
 			Desc: t.Desc,
 		}
 		if t.LastTask != nil {
-			vo, _ := task2Vo(*t.LastTask)
+			vo := task2WithoutYamlContentVo(*t.LastTask)
 			ret.LastTask = &vo
 		}
 		return ret, nil
@@ -201,9 +205,11 @@ func listTask(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(tasks, task2Vo)
-		c.JSON(http.StatusOK, ginutil.Page2Resp[TaskVO]{
-			DataResp: ginutil.DataResp[[]TaskVO]{
+		data, _ := listutil.Map(tasks, func(t workflowsrv.TaskWithoutYamlContentDTO) (TaskWithoutYamlContentVO, error) {
+			return task2WithoutYamlContentVo(t), nil
+		})
+		c.JSON(http.StatusOK, ginutil.Page2Resp[TaskWithoutYamlContentVO]{
+			DataResp: ginutil.DataResp[[]TaskWithoutYamlContentVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},
@@ -213,17 +219,45 @@ func listTask(c *gin.Context) {
 	}
 }
 
-func task2Vo(t workflowsrv.TaskDTO) (TaskVO, error) {
-	return TaskVO{
+func listTaskByPrId(c *gin.Context) {
+	tasks, err := workflowsrv.Outer.ListTaskByPrId(c, workflowsrv.ListTaskByPrIdReqDTO{
+		PrId:     cast.ToInt64(c.Param("prId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(tasks, func(t workflowsrv.WorkflowTaskDTO) (WorkflowTaskVO, error) {
+		return WorkflowTaskVO{
+			Name:                     t.Name,
+			TaskWithoutYamlContentVO: task2WithoutYamlContentVo(t.TaskWithoutYamlContentDTO),
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]WorkflowTaskVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func task2WithoutYamlContentVo(t workflowsrv.TaskWithoutYamlContentDTO) TaskWithoutYamlContentVO {
+	return TaskWithoutYamlContentVO{
 		Id:          t.Id,
 		TaskStatus:  t.TaskStatus,
 		TriggerType: t.TriggerType,
 		Operator:    t.Operator,
-		YamlContent: t.YamlContent,
 		Created:     t.Created.Format(time.DateTime),
 		Branch:      t.Branch,
 		PrId:        t.PrId,
 		Duration:    t.Duration,
+		WorkflowId:  t.WorkflowId,
+	}
+}
+
+func task2Vo(t workflowsrv.TaskDTO) (TaskVO, error) {
+	return TaskVO{
+		TaskWithoutYamlContentVO: task2WithoutYamlContentVo(t.TaskWithoutYamlContentDTO),
+		YamlContent:              t.YamlContent,
 	}, nil
 }
 
@@ -256,5 +290,21 @@ func getLogContent(c *gin.Context) {
 	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     logs,
+	})
+}
+
+func getTaskDetail(c *gin.Context) {
+	task, err := workflowsrv.Outer.GetTaskDetail(c, workflowsrv.GetTaskDetailReqDTO{
+		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	vo, _ := task2Vo(task)
+	c.JSON(http.StatusOK, ginutil.DataResp[TaskVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     vo,
 	})
 }

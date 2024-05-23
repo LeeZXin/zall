@@ -7,16 +7,51 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/eventbus"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"time"
 )
 
 type outerImpl struct{}
+
+func newOuterService() OuterService {
+	psub.Subscribe(eventbus.PullRequestEventTopic, func(data any) {
+		event, ok := data.(eventbus.PullRequestEvent)
+		if ok {
+			ctx, closer := xormstore.Context(context.Background())
+			defer closer.Close()
+			// 触发webhook
+			hookList, err := webhookmd.ListWebhook(ctx, event.RepoId)
+			if err == nil {
+				req := &webhook.PullRequestEventReq{
+					PrId:    event.PrId,
+					PrTitle: event.PrTitle,
+					Action:  webhook.PullRequestAction(event.Action),
+					BaseRepoReq: webhook.BaseRepoReq{
+						RepoId:    event.RepoId,
+						RepoName:  event.RepoName,
+						Account:   event.Account,
+						EventTime: event.EventTime.UnixMilli(),
+					},
+				}
+				for _, hook := range hookList {
+					if hook.Events.Has(webhook.PullRequestEvent) {
+						webhook.TriggerWebhook(hook.HookUrl, hook.Secret, req)
+					}
+				}
+			} else {
+				logger.Logger.Error(err)
+			}
+		}
+	})
+	return new(outerImpl)
+}
 
 // CreateWebhook 新增webhook
 func (*outerImpl) CreateWebhook(ctx context.Context, reqDTO CreateWebhookReqDTO) (err error) {

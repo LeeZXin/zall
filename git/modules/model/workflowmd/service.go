@@ -96,6 +96,22 @@ func GetWorkflowById(ctx context.Context, id int64) (Workflow, bool, error) {
 	return ret, b, err
 }
 
+func BatchGetWorkflowNameById(ctx context.Context, idList []int64) (map[int64]string, error) {
+	wfList := make([]Workflow, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		In("id", idList).
+		Cols("name", "id").
+		Find(&wfList)
+	if err != nil {
+		return nil, err
+	}
+	ret := make(map[int64]string, len(wfList))
+	for _, wf := range wfList {
+		ret[wf.Id] = wf.Name
+	}
+	return ret, nil
+}
+
 func ListTaskByWorkflowId(ctx context.Context, reqDTO ListTaskByWorkflowIdReqDTO) ([]Task, int64, error) {
 	ret := make([]Task, 0)
 	total, err := xormutil.MustGetXormSession(ctx).
@@ -104,6 +120,14 @@ func ListTaskByWorkflowId(ctx context.Context, reqDTO ListTaskByWorkflowIdReqDTO
 		OrderBy("id desc").
 		FindAndCount(&ret)
 	return ret, total, err
+}
+
+func ListTaskByPrId(ctx context.Context, prId int64) ([]Task, error) {
+	ret := make([]Task, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("pr_id = ?", prId).
+		Find(&ret)
+	return ret, err
 }
 
 func GetTaskById(ctx context.Context, id int64) (Task, bool, error) {

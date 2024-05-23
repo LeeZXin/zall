@@ -13,13 +13,13 @@
           <span>
             <a-tooltip placement="top" v-if="!item.lastTask || (item.lastTask.taskStatus !== 1 && item.lastTask.taskStatus !== 0)">
               <template #title>手动执行</template>
-              <span class="op" @click="showBranchModal(item)">
+              <span class="op-icon" @click="showBranchModal(item)">
                 <PlayCircleFilled />
               </span>
             </a-tooltip>
             <a-tooltip placement="top" v-else>
               <template #title>停止执行</template>
-              <span class="op" @click="killTask(item)">
+              <span class="op-icon" @click="killTask(item)">
                 <PauseOutlined />
               </span>
             </a-tooltip>
@@ -40,7 +40,7 @@
                   </li>
                 </ul>
               </template>
-              <div class="op">
+              <div class="op-icon">
                 <EllipsisOutlined />
               </div>
             </a-popover>
@@ -219,17 +219,6 @@ const killTask = item => {
 };
 </script>
 <style scoped>
-.op {
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  line-height: 24px;
-  font-size: 16px;
-  text-align: center;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
 .no-data {
   font-size: 14px;
   text-align: center;

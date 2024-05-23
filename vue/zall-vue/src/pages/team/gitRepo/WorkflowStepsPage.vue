@@ -38,16 +38,7 @@
       <li>
         <div class="info-name">任务状态</div>
         <div class="info-value">
-          <div>
-            <rocket-outlined v-if="taskInfo.status === 'running'" />
-            <check-circle-filled style="color:green" v-else-if="taskInfo.status === 'success'" />
-            <close-circle-filled
-              style="color:red"
-              v-else-if="['fail', 'timeout', 'cancel'].find(item=>item===taskInfo.status)"
-            />
-            <play-circle-outlined v-else />
-            <span style="padding-left:6px">{{t(statusMap[taskInfo.status])}}</span>
-          </div>
+          <RunStatus :status="taskInfo.status"/>
         </div>
       </li>
       <li>
@@ -89,7 +80,7 @@
       </div>
       <div class="right" v-if="jobInfo.status.length > 0 && jobInfo.status !== 'unknown'">
         <div class="run-status">
-          <span>{{t(statusMap[jobInfo.status])}}</span>
+          <RunStatus :status="jobInfo.status"/>
           <span style="margin-left:8px">{{readableDurationWrap(jobInfo.duration)}}</span>
         </div>
         <ul class="step-list">
@@ -126,6 +117,7 @@
   </div>
 </template>
 <script setup>
+import RunStatus from "@/components/git/WorkflowRunStatus";
 import PrIdTag from "@/components/git/PrIdTag";
 import ZNaviBack from "@/components/common/ZNaviBack";
 import WorkflowNode from "@/components/vueflow/WorkflowNode";
@@ -136,14 +128,10 @@ import {
   MinusOutlined,
   RightOutlined,
   DownOutlined,
-  RocketOutlined,
-  PlayCircleOutlined,
-  CheckCircleFilled,
-  CloseCircleFilled,
   ExclamationCircleOutlined
 } from "@ant-design/icons-vue";
 import { ref, h, onUnmounted, reactive, createVNode } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { VueFlow, MarkerType, useVueFlow } from "@vue-flow/core";
 import "@vue-flow/core/dist/style.css";
 import "@vue-flow/core/dist/theme-default.css";
@@ -152,24 +140,15 @@ import jsyaml from "js-yaml";
 import {
   getTaskStatusRequest,
   killWorkflowTaskRequest,
-  getLogContentRequest
+  getLogContentRequest,
+  getTaskDetailRequest
 } from "@/api/git/workflowApi";
 import { readableDuration, readableTimeComparingNow } from "@/utils/time";
-import { useWorkflowTaskStore } from "@/pinia/workflowTaskStore";
 import { useI18n } from "vue-i18n";
 import { message, Modal } from "ant-design-vue";
-const statusMap = {
-  success: "workflow.status.success",
-  fail: "workflow.status.fail",
-  timeout: "workflow.status.timeout",
-  cancel: "workflow.status.cancel",
-  queue: "workflow.status.queue",
-  running: "workflow.status.running",
-  unknown: "workflow.status.unknown"
-};
 const { findNode } = useVueFlow();
 const { t } = useI18n();
-const taskStore = useWorkflowTaskStore();
+const taskStore = ref({});
 const taskInfo = reactive({
   status: "unknown",
   duration: 0
@@ -178,7 +157,6 @@ const jobInfo = reactive({
   status: "unknown",
   duration: 0
 });
-const router = useRouter();
 const { layout } = useLayout();
 const stepsList = ref([]);
 const readableDurationWrap = duration => {
@@ -188,7 +166,7 @@ const readableDurationWrap = duration => {
   return "";
 };
 const actionConfig2FlowElements = jobMap => {
-  let config = taskStore.yamlContent;
+  let config = taskStore.value.yamlContent;
   let action = jsyaml.load(config);
   let nodes = [];
   let edges = [];
@@ -317,12 +295,11 @@ const getTaskStatus = () => {
     }
   });
 };
-if (taskStore.id === 0) {
-  router.push(
-    `/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/tasks`
-  );
-} else {
-  getTaskStatus();
+const getTaskDetail = () => {
+  getTaskDetailRequest(route.params.taskId).then(res=>{
+    taskStore.value = res.data;
+    getTaskStatus();
+  })
 }
 const clickFlowNode = e => {
   selectJob(e.node.id);
@@ -334,7 +311,7 @@ const killTask = () => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      killWorkflowTaskRequest(taskStore.id).then(() => {
+      killWorkflowTaskRequest(taskStore.value.id).then(() => {
         message.success("停止成功");
       });
     },
@@ -347,13 +324,14 @@ const showLogs = (item, index) => {
   } else if (item.loaded) {
     item.openLog = true;
   } else {
-    getLogContentRequest(taskStore.id, selectedJob.value, index).then(res => {
+    getLogContentRequest(taskStore.value.id, selectedJob.value, index).then(res => {
       item.loaded = true;
       item.logs = res.data;
       item.openLog = true;
     });
   }
 };
+getTaskDetail();
 onUnmounted(() => {
   if (statusInterval.value) {
     clearInterval(statusInterval.value);

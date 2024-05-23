@@ -73,6 +73,7 @@ func Post(ctx context.Context, url, secret string, req EventReq) error {
 }
 
 func post(ctx context.Context, url, eventType, secret string, req any) error {
+	initTrigger()
 	reqJson, err := json.Marshal(req)
 	if err != nil {
 		return err

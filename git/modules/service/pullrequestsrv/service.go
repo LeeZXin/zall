@@ -18,15 +18,15 @@ type OuterService interface {
 	// SubmitPullRequest 创建合并请求
 	SubmitPullRequest(context.Context, SubmitPullRequestReqDTO) error
 	// ClosePullRequest 关闭合并请求
-	ClosePullRequest(context.Context, ClosePullRequestReqDTO) error
+	ClosePullRequest(context.Context, ClosePullRequestReqDTO) (bool, error)
 	// MergePullRequest 合并代码
-	MergePullRequest(context.Context, MergePullRequestReqDTO) error
+	MergePullRequest(context.Context, MergePullRequestReqDTO) (bool, error)
 	// CanMergePullRequest 是否可合并
-	CanMergePullRequest(context.Context, CanMergePullRequestReqDTO) (CanMergePullRequestRespDTO, error)
+	CanMergePullRequest(context.Context, CanMergePullRequestReqDTO) (CanMergePullRequestRespDTO, bool, error)
 	// CanReviewPullRequest 是否可评审代码
-	CanReviewPullRequest(context.Context, CanReviewPullRequestReqDTO) (CanReviewPullRequestRespDTO, error)
+	CanReviewPullRequest(context.Context, CanReviewPullRequestReqDTO) (CanReviewPullRequestRespDTO, bool, error)
 	// AgreeReviewPullRequest 同意合并代码
-	AgreeReviewPullRequest(context.Context, AgreeReviewPullRequestReqDTO) error
+	AgreeReviewPullRequest(context.Context, AgreeReviewPullRequestReqDTO) (bool, error)
 	// ListTimeline 展示时间轴
 	ListTimeline(context.Context, ListTimelineReqDTO) ([]TimelineDTO, error)
 	// AddComment 添加评论

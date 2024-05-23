@@ -18,7 +18,8 @@
       show-less-items
       :pageSize="pageSize"
       style="margin-top:10px"
-      v-show="totalCount > pageSize"
+      :hideOnSinglePage="true"
+      :showSizeChanger="false"
       @change="()=>listTag()"
     />
   </div>

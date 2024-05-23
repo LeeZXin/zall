@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	Outer OuterService = new(outerImpl)
+	Outer = newOuterService()
 )
 
 type OuterService interface {

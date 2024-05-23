@@ -37,6 +37,7 @@
         :disabled="!canMerge"
         v-show="!submitFormVisible"
         @click="showSubmitForm"
+        :icon="h(PlusOutlined)"
       >创建合并请求</a-button>
     </div>
     <div class="submit-form" v-if="submitFormVisible">
@@ -70,11 +71,12 @@ import {
   ArrowLeftOutlined,
   CloseOutlined,
   CheckOutlined,
-  LoadingOutlined
+  LoadingOutlined,
+  PlusOutlined
 } from "@ant-design/icons-vue";
 import FileDiffDetail from "@/components/git/FileDiffDetail";
 import BranchTagSelect from "@/components/git/BranchTagSelect";
-import { ref, reactive, nextTick } from "vue";
+import { ref, reactive, nextTick, h } from "vue";
 import { simpleInfoRequest, diffRefsRequest } from "@/api/git/repoApi";
 import { submitPullRequestRequest } from "@/api/git/prApi";
 import { useRoute, useRouter } from "vue-router";

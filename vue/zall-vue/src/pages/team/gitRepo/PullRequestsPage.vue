@@ -55,7 +55,8 @@
       show-less-items
       :pageSize="pageSize"
       style="margin-top:10px"
-      v-show="totalCount > pageSize"
+      :hideOnSinglePage="true"
+      :showSizeChanger="false"
       @change="()=>listPullRequest()"
     />
   </div>
@@ -76,7 +77,6 @@ import {
   statsPullRequestRequest
 } from "@/api/git/prApi";
 import { useRoute, useRouter } from "vue-router";
-import { usePrStore } from "@/pinia/prStore";
 import { readableTimeComparingNow } from "@/utils/time";
 const searchKey = ref("");
 const route = useRoute();
@@ -117,21 +117,6 @@ const toCreatePage = () => {
 };
 // 详情页
 const toDetail = item => {
-  const prStore = usePrStore();
-  prStore.commentCount = item.commentCount;
-  prStore.createBy = item.createBy;
-  prStore.created = item.created;
-  prStore.head = item.head;
-  prStore.headCommitId = item.headCommitId;
-  prStore.headType = item.headType;
-  prStore.id = item.id;
-  prStore.prComment = item.prComment;
-  prStore.prStatus = item.prStatus;
-  prStore.prTitle = item.prTitle;
-  prStore.repoId = item.repoId;
-  prStore.target = item.target;
-  prStore.targetCommitId = item.targetCommitId;
-  prStore.targetType = item.targetType;
   router.push(`/gitRepo/${route.params.repoId}/pullRequest/${item.id}/detail`);
 };
 listPullRequest();

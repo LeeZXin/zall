@@ -8,39 +8,15 @@
         <span style="font-weight:bold;">{{ props.label }}</span>
         <span class="label-duration">{{props.data.duration}}</span>
       </div>
-      <div class="status" v-if="props.data.status === 'running'">
-        <rocket-outlined />
-        <span style="padding-left:6px">运行中</span>
-      </div>
-      <div class="status" v-else-if="props.data.status === 'success'">
-        <check-circle-filled style="color:green" />
-        <span style="padding-left:6px">成功</span>
-      </div>
-      <div class="status" v-else-if="props.data.status === 'fail'">
-        <close-circle-filled style="color:red" />
-        <span style="padding-left:6px">失败</span>
-      </div>
-      <div class="status" v-else-if="props.data.status === 'timeout'">
-        <close-circle-filled style="color:red" />
-        <span style="padding-left:6px">超时</span>
-      </div>
-      <div class="status" v-else>
-        <play-circle-outlined />
-        <span style="padding-left:6px">未执行</span>
-      </div>
+      <RunStatus :status="props.data.status"/>
     </div>
     <Handle type="source" :position="Position.Right" v-if="props.data.hasRightHandle" />
   </div>
 </template>
 <script setup>
+import RunStatus from "../git/WorkflowRunStatus";
 import { Position, Handle } from "@vue-flow/core";
 import { defineProps } from "vue";
-import {
-  RocketOutlined,
-  PlayCircleOutlined,
-  CheckCircleFilled,
-  CloseCircleFilled
-} from "@ant-design/icons-vue";
 // props were passed from the slot using `v-bind="customNodeProps"`
 const props = defineProps(["label", "selected", "data"]);
 </script>

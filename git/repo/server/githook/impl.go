@@ -25,7 +25,6 @@ import (
 type hookImpl struct{}
 
 func NewHook() Hook {
-	webhook.InitWebhook()
 	return new(hookImpl)
 }
 
@@ -165,9 +164,9 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 		// 触发工作流
 		for _, wf := range workflowList {
 			if refType == "commit" {
-				branch := strings.TrimPrefix(revInfo.Ref, git.BranchPrefix)
-				if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, branch) {
-					workflowsrv.Inner.Execute(&wf, opts.PusherAccount, workflowmd.HookTriggerType, branch, 0)
+				ref := strings.TrimPrefix(revInfo.Ref, git.BranchPrefix)
+				if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, ref) {
+					workflowsrv.Inner.Execute(&wf, opts.PusherAccount, workflowmd.HookTriggerType, ref, 0)
 				}
 			}
 		}
