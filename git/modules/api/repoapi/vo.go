@@ -214,25 +214,6 @@ type HistoryCommitsRespVO struct {
 	Cursor int        `json:"cursor"`
 }
 
-type RepoTokenVO struct {
-	TokenId int64  `json:"tokenId"`
-	Account string `json:"account"`
-	Token   string `json:"token"`
-	Created string `json:"created"`
-}
-
-type CreateRepoTokenReqVO struct {
-	RepoId int64 `json:"repoId"`
-}
-
-type DeleteRepoTokenReqVO struct {
-	TokenId int64 `json:"tokenId"`
-}
-
-type ListRepoTokenReqVO struct {
-	RepoId int64 `json:"repoId"`
-}
-
 type TransferTeam struct {
 	RepoId int64 `json:"repoId"`
 	TeamId int64 `json:"teamId"`

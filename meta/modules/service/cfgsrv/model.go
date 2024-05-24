@@ -17,7 +17,6 @@ var (
 		LfsEnabled:   true,
 		LfsJwtExpiry: 3600,
 		LfsJwtSecret: idutil.RandomUuid(),
-		ActionToken:  idutil.RandomUuid(),
 	}
 	DefaultEnvCfg = &EnvCfg{
 		Envs: []string{
@@ -59,8 +58,6 @@ type GitCfg struct {
 	LfsJwtSecret string `json:"lfsJwtSecret"`
 	// lfsJwtSecretBytes lfs 密钥
 	lfsJwtSecretBytes []byte
-	// ActionToken action 执行token
-	ActionToken string `json:"actionToken"`
 }
 
 func (c *GitCfg) GetLfsJwtExpiry() time.Duration {

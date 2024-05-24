@@ -58,12 +58,6 @@ func InitApi() {
 			group.GET("/showDiffTextContent", showDiffTextContent)
 			// 历史提交
 			group.GET("/historyCommits", historyCommits)
-			// 获取令牌列表
-			group.POST("/listRepoToken", listRepoToken)
-			// 删除访问令牌
-			group.POST("/deleteRepoToken", deleteRepoToken)
-			// 创建访问令牌
-			group.POST("/insertRepoToken", insertRepoToken)
 			// 刷新hook
 			group.Any("/refreshAllGitHooks", refreshAllGitHooks)
 			// 迁移项目组
@@ -678,62 +672,6 @@ func historyCommits(c *gin.Context) {
 			return commitDto2Vo(t), nil
 		})
 		c.JSON(http.StatusOK, ret)
-	}
-}
-
-func listRepoToken(c *gin.Context) {
-	var req ListRepoTokenReqVO
-	if util.ShouldBindJSON(&req, c) {
-		tokens, err := reposrv.Outer.ListRepoToken(c, reposrv.ListRepoTokenReqDTO{
-			RepoId:   req.RepoId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		data, _ := listutil.Map(tokens, func(t reposrv.RepoTokenDTO) (RepoTokenVO, error) {
-			return RepoTokenVO{
-				TokenId: t.TokenId,
-				Account: t.Account,
-				Token:   t.Token,
-				Created: t.Created.Format(time.DateTime),
-			}, nil
-		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]RepoTokenVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     data,
-		})
-	}
-}
-
-func insertRepoToken(c *gin.Context) {
-	var req CreateRepoTokenReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.InsertRepoToken(c, reposrv.InsertRepoTokenReqDTO{
-			RepoId:   req.RepoId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func deleteRepoToken(c *gin.Context) {
-	var req DeleteRepoTokenReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.DeleteRepoToken(c, reposrv.DeleteRepoTokenReqDTO{
-			TokenId:  req.TokenId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
 	}
 }
 

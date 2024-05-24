@@ -34,7 +34,7 @@ func NewStore() Store {
 }
 
 // InitRepo 初始化仓库
-func (s *storeImpl) InitRepo(ctx context.Context, req reqvo.InitRepoReq) error {
+func (s *storeImpl) InitRepo(ctx context.Context, req reqvo.InitRepoReq) (int64, error) {
 	err := git.InitRepository(ctx, git.InitRepoOpts{
 		Owner: git.User{
 			Account: req.UserAccount,
@@ -47,14 +47,12 @@ func (s *storeImpl) InitRepo(ctx context.Context, req reqvo.InitRepoReq) error {
 		DefaultBranch: req.DefaultBranch,
 	})
 	// 仓库已存在
-	if err == git.RepoExistsErr {
-		return nil
+	if err == git.RepoExistsErr || err == nil {
+		gitSize, _ := getGitSize(req.RepoPath)
+		return gitSize, nil
 	}
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	return nil
+	logger.Logger.WithContext(ctx).Error(err)
+	return 0, util.InternalError(err)
 }
 
 // DeleteRepo 删除仓库
@@ -177,14 +175,19 @@ func (s *storeImpl) GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq) ([]
 }
 
 // Gc 触发仓库gc
-func (s *storeImpl) Gc(ctx context.Context, req reqvo.GcReq) error {
+func (s *storeImpl) Gc(ctx context.Context, req reqvo.GcReq) (int64, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	err := git.Gc(ctx, repoPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return 0, util.InternalError(err)
 	}
-	return nil
+	gitSize, err := getGitSize(req.RepoPath)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return 0, util.InternalError(err)
+	}
+	return gitSize, nil
 }
 
 // DiffRefs 对比两个ref差异
@@ -323,14 +326,26 @@ func (s *storeImpl) DiffFile(ctx context.Context, req reqvo.DiffFileReq) (reqvo.
 }
 
 // GetRepoSize 获取仓库大小
-func (s *storeImpl) GetRepoSize(ctx context.Context, req reqvo.GetRepoSizeReq) (int64, error) {
-	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	size, err := git.GetRepoSize(repoPath)
+func (s *storeImpl) GetRepoSize(ctx context.Context, req reqvo.GetRepoSizeReq) (int64, int64, error) {
+	return getGitAndLfsSize(ctx, req.RepoPath)
+}
+
+func getGitAndLfsSize(ctx context.Context, repoPath string) (int64, int64, error) {
+	gitSize, err := getGitSize(repoPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return 0, util.InternalError(err)
+		return 0, 0, util.InternalError(err)
 	}
-	return size, nil
+	lfsSize, err := git.GetDirSize(filepath.Join(git.LfsDir(), repoPath))
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return 0, 0, util.InternalError(err)
+	}
+	return gitSize, lfsSize, nil
+}
+
+func getGitSize(repoPath string) (int64, error) {
+	return git.GetDirSize(filepath.Join(git.RepoDir(), repoPath))
 }
 
 // ShowDiffTextContent 获取某个commitId文件内容
@@ -468,13 +483,13 @@ func (s *storeImpl) IndexRepo(ctx context.Context, req reqvo.IndexRepoReq) (reqv
 // UploadPack git-upload-pack
 func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 	// 校验content-type
-	if req.C.GetHeader("YamlContent-Type") != "application/x-git-upload-pack-request" {
+	if req.C.GetHeader("Content-Type") != "application/x-git-upload-pack-request" {
 		req.C.String(http.StatusForbidden, "bad content type")
 		return
 	}
 	reqBody := req.C.Request.Body
 	var err error
-	if req.C.GetHeader("Config-Encoding") == "gzip" {
+	if req.C.GetHeader("Content-Encoding") == "gzip" {
 		reqBody, err = gzip.NewReader(reqBody)
 		if err != nil {
 			logger.Logger.WithContext(req.C).Error(err)
@@ -488,7 +503,7 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
-	req.C.Header("YamlContent-Type", "application/x-git-upload-pack-result")
+	req.C.Header("Content-Type", "application/x-git-upload-pack-result")
 	req.C.Writer.WriteHeaderNow()
 	env := make([]string, 0)
 	protocol := req.C.GetHeader("Git-Protocol")
@@ -513,13 +528,13 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 // ReceivePack git-receive-pack
 func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 	// 校验content-type
-	if req.C.GetHeader("YamlContent-Type") != "application/x-git-receive-pack-request" {
+	if req.C.GetHeader("Content-Type") != "application/x-git-receive-pack-request" {
 		req.C.String(http.StatusForbidden, "bad content type")
 		return
 	}
 	reqBody := req.C.Request.Body
 	var err error
-	if req.C.GetHeader("Config-Encoding") == "gzip" {
+	if req.C.GetHeader("Content-Encoding") == "gzip" {
 		reqBody, err = gzip.NewReader(reqBody)
 		if err != nil {
 			req.C.String(http.StatusInternalServerError, "internal error")
@@ -532,7 +547,7 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
-	req.C.Header("YamlContent-Type", "application/x-git-receive-pack-result")
+	req.C.Header("Content-Type", "application/x-git-receive-pack-result")
 	req.C.Writer.WriteHeaderNow()
 	env := make([]string, 0)
 	protocol := req.C.GetHeader("Git-Protocol")
@@ -560,11 +575,10 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 func (s *storeImpl) InfoRefs(ctx context.Context, req reqvo.InfoRefsReq) {
 	serviceParam := req.C.Query("service")
 	// 不缓存任何东西
-	req.C.Writer.WriteHeader(http.StatusOK)
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
-	req.C.Header("YamlContent-Type", fmt.Sprintf("application/x-%s-advertisement", serviceParam))
+	req.C.Header("Content-Type", fmt.Sprintf("application/x-%s-advertisement", serviceParam))
 	req.C.Writer.WriteHeaderNow()
 	env := make([]string, 0)
 	protocol := req.C.GetHeader("Git-Protocol")
@@ -680,9 +694,9 @@ func (s *storeImpl) CreateArchive(ctx context.Context, req reqvo.CreateArchiveRe
 	req.C.Header("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	req.C.Header("Pragma", "no-cache")
 	req.C.Header("Cache-Control", "no-cache, max-age=0, must-revalidate")
-	req.C.Header("YamlContent-Type", archiveType.HttpContentType())
-	req.C.Header("YamlContent-Disposition", "attachment; filename=\""+req.FileName+"\"")
-	req.C.Header("Access-Control-Expose-Headers", "YamlContent-Disposition")
+	req.C.Header("Content-Type", archiveType.HttpContentType())
+	req.C.Header("Content-Disposition", "attachment; filename=\""+req.FileName+"\"")
+	req.C.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	req.C.Writer.WriteHeaderNow()
 	// 暂时不搞http缓存
 	err = git.CreateArchive(ctx, repoPath, commitId, archiveType, req.C.Writer)

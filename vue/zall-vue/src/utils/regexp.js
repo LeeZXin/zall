@@ -24,6 +24,8 @@ const workflowBranchRegexp = /^.{1,1024}$/;
 const workflowAgentHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
 const workflowAgentTokenRegexp = /^.{1,1024}$/;
 const workflowDescRegexp = /^.{1,1024}$/;
+const workflowSecretNameRegexp = /^\w{1,32}$/;
+const workflowSecretContentRegexp = /^[\s\S]{1,10240}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -43,5 +45,7 @@ export {
     workflowBranchRegexp,
     workflowAgentHostRegexp,
     workflowAgentTokenRegexp,
-    workflowDescRegexp
+    workflowDescRegexp,
+    workflowSecretNameRegexp,
+    workflowSecretContentRegexp
 }

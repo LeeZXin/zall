@@ -17,6 +17,10 @@ var (
 		Id:         "system.unauthorized",
 		DefaultRet: "权限不足",
 	}
+	SystemForbidden = KeyItem{
+		Id:         "system.forbidden",
+		DefaultRet: "禁止操作",
+	}
 	SystemAlreadyExists = KeyItem{
 		Id:         "system.dataAlreadyExists",
 		DefaultRet: "数据已存在",

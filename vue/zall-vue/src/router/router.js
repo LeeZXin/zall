@@ -31,7 +31,7 @@ const router = createRouter({
             children: [{
                     path: "/team/:teamId(\\d+)/gitRepo/create",
                     component: () =>
-                        import ("../pages/team/gitRepo/CreateRepoPage")
+                        import ("../pages/team/gitRepo/RepoCreatePage")
                 },
                 {
                     path: "/team/:teamId(\\d+)/gitRepo/list",
@@ -127,11 +127,11 @@ const router = createRouter({
             }, {
                 path: "/gitRepo/:repoId(\\d+)/protectedBranch/create",
                 component: () =>
-                    import ("../pages/team/gitRepo/HandleProtectedBranchPage")
+                    import ("../pages/team/gitRepo/ProtectedBranchHandlePage")
             }, {
                 path: "/gitRepo/:repoId(\\d+)/protectedBranch/:protectedBranchId(\\d+)/update",
                 component: () =>
-                    import ("../pages/team/gitRepo/HandleProtectedBranchPage")
+                    import ("../pages/team/gitRepo/ProtectedBranchHandlePage")
             }, {
                 path: "/gitRepo/:repoId(\\d+)/webhook/list",
                 component: () =>
@@ -139,11 +139,11 @@ const router = createRouter({
             }, {
                 path: "/gitRepo/:repoId(\\d+)/webhook/create",
                 component: () =>
-                    import ("../pages/team/gitRepo/HandleWebhookPage")
+                    import ("../pages/team/gitRepo/WebhookHandlePage")
             }, {
                 path: "/gitRepo/:repoId(\\d+)/webhook/:webhookId(\\d+)/update",
                 component: () =>
-                    import ("../pages/team/gitRepo/HandleWebhookPage")
+                    import ("../pages/team/gitRepo/WebhookHandlePage")
             }, {
                 path: "/gitRepo/:repoId(\\d+)/workflow/list",
                 component: () =>
@@ -151,11 +151,11 @@ const router = createRouter({
             }, {
                 path: "/gitRepo/:repoId(\\d+)/workflow/create",
                 component: () =>
-                    import ("../pages/team/gitRepo/HandleWorkflowPage")
+                    import ("../pages/team/gitRepo/WorkflowHandlePage")
             }, {
                 path: "/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/update",
                 component: () =>
-                    import ("../pages/team/gitRepo/HandleWorkflowPage")
+                    import ("../pages/team/gitRepo/WorkflowHandlePage")
             }, {
                 path: "/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/tasks",
                 component: () =>
@@ -164,6 +164,22 @@ const router = createRouter({
                 path: "/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/:taskId(\\d+)/steps",
                 component: () =>
                     import ("../pages/team/gitRepo/WorkflowStepsPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/workflow/secrets",
+                component: () =>
+                    import ("../pages/team/gitRepo/SecretsPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/workflow/secret/create",
+                component: () =>
+                    import ("../pages/team/gitRepo/SecretHandlePage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/workflow/secret/:secretId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/gitRepo/SecretHandlePage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/config",
+                component: () =>
+                    import ("../pages/team/gitRepo/RepoConfigPage")
             }]
         },
         {

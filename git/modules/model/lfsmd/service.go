@@ -73,16 +73,6 @@ func BatchInsertMetaObject(ctx context.Context, reqDTO []InsertMetaObjectReqDTO)
 	return ret, err
 }
 
-func SumRepoLfsSize(ctx context.Context, repoId int64) (int64, error) {
-	size, err := xormutil.MustGetXormSession(ctx).
-		Where("repo_id = ?", repoId).
-		Sum(new(MetaObject), "size")
-	if err != nil {
-		return 0, err
-	}
-	return int64(size), err
-}
-
 func ListLfsLock(ctx context.Context, reqDTO ListLockReqDTO) ([]LfsLock, error) {
 	ret := make([]LfsLock, 0)
 	session := xormutil.MustGetXormSession(ctx).

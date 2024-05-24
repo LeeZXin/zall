@@ -12,11 +12,9 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/kballard/go-shellquote"
 	"io"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -147,9 +145,10 @@ func (c *GraphCfg) ConvertToGraph() (*Graph, error) {
 }
 
 type StepCfg struct {
-	Name   string            `json:"name" yaml:"name"`
-	With   map[string]string `json:"with" yaml:"with"`
-	Script string            `json:"script" yaml:"script"`
+	Name    string            `json:"name" yaml:"name"`
+	Secrets []string          `json:"secrets"`
+	With    map[string]string `json:"with" yaml:"with"`
+	Script  string            `json:"script" yaml:"script"`
 }
 
 func (c *StepCfg) convertToStep() *step {
@@ -355,14 +354,6 @@ type step struct {
 	killed bool
 }
 
-func (s *step) GetReplacedScript(args map[string]string) string {
-	script := s.Script
-	for k, v := range args {
-		script = strings.ReplaceAll(script, "{{"+k+"}}", v)
-	}
-	return script
-}
-
 func (s *step) SetCurr(cmd *exec.Cmd) bool {
 	s.Lock()
 	defer s.Unlock()
@@ -395,13 +386,13 @@ func (s *step) Run(opts *RunOpts, j *job, index int) error {
 	})
 	if err == nil {
 		cmdPath := filepath.Join(opts.Workdir, idutil.RandomUuid())
-		err = util.WriteFile(cmdPath, []byte(s.GetReplacedScript(opts.Args)))
+		err = util.WriteFile(cmdPath, []byte(s.Script))
 		if err == nil {
 			defer util.RemoveAll(cmdPath)
 			err = executeCommand(j.ctx, "chmod +x "+cmdPath, nil, nil, opts.Workdir, nil)
 			if err == nil {
 				var cmd *exec.Cmd
-				cmd, err = newCommand(j.ctx, "bash -c "+cmdPath, writer, writer, opts.Workdir, mergeEnvs(s.With))
+				cmd, err = newCommand(j.ctx, "bash -c "+cmdPath, writer, writer, opts.Workdir, mergeEnvs(s.With, opts.Args))
 				if err == nil {
 					if s.SetCurr(cmd) {
 						err = cmd.Run()
@@ -427,9 +418,12 @@ func (s *step) Run(opts *RunOpts, j *job, index int) error {
 	return err
 }
 
-func mergeEnvs(args map[string]string) []string {
-	ret := make([]string, 0, len(args))
+func mergeEnvs(args, with map[string]string) []string {
+	ret := make([]string, 0, len(args)+len(with))
 	for k, v := range args {
+		ret = append(ret, k+"="+v)
+	}
+	for k, v := range with {
 		ret = append(ret, k+"="+v)
 	}
 	return ret
@@ -458,9 +452,7 @@ func newCommand(ctx context.Context, line string, stdout, stderr io.Writer, work
 	}
 	process.SetSysProcAttribute(cmd)
 	if len(envs) > 0 {
-		cmd.Env = append(os.Environ(), envs...)
-	} else {
-		cmd.Env = os.Environ()
+		cmd.Env = envs
 	}
 	cmd.Dir = workdir
 	cmd.Stdout = stdout

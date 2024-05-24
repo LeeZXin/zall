@@ -11,19 +11,8 @@
           <span style="color:darkred">*</span>
         </div>
         <div class="section-body">
-          <a-input style="width:100%" v-model:value="formState.pattern" :disabled="mode==='view'" />
+          <a-input style="width:100%" v-model:value="formState.pattern" />
           <div class="input-desc">保护分支默认不允许删除,不允许强行推送, 可以是glob模版, 模式例如: dev_*</div>
-        </div>
-      </div>
-      <div class="section">
-        <div class="section-title">
-          <span>受保护的文件模式(使用分号 ';' 分隔)</span>
-        </div>
-        <div class="section-body">
-          <a-input style="width:100%" v-model:value="formState.protectedFilePatterns" />
-          <div
-            class="input-desc"
-          >即使用户有权添加、编辑或删除此分支中的文件，也不允许直接更改受保护的文件。 可以使用分号 (';') 分隔多个模式。 见github.com/gobwas/glob文档了解模式语法。例如： .drone.yml, /docs/**/*.txt</div>
         </div>
       </div>
       <div class="section">
@@ -121,7 +110,6 @@ const router = useRouter();
 const mode = getMode();
 const formState = reactive({
   pattern: "",
-  protectedFilePatterns: "",
   pushOption: 0,
   pushWhiteList: [],
   reviewCountWhenCreatePr: 1,
@@ -152,7 +140,6 @@ const createOrUpdateProtectedBranch = () => {
       pattern: formState.pattern,
       repoId: parseInt(route.params.repoId),
       cfg: {
-        protectedFilePatterns: formState.protectedFilePatterns.split(";"),
         pushOption: formState.pushOption,
         pushWhiteList: formState.pushWhiteList,
         reviewCountWhenCreatePr: formState.reviewCountWhenCreatePr,
@@ -170,7 +157,6 @@ const createOrUpdateProtectedBranch = () => {
       pattern: formState.pattern,
       repoId: parseInt(route.params.repoId),
       cfg: {
-        protectedFilePatterns: formState.protectedFilePatterns.split(";"),
         pushOption: formState.pushOption,
         pushWhiteList: formState.pushWhiteList,
         reviewCountWhenCreatePr: formState.reviewCountWhenCreatePr,
@@ -193,9 +179,6 @@ if (mode !== "create") {
   } else {
     if (mode !== "create") {
       formState.pattern = protectedBranchStore.pattern;
-      formState.protectedFilePatterns = protectedBranchStore.cfg?.protectedFilePatterns?.join(
-        ";"
-      );
       formState.pushOption = protectedBranchStore.cfg?.pushOption;
       formState.pushWhiteList = protectedBranchStore.cfg?.pushWhiteList;
       formState.reviewCountWhenCreatePr =
@@ -220,24 +203,10 @@ if (mode !== "create") {
   margin-bottom: 10px;
   font-weight: bold;
 }
-.input-desc {
-  font-size: 13px;
-  color: gray;
-  margin-top: 10px;
-  line-height: 20px;
-  word-break: break-all;
-}
 .push-option-desc {
   font-size: 13px;
   padding-left: 24px;
   color: gray;
   margin-bottom: 6px;
-}
-.input-title {
-  font-size: 14px;
-  margin-bottom: 6px;
-}
-.input-item + .input-item {
-  margin-top: 16px;
 }
 </style>

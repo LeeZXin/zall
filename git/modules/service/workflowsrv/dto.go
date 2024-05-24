@@ -288,3 +288,118 @@ func (r *GetLogContentReqDTO) IsValid() error {
 	}
 	return nil
 }
+
+type ListSecretReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListSecretReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type CreateSecretReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	Name     string              `json:"name"`
+	Content  string              `json:"content"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *CreateSecretReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !workflowmd.IsSecretNameValid(r.Name) {
+		return util.InvalidArgsError()
+	}
+	if !workflowmd.IsSecretContentValid(r.Content) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type UpdateSecretReqDTO struct {
+	SecretId int64               `json:"secretId"`
+	Content  string              `json:"content"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *UpdateSecretReqDTO) IsValid() error {
+	if r.SecretId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !workflowmd.IsSecretContentValid(r.Content) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DeleteSecretReqDTO struct {
+	SecretId int64               `json:"secretId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *DeleteSecretReqDTO) IsValid() error {
+	if r.SecretId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type GetSecretContentReqDTO struct {
+	SecretId int64               `json:"secretId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetSecretContentReqDTO) IsValid() error {
+	if r.SecretId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type SecretWithoutContentDTO struct {
+	SecretId int64
+	Name     string
+}
+
+type SecretDTO struct {
+	SecretWithoutContentDTO
+	Content string
+}
+
+type FindAndExecuteWorkflowReqDTO struct {
+	RepoId      int64
+	RepoPath    string
+	Operator    string
+	TriggerType workflowmd.TriggerType
+	Branch      string
+	Source      workflowmd.SourceType
+	PrId        int64
+}
+
+type ExecuteWorkflowReqDTO struct {
+	RepoPath    string
+	Operator    string
+	TriggerType workflowmd.TriggerType
+	Branch      string
+	PrId        int64
+}

@@ -11,7 +11,7 @@
           <span style="color:darkred">*</span>
         </div>
         <div class="section-body">
-          <a-input style="width:100%" v-model:value="formState.hookUrl" :disabled="mode==='view'" />
+          <a-input style="width:100%" v-model:value="formState.hookUrl" />
           <div class="input-desc">必须以http开头的有效url</div>
         </div>
       </div>

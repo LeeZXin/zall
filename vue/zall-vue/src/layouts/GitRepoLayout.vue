@@ -45,11 +45,7 @@
             <calendar-outlined />
             <span>操作日志</span>
           </a-menu-item>
-          <a-menu-item key="/team/gitRepo/accessToken" v-if="isAdmin">
-            <key-outlined />
-            <span>访问令牌</span>
-          </a-menu-item>
-          <a-menu-item key="/team/gitRepo/settings" v-if="isAdmin">
+          <a-menu-item key="/config" v-if="isAdmin">
             <setting-outlined />
             <span>设置</span>
           </a-menu-item>
@@ -79,7 +75,6 @@ import {
   TagOutlined,
   SettingOutlined,
   CalendarOutlined,
-  KeyOutlined,
   CloudUploadOutlined,
   ApiOutlined,
   NodeIndexOutlined

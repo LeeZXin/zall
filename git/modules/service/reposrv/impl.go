@@ -22,11 +22,9 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/strutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/patrickmn/go-cache"
 	"path/filepath"
@@ -94,25 +92,6 @@ func (s *innerImpl) GetByRepoId(ctx context.Context, id int64) (repomd.Repo, boo
 		s.idCache.Set(key, r, time.Minute)
 	}
 	return r, b
-}
-
-func (*innerImpl) CheckRepoToken(ctx context.Context, reqDTO CheckRepoTokenReqDTO) bool {
-	if err := reqDTO.IsValid(); err != nil {
-		return false
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	token, b, err := repomd.GetRepoToken(ctx, repomd.GetRepoTokenReqDTO{
-		RepoId:  reqDTO.RepoId,
-		Account: reqDTO.Account,
-	})
-	if err != nil || !b {
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-		}
-		return false
-	}
-	return token.Token == reqDTO.Token
 }
 
 type outerImpl struct {
@@ -391,7 +370,7 @@ func (s *outerImpl) CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) (er
 	// 添加数据
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 插入数据库
-		_, err := repomd.InsertRepo(ctx, repomd.InsertRepoReqDTO{
+		repo, err2 := repomd.InsertRepo(ctx, repomd.InsertRepoReqDTO{
 			Name:          reqDTO.Name,
 			Path:          relativePath,
 			Author:        reqDTO.Operator.Account,
@@ -399,12 +378,13 @@ func (s *outerImpl) CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) (er
 			RepoDesc:      reqDTO.Desc,
 			DefaultBranch: reqDTO.DefaultBranch,
 			RepoStatus:    repomd.OpenRepoStatus,
+			LastOperated:  time.Now(),
 		})
-		if err != nil {
-			return err
+		if err2 != nil {
+			return err2
 		}
 		// 调用store
-		err = client.InitRepo(ctx, reqvo.InitRepoReq{
+		gitSize, err2 := client.InitRepo(ctx, reqvo.InitRepoReq{
 			UserAccount:   reqDTO.Operator.Account,
 			UserEmail:     reqDTO.Operator.Email,
 			RepoName:      reqDTO.Name,
@@ -413,10 +393,10 @@ func (s *outerImpl) CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) (er
 			GitIgnoreName: reqDTO.GitIgnoreName,
 			DefaultBranch: reqDTO.DefaultBranch,
 		})
-		if err != nil {
-			return err
+		if err2 == nil {
+			repomd.UpdateGitSize(ctx, repo.Id, gitSize)
 		}
-		return nil
+		return err2
 	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
@@ -599,16 +579,20 @@ func (s *outerImpl) Gc(ctx context.Context, reqDTO GcReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return err
 	}
-	err = client.Gc(ctx, reqvo.GcReq{
+	gitSize, err := client.Gc(ctx, reqvo.GcReq{
 		RepoPath: repo.Path,
 	})
 	if err != nil {
@@ -618,6 +602,7 @@ func (s *outerImpl) Gc(ctx context.Context, reqDTO GcReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	repomd.UpdateGitSize(ctx, reqDTO.RepoId, gitSize)
 	return nil
 }
 
@@ -966,118 +951,6 @@ func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReq
 		return r, nil
 	})
 	return ret, nil
-}
-
-func (*outerImpl) InsertRepoToken(ctx context.Context, reqDTO InsertRepoTokenReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.InsertRepoToken),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	// 校验权限
-	err = checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, updateToken)
-	if err != nil {
-		return
-	}
-	for i := 0; i < 10; i++ {
-		_, err = repomd.InsertRepoToken(ctx, repomd.InsertRepoTokenReqDTO{
-			RepoId:  reqDTO.RepoId,
-			Account: strutil.RandomStr(16),
-			Token:   strutil.RandomStr(16),
-		})
-		if err != nil && xormutil.IsDuplicatedEntryError(err) {
-			continue
-		}
-		break
-	}
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
-func (*outerImpl) DeleteRepoToken(ctx context.Context, reqDTO DeleteRepoTokenReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.DeleteRepoToken),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	token, b, err := repomd.GetByTokenId(ctx, reqDTO.TokenId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	// 校验权限
-	err = checkPermByRepoId(ctx, token.RepoId, reqDTO.Operator, updateToken)
-	if err != nil {
-		return
-	}
-	_, err = repomd.DeleteRepoToken(ctx, reqDTO.TokenId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
-func (*outerImpl) ListRepoToken(ctx context.Context, reqDTO ListRepoTokenReqDTO) ([]RepoTokenDTO, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	// 校验权限
-	err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, accessToken)
-	if err != nil {
-		return nil, err
-	}
-	tokens, err := repomd.ListRepoToken(ctx, reqDTO.RepoId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	return listutil.Map(tokens, func(t repomd.RepoToken) (RepoTokenDTO, error) {
-		return RepoTokenDTO{
-			TokenId: t.Id,
-			Account: t.Account,
-			Token:   t.Token,
-			Created: t.Created,
-		}, nil
-	})
-}
-
-func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo, permCode int) error {
-	repo, b := Inner.GetByRepoId(ctx, repoId)
-	if !b {
-		return util.InvalidArgsError()
-	}
-	return checkPermByRepo(ctx, repo, operator, permCode)
 }
 
 func checkPermByRepo(ctx context.Context, repo repomd.Repo, operator apisession.UserInfo, permCode int) error {

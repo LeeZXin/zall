@@ -43,10 +43,20 @@ const (
 	TaskTimeoutStatus
 )
 
+func (s TaskStatus) IsEndType() bool {
+	switch s {
+	case TaskQueueStatus, TaskRunningStatus:
+		return false
+	default:
+		return true
+	}
+}
+
 const (
 	TaskTableName     = "zgit_workflow_task"
-	StepTableName     = "zgit_workflow_step"
+	SecretTableName   = "zgit_workflow_secret"
 	WorkflowTableName = "zgit_workflow"
+	TokenTableName    = "zgit_workflow_token"
 )
 
 type Task struct {
@@ -86,4 +96,35 @@ type Workflow struct {
 
 func (*Workflow) TableName() string {
 	return WorkflowTableName
+}
+
+type Secret struct {
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	RepoId  int64     `json:"repoId"`
+	Name    string    `json:"name"`
+	Content string    `json:"content"`
+	Created time.Time `json:"created" xorm:"created"`
+	Updated time.Time `json:"updated" xorm:"updated"`
+}
+
+func (*Secret) TableName() string {
+	return SecretTableName
+}
+
+type Token struct {
+	Id       int64     `json:"id" xorm:"pk autoincr"`
+	TaskId   int64     `json:"taskId"`
+	RepoId   int64     `json:"repoId"`
+	Content  string    `json:"content"`
+	Operator string    `json:"operator"`
+	Expired  time.Time `json:"expired"`
+	Created  time.Time `json:"created" xorm:"created"`
+}
+
+func (*Token) TableName() string {
+	return TokenTableName
+}
+
+func (t *Token) IsExpired() bool {
+	return t.Expired.Before(time.Now())
 }

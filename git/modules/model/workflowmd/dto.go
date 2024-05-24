@@ -1,5 +1,7 @@
 package workflowmd
 
+import "time"
+
 type InsertTaskReqDTO struct {
 	WorkflowId  int64
 	TaskStatus  TaskStatus
@@ -37,4 +39,28 @@ type ListTaskByWorkflowIdReqDTO struct {
 	WorkflowId int64
 	PageNum    int
 	PageSize   int
+}
+
+type InsertSecretReqDTO struct {
+	RepoId  int64
+	Name    string
+	Content string
+}
+
+type UpdateSecretReqDTO struct {
+	Id      int64
+	Content string
+}
+
+type ExistsSecretReqDTO struct {
+	RepoId int64
+	Name   string
+}
+
+type InsertTokenReqDTO struct {
+	RepoId   int64
+	TaskId   int64
+	Content  string
+	Expired  time.Time
+	Operator string
 }

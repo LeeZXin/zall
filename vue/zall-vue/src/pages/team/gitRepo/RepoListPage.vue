@@ -11,20 +11,14 @@
         type="primary"
         @click="gotoCreatePage"
         v-if="canCreateRepo"
+        :icon="h(PlusOutlined)"
       >{{t("gitRepo.createRepoText")}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="repoList" v-if="wholeRepoList.length > 0">
       <template #bodyCell="{dataIndex, dataItem}">
-        <div v-if="dataIndex === 'operation'">
-          <div class="op-icon" @click="checkRepo(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>查看</span>
-              </template>
-              <eye-outlined />
-            </a-tooltip>
-          </div>
-        </div>
+        <span @click="checkRepo(dataItem)" class="check-btn" v-if="dataIndex === 'operation'">查看</span>
+        <span v-else-if="dataIndex === 'gitSize'">{{readableVolumeSize(dataItem[dataIndex])}}</span>
+        <span v-else-if="dataIndex === 'lfsSize'">{{readableVolumeSize(dataItem[dataIndex])}}</span>
         <span v-else>{{dataItem[dataIndex]}}</span>
       </template>
     </ZTable>
@@ -41,13 +35,14 @@
 <script setup>
 import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
-import { EyeOutlined } from "@ant-design/icons-vue";
-import { ref } from "vue";
+import { PlusOutlined } from "@ant-design/icons-vue";
+import { ref, h } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter, useRoute } from "vue-router";
 import { getTeamPermRequest } from "@/api/team/teamApi";
 import { getRepoListRequest } from "@/api/git/repoApi";
 import { useRepoStore } from "@/pinia/repoStore";
+import { readableVolumeSize } from "@/utils/size";
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -85,6 +80,16 @@ const columns = ref([
     title: "描述",
     dataIndex: "repoDesc",
     key: "repoDesc"
+  },
+  {
+    title: "仓库大小",
+    dataIndex: "gitSize",
+    key: "gitSize"
+  },
+  {
+    title: "lfs大小",
+    dataIndex: "lfsSize",
+    key: "lfsSize"
   },
   {
     title: "最近更新时间",
@@ -125,5 +130,12 @@ const checkRepo = item => {
 .no-data {
   font-size: 16px;
   text-align: center;
+}
+.check-btn {
+  font-size: 14px;
+}
+.check-btn:hover {
+  color: #1677ff;
+  cursor: pointer;
 }
 </style>

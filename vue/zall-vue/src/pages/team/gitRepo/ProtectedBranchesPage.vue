@@ -1,7 +1,7 @@
 <template>
   <div style="padding:14px">
     <div class="header">
-      <a-button type="primary" @click="gotoCreatePage">添加保护分支</a-button>
+      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加保护分支</a-button>
     </div>
     <ul class="branch-list" v-if="branches.length > 0">
       <li v-for="item in branches" v-bind:key="item.id">
@@ -22,14 +22,14 @@
   </div>
 </template>
 <script setup>
-import { ref, createVNode } from "vue";
+import { ref, createVNode, h } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import ZNoData from "@/components/common/ZNoData";
 import {
   listProtectedBranchRequest,
   deleteProtectedBranchRequest
 } from "@/api/git/branchApi";
-import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
+import { ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
 import { useProtectedBranchStore } from "@/pinia/protectedBranchStore";
 const router = useRouter();

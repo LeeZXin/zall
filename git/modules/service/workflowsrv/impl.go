@@ -7,6 +7,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apicode"
@@ -33,9 +34,33 @@ const (
 	updateWorkflow = iota
 	accessWorkflow
 	triggerWorkflow
+	accessSecret
+	updateSecret
 )
 
 type innerImpl struct{}
+
+func (s *innerImpl) CheckWorkflowToken(ctx context.Context, repoId int64, token string) (usermd.UserInfo, bool) {
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	wfToken, b, err := workflowmd.GetTokenByRepoIdAndContent(ctx, repoId, token)
+	// 数据库错误 或 不存在 或 已过期
+	if err != nil || !b || wfToken.IsExpired() {
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+		}
+		return usermd.UserInfo{}, false
+	}
+	// 获取操作用户信息
+	user, b, err := usermd.GetByAccount(ctx, wfToken.Operator)
+	if err != nil || !b {
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+		}
+		return usermd.UserInfo{}, false
+	}
+	return user.ToUserInfo(), true
+}
 
 // TaskCallback 工作流回调
 func (s *innerImpl) TaskCallback(taskId string, task workflow.TaskStatusCallbackReq) {
@@ -78,40 +103,73 @@ func (s *innerImpl) TaskCallback(taskId string, task workflow.TaskStatusCallback
 	if err != nil {
 		logger.Logger.Error(err)
 	}
+	// 如果是终态 删除token
+	if finalStatus.IsEndType() {
+		err = workflowmd.DeleteTokenByTaskId(ctx, taskmd.Id)
+		if err != nil {
+			logger.Logger.Error(err)
+		}
+	}
 }
 
-func (s *innerImpl) FindAndExecute(repoId int64, operator string, triggerType workflowmd.TriggerType, branch string, source workflowmd.SourceType, prId int64) {
+func (s *innerImpl) FindAndExecute(reqDTO FindAndExecuteWorkflowReqDTO) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	workflowList, err := workflowmd.ListWorkflow(ctx, repoId)
+	workflowList, err := workflowmd.ListWorkflow(ctx, reqDTO.RepoId)
 	if err != nil {
 		logger.Logger.Error(err)
 		return
 	}
 	for _, wf := range workflowList {
-		if !wf.Source.MatchBranchBySource(source, branch) {
+		if !wf.Source.MatchBranchBySource(reqDTO.Source, reqDTO.Branch) {
 			continue
 		}
-		s.Execute(&wf, operator, triggerType, branch, prId)
+		s.Execute(wf, ExecuteWorkflowReqDTO{
+			RepoPath:    reqDTO.RepoPath,
+			Operator:    reqDTO.Operator,
+			TriggerType: reqDTO.TriggerType,
+			Branch:      reqDTO.Branch,
+			PrId:        reqDTO.PrId,
+		})
 	}
 }
 
-func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerType workflowmd.TriggerType, branch string, prId int64) error {
+func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO) error {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
+	secrets, err := workflowmd.ListSecretByRepoId(ctx, wf.RepoId)
+	if err != nil {
+		logger.Logger.Error(err)
+		return err
+	}
 	now := time.Now()
 	bizId := now.Format("2006010215") + idutil.RandomUuid()
-	task, err := workflowmd.InsertTask(ctx, workflowmd.InsertTaskReqDTO{
-		WorkflowId:  wf.Id,
-		TaskStatus:  workflowmd.TaskQueueStatus,
-		TriggerType: triggerType,
-		YamlContent: wf.YamlContent,
-		Operator:    operator,
-		Branch:      branch,
-		PrId:        prId,
-		AgentHost:   wf.AgentHost,
-		AgentToken:  wf.AgentToken,
-		BizId:       bizId,
+	var task workflowmd.Task
+	gitToken := idutil.RandomUuid()
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		var err2 error
+		task, err2 = workflowmd.InsertTask(ctx, workflowmd.InsertTaskReqDTO{
+			WorkflowId:  wf.Id,
+			TaskStatus:  workflowmd.TaskQueueStatus,
+			TriggerType: reqDTO.TriggerType,
+			YamlContent: wf.YamlContent,
+			Operator:    reqDTO.Operator,
+			Branch:      reqDTO.Branch,
+			PrId:        reqDTO.PrId,
+			AgentHost:   wf.AgentHost,
+			AgentToken:  wf.AgentToken,
+			BizId:       bizId,
+		})
+		if err2 != nil {
+			return err2
+		}
+		return workflowmd.InsertToken(ctx, workflowmd.InsertTokenReqDTO{
+			RepoId:   wf.RepoId,
+			TaskId:   task.Id,
+			Content:  gitToken,
+			Expired:  time.Now().Add(24 * time.Hour),
+			Operator: reqDTO.Operator,
+		})
 	})
 	if err != nil {
 		logger.Logger.Error(err)
@@ -122,17 +180,33 @@ func (s *innerImpl) Execute(wf *workflowmd.Workflow, operator string, triggerTyp
 		url = fmt.Sprintf("http://%s:%d/api/v1/workflow/internal/taskCallBack", common.GetLocalIP(), common.HttpServerPort())
 		logger.Logger.Infof("callback url: %s", url)
 	}
+	envs := make(map[string]string, len(secrets)+9)
+	{
+		envs["GIT_BRANCH"] = reqDTO.Branch
+		envs["GIT_PR_ID"] = strconv.FormatInt(reqDTO.PrId, 10)
+		envs["GIT_OPERATOR"] = reqDTO.Operator
+		envs["GIT_REPO_ID"] = strconv.FormatInt(wf.RepoId, 10)
+		envs["GIT_REPO_PATH"] = reqDTO.RepoPath
+		envs["GIT_TOKEN"] = gitToken
+		envs["GIT_TRIGGER_TYPE"] = strconv.Itoa(int(reqDTO.TriggerType))
+		envs[action.EnvCallBackUrl] = url
+		envs[action.EnvCallBackToken] = static.GetString("workflow.callback.token")
+		for _, secret := range secrets {
+			envs[secret.Name] = secret.Content
+		}
+	}
 	err = workflow.NewAgentCommand(wf.AgentHost, wf.AgentToken, "").
-		ExecuteWorkflow(wf.YamlContent, bizId, map[string]string{
-			action.EnvCallBackUrl:   url,
-			action.EnvCallBackToken: static.GetString("workflow.callback.token"),
-		})
+		ExecuteWorkflow(wf.YamlContent, bizId, envs)
 	if err != nil {
 		if strings.Contains(err.Error(), "out of capacity") {
 			workflowmd.DeleteTaskById(ctx, task.Id)
 		}
 	} else {
-		workflowmd.UpdateLastTaskIdByWorkflowId(ctx, wf.Id, task.Id)
+		{
+			ctx2, closer2 := xormstore.Context(context.Background())
+			defer closer2.Close()
+			workflowmd.UpdateLastTaskIdByWorkflowId(ctx2, wf.Id, task.Id)
+		}
 	}
 	return err
 }
@@ -143,13 +217,15 @@ func newOuterService() OuterService {
 	psub.Subscribe(eventbus.PullRequestEventTopic, func(data any) {
 		event, ok := data.(eventbus.PullRequestEvent)
 		if ok && event.Action == string(webhook.MergeAction) {
-			Inner.FindAndExecute(event.RepoId,
-				event.Account,
-				workflowmd.HookTriggerType,
-				event.Ref,
-				workflowmd.PullRequestTriggerSource,
-				event.PrId,
-			)
+			Inner.FindAndExecute(FindAndExecuteWorkflowReqDTO{
+				RepoId:      event.RepoId,
+				RepoPath:    event.RepoPath,
+				Operator:    event.Account,
+				TriggerType: workflowmd.HookTriggerType,
+				Branch:      event.Ref,
+				Source:      workflowmd.PullRequestTriggerSource,
+				PrId:        event.PrId,
+			})
 		}
 	})
 	return new(outerImpl)
@@ -170,7 +246,7 @@ func (*outerImpl) CreateWorkflow(ctx context.Context, reqDTO CreateWorkflowReqDT
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err = checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, updateWorkflow)
+	_, err = checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, updateWorkflow)
 	if err != nil {
 		return
 	}
@@ -223,7 +299,7 @@ func (*outerImpl) DeleteWorkflow(ctx context.Context, reqDTO DeleteWorkflowReqDT
 		return
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, updateWorkflow)
+	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, updateWorkflow)
 	if err != nil {
 		return
 	}
@@ -249,7 +325,7 @@ func (*outerImpl) ListWorkflowWithLastTask(ctx context.Context, reqDTO ListWorkf
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, accessWorkflow)
+	_, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, accessWorkflow)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +387,7 @@ func (*outerImpl) UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDT
 		return
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, updateWorkflow)
+	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, updateWorkflow)
 	if err != nil {
 		return
 	}
@@ -353,11 +429,17 @@ func (*outerImpl) TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReq
 		return util.InvalidArgsError()
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, triggerWorkflow)
+	repo, err := checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, triggerWorkflow)
 	if err != nil {
 		return err
 	}
-	err = Inner.Execute(&wf, reqDTO.Operator.Account, workflowmd.ManualTriggerType, reqDTO.Branch, 0)
+	err = Inner.Execute(wf, ExecuteWorkflowReqDTO{
+		RepoPath:    repo.Path,
+		Operator:    reqDTO.Operator.Account,
+		TriggerType: workflowmd.ManualTriggerType,
+		Branch:      reqDTO.Branch,
+		PrId:        0,
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		if strings.Contains(err.Error(), "out of capacity") {
@@ -368,28 +450,28 @@ func (*outerImpl) TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReq
 	return nil
 }
 
-func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo, permCode int) error {
+func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo, permCode int) (repomd.Repo, error) {
 	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return repo, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return repo, util.InvalidArgsError()
 	}
 	if operator.IsAdmin {
-		return nil
+		return repo, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return repo, util.InternalError(err)
 	}
 	if !b {
-		return util.UnauthorizedError()
+		return repo, util.UnauthorizedError()
 	}
 	if p.IsAdmin {
-		return nil
+		return repo, nil
 	}
 	var pass bool
 	switch permCode {
@@ -400,12 +482,12 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 	case triggerWorkflow:
 		pass = p.PermDetail.GetRepoPerm(repoId).CanTriggerWorkflow
 	default:
-		return util.UnauthorizedError()
+		return repo, util.UnauthorizedError()
 	}
 	if pass {
-		return nil
+		return repo, nil
 	}
-	return util.UnauthorizedError()
+	return repo, util.UnauthorizedError()
 }
 
 func (*outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]TaskWithoutYamlContentDTO, int64, error) {
@@ -423,7 +505,7 @@ func (*outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]TaskWi
 		return nil, 0, util.InvalidArgsError()
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -458,7 +540,7 @@ func (*outerImpl) ListTaskByPrId(ctx context.Context, reqDTO ListTaskByPrIdReqDT
 		return nil, util.InvalidArgsError()
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, pr.RepoId, reqDTO.Operator, accessWorkflow)
+	_, err = checkPermByRepoId(ctx, pr.RepoId, reqDTO.Operator, accessWorkflow)
 	if err != nil {
 		return nil, err
 	}
@@ -520,7 +602,7 @@ func (*outerImpl) GetWorkflowDetail(ctx context.Context, reqDTO GetWorkflowDetai
 		return WorkflowDTO{}, util.InvalidArgsError()
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, updateWorkflow)
+	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, updateWorkflow)
 	if err != nil {
 		return WorkflowDTO{}, err
 	}
@@ -542,7 +624,9 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 	if b && task.TaskStatus == workflowmd.TaskCancelStatus {
 		return nil
 	}
-	if !b || (task.TaskStatus != workflowmd.TaskRunningStatus && task.TaskStatus != workflowmd.TaskQueueStatus) {
+	if !b ||
+		(task.TaskStatus != workflowmd.TaskRunningStatus &&
+			task.TaskStatus != workflowmd.TaskQueueStatus) {
 		return util.InvalidArgsError()
 	}
 	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
@@ -554,7 +638,7 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 		return util.ThereHasBugErr()
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, triggerWorkflow)
+	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, triggerWorkflow)
 	if err != nil {
 		return err
 	}
@@ -572,6 +656,7 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	workflowmd.DeleteTokenByTaskId(ctx, task.Id)
 	return nil
 }
 
@@ -599,7 +684,7 @@ func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO)
 		return workflow.TaskStatus{}, util.ThereHasBugErr()
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
 	if err != nil {
 		return workflow.TaskStatus{}, err
 	}
@@ -665,7 +750,7 @@ func (*outerImpl) GetLogContent(ctx context.Context, reqDTO GetLogContentReqDTO)
 		return nil, util.ThereHasBugErr()
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
 	if err != nil {
 		return nil, err
 	}
@@ -703,11 +788,162 @@ func (*outerImpl) GetTaskDetail(ctx context.Context, reqDTO GetTaskDetailReqDTO)
 		return TaskDTO{}, util.ThereHasBugErr()
 	}
 	// 校验权限
-	err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
 	if err != nil {
 		return TaskDTO{}, err
 	}
 	return task2Dto(task)
+}
+
+// ListSecret 展示密钥列表
+func (*outerImpl) ListSecret(ctx context.Context, reqDTO ListSecretReqDTO) ([]SecretWithoutContentDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 校验权限
+	_, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, accessSecret)
+	if err != nil {
+		return nil, err
+	}
+	secrets, err := workflowmd.ListSecretByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(secrets, func(t workflowmd.Secret) (SecretWithoutContentDTO, error) {
+		return SecretWithoutContentDTO{
+			SecretId: t.Id,
+			Name:     t.Name,
+		}, nil
+	})
+}
+
+// CreateSecret 新增密钥
+func (*outerImpl) CreateSecret(ctx context.Context, reqDTO CreateSecretReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 校验权限
+	_, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, updateSecret)
+	if err != nil {
+		return err
+	}
+	exists, err := workflowmd.ExistsSecret(ctx, workflowmd.ExistsSecretReqDTO{
+		RepoId: reqDTO.RepoId,
+		Name:   reqDTO.Name,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if exists {
+		return util.AlreadyExistsError()
+	}
+	err = workflowmd.InsertSecret(ctx, workflowmd.InsertSecretReqDTO{
+		RepoId:  reqDTO.RepoId,
+		Name:    reqDTO.Name,
+		Content: reqDTO.Content,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// UpdateSecret 编辑密钥
+func (*outerImpl) UpdateSecret(ctx context.Context, reqDTO UpdateSecretReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	secret, b, err := workflowmd.GetSecretById(ctx, reqDTO.SecretId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	// 校验权限
+	_, err = checkPermByRepoId(ctx, secret.RepoId, reqDTO.Operator, updateSecret)
+	if err != nil {
+		return err
+	}
+	_, err = workflowmd.UpdateSecret(ctx, workflowmd.UpdateSecretReqDTO{
+		Id:      reqDTO.SecretId,
+		Content: reqDTO.Content,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// DeleteSecret 删除密钥
+func (*outerImpl) DeleteSecret(ctx context.Context, reqDTO DeleteSecretReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	secret, b, err := workflowmd.GetSecretById(ctx, reqDTO.SecretId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	// 校验权限
+	_, err = checkPermByRepoId(ctx, secret.RepoId, reqDTO.Operator, updateSecret)
+	if err != nil {
+		return err
+	}
+	_, err = workflowmd.DeleteSecret(ctx, reqDTO.SecretId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+/*
+GetSecretContent 获取密钥内容
+只有密钥编辑权限才可以获取内容
+*/
+func (*outerImpl) GetSecretContent(ctx context.Context, reqDTO GetSecretContentReqDTO) (SecretDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return SecretDTO{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	secret, b, err := workflowmd.GetSecretById(ctx, reqDTO.SecretId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return SecretDTO{}, util.InternalError(err)
+	}
+	if !b {
+		return SecretDTO{}, util.InvalidArgsError()
+	}
+	// 校验权限
+	_, err = checkPermByRepoId(ctx, secret.RepoId, reqDTO.Operator, updateSecret)
+	if err != nil {
+		return SecretDTO{}, err
+	}
+	return SecretDTO{
+		SecretWithoutContentDTO: SecretWithoutContentDTO{
+			SecretId: secret.Id,
+			Name:     secret.Name,
+		},
+		Content: secret.Content,
+	}, nil
 }
 
 func workflow2Dto(wf workflowmd.Workflow) WorkflowDTO {

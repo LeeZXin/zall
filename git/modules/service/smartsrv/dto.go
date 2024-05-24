@@ -11,10 +11,9 @@ import (
 )
 
 type UploadPackReqDTO struct {
-	Repo            repomd.Repo     `json:"repo"`
-	Operator        usermd.UserInfo `json:"operator"`
-	C               *gin.Context    `json:"-"`
-	FromAccessToken bool            `json:"fromAccessToken"`
+	Repo     repomd.Repo     `json:"repo"`
+	Operator usermd.UserInfo `json:"operator"`
+	C        *gin.Context    `json:"-"`
 }
 
 func (r *UploadPackReqDTO) IsValid() error {
@@ -54,10 +53,9 @@ func validateRepo(info repomd.Repo) bool {
 }
 
 type InfoRefsReqDTO struct {
-	Repo            repomd.Repo     `json:"repo"`
-	Operator        usermd.UserInfo `json:"operator"`
-	C               *gin.Context    `json:"-"`
-	FromAccessToken bool            `json:"fromAccessToken"`
+	Repo     repomd.Repo     `json:"repo"`
+	Operator usermd.UserInfo `json:"operator"`
+	C        *gin.Context    `json:"-"`
 }
 
 func (r *InfoRefsReqDTO) IsValid() error {

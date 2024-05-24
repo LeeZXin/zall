@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	storeSrv Store
+	Srv Store
 )
 
 func InitApi() {
-	storeSrv = NewStore()
+	Srv = NewStore()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/v1/git/store")
 		{
@@ -30,7 +30,6 @@ func InitApi() {
 			group.POST("/diffRefs", diffRefs)
 			group.POST("/diffCommits", diffCommits)
 			group.POST("/diffFile", diffFile)
-			group.POST("/getRepoSize", getRepoSize)
 			group.POST("/showDiffTextContent", showDiffTextContent)
 			group.POST("/historyCommits", historyCommits)
 			group.POST("/initRepoHook", initRepoHook)
@@ -53,7 +52,7 @@ func InitApi() {
 }
 
 func createArchive(c *gin.Context) {
-	storeSrv.CreateArchive(c, reqvo.CreateArchiveReq{
+	Srv.CreateArchive(c, reqvo.CreateArchiveReq{
 		RepoPath: c.GetString("repoPath"),
 		FileName: c.Param("fileName"),
 		C:        c,
@@ -67,19 +66,22 @@ func packRepoPath(c *gin.Context) {
 func initRepo(c *gin.Context) {
 	var req reqvo.InitRepoReq
 	if util.ShouldBindJSON(&req, c) {
-		err := storeSrv.InitRepo(c, req)
+		gitSize, err := Srv.InitRepo(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		util.DefaultOkResponse(c)
+		c.JSON(http.StatusOK, ginutil.DataResp[int64]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     gitSize,
+		})
 	}
 }
 
 func delRepo(c *gin.Context) {
 	var req reqvo.DeleteRepoReq
 	if util.ShouldBindJSON(&req, c) {
-		err := storeSrv.DeleteRepo(c, req)
+		err := Srv.DeleteRepo(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -91,7 +93,7 @@ func delRepo(c *gin.Context) {
 func getAllBranches(c *gin.Context) {
 	var req reqvo.GetAllBranchesReq
 	if util.ShouldBindJSON(&req, c) {
-		ret, err := storeSrv.GetAllBranches(c, req)
+		ret, err := Srv.GetAllBranches(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -106,7 +108,7 @@ func getAllBranches(c *gin.Context) {
 func deleteBranch(c *gin.Context) {
 	var req reqvo.DeleteBranchReq
 	if util.ShouldBindJSON(&req, c) {
-		err := storeSrv.DeleteBranch(c, req)
+		err := Srv.DeleteBranch(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -118,7 +120,7 @@ func deleteBranch(c *gin.Context) {
 func pageBranchAndLastCommit(c *gin.Context) {
 	var req reqvo.PageRefCommitsReq
 	if util.ShouldBindJSON(&req, c) {
-		ret, total, err := storeSrv.PageBranchAndLastCommit(c, req)
+		ret, total, err := Srv.PageBranchAndLastCommit(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -137,7 +139,7 @@ func pageBranchAndLastCommit(c *gin.Context) {
 func pageTagAndCommit(c *gin.Context) {
 	var req reqvo.PageRefCommitsReq
 	if util.ShouldBindJSON(&req, c) {
-		ret, total, err := storeSrv.PageTagAndCommit(c, req)
+		ret, total, err := Srv.PageTagAndCommit(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -156,7 +158,7 @@ func pageTagAndCommit(c *gin.Context) {
 func getAllTags(c *gin.Context) {
 	var req reqvo.GetAllTagsReq
 	if util.ShouldBindJSON(&req, c) {
-		ret, err := storeSrv.GetAllTags(c, req)
+		ret, err := Srv.GetAllTags(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -171,19 +173,22 @@ func getAllTags(c *gin.Context) {
 func gc(c *gin.Context) {
 	var req reqvo.GcReq
 	if util.ShouldBindJSON(&req, c) {
-		err := storeSrv.Gc(c, req)
+		gitSize, err := Srv.Gc(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		util.DefaultOkResponse(c)
+		c.JSON(http.StatusOK, ginutil.DataResp[int64]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data:     gitSize,
+		})
 	}
 }
 
 func diffRefs(c *gin.Context) {
 	var req reqvo.DiffRefsReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.DiffRefs(c, req)
+		resp, err := Srv.DiffRefs(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -198,7 +203,7 @@ func diffRefs(c *gin.Context) {
 func diffCommits(c *gin.Context) {
 	var req reqvo.DiffCommitsReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.DiffCommits(c, req)
+		resp, err := Srv.DiffCommits(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -213,7 +218,7 @@ func diffCommits(c *gin.Context) {
 func canMerge(c *gin.Context) {
 	var req reqvo.CanMergeReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.CanMerge(c, req)
+		resp, err := Srv.CanMerge(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -228,7 +233,7 @@ func canMerge(c *gin.Context) {
 func diffFile(c *gin.Context) {
 	var req reqvo.DiffFileReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.DiffFile(c, req)
+		resp, err := Srv.DiffFile(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -240,25 +245,10 @@ func diffFile(c *gin.Context) {
 	}
 }
 
-func getRepoSize(c *gin.Context) {
-	var req reqvo.GetRepoSizeReq
-	if util.ShouldBindJSON(&req, c) {
-		size, err := storeSrv.GetRepoSize(c, req)
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		c.JSON(http.StatusOK, ginutil.DataResp[int64]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     size,
-		})
-	}
-}
-
 func showDiffTextContent(c *gin.Context) {
 	var req reqvo.ShowDiffTextContentReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.ShowDiffTextContent(c, req)
+		resp, err := Srv.ShowDiffTextContent(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -273,7 +263,7 @@ func showDiffTextContent(c *gin.Context) {
 func historyCommits(c *gin.Context) {
 	var req reqvo.HistoryCommitsReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.HistoryCommits(c, req)
+		resp, err := Srv.HistoryCommits(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -288,7 +278,7 @@ func historyCommits(c *gin.Context) {
 func initRepoHook(c *gin.Context) {
 	var req reqvo.InitRepoHookReq
 	if util.ShouldBindJSON(&req, c) {
-		err := storeSrv.InitRepoHook(c, req)
+		err := Srv.InitRepoHook(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -300,7 +290,7 @@ func initRepoHook(c *gin.Context) {
 func entriesRepo(c *gin.Context) {
 	var req reqvo.EntriesRepoReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.EntriesRepo(c, req)
+		resp, err := Srv.EntriesRepo(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -315,7 +305,7 @@ func entriesRepo(c *gin.Context) {
 func catFile(c *gin.Context) {
 	var req reqvo.CatFileReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.CatFile(c, req)
+		resp, err := Srv.CatFile(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -330,7 +320,7 @@ func catFile(c *gin.Context) {
 func indexRepo(c *gin.Context) {
 	var req reqvo.IndexRepoReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.IndexRepo(c, req)
+		resp, err := Srv.IndexRepo(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -343,21 +333,21 @@ func indexRepo(c *gin.Context) {
 }
 
 func uploadPack(c *gin.Context) {
-	storeSrv.UploadPack(reqvo.UploadPackReq{
+	Srv.UploadPack(reqvo.UploadPackReq{
 		RepoPath: c.GetString("repoPath"),
 		C:        c,
 	})
 }
 
 func receivePack(c *gin.Context) {
-	storeSrv.ReceivePack(reqvo.ReceivePackReq{
+	Srv.ReceivePack(reqvo.ReceivePackReq{
 		RepoPath: c.GetString("repoPath"),
 		C:        c,
 	})
 }
 
 func infoRefs(c *gin.Context) {
-	storeSrv.InfoRefs(c.Request.Context(), reqvo.InfoRefsReq{
+	Srv.InfoRefs(c.Request.Context(), reqvo.InfoRefsReq{
 		RepoPath: c.GetString("repoPath"),
 		C:        c,
 	})
@@ -366,7 +356,7 @@ func infoRefs(c *gin.Context) {
 func merge(c *gin.Context) {
 	var req reqvo.MergeReq
 	if util.ShouldBindJSON(&req, c) {
-		resp, err := storeSrv.Merge(c, req)
+		resp, err := Srv.Merge(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -381,7 +371,7 @@ func merge(c *gin.Context) {
 func blame(c *gin.Context) {
 	var req reqvo.BlameReq
 	if util.ShouldBindJSON(&req, c) {
-		lines, err := storeSrv.Blame(c, req)
+		lines, err := Srv.Blame(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -396,7 +386,7 @@ func blame(c *gin.Context) {
 func deleteTag(c *gin.Context) {
 	var req reqvo.DeleteTagReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := storeSrv.DeleteTag(c, req)
+		err := Srv.DeleteTag(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return

@@ -2,7 +2,6 @@ package reposrv
 
 import (
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
-	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/util"
@@ -528,77 +527,6 @@ func (r *HistoryCommitsReqDTO) IsValid() error {
 type HistoryCommitsRespDTO struct {
 	Data   []CommitDTO
 	Cursor int
-}
-
-type InsertRepoTokenReqDTO struct {
-	RepoId   int64               `json:"repoId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *InsertRepoTokenReqDTO) IsValid() error {
-	if r.RepoId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type DeleteRepoTokenReqDTO struct {
-	TokenId  int64               `json:"tokenId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *DeleteRepoTokenReqDTO) IsValid() error {
-	if r.TokenId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type ListRepoTokenReqDTO struct {
-	RepoId   int64               `json:"repoId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *ListRepoTokenReqDTO) IsValid() error {
-	if r.RepoId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type RepoTokenDTO struct {
-	TokenId int64     `json:"tokenId"`
-	Account string    `json:"account"`
-	Token   string    `json:"token"`
-	Created time.Time `json:"created"`
-}
-
-type CheckRepoTokenReqDTO struct {
-	RepoId  int64  `json:"repoId"`
-	Account string `json:"account"`
-	Token   string `json:"token"`
-}
-
-func (r *CheckRepoTokenReqDTO) IsValid() error {
-	if r.RepoId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !repomd.IsRepoTokenAccountValid(r.Account) {
-		return util.InvalidArgsError()
-	}
-	if !repomd.IsRepoTokenTokenValid(r.Token) {
-		return util.InvalidArgsError()
-	}
-	return nil
 }
 
 type RefreshAllGitHooksReqDTO struct {

@@ -1,15 +1,14 @@
 <template>
   <div style="padding:14px">
     <div class="header">
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加Webhook</a-button>
+      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加密钥</a-button>
     </div>
-    <ul class="webhook-list" v-if="webhooks.length > 0">
-      <li v-for="item in webhooks" v-bind:key="item.id">
-        <div class="webhook-pattern no-wrap">{{item.hookUrl}}</div>
+    <ul class="secret-list" v-if="secrets.length > 0">
+      <li v-for="item in secrets" v-bind:key="item.id">
+        <div class="secret-pattern no-wrap">{{item.name}}</div>
         <ul class="op-btns">
-          <li class="ping-btn" @click="pingWebhook(item)">ping</li>
-          <li class="update-btn" @click="handleWebhook(item)">编辑</li>
-          <li class="del-btn" @click="deleteWebhook(item)">删除</li>
+          <li class="update-btn" @click="handleSecret(item)">编辑</li>
+          <li class="del-btn" @click="deleteSecret(item)">删除</li>
         </ul>
       </li>
     </ul>
@@ -17,7 +16,7 @@
       <template #desc>
         <div
           class="no-data-text"
-        >Webhooks allow external services to be notified when certain events happen. When the specified events happen, we'll send a POST request to each of the URLs you provide. Learn more in our Webhooks Guide.</div>
+        >Secrets are encrypted and are used for sensitive data. Learn more about encrypted secrets.</div>
       </template>
     </ZNoData>
   </div>
@@ -26,67 +25,57 @@
 import { ref, createVNode, h } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import ZNoData from "@/components/common/ZNoData";
-import { deleteWebhookRequest } from "@/api/git/webhookApi";
-import { listWebhookRequest, pingWebhookRequest } from "@/api/git/webhookApi";
 import { ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
-import { useWebhookStore } from "@/pinia/webhookStore";
+import { listSecretRequest, deleteSecretRequest } from "@/api/git/workflowApi";
 const router = useRouter();
 const route = useRoute();
-const webhooks = ref([]);
-const webhookStore = useWebhookStore();
+const secrets = ref([]);
 const gotoCreatePage = () => {
-  router.push(`/gitRepo/${route.params.repoId}/webhook/create`);
+  router.push(`/gitRepo/${route.params.repoId}/workflow/secret/create`);
 };
-const deleteWebhook = item => {
+const deleteSecret = item => {
   Modal.confirm({
-    title: `你确定要删除${item.hookUrl}吗?`,
+    title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteWebhookRequest(item.id).then(() => {
+      deleteSecretRequest(item.id).then(() => {
         message.success("删除成功");
-        listWebhook();
+        listSecret();
       });
     },
     onCancel() {}
   });
 };
-const listWebhook = () => {
-  listWebhookRequest(route.params.repoId).then(res => {
-    webhooks.value = res.data;
+const listSecret = () => {
+  listSecretRequest(route.params.repoId).then(res => {
+    secrets.value = res.data;
   });
 };
-const handleWebhook = item => {
-  webhookStore.id = item.id;
-  webhookStore.hookUrl = item.hookUrl;
-  webhookStore.events = item.events;
-  webhookStore.secret = item.secret;
-  router.push(`/gitRepo/${route.params.repoId}/webhook/${item.id}/update`);
+const handleSecret = item => {
+  router.push(
+    `/gitRepo/${route.params.repoId}/workflow/secret/${item.id}/update`
+  );
 };
-const pingWebhook = item => {
-  pingWebhookRequest(item.id).then(()=>{
-      message.success("成功");
-  })
-};
-listWebhook();
+listSecret();
 </script>
 <style scoped>
-.webhook-list {
+.secret-list {
   border: 1px solid #d9d9d9;
   border-radius: 4px;
 }
-.webhook-list > li {
+.secret-list > li {
   padding: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.webhook-list > li + li {
+.secret-list > li + li {
   border-top: 1px solid #d9d9d9;
 }
-.webhook-pattern {
+.secret-pattern {
   font-size: 14px;
   line-height: 32px;
   width: 60%;

@@ -295,7 +295,7 @@ func CommitTree(ctx context.Context, repoPath string, tree Tree, opts CommitTree
 	return strings.TrimSpace(result.ReadAsString()), nil
 }
 
-func GetRepoSize(path string) (int64, error) {
+func GetDirSize(path string) (int64, error) {
 	var size int64
 	err := filepath.WalkDir(path, func(_ string, info os.DirEntry, err error) error {
 		if err != nil {
@@ -317,10 +317,6 @@ func GetRepoSize(path string) (int64, error) {
 		return err
 	})
 	return size, err
-}
-
-func GetLfsSize(path string) (int64, error) {
-	return GetRepoSize(path)
 }
 
 type RefName string

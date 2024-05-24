@@ -5,6 +5,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
 	"github.com/LeeZXin/zall/git/modules/service/smartsrv"
+	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
@@ -19,8 +20,7 @@ import (
 )
 
 const (
-	fromAccessToken = "fromAccessToken"
-	loginUser       = "loginUser"
+	loginUser = "loginUser"
 )
 
 func InitApi() {
@@ -84,17 +84,24 @@ func auth(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	userInfo, b := usersrv.Inner.CheckAccountAndPassword(c, usersrv.CheckAccountAndPasswordReqDTO{
-		Account:  account,
-		Password: password,
-	})
-	if !b {
-		repo := getRepo(c)
-		// 常规账号密码不存在就检查访问令牌
-		b = reposrv.Inner.CheckRepoToken(c, reposrv.CheckRepoTokenReqDTO{
-			RepoId:  repo.Id,
-			Account: account,
-			Token:   password,
+	repo := getRepo(c)
+	var (
+		userInfo usermd.UserInfo
+		b        bool
+	)
+	if password == "" {
+		// 检查是否是工作流的git token
+		userInfo, b = workflowsrv.Inner.CheckWorkflowToken(c, repo.Id, account)
+		if !b {
+			c.Header("WWW-Authenticate", "Basic realm=\".\"")
+			c.String(http.StatusUnauthorized, "")
+			c.Abort()
+			return
+		}
+	} else {
+		userInfo, b = usersrv.Inner.CheckAccountAndPassword(c, usersrv.CheckAccountAndPasswordReqDTO{
+			Account:  account,
+			Password: password,
 		})
 		if !b {
 			c.Header("WWW-Authenticate", "Basic realm=\".\"")
@@ -102,14 +109,6 @@ func auth(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		userInfo = usermd.UserInfo{
-			Account: account,
-			Name:    fmt.Sprintf("%s's accessToken", repo.Name),
-			Email:   "zgit@noreply.fake",
-		}
-		c.Set(fromAccessToken, true)
-	} else {
-		c.Set(fromAccessToken, false)
 	}
 	c.Set(loginUser, userInfo)
 	c.Next()
@@ -117,10 +116,9 @@ func auth(c *gin.Context) {
 
 func uploadPack(c *gin.Context) {
 	err := smartsrv.Outer.UploadPack(c, smartsrv.UploadPackReqDTO{
-		Repo:            getRepo(c),
-		Operator:        getUserInfo(c),
-		C:               c,
-		FromAccessToken: getFromAccessToken(c),
+		Repo:     getRepo(c),
+		Operator: getUserInfo(c),
+		C:        c,
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
@@ -140,10 +138,9 @@ func receivePack(c *gin.Context) {
 
 func infoRefs(c *gin.Context) {
 	err := smartsrv.Outer.InfoRefs(c, smartsrv.InfoRefsReqDTO{
-		Repo:            getRepo(c),
-		Operator:        getUserInfo(c),
-		FromAccessToken: getFromAccessToken(c),
-		C:               c,
+		Repo:     getRepo(c),
+		Operator: getUserInfo(c),
+		C:        c,
 	})
 	if err != nil {
 		c.String(http.StatusForbidden, err.Error())
@@ -152,10 +149,6 @@ func infoRefs(c *gin.Context) {
 
 func getRepo(c *gin.Context) repomd.Repo {
 	return c.MustGet("repo").(repomd.Repo)
-}
-
-func getFromAccessToken(c *gin.Context) bool {
-	return c.GetBool(fromAccessToken)
 }
 
 func getUserInfo(c *gin.Context) usermd.UserInfo {

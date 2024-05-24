@@ -6,8 +6,9 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
-	"github.com/LeeZXin/zall/git/modules/service/reposrv"
 	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
+	"github.com/LeeZXin/zall/git/repo/reqvo"
+	"github.com/LeeZXin/zall/git/repo/server/store"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/git"
@@ -42,7 +43,7 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 	repoPath := filepath.Join(git.RepoDir(), repo.Path)
 	// 检查仓库大小是否大于配置大小
 	if repo.Cfg.MaxGitLimitSize > 0 {
-		repoSize, err := git.GetRepoSize(repoPath)
+		repoSize, err := git.GetDirSize(repoPath)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return util.InternalError(err)
@@ -118,9 +119,28 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := reposrv.Inner.GetByRepoId(ctx, opts.RepoId)
-	if !b {
+	// 获取仓库信息
+	repo, b, err := repomd.GetByRepoId(ctx, opts.RepoId)
+	if err != nil || !b {
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+		}
 		return
+	}
+	// 更新最后操作时间
+	_, err = repomd.UpdateLastOperated(ctx, opts.RepoId, time.Now())
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+	}
+	repoSize, lfsSize, err := store.Srv.GetRepoSize(ctx, reqvo.GetRepoSizeReq{
+		RepoPath: repo.Path,
+	})
+	if err == nil {
+		// 更新仓库大小
+		err = repomd.UpdateGitSizeAndLfsSize(ctx, opts.RepoId, repoSize+lfsSize, lfsSize)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+		}
 	}
 	// 查找webhook
 	webhookList, err := webhookmd.ListWebhook(ctx, repo.Id)
@@ -166,7 +186,13 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 			if refType == "commit" {
 				ref := strings.TrimPrefix(revInfo.Ref, git.BranchPrefix)
 				if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, ref) {
-					workflowsrv.Inner.Execute(&wf, opts.PusherAccount, workflowmd.HookTriggerType, ref, 0)
+					workflowsrv.Inner.Execute(wf, workflowsrv.ExecuteWorkflowReqDTO{
+						RepoPath:    repo.Path,
+						Operator:    opts.PusherAccount,
+						TriggerType: workflowmd.HookTriggerType,
+						Branch:      ref,
+						PrId:        0,
+					})
 				}
 			}
 		}

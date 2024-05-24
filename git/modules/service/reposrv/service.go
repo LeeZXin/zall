@@ -17,7 +17,6 @@ var (
 type InnerService interface {
 	GetByRepoPath(context.Context, string) (repomd.Repo, bool)
 	GetByRepoId(context.Context, int64) (repomd.Repo, bool)
-	CheckRepoToken(context.Context, CheckRepoTokenReqDTO) bool
 }
 
 type OuterService interface {
@@ -35,6 +34,7 @@ type OuterService interface {
 	IndexRepo(context.Context, IndexRepoReqDTO) (IndexRepoRespDTO, error)
 	// CreateRepo 创建仓库
 	CreateRepo(context.Context, CreateRepoReqDTO) error
+	// AllGitIgnoreTemplateList ignore模板
 	AllGitIgnoreTemplateList() []string
 	DeleteRepo(context.Context, DeleteRepoReqDTO) error
 	// AllBranches 获取所有分支
@@ -51,9 +51,6 @@ type OuterService interface {
 	ShowDiffTextContent(context.Context, ShowDiffTextContentReqDTO) ([]DiffLineDTO, error)
 	// HistoryCommits 分支提交历史
 	HistoryCommits(context.Context, HistoryCommitsReqDTO) (HistoryCommitsRespDTO, error)
-	InsertRepoToken(context.Context, InsertRepoTokenReqDTO) error
-	DeleteRepoToken(context.Context, DeleteRepoTokenReqDTO) error
-	ListRepoToken(context.Context, ListRepoTokenReqDTO) ([]RepoTokenDTO, error)
 	RefreshAllGitHooks(context.Context, RefreshAllGitHooksReqDTO) error
 	TransferTeam(context.Context, TransferTeamReqDTO) error
 	// Blame 获取每一行提交信息

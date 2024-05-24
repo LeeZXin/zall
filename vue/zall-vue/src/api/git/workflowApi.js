@@ -23,7 +23,17 @@ const getTaskDetailRequest = (taskId) => request.get("/api/workflowTask/detail/"
 // 获取任务详情
 const getTaskStatusRequest = (taskId) => request.get("/api/workflowTask/status/" + taskId);
 // 获取日志内容
-const getLogContentRequest = (taskId, jobName, stepIndex) => request.get(`/api/workflowTask/log/${taskId}`, { params: { jobName, stepIndex } });
+const getLogContentRequest = (taskId, jobName, stepIndex) => request.get("/api/workflowTask/log/" + taskId, { params: { jobName, stepIndex } });
+// 展示工作流密钥
+const listSecretRequest = (repoId) => request.get("/api/workflowSecret/list/" + repoId);
+// 新增密钥
+const createSecretRequest = (data) => request.post("/api/workflowSecret/create", data);
+// 编辑密钥
+const updateSecretRequest = (data) => request.post("/api/workflowSecret/update", data);
+// 删除密钥
+const deleteSecretRequest = (secretId) => request.delete("/api/workflowSecret/delete/" + secretId);
+// 获取密钥内容
+const getSecretContentRequest = (secretId) => request.get("/api/workflowSecret/content/" + secretId);
 export {
     createWorkflowRequest,
     listWorkflowRequest,
@@ -36,5 +46,10 @@ export {
     getTaskDetailRequest,
     getTaskStatusRequest,
     getLogContentRequest,
-    listTaskByPrIdRequest
+    listTaskByPrIdRequest,
+    listSecretRequest,
+    createSecretRequest,
+    updateSecretRequest,
+    deleteSecretRequest,
+    getSecretContentRequest
 }

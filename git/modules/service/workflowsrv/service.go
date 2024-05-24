@@ -3,6 +3,7 @@ package workflowsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
+	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/pkg/workflow"
 )
 
@@ -13,12 +14,14 @@ var (
 )
 
 type InnerService interface {
+	// CheckWorkflowToken 检查工作流的token
+	CheckWorkflowToken(context.Context, int64, string) (usermd.UserInfo, bool)
 	// TaskCallback 工作流回调
 	TaskCallback(string, workflow.TaskStatusCallbackReq)
 	// FindAndExecute 匹配仓库id 寻找并执行工作流
-	FindAndExecute(int64, string, workflowmd.TriggerType, string, workflowmd.SourceType, int64)
+	FindAndExecute(FindAndExecuteWorkflowReqDTO)
 	// Execute 执行工作流
-	Execute(*workflowmd.Workflow, string, workflowmd.TriggerType, string, int64) error
+	Execute(workflowmd.Workflow, ExecuteWorkflowReqDTO) error
 }
 
 type OuterService interface {
@@ -46,4 +49,14 @@ type OuterService interface {
 	GetTaskStatus(context.Context, GetTaskStatusReqDTO) (workflow.TaskStatus, error)
 	// GetLogContent 获取日志内容
 	GetLogContent(context.Context, GetLogContentReqDTO) ([]string, error)
+	// ListSecret 展示密钥列表
+	ListSecret(context.Context, ListSecretReqDTO) ([]SecretWithoutContentDTO, error)
+	// CreateSecret 新增密钥
+	CreateSecret(context.Context, CreateSecretReqDTO) error
+	// UpdateSecret 编辑密钥
+	UpdateSecret(context.Context, UpdateSecretReqDTO) error
+	// DeleteSecret 删除密钥
+	DeleteSecret(context.Context, DeleteSecretReqDTO) error
+	// GetSecretContent 获取密钥内容
+	GetSecretContent(context.Context, GetSecretContentReqDTO) (SecretDTO, error)
 }

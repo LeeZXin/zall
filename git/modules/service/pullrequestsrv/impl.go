@@ -459,8 +459,6 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 	}
 	// 触发webhook和工作流
 	notifyEventBus(repo, reqDTO.Operator, pr, webhook.MergeAction)
-	// 触发工作流
-	triggerMergePrWorkflow(reqDTO.Operator, pr)
 	return
 }
 
@@ -786,34 +784,16 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 	return repo, nil
 }
 
-func notifyPullRequestEvent(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action webhook.PullRequestAction) {
-	psub.Publish(eventbus.PullRequestEventTopic, eventbus.PullRequestEvent{
-		PrId:      pr.Id,
-		PrTitle:   pr.PrTitle,
-		Action:    string(action),
-		RepoId:    repo.Id,
-		RepoName:  repo.Name,
-		Account:   operator.Account,
-		EventTime: time.Now(),
-	})
-}
-
 func notifyEventBus(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action webhook.PullRequestAction) {
 	psub.Publish(eventbus.PullRequestEventTopic, eventbus.PullRequestEvent{
 		PrId:      pr.Id,
 		PrTitle:   pr.PrTitle,
 		Action:    string(action),
 		RepoId:    repo.Id,
+		RepoPath:  repo.Path,
 		RepoName:  repo.Name,
 		Account:   operator.Account,
 		Ref:       pr.Head,
 		EventTime: time.Now(),
 	})
-}
-
-// triggerMergePrWorkflow 触发合并请求的工作流
-func triggerMergePrWorkflow(operator apisession.UserInfo, pr pullrequestmd.PullRequest) {
-	go func() {
-
-	}()
 }

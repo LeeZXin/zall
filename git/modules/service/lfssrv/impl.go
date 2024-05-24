@@ -70,11 +70,9 @@ func (*outerImpl) ListLock(ctx context.Context, reqDTO ListLockReqDTO) (ListLock
 	// 检查仓库访问权限
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if !reqDTO.FromAccessToken {
-		err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
-		if err != nil {
-			return ListLockRespDTO{}, err
-		}
+	err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return ListLockRespDTO{}, err
 	}
 	if reqDTO.Limit <= 0 || reqDTO.Limit > 1000 {
 		reqDTO.Limit = 1000
@@ -140,11 +138,9 @@ func (s *outerImpl) Verify(ctx context.Context, reqDTO VerifyReqDTO) (bool, bool
 	// 检查仓库访问权限
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if !reqDTO.FromAccessToken {
-		err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
-		if err != nil {
-			return false, false, err
-		}
+	err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return false, false, err
 	}
 	stat, err := client.LfsStat(ctx, reqvo.LfsStatReq{
 		RepoPath: reqDTO.Repo.Path,
@@ -178,11 +174,9 @@ func (s *outerImpl) Download(ctx context.Context, reqDTO DownloadReqDTO) (err er
 	// 检查仓库访问权限
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if !reqDTO.FromAccessToken {
-		err = checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
-		if err != nil {
-			return
-		}
+	err = checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return
 	}
 	err = client.LfsDownload(reqvo.LfsDownloadReq{
 		RepoPath: reqDTO.Repo.Path,
@@ -245,18 +239,6 @@ func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error)
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 		return
-	}
-	// 忽略lfs size计算异常
-	lfsSize, err := lfsmd.SumRepoLfsSize(ctx, reqDTO.Repo.Id)
-	if err == nil {
-		err = repomd.UpdateLfsSize(ctx, reqDTO.Repo.Id, lfsSize)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-	} else {
-		logger.Logger.WithContext(ctx).Error(err)
 	}
 	return
 }

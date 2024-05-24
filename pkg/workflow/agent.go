@@ -537,7 +537,7 @@ func NewAgentServer() zsf.LifeCycle {
 							}
 						}
 					},
-					Args: args,
+					Args: envs,
 				})
 				if err != nil {
 					graph.Cancel(action.TaskCancelErr)

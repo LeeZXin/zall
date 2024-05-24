@@ -40,12 +40,10 @@ func (s *outerImpl) UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) (er
 	if !b {
 		return util.InternalError(errors.New("can not get git config"))
 	}
-	if !reqDTO.FromAccessToken {
-		// 获取权限
-		err = getPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
-		if err != nil {
-			return
-		}
+	// 获取权限
+	err = getPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return
 	}
 	err = client.UploadPack(reqvo.UploadPackReq{
 		RepoPath: reqDTO.Repo.Path,
@@ -99,14 +97,12 @@ func (s *outerImpl) InfoRefs(ctx context.Context, reqDTO InfoRefsReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if !reqDTO.FromAccessToken {
-		// 获取权限
-		err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
-		if err != nil {
-			return err
-		}
+	// 获取权限
+	err := getPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
+	if err != nil {
+		return err
 	}
-	err := client.InfoRefs(reqvo.InfoRefsReq{
+	err = client.InfoRefs(reqvo.InfoRefsReq{
 		Service:  reqDTO.C.Query("service"),
 		RepoPath: reqDTO.Repo.Path,
 		C:        reqDTO.C,

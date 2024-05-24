@@ -7,7 +7,7 @@ import (
 
 type Store interface {
 	// InitRepo 初始化仓库
-	InitRepo(context.Context, reqvo.InitRepoReq) error
+	InitRepo(context.Context, reqvo.InitRepoReq) (int64, error)
 	// DeleteRepo 删除仓库
 	DeleteRepo(context.Context, reqvo.DeleteRepoReq) error
 	// GetAllBranches 获取所有分支
@@ -21,7 +21,7 @@ type Store interface {
 	// GetAllTags 获取所有tags
 	GetAllTags(context.Context, reqvo.GetAllTagsReq) ([]reqvo.RefVO, error)
 	// Gc 触发仓库gc
-	Gc(context.Context, reqvo.GcReq) error
+	Gc(context.Context, reqvo.GcReq) (int64, error)
 	// DiffRefs 对比两个ref差异
 	DiffRefs(context.Context, reqvo.DiffRefsReq) (reqvo.DiffRefsResp, error)
 	// DiffCommits 对比两个提交差异
@@ -31,7 +31,7 @@ type Store interface {
 	// DiffFile 对比两个分支单个文件差异
 	DiffFile(context.Context, reqvo.DiffFileReq) (reqvo.DiffFileResp, error)
 	// GetRepoSize 获取仓库大小
-	GetRepoSize(context.Context, reqvo.GetRepoSizeReq) (int64, error)
+	GetRepoSize(context.Context, reqvo.GetRepoSizeReq) (int64, int64, error)
 	// ShowDiffTextContent 获取某个commitId文件内容
 	ShowDiffTextContent(context.Context, reqvo.ShowDiffTextContentReq) ([]reqvo.DiffLineVO, error)
 	// HistoryCommits 获取历史提交记录

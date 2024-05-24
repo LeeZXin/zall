@@ -20,8 +20,6 @@ func (o PushOption) IsValid() bool {
 }
 
 type ProtectedBranchCfg struct {
-	// 受保护文件模式
-	ProtectedFilePatterns []string `json:"protectedFilePatterns"`
 	// 推送模式
 	PushOption PushOption `json:"pushOption"`
 	// 当推送人模式为白名单
@@ -40,8 +38,7 @@ func (c *ProtectedBranchCfg) IsValid() bool {
 		return false
 	}
 	return c.PushOption.IsValid() &&
-		len(c.PushWhiteList) <= 50 && len(c.ReviewerList) <= 50 &&
-		len(c.ProtectedFilePatterns) <= 1000
+		len(c.PushWhiteList) <= 50 && len(c.ReviewerList) <= 50
 }
 
 func (c *ProtectedBranchCfg) ToString() string {

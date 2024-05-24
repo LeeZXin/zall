@@ -86,27 +86,11 @@ func packRepoPath(c *gin.Context) {
 			Password: password,
 		})
 		if !b {
-			// 常规账号密码不存在的话就检查访问令牌
-			b = reposrv.Inner.CheckRepoToken(ctx, reposrv.CheckRepoTokenReqDTO{
-				RepoId:  repo.Id,
-				Account: account,
-				Token:   password,
+			c.JSON(http.StatusUnauthorized, ErrVO{
+				Message: i18n.GetByKey(i18n.SystemUnauthorized),
 			})
-			if !b {
-				c.JSON(http.StatusUnauthorized, ErrVO{
-					Message: i18n.GetByKey(i18n.SystemUnauthorized),
-				})
-				c.Abort()
-				return
-			}
-			userInfo = usermd.UserInfo{
-				Account: account,
-				Name:    fmt.Sprintf("%s's accessToken", repo.Name),
-				Email:   "zgit@noreply.fake",
-			}
-			c.Set("fromAccessToken", true)
-		} else {
-			c.Set("fromAccessToken", false)
+			c.Abort()
+			return
 		}
 	} else {
 		cfg, b := cfgsrv.Inner.GetGitCfg(c)
@@ -264,7 +248,7 @@ func batch(c *gin.Context) {
 			}, nil
 		}
 	})
-	c.Header("YamlContent-Type", MediaType)
+	c.Header("Content-Type", MediaType)
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -329,12 +313,11 @@ func listLock(c *gin.Context) {
 	operator := getOperator(c)
 	cursor, _ := strconv.ParseInt(req.Cursor, 10, 64)
 	listResp, err := lfssrv.Outer.ListLock(c, lfssrv.ListLockReqDTO{
-		Repo:            getRepo(c),
-		Operator:        operator,
-		Cursor:          cursor,
-		Limit:           req.Limit,
-		RefName:         req.RefSpec,
-		FromAccessToken: getFromAccessToken(c),
+		Repo:     getRepo(c),
+		Operator: operator,
+		Cursor:   cursor,
+		Limit:    req.Limit,
+		RefName:  req.RefSpec,
 	})
 	if err != nil {
 		c.JSON(http.StatusForbidden, ErrVO{
@@ -405,12 +388,11 @@ func listLockVerify(c *gin.Context) {
 	cursor, _ := strconv.ParseInt(req.Cursor, 10, 64)
 	operator := getOperator(c)
 	listResp, err := lfssrv.Outer.ListLock(c, lfssrv.ListLockReqDTO{
-		Repo:            getRepo(c),
-		Operator:        operator,
-		Cursor:          cursor,
-		Limit:           req.Limit,
-		RefName:         req.Ref.Name,
-		FromAccessToken: getFromAccessToken(c),
+		Repo:     getRepo(c),
+		Operator: operator,
+		Cursor:   cursor,
+		Limit:    req.Limit,
+		RefName:  req.Ref.Name,
 	})
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, ErrVO{
@@ -456,9 +438,8 @@ func verify(c *gin.Context) {
 			Oid:  req.Oid,
 			Size: req.Size,
 		},
-		Repo:            getRepo(c),
-		Operator:        getOperator(c),
-		FromAccessToken: getFromAccessToken(c),
+		Repo:     getRepo(c),
+		Operator: getOperator(c),
 	})
 	if err != nil {
 		c.JSON(http.StatusForbidden, ErrVO{
@@ -488,11 +469,10 @@ func download(c *gin.Context) {
 	oid := c.Param("oid")
 	ctx := c
 	err := lfssrv.Outer.Download(ctx, lfssrv.DownloadReqDTO{
-		Oid:             oid,
-		Repo:            getRepo(c),
-		Operator:        getOperator(c),
-		FromAccessToken: getFromAccessToken(c),
-		C:               c,
+		Oid:      oid,
+		Repo:     getRepo(c),
+		Operator: getOperator(c),
+		C:        c,
 	})
 	if err != nil {
 		c.JSON(http.StatusForbidden, ErrVO{
@@ -504,6 +484,8 @@ func download(c *gin.Context) {
 }
 
 func upload(c *gin.Context) {
+	body := c.Request.Body
+	defer body.Close()
 	size, err := strconv.ParseInt(c.Param("size"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusForbidden, ErrVO{
@@ -512,13 +494,18 @@ func upload(c *gin.Context) {
 		})
 		return
 	}
+	repo := getRepo(c)
+	if repo.Cfg != nil && repo.Cfg.DisableLfs {
+		c.JSON(http.StatusForbidden, ErrVO{
+			Message:   i18n.GetByKey(i18n.SystemForbidden),
+			RequestID: logger.GetTraceId(c),
+		})
+	}
 	oid := c.Param("oid")
-	body := c.Request.Body
-	defer body.Close()
 	err = lfssrv.Outer.Upload(c, lfssrv.UploadReqDTO{
 		Oid:      oid,
 		Size:     size,
-		Repo:     getRepo(c),
+		Repo:     repo,
 		Operator: getOperator(c),
 		C:        c,
 	})
@@ -544,8 +531,4 @@ func model2LockVO(l lfssrv.LfsLockDTO, locker usermd.UserInfo) LockVO {
 
 func writeRespMessage(c *gin.Context, code int, message string) {
 	c.Data(code, MediaType, []byte(message))
-}
-
-func getFromAccessToken(c *gin.Context) bool {
-	return c.GetBool("fromAccessToken")
 }

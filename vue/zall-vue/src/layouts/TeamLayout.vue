@@ -8,7 +8,7 @@
     </a-layout-header>
     <a-layout>
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
-        <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @select="onselect">
+        <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
           <a-menu-item key="/gitRepo/list">
             <branches-outlined />
             <span>{{t("teamMenu.gitRepo")}}</span>
@@ -54,7 +54,7 @@ import I18nSelect from "../components/i18n/I18nSelect";
 import AvatarName from "../components/user/AvatarName";
 import { useTeamStore } from "../pinia/teamStore";
 import { useI18n } from "vue-i18n";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
   DesktopOutlined,
@@ -73,21 +73,32 @@ const { t } = useI18n();
 const collapsed = ref(false);
 const route = useRoute();
 const selectedKeys = ref([]);
+const routeKey = `/team/${route.params.teamId}`;
 const switchTeam = () => {
   router.push("/index");
 };
 const isAdmin = ref(false);
 const onselect = event => {
-  router.push(`/team/${route.params.teamId}` + event.key);
+  router.push({
+    path: routeKey + event.key,
+    force: true
+  });
+};
+const changeSelectedKey = path => {
+  const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
+  for (let key in pagesMap) {
+    let value = pagesMap[key];
+    if (routeSuffix.startsWith(key)) {
+      selectedKeys.value = [value];
+      break;
+    }
+  }
 };
 // 为了子页面能体现在导航栏
-const pagesList = ["/gitRepo/list"];
-let page = pagesList.find(item => {
-  return route.path.endsWith(item);
-});
-if (page) {
-  selectedKeys.value = [page];
-}
+const pagesMap = {
+  "/gitRepo": "/gitRepo/list"
+};
+changeSelectedKey(route.path);
 isTeamAdminRequest(route.params.teamId).then(res => {
   isAdmin.value = res.data;
 });
@@ -97,6 +108,10 @@ if (team.teamId === 0) {
     team.name = res.data.name;
   });
 }
+watch(
+  () => router.currentRoute.value.path,
+  newPath => changeSelectedKey(newPath)
+);
 </script>
 <style scoped>
 .switch-team-text {

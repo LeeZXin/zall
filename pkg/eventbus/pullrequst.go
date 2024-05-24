@@ -10,6 +10,7 @@ type PullRequestEvent struct {
 	Action    string
 	RepoId    int64
 	RepoName  string
+	RepoPath  string
 	Account   string
 	EventTime time.Time
 	Ref       string

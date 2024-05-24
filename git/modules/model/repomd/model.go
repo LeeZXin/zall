@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	RepoTableName      = "zgit_repo"
-	RepoTokenTableName = "zgit_repo_token"
+	RepoTableName = "zgit_repo"
 )
 
 type RepoStatus int
@@ -50,7 +49,7 @@ type Repo struct {
 	// 仓库配置
 	Cfg *RepoCfg `json:"cfg"`
 	// LastOperated 最后操作时间
-	LastOperated time.Time `json:"lastOperated" xorm:"created"`
+	LastOperated time.Time `json:"lastOperated"`
 	Created      time.Time `json:"created" xorm:"created"`
 	Updated      time.Time `json:"updated" xorm:"updated"`
 }
@@ -59,19 +58,9 @@ func (*Repo) TableName() string {
 	return RepoTableName
 }
 
-type RepoToken struct {
-	Id      int64     `json:"id" xorm:"pk autoincr"`
-	RepoId  int64     `json:"repoId"`
-	Account string    `json:"account"`
-	Token   string    `json:"token"`
-	Created time.Time `json:"created" xorm:"created"`
-}
-
-func (*RepoToken) TableName() string {
-	return RepoTokenTableName
-}
-
 type RepoCfg struct {
+	// DisableLfs 是否禁用lfs
+	DisableLfs bool `json:"disableLfs"`
 	// 单个lfs size大小限制
 	SingleLfsFileLimitSize int64 `json:"singleLfsFileLimitSize"`
 	// 整个lfs仓库大小限制

@@ -23,8 +23,8 @@ var (
 )
 
 // InitRepo 初始化仓库
-func InitRepo(ctx context.Context, req reqvo.InitRepoReq) error {
-	var resp ginutil.BaseResp
+func InitRepo(ctx context.Context, req reqvo.InitRepoReq) (int64, error) {
+	var resp ginutil.DataResp[int64]
 	err := postHttp(
 		ctx,
 		"/api/v1/git/store/initRepo",
@@ -32,12 +32,12 @@ func InitRepo(ctx context.Context, req reqvo.InitRepoReq) error {
 		&resp,
 	)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if !resp.IsSuccess() {
-		return bizerr.NewBizErr(resp.Code, resp.Message)
+		return 0, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
-	return nil
+	return resp.Data, nil
 }
 
 // DeleteRepo 删除仓库
@@ -149,8 +149,8 @@ func GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq) ([]reqvo.RefVO, er
 }
 
 // Gc 仓库gc
-func Gc(ctx context.Context, req reqvo.GcReq) error {
-	var resp ginutil.BaseResp
+func Gc(ctx context.Context, req reqvo.GcReq) (int64, error) {
+	var resp ginutil.DataResp[int64]
 	err := postHttp(
 		ctx,
 		"/api/v1/git/store/gc",
@@ -158,12 +158,12 @@ func Gc(ctx context.Context, req reqvo.GcReq) error {
 		&resp,
 	)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if !resp.IsSuccess() {
-		return bizerr.NewBizErr(resp.Code, resp.Message)
+		return 0, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
-	return nil
+	return resp.Data, nil
 }
 
 // DiffRefs 比较两个refs
@@ -216,24 +216,6 @@ func DiffFile(ctx context.Context, req reqvo.DiffFileReq) (reqvo.DiffFileResp, e
 	}
 	if !resp.IsSuccess() {
 		return reqvo.DiffFileResp{}, bizerr.NewBizErr(resp.Code, resp.Message)
-	}
-	return resp.Data, nil
-}
-
-// GetRepoSize 获取仓库大小
-func GetRepoSize(ctx context.Context, req reqvo.GetRepoSizeReq) (int64, error) {
-	var resp ginutil.DataResp[int64]
-	err := postHttp(
-		ctx,
-		"/api/v1/git/store/diffFile",
-		req,
-		&resp,
-	)
-	if err != nil {
-		return 0, err
-	}
-	if !resp.IsSuccess() {
-		return 0, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
 	return resp.Data, nil
 }
@@ -402,7 +384,7 @@ func ReceivePack(req reqvo.ReceivePackReq, repoId int64, pusherAccount, pusherEm
 
 func InfoRefs(req reqvo.InfoRefsReq) error {
 	return proxyHttp(
-		"/api/v1/git/smart/"+req.RepoPath+"/info/refs?service="+req.C.Query("service"),
+		"/api/v1/git/smart/"+req.RepoPath+"/info/refs?service="+req.Service,
 		req.C,
 		nil,
 	)

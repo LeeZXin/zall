@@ -2,6 +2,7 @@
   <div style="padding:14px">
     <div style="margin-bottom:10px">
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建工作流</a-button>
+      <a-button type="primary" @click="gotoSecretPage" :icon="h(KeyOutlined)" style="margin-left:8px">管理密钥</a-button>
     </div>
     <ul class="workflow-list" v-if="workflowList.length > 0">
       <li v-for="item in workflowList" v-bind:key="item.id">
@@ -122,7 +123,8 @@ import {
   LoadingOutlined,
   ClockCircleOutlined,
   PauseOutlined,
-  PlusOutlined
+  PlusOutlined,
+  KeyOutlined
 } from "@ant-design/icons-vue";
 import ZNoData from "@/components/common/ZNoData";
 import { ref, createVNode, onUnmounted, h } from "vue";
@@ -156,6 +158,9 @@ const listWorkflow = () => {
 const gotoDetailPage = id => {
   router.push(`/gitRepo/${route.params.repoId}/workflow/${id}/update`);
 };
+const gotoSecretPage = () => {
+  router.push(`/gitRepo/${route.params.repoId}/workflow/secrets`);
+}
 const gotoTasksPage = item => {
   workflowStore.id = item.id;
   workflowStore.name = item.name;

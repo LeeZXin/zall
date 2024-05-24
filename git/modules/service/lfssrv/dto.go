@@ -50,13 +50,12 @@ type LockRespDTO struct {
 }
 
 type ListLockReqDTO struct {
-	Repo            repomd.Repo     `json:"repo"`
-	Operator        usermd.UserInfo `json:"operator"`
-	Path            string          `json:"path"`
-	Cursor          int64           `json:"cursor"`
-	Limit           int             `json:"limit"`
-	RefName         string          `json:"refName"`
-	FromAccessToken bool            `json:"fromAccessToken"`
+	Repo     repomd.Repo     `json:"repo"`
+	Operator usermd.UserInfo `json:"operator"`
+	Path     string          `json:"path"`
+	Cursor   int64           `json:"cursor"`
+	Limit    int             `json:"limit"`
+	RefName  string          `json:"refName"`
 }
 
 func (r *ListLockReqDTO) IsValid() error {
@@ -108,9 +107,8 @@ func (p *PointerDTO) IsValid() error {
 
 type VerifyReqDTO struct {
 	PointerDTO
-	Repo            repomd.Repo     `json:"repo"`
-	Operator        usermd.UserInfo `json:"operator"`
-	FromAccessToken bool            `json:"fromAccessToken"`
+	Repo     repomd.Repo     `json:"repo"`
+	Operator usermd.UserInfo `json:"operator"`
 }
 
 func (r *VerifyReqDTO) IsValid() error {
@@ -127,11 +125,10 @@ func (r *VerifyReqDTO) IsValid() error {
 }
 
 type DownloadReqDTO struct {
-	Oid             string          `json:"oid"`
-	Repo            repomd.Repo     `json:"repo"`
-	Operator        usermd.UserInfo `json:"operator"`
-	FromAccessToken bool            `json:"fromAccessToken"`
-	C               *gin.Context    `json:"-"`
+	Oid      string          `json:"oid"`
+	Repo     repomd.Repo     `json:"repo"`
+	Operator usermd.UserInfo `json:"operator"`
+	C        *gin.Context    `json:"-"`
 }
 
 func (r *DownloadReqDTO) IsValid() error {

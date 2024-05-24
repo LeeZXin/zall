@@ -3,7 +3,12 @@ package workflowmd
 import (
 	"context"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
+	"regexp"
 	"time"
+)
+
+var (
+	validSecretNameRegexp = regexp.MustCompile(`^\w{1,32}$`)
 )
 
 func IsWorkflowNameValid(name string) bool {
@@ -12,6 +17,14 @@ func IsWorkflowNameValid(name string) bool {
 
 func IsWorkflowDescValid(desc string) bool {
 	return len(desc) > 0 && len(desc) <= 255
+}
+
+func IsSecretNameValid(name string) bool {
+	return validSecretNameRegexp.MatchString(name)
+}
+
+func IsSecretContentValid(content string) bool {
+	return len(content) > 0 && len(content) <= 10240
 }
 
 func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
@@ -168,4 +181,83 @@ func DeleteTaskById(ctx context.Context, id int64) (bool, error) {
 		Where("id = ?", id).
 		Delete(new(Task))
 	return rows == 1, err
+}
+
+func ListSecretByRepoId(ctx context.Context, repoId int64) ([]Secret, error) {
+	ret := make([]Secret, 0)
+	err := xormutil.MustGetXormSession(ctx).Where("repo_id = ?", repoId).Find(&ret)
+	return ret, err
+}
+
+func InsertSecret(ctx context.Context, reqDTO InsertSecretReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Insert(&Secret{
+			RepoId:  reqDTO.RepoId,
+			Name:    reqDTO.Name,
+			Content: reqDTO.Content,
+		})
+	return err
+}
+
+func ExistsSecret(ctx context.Context, reqDTO ExistsSecretReqDTO) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("repo_id = ?", reqDTO.RepoId).
+		And("name = ?", reqDTO.Name).
+		Exist(new(Secret))
+}
+
+func UpdateSecret(ctx context.Context, reqDTO UpdateSecretReqDTO) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", reqDTO.Id).
+		Cols("content").
+		Update(&Secret{
+			Content: reqDTO.Content,
+		})
+	return rows == 1, err
+}
+
+func DeleteSecret(ctx context.Context, id int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Delete(new(Secret))
+	return rows == 1, err
+}
+
+func GetSecretById(ctx context.Context, id int64) (Secret, bool, error) {
+	var ret Secret
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	return ret, b, err
+}
+
+func InsertToken(ctx context.Context, reqDTO InsertTokenReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Insert(&Token{
+			TaskId:   reqDTO.TaskId,
+			RepoId:   reqDTO.RepoId,
+			Content:  reqDTO.Content,
+			Expired:  reqDTO.Expired,
+			Operator: reqDTO.Operator,
+		})
+	return err
+}
+
+func GetTokenByRepoIdAndContent(ctx context.Context, repoId int64, content string) (Token, bool, error) {
+	var ret Token
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("repo_id = ?", repoId).
+		And("content = ?", content).
+		Get(&ret)
+	return ret, b, err
+}
+
+func DeleteTokenByTaskId(ctx context.Context, taskId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("task_id = ?", taskId).
+		Delete(new(Token))
+	return err
+}
+
+func DeleteExpiredToken(ctx context.Context) error {
+	_, err := xormutil.MustGetXormSession(ctx).Where("expired < now()").Delete(new(Token))
+	return err
 }
