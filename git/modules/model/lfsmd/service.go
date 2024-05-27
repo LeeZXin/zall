@@ -51,6 +51,13 @@ func BatchMetaObjectByOidList(ctx context.Context, oidList []string, repoId int6
 	return ret, err
 }
 
+func SumSizeWithoutOidList(ctx context.Context, oidList []string, repoId int64) (float64, error) {
+	return xormutil.MustGetXormSession(ctx).
+		NotIn("oid", oidList).
+		And("repo_id = ?", repoId).
+		Sum(new(MetaObject), "size")
+}
+
 func InsertMetaObject(ctx context.Context, reqDTO InsertMetaObjectReqDTO) (MetaObject, error) {
 	ret := MetaObject{
 		RepoId: reqDTO.RepoId,

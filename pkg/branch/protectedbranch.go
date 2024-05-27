@@ -19,15 +19,26 @@ func (o PushOption) IsValid() bool {
 	}
 }
 
+type AccountList []string
+
+func (al AccountList) Contains(account string) bool {
+	for _, name := range al {
+		if name == account {
+			return true
+		}
+	}
+	return false
+}
+
 type ProtectedBranchCfg struct {
 	// 推送模式
 	PushOption PushOption `json:"pushOption"`
 	// 当推送人模式为白名单
-	PushWhiteList []string `json:"pushWhiteList"`
+	PushWhiteList AccountList `json:"pushWhiteList"`
 	// 合并请求时代码评审数量大于该数量才能合并
 	ReviewCountWhenCreatePr int `json:"reviewCountWhenCreatePr"`
 	// 代码评审员名单
-	ReviewerList []string `json:"reviewerList"`
+	ReviewerList AccountList `json:"reviewerList"`
 	// 撤销过时的审批
 	CancelOldReviewApprovalWhenNewCommit bool `json:"cancelOldReviewApprovalWhenNewCommit"`
 }

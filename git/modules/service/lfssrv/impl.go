@@ -2,18 +2,24 @@ package lfssrv
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/git/modules/model/branchmd"
 	"github.com/LeeZXin/zall/git/modules/model/lfsmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
+	"github.com/LeeZXin/zall/git/modules/service/oplogsrv"
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
-	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
+	"github.com/LeeZXin/zall/pkg/apicode"
+	"github.com/LeeZXin/zall/pkg/branch"
+	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"net/http"
+	"strings"
 )
 
 const (
@@ -158,25 +164,16 @@ func (s *outerImpl) Verify(ctx context.Context, reqDTO VerifyReqDTO) (bool, bool
 	return true, true, nil
 }
 
-func (s *outerImpl) Download(ctx context.Context, reqDTO DownloadReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.LfsSrvKeysVO.Download),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (s *outerImpl) Download(ctx context.Context, reqDTO DownloadReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	// 检查仓库访问权限
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err = checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
+	err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
 	if err != nil {
-		return
+		return err
 	}
 	err = client.LfsDownload(reqvo.LfsDownloadReq{
 		RepoPath: reqDTO.Repo.Path,
@@ -185,38 +182,50 @@ func (s *outerImpl) Download(ctx context.Context, reqDTO DownloadReqDTO) (err er
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	// 插入日志
+	oplogsrv.Inner.InsertOpLog(oplogsrv.OpLog{
+		RepoId:   reqDTO.Repo.Id,
+		Operator: reqDTO.Operator.Account,
+		Log:      oplogsrv.FormatI18n(i18n.LfsSrvKeysVO.Download, reqDTO.Oid),
+		Req:      reqDTO,
+	})
+	return nil
 }
 
-func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.LfsSrvKeysVO.Upload),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	// 检查仓库访问权限
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err = checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, updateRepo)
+	err := checkPerm(ctx, reqDTO.Repo, reqDTO.Operator, updateRepo)
 	if err != nil {
-		return
+		return err
+	}
+	/*
+		这个接口是可以绕过batch接口绕过lfs限制并直接上传文件的
+		所以依然要判断lfs大小限制
+	*/
+	limitSize := reqDTO.Repo.GetCfg().LfsLimitSize
+	if limitSize > 0 {
+		var lfsTotalSize float64
+		lfsTotalSize, err = lfsmd.SumSizeWithoutOidList(ctx, []string{reqDTO.Oid}, reqDTO.Repo.Id)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		if limitSize < int64(lfsTotalSize)+reqDTO.Size {
+			return util.NewBizErr(apicode.ForcePushForbiddenCode, i18n.RepoSizeExceedLimit, util.VolumeReadable(limitSize))
+		}
 	}
 	// 检查oid是否落库
 	_, b, err := lfsmd.GetMetaObjectByOid(ctx, reqDTO.Oid, reqDTO.Repo.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if !b {
 		_, err = lfsmd.InsertMetaObject(ctx, lfsmd.InsertMetaObjectReqDTO{
@@ -226,8 +235,7 @@ func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error)
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
+			return util.InternalError(err)
 		}
 	}
 	err = client.LfsUpload(reqvo.LfsUploadReq{
@@ -237,10 +245,16 @@ func (s *outerImpl) Upload(ctx context.Context, reqDTO UploadReqDTO) (err error)
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	// 插入日志
+	oplogsrv.Inner.InsertOpLog(oplogsrv.OpLog{
+		RepoId:   reqDTO.Repo.Id,
+		Operator: reqDTO.Operator.Account,
+		Log:      oplogsrv.FormatI18n(i18n.LfsSrvKeysVO.Upload, reqDTO.Oid),
+		Req:      reqDTO,
+	})
+	return nil
 }
 
 func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO, error) {
@@ -249,10 +263,46 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
+	// 检查保护分支
+	ref := strings.TrimPrefix(reqDTO.RefName, git.BranchPrefix)
+	pbCfg, b, err := branchmd.IsProtectedBranch(ctx, reqDTO.Repo.Id, ref)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return BatchRespDTO{}, util.InternalError(err)
+	}
+	if b {
+		switch pbCfg.PushOption {
+		case branch.NotAllowPush:
+			return BatchRespDTO{}, util.NewBizErr(apicode.ProtectedBranchNotAllowPushCode, i18n.ProtectedBranchNotAllowPush)
+		case branch.WhiteListPush:
+			if !pbCfg.PushWhiteList.Contains(reqDTO.Operator.Account) {
+				return BatchRespDTO{}, util.NewBizErr(apicode.ProtectedBranchNotAllowPushCode, i18n.ProtectedBranchNotAllowPush)
+			}
+		}
+	}
 	ret := make([]ObjectDTO, 0, len(reqDTO.Objects))
-	oidList, _ := listutil.Map(reqDTO.Objects, func(t PointerDTO) (string, error) {
-		return t.Oid, nil
-	})
+	oidList := make([]string, 0, len(reqDTO.Objects))
+	var reqTotalSize int64 = 0
+	for _, obj := range reqDTO.Objects {
+		oidList = append(oidList, obj.Oid)
+		reqTotalSize += obj.Size
+	}
+	// 检查lfs大小限制
+	if reqDTO.IsUpload {
+		// 超过限制大小
+		limitSize := reqDTO.Repo.GetCfg().LfsLimitSize
+		if limitSize > 0 {
+			// 获取已入库lfs大小
+			lfsExistTotalSize, err := lfsmd.SumSizeWithoutOidList(ctx, oidList, reqDTO.Repo.Id)
+			if err != nil {
+				logger.Logger.WithContext(ctx).Error(err)
+				return BatchRespDTO{}, util.InternalError(err)
+			}
+			if limitSize < (reqTotalSize + int64(lfsExistTotalSize)) {
+				return BatchRespDTO{}, util.NewBizErr(apicode.ForcePushForbiddenCode, i18n.RepoSizeExceedLimit, util.VolumeReadable(limitSize))
+			}
+		}
+	}
 	objList, err := lfsmd.BatchMetaObjectByOidList(ctx, oidList, reqDTO.Repo.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -278,8 +328,8 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 			// 大小不一致
 			ret = append(ret, ObjectDTO{
 				ErrObjDTO: ErrObjDTO{
-					Code:    422,
-					Message: "size is invalid",
+					Code:    http.StatusUnprocessableEntity,
+					Message: i18n.GetByKey(i18n.SystemInvalidArgs),
 				},
 			})
 			continue
@@ -287,16 +337,6 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 		// 文件存在 但没有落库
 		exists := existsMap[object.Oid]
 		if reqDTO.IsUpload {
-			// 检查是否超过单个lfs文件配置大小
-			if !exists && reqDTO.Repo.Cfg.SingleLfsFileLimitSize > 0 && object.Size > reqDTO.Repo.Cfg.SingleLfsFileLimitSize {
-				ret = append(ret, ObjectDTO{
-					ErrObjDTO: ErrObjDTO{
-						Code:    422,
-						Message: "size exceeds",
-					},
-				})
-				continue
-			}
 			if exists && !b {
 				shouldInsert = append(shouldInsert, lfsmd.InsertMetaObjectReqDTO{
 					RepoId: reqDTO.Repo.Id,
@@ -311,8 +351,8 @@ func (s *outerImpl) Batch(ctx context.Context, reqDTO BatchReqDTO) (BatchRespDTO
 			if !exists || !b {
 				ret = append(ret, ObjectDTO{
 					ErrObjDTO: ErrObjDTO{
-						Code:    404,
-						Message: "not found",
+						Code:    http.StatusNotFound,
+						Message: i18n.GetByKey(i18n.SystemNotExists),
 					},
 				})
 			} else {
@@ -350,7 +390,7 @@ func checkPerm(ctx context.Context, repo repomd.Repo, operator usermd.UserInfo, 
 	case accessRepo:
 		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo
 	case updateRepo:
-		pass = p.PermDetail.GetRepoPerm(repo.Id).CanUpdateRepo
+		pass = p.PermDetail.GetRepoPerm(repo.Id).CanPushRepo
 	}
 	if !pass {
 		return util.UnauthorizedError()

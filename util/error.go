@@ -6,7 +6,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/wraperr"
 	"github.com/LeeZXin/zsf-utils/bizerr"
-	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
 func InvalidArgsError() error {
@@ -15,10 +14,6 @@ func InvalidArgsError() error {
 
 func InternalError(err error) error {
 	return wraperr.WrapErr(err, NewBizErr(apicode.InternalErrorCode, i18n.SystemInternalError))
-}
-
-func ApiError(resp ginutil.BaseResp) error {
-	return bizerr.NewBizErr(resp.Code, resp.Message)
 }
 
 func UnauthorizedError() error {

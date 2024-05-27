@@ -245,7 +245,7 @@ func GetFlowByCreatorAndTime(ctx context.Context, creator string, startTime, end
 }
 
 func BatchGetFlows(ctx context.Context, flowIds []int64) ([]Flow, error) {
-	ret := make([]Flow, 0)
+	ret := make([]Flow, 0, len(flowIds))
 	err := xormutil.MustGetXormSession(ctx).
 		In("id", flowIds).
 		OrderBy("updated desc").

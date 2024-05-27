@@ -93,7 +93,14 @@ func DeleteWorkflow(ctx context.Context, workflowId int64) (bool, error) {
 	return rows == 1, err
 }
 
-func ListWorkflow(ctx context.Context, repoId int64) ([]Workflow, error) {
+func DeleteWorkflowsByRepoId(ctx context.Context, repoId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("repo_id = ?", repoId).
+		Delete(new(Workflow))
+	return err
+}
+
+func ListWorkflowByRepoId(ctx context.Context, repoId int64) ([]Workflow, error) {
 	ret := make([]Workflow, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("repo_id = ?", repoId).
@@ -110,7 +117,7 @@ func GetWorkflowById(ctx context.Context, id int64) (Workflow, bool, error) {
 }
 
 func BatchGetWorkflowNameById(ctx context.Context, idList []int64) (map[int64]string, error) {
-	wfList := make([]Workflow, 0)
+	wfList := make([]Workflow, 0, len(idList))
 	err := xormutil.MustGetXormSession(ctx).
 		In("id", idList).
 		Cols("name", "id").
@@ -183,6 +190,13 @@ func DeleteTaskById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
+func DeleteTaskByWorkflowIdList(ctx context.Context, wfIdList []int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		In("workflow_id", wfIdList).
+		Delete(new(Task))
+	return err
+}
+
 func ListSecretByRepoId(ctx context.Context, repoId int64) ([]Secret, error) {
 	ret := make([]Secret, 0)
 	err := xormutil.MustGetXormSession(ctx).Where("repo_id = ?", repoId).Find(&ret)
@@ -221,6 +235,13 @@ func DeleteSecret(ctx context.Context, id int64) (bool, error) {
 		Where("id = ?", id).
 		Delete(new(Secret))
 	return rows == 1, err
+}
+
+func DeleteSecretsByRepoId(ctx context.Context, repoId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("repo_id = ?", repoId).
+		Delete(new(Secret))
+	return err
 }
 
 func GetSecretById(ctx context.Context, id int64) (Secret, bool, error) {

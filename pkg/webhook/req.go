@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"net/http"
 )
@@ -20,10 +21,28 @@ const (
 type PullRequestAction string
 
 const (
-	SubmitAction PullRequestAction = "submit"
-	CloseAction  PullRequestAction = "close"
-	MergeAction  PullRequestAction = "merge"
-	ReviewAction PullRequestAction = "review"
+	PrSubmitAction PullRequestAction = "submit"
+	PrCloseAction  PullRequestAction = "close"
+	PrMergeAction  PullRequestAction = "merge"
+	PrReviewAction PullRequestAction = "review"
+)
+
+type GitRepoAction string
+
+const (
+	RepoDeleteTemporarilyAction GitRepoAction = "deleteTemporarily"
+	RepoDeletePermanentlyAction GitRepoAction = "deletePermanently"
+	RepoArchivedAction          GitRepoAction = "archived"
+	RepoUnArchivedAction        GitRepoAction = "unArchived"
+	RepoRecoverFromRecycle      GitRepoAction = "recoverFromRecycle"
+)
+
+type ProtectedBranchAction string
+
+const (
+	PbCreateAction ProtectedBranchAction = "create"
+	PbUpdateAction ProtectedBranchAction = "update"
+	PbDeleteAction ProtectedBranchAction = "delete"
 )
 
 type EventReq interface {
@@ -35,6 +54,31 @@ type BaseRepoReq struct {
 	RepoName  string `json:"repoName"`
 	Account   string `json:"account"`
 	EventTime int64  `json:"eventTime"`
+}
+
+type ProtectedBranchObj struct {
+	Pattern string `json:"pattern"`
+	branch.ProtectedBranchCfg
+}
+
+type ProtectedBranchEventReq struct {
+	BaseRepoReq
+	Action ProtectedBranchAction `json:"action"`
+	Before *ProtectedBranchObj   `json:"before,omitempty"`
+	After  *ProtectedBranchObj   `json:"after,omitempty"`
+}
+
+func (*ProtectedBranchEventReq) EventType() Event {
+	return ProtectedBranchEvent
+}
+
+type GitRepoEventReq struct {
+	BaseRepoReq
+	Action GitRepoAction `json:"action"`
+}
+
+func (*GitRepoEventReq) EventType() Event {
+	return GitRepoEvent
 }
 
 type GitPushEventReq struct {

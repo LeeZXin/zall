@@ -115,7 +115,7 @@ func (s *innerImpl) TaskCallback(taskId string, task workflow.TaskStatusCallback
 func (s *innerImpl) FindAndExecute(reqDTO FindAndExecuteWorkflowReqDTO) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	workflowList, err := workflowmd.ListWorkflow(ctx, reqDTO.RepoId)
+	workflowList, err := workflowmd.ListWorkflowByRepoId(ctx, reqDTO.RepoId)
 	if err != nil {
 		logger.Logger.Error(err)
 		return
@@ -197,16 +197,14 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 	}
 	err = workflow.NewAgentCommand(wf.AgentHost, wf.AgentToken, "").
 		ExecuteWorkflow(wf.YamlContent, bizId, envs)
+	ctx2, closer2 := xormstore.Context(context.Background())
+	defer closer2.Close()
 	if err != nil {
-		if strings.Contains(err.Error(), "out of capacity") {
-			workflowmd.DeleteTaskById(ctx, task.Id)
-		}
+		logger.Logger.WithContext(ctx).Error(err)
+		workflowmd.DeleteTaskById(ctx2, task.Id)
+		workflowmd.DeleteTokenByTaskId(ctx2, task.Id)
 	} else {
-		{
-			ctx2, closer2 := xormstore.Context(context.Background())
-			defer closer2.Close()
-			workflowmd.UpdateLastTaskIdByWorkflowId(ctx2, wf.Id, task.Id)
-		}
+		workflowmd.UpdateLastTaskIdByWorkflowId(ctx2, wf.Id, task.Id)
 	}
 	return err
 }
@@ -216,7 +214,7 @@ type outerImpl struct{}
 func newOuterService() OuterService {
 	psub.Subscribe(eventbus.PullRequestEventTopic, func(data any) {
 		event, ok := data.(eventbus.PullRequestEvent)
-		if ok && event.Action == string(webhook.MergeAction) {
+		if ok && event.Action == string(webhook.PrMergeAction) {
 			Inner.FindAndExecute(FindAndExecuteWorkflowReqDTO{
 				RepoId:      event.RepoId,
 				RepoPath:    event.RepoPath,
@@ -329,7 +327,7 @@ func (*outerImpl) ListWorkflowWithLastTask(ctx context.Context, reqDTO ListWorkf
 	if err != nil {
 		return nil, err
 	}
-	ret, err := workflowmd.ListWorkflow(ctx, reqDTO.RepoId)
+	ret, err := workflowmd.ListWorkflowByRepoId(ctx, reqDTO.RepoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -441,11 +439,10 @@ func (*outerImpl) TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReq
 		PrId:        0,
 	})
 	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
 		if strings.Contains(err.Error(), "out of capacity") {
 			return util.NewBizErr(apicode.OutOfWorkflowCapacityErrCode, i18n.SystemTooManyOperation)
 		}
-		return util.InternalError(err)
+		return util.NewBizErr(apicode.ProxyAbnormalErrCode, i18n.SystemProxyAbnormal)
 	}
 	return nil
 }
@@ -693,7 +690,7 @@ func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO)
 		GetWorkflowTaskStatus(task.BizId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return workflow.TaskStatus{}, util.InternalError(err)
+		return workflow.TaskStatus{}, util.NewBizErr(apicode.ProxyAbnormalErrCode, i18n.SystemProxyAbnormal)
 	}
 	// 检查结果和数据库是否一致
 	{

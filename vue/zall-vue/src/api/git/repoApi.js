@@ -5,6 +5,8 @@ const createRepoRequest = (data) => request.post("/api/gitRepo/create", data);
 const allGitIgnoreTemplateListRequest = () => request.get("/api/gitRepo/allGitIgnoreTemplateList")
     // 获取仓库列表
 const getRepoListRequest = (teamId) => request.get("/api/gitRepo/list/" + teamId);
+// 获取已删除仓库列表
+const getDeletedRepoListRequest = (teamId) => request.get("/api/gitRepo/listDeleted/" + teamId);
 // 获取仓库信息
 const getRepoRequest = (repoId) => request.get("/api/gitRepo/get/" + repoId);
 // 获取代码信息
@@ -35,6 +37,20 @@ const deleteBranchRequest = (data) => request.delete("/api/gitRepo/deleteBranch"
 const deleteTagRequest = (data) => request.delete("/api/gitRepo/deleteTag", { params: data });
 // 提交历史
 const historyCommitsRequest = (data) => request.get("/api/gitRepo/historyCommits", { params: data });
+// gc
+const gcRequest = (repoId) => request.put("/api/gitRepo/gc/" + repoId);
+// 更新仓库配置
+const updateRepoRequest = (data) => request.post("/api/gitRepo/update", data);
+// 归档仓库
+const setArchivedRequest = (repoId) => request.put("/api/gitRepo/setArchived/" + repoId);
+// 归档仓库 -> 正常仓库
+const setUnArchivedRequest = (repoId) => request.put("/api/gitRepo/setUnArchived/" + repoId);
+// 删除仓库
+const deleteRepoRequest = (repoId) => request.delete("/api/gitRepo/delete/" + repoId);
+// 永久删除仓库
+const deleteRepoPermanentlyRequest = (repoId) => request.delete("/api/gitRepo/deletePermanently/" + repoId);
+// 从回收站恢复仓库
+const reoverFromRecycleRequest = (repoId) => request.put("/api/gitRepo/recoverFromRecycle/" + repoId);
 export {
     createRepoRequest,
     allGitIgnoreTemplateListRequest,
@@ -53,5 +69,13 @@ export {
     historyCommitsRequest,
     diffCommitsRequest,
     pageTagCommitsRequest,
-    deleteTagRequest
+    deleteTagRequest,
+    gcRequest,
+    updateRepoRequest,
+    setArchivedRequest,
+    setUnArchivedRequest,
+    deleteRepoRequest,
+    getDeletedRepoListRequest,
+    deleteRepoPermanentlyRequest,
+    reoverFromRecycleRequest
 }

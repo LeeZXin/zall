@@ -147,27 +147,27 @@ var (
 	PullRequestSrvKeysVO = PullRequestSrvKeys{
 		SubmitPullRequest: KeyItem{
 			Id:         "pullRequestSrv.SubmitPullRequest",
-			DefaultRet: "提交合并请求",
+			DefaultRet: "提交合并请求: #%v",
 		},
 		ClosePullRequest: KeyItem{
 			Id:         "pullRequestSrv.ClosePullRequest",
-			DefaultRet: "关闭合并请求",
+			DefaultRet: "关闭合并请求: #%v",
 		},
 		MergePullRequest: KeyItem{
 			Id:         "pullRequestSrv.MergePullRequest",
-			DefaultRet: "触发合并请求",
+			DefaultRet: "触发合并请求: #%v",
 		},
 		ReviewPullRequest: KeyItem{
 			Id:         "pullRequestSrv.AgreeReviewPullRequest",
-			DefaultRet: "评审合并请求",
+			DefaultRet: "评审合并请求: #%v",
 		},
 		AddComment: KeyItem{
 			Id:         "pullRequestSrv.AddComment",
-			DefaultRet: "添加评论",
+			DefaultRet: "添加评论: %v",
 		},
 		DeleteComment: KeyItem{
 			Id:         "pullRequestSrv.DeleteComment",
-			DefaultRet: "删除评论",
+			DefaultRet: "删除评论: %v",
 		},
 	}
 
@@ -187,13 +187,17 @@ var (
 	}
 
 	BranchSrvKeysVO = BranchSrvKeys{
-		InsertProtectedBranch: KeyItem{
+		CreateProtectedBranch: KeyItem{
 			Id:         "branchSrv.CreateProtectedBranch",
-			DefaultRet: "新增保护分支",
+			DefaultRet: "新增保护分支: %s",
 		},
 		DeleteProtectedBranch: KeyItem{
 			Id:         "branchSrv.DeleteProtectedBranch",
-			DefaultRet: "删除保护分支",
+			DefaultRet: "删除保护分支: %s",
+		},
+		UpdateProtectedBranch: KeyItem{
+			Id:         "branchSrv.UpdateProtectedBranch",
+			DefaultRet: "编辑保护分支: %s",
 		},
 	}
 
@@ -207,11 +211,11 @@ var (
 	LfsSrvKeysVO = LfsSrvKeys{
 		Download: KeyItem{
 			Id:         "lfsSrv.download",
-			DefaultRet: "下载lfs文件",
+			DefaultRet: "下载lfs文件: %s",
 		},
 		Upload: KeyItem{
 			Id:         "lfsSrv.upload",
-			DefaultRet: "上传lfs文件",
+			DefaultRet: "上传lfs文件: %s",
 		},
 	}
 
@@ -557,8 +561,9 @@ type CfgSrvKeys struct {
 }
 
 type BranchSrvKeys struct {
-	InsertProtectedBranch KeyItem
+	CreateProtectedBranch KeyItem
 	DeleteProtectedBranch KeyItem
+	UpdateProtectedBranch KeyItem
 }
 
 type HookSrvKeys struct {

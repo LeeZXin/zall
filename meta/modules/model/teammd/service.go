@@ -42,21 +42,14 @@ func UpdateTeam(ctx context.Context, reqDTO UpdateTeamReqDTO) (bool, error) {
 }
 
 func GetUserPermDetail(ctx context.Context, teamId int64, account string) (UserPermDetailDTO, bool, error) {
-	pu, b, err := GetTeamUser(ctx, teamId, account)
-	if err != nil || !b {
-		return UserPermDetailDTO{}, b, err
-	}
-	if pu.RoleId == 0 {
-		return UserPermDetailDTO{}, true, nil
-	}
-	group, b, err := GetByRoleId(ctx, pu.RoleId)
+	role, b, err := GetRoleByTeamIdAndAccount(ctx, teamId, account)
 	if err != nil || !b {
 		return UserPermDetailDTO{}, b, err
 	}
 	return UserPermDetailDTO{
-		RoleId:     group.Id,
-		IsAdmin:    group.IsAdmin,
-		PermDetail: *group.Perm,
+		RoleId:     role.Id,
+		IsAdmin:    role.IsAdmin,
+		PermDetail: *role.Perm,
 	}, true, nil
 }
 
@@ -130,10 +123,19 @@ func InsertRole(ctx context.Context, reqDTO InsertRoleReqDTO) (Role, error) {
 	return ret, err
 }
 
-func GetByRoleId(ctx context.Context, id int64) (Role, bool, error) {
+func GetRoleById(ctx context.Context, id int64) (Role, bool, error) {
 	ret := Role{}
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
+		Get(&ret)
+	return ret, b, err
+}
+
+func GetRoleByTeamIdAndAccount(ctx context.Context, teamId int64, account string) (Role, bool, error) {
+	var ret Role
+	b, err := xormutil.MustGetXormSession(ctx).
+		SQL("select * from zall_team_role where id = (select role_id from zall_team_user where team_id = ? and account = ? limit 1)",
+			teamId, account).
 		Get(&ret)
 	return ret, b, err
 }

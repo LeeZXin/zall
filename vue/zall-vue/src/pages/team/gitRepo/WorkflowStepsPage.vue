@@ -38,12 +38,16 @@
       <li>
         <div class="info-name">任务状态</div>
         <div class="info-value">
-          <RunStatus :status="taskInfo.status"/>
+          <RunStatus :status="taskInfo.status" />
         </div>
       </li>
       <li>
         <div class="info-name">总耗时</div>
         <div class="info-value">{{readableDuration(taskInfo.duration)}}</div>
+      </li>
+      <li>
+        <div class="info-name">工作流配置</div>
+        <div class="info-value check-yaml-btn" @click="showYamlModal">查看配置</div>
       </li>
     </ul>
     <div class="flow">
@@ -80,7 +84,7 @@
       </div>
       <div class="right" v-if="jobInfo.status.length > 0 && jobInfo.status !== 'unknown'">
         <div class="run-status">
-          <RunStatus :status="jobInfo.status"/>
+          <RunStatus :status="jobInfo.status" />
           <span style="margin-left:8px">{{readableDurationWrap(jobInfo.duration)}}</span>
         </div>
         <ul class="step-list">
@@ -114,6 +118,14 @@
         </ul>
       </div>
     </div>
+    <a-modal v-model:open="yamlModalOpen" title="工作流配置" okText="确定" :footer="null">
+      <Codemirror
+          v-model="taskStore.yamlContent"
+          :style="codemirrorStyle"
+          :extensions="extensions"
+          :disabled="true"
+        />
+    </a-modal>
   </div>
 </template>
 <script setup>
@@ -121,6 +133,9 @@ import RunStatus from "@/components/git/WorkflowRunStatus";
 import PrIdTag from "@/components/git/PrIdTag";
 import ZNaviBack from "@/components/common/ZNaviBack";
 import WorkflowNode from "@/components/vueflow/WorkflowNode";
+import { Codemirror } from "vue-codemirror";
+import { yaml } from "@codemirror/lang-yaml";
+import { oneDark } from "@codemirror/theme-one-dark";
 import {
   PauseOutlined,
   CheckOutlined,
@@ -146,9 +161,12 @@ import {
 import { readableDuration, readableTimeComparingNow } from "@/utils/time";
 import { useI18n } from "vue-i18n";
 import { message, Modal } from "ant-design-vue";
+const extensions = [yaml(), oneDark];
+const codemirrorStyle = { height: "380px", width: "100%" };
 const { findNode } = useVueFlow();
 const { t } = useI18n();
 const taskStore = ref({});
+const yamlModalOpen = ref(false);
 const taskInfo = reactive({
   status: "unknown",
   duration: 0
@@ -296,13 +314,16 @@ const getTaskStatus = () => {
   });
 };
 const getTaskDetail = () => {
-  getTaskDetailRequest(route.params.taskId).then(res=>{
+  getTaskDetailRequest(route.params.taskId).then(res => {
     taskStore.value = res.data;
     getTaskStatus();
-  })
-}
+  });
+};
 const clickFlowNode = e => {
   selectJob(e.node.id);
+};
+const showYamlModal = () => {
+  yamlModalOpen.value = true;
 };
 const killTask = () => {
   Modal.confirm({
@@ -324,11 +345,13 @@ const showLogs = (item, index) => {
   } else if (item.loaded) {
     item.openLog = true;
   } else {
-    getLogContentRequest(taskStore.value.id, selectedJob.value, index).then(res => {
-      item.loaded = true;
-      item.logs = res.data;
-      item.openLog = true;
-    });
+    getLogContentRequest(taskStore.value.id, selectedJob.value, index).then(
+      res => {
+        item.loaded = true;
+        item.logs = res.data;
+        item.openLog = true;
+      }
+    );
   }
 };
 getTaskDetail();
@@ -467,5 +490,9 @@ onUnmounted(() => {
   font-size: 14px;
   padding: 8px;
   line-height: 16px;
+}
+.check-yaml-btn:hover {
+  cursor: pointer;
+  color: #1677ff;
 }
 </style>

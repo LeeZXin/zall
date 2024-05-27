@@ -59,6 +59,8 @@ func (s *storeImpl) InitRepo(ctx context.Context, req reqvo.InitRepoReq) (int64,
 func (s *storeImpl) DeleteRepo(ctx context.Context, req reqvo.DeleteRepoReq) error {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	util.RemoveAll(repoPath)
+	lfsPath := filepath.Join(git.LfsDir(), req.RepoPath)
+	util.RemoveAll(lfsPath)
 	return nil
 }
 

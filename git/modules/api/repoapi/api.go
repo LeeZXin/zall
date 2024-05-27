@@ -1,7 +1,6 @@
 package repoapi
 
 import (
-	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
@@ -28,10 +27,18 @@ func InitApi() {
 			group.GET("/allGitIgnoreTemplateList", allGitIgnoreTemplateList)
 			// 初始化仓库
 			group.POST("/create", createRepo)
+			// 编辑仓库
+			group.POST("/update", updateRepo)
 			// 删除仓库
-			group.POST("/delete", deleteRepo)
+			group.DELETE("/delete/:repoId", deleteRepo)
+			// 永久删除仓库
+			group.DELETE("/deletePermanently/:repoId", deletePermanentlyRepo)
+			// 从回收站恢复仓库
+			group.PUT("/recoverFromRecycle/:repoId", recoverFromRecycle)
 			// 展示仓库列表
 			group.GET("/list/:teamId", listRepo)
+			// 展示已删除仓库列表
+			group.GET("/listDeleted/:teamId", listDeletedRepo)
 			// 展示仓库主页
 			group.GET("/index", indexRepo)
 			// 展示更多文件列表
@@ -47,19 +54,15 @@ func InitApi() {
 			// 展示仓库所有tag
 			group.GET("/allTags/:repoId", allTags)
 			// gc
-			group.POST("/gc/:repoId", gc)
+			group.PUT("/gc/:repoId", gc)
 			// 提交差异
 			group.GET("/diffRefs", diffRefs)
 			// 提交差异
 			group.GET("/diffCommits", diffCommits)
 			// 展示提交文件差异
 			group.GET("/diffFile", diffFile)
-			// 展示文件内容
-			group.GET("/showDiffTextContent", showDiffTextContent)
 			// 历史提交
 			group.GET("/historyCommits", historyCommits)
-			// 刷新hook
-			group.Any("/refreshAllGitHooks", refreshAllGitHooks)
 			// 迁移项目组
 			group.POST("/transferTeam", transferTeam)
 			// 获取每一行提交信息
@@ -70,12 +73,42 @@ func InitApi() {
 			group.GET("/archive", createArchive)
 			// 删除tag
 			group.DELETE("/deleteTag", deleteTag)
+			// 归档仓库
+			group.PUT("/setArchived/:repoId", setArchived)
+			// 归档仓库变为正常仓库
+			group.PUT("/setUnArchived/:repoId", setUnArchived)
 		}
 	})
 }
 
+func setArchived(c *gin.Context) {
+	err := reposrv.Outer.SetRepoArchivedStatus(c, reposrv.SetRepoArchivedStatusReqDTO{
+		RepoId:     getRepoId(c),
+		IsArchived: true,
+		Operator:   apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
+}
+
+func setUnArchived(c *gin.Context) {
+	err := reposrv.Outer.SetRepoArchivedStatus(c, reposrv.SetRepoArchivedStatusReqDTO{
+		RepoId:     getRepoId(c),
+		IsArchived: false,
+		Operator:   apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
+}
+
 func getRepo(c *gin.Context) {
-	repo, _, err := reposrv.Outer.GetRepo(c, reposrv.GetRepoReqDTO{
+	repo, err := reposrv.Outer.GetRepo(c, reposrv.GetRepoReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -87,6 +120,25 @@ func getRepo(c *gin.Context) {
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     repo2VO(repo),
 	})
+}
+
+func updateRepo(c *gin.Context) {
+	var req UpdateRepoReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := reposrv.Outer.UpdateRepo(c, reposrv.UpdateRepoReqDTO{
+			RepoId:       req.RepoId,
+			Desc:         req.Desc,
+			DisableLfs:   req.DisableLfs,
+			LfsLimitSize: req.LfsLimitSize,
+			GitLimitSize: req.GitLimitSize,
+			Operator:     apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
 }
 
 func getSimpleInfo(c *gin.Context) {
@@ -379,31 +431,51 @@ func createRepo(c *gin.Context) {
 }
 
 func deleteRepo(c *gin.Context) {
-	var req DeleteRepoReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.DeleteRepo(c, reposrv.DeleteRepoReqDTO{
-			Operator: apisession.MustGetLoginUser(c),
-			RepoId:   req.RepoId,
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+	err := reposrv.Outer.DeleteRepo(c, reposrv.DeleteRepoReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+		RepoId:   getRepoId(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
+}
+
+func deletePermanentlyRepo(c *gin.Context) {
+	err := reposrv.Outer.DeleteRepoPermanently(c, reposrv.DeleteRepoReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+		RepoId:   getRepoId(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
+}
+
+func recoverFromRecycle(c *gin.Context) {
+	err := reposrv.Outer.RecoverFromRecycle(c, reposrv.RecoverFromRecycleReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+		RepoId:   getRepoId(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
 }
 
 func listRepo(c *gin.Context) {
-	teamId := cast.ToInt64(c.Param("teamId"))
 	repoList, err := reposrv.Outer.ListRepo(c, reposrv.ListRepoReqDTO{
-		TeamId:   teamId,
+		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(repoList, func(t repomd.Repo) (RepoVO, error) {
+	data, _ := listutil.Map(repoList, func(t reposrv.RepoDTO) (RepoVO, error) {
 		return repo2VO(t), nil
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]RepoVO]{
@@ -412,19 +484,42 @@ func listRepo(c *gin.Context) {
 	})
 }
 
-func repo2VO(t repomd.Repo) RepoVO {
+func listDeletedRepo(c *gin.Context) {
+	repoList, err := reposrv.Outer.ListDeletedRepo(c, reposrv.ListDeletedRepoReqDTO{
+		TeamId:   cast.ToInt64(c.Param("teamId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(repoList, func(t reposrv.DeletedRepoDTO) (DeletedRepoVO, error) {
+		return DeletedRepoVO{
+			RepoVO:  repo2VO(t.RepoDTO),
+			Deleted: t.Deleted.Format(time.DateTime),
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]DeletedRepoVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func repo2VO(t reposrv.RepoDTO) RepoVO {
 	return RepoVO{
 		RepoId:       t.Id,
 		Name:         t.Name,
 		Path:         t.Path,
-		Author:       t.Author,
 		RepoDesc:     t.RepoDesc,
 		GitSize:      t.GitSize,
 		LfsSize:      t.LfsSize,
-		TeamId:       t.TeamId,
 		Created:      t.Created.Format(time.DateTime),
-		Updated:      t.Updated.Format(time.DateTime),
-		LastOperated: util.ReadableTimeComparingNow(t.LastOperated),
+		TeamId:       t.TeamId,
+		LastOperated: t.LastOperated.Format(time.DateTime),
+		DisableLfs:   t.DisableLfs,
+		LfsLimitSize: t.LfsLimitSize,
+		GitLimitSize: t.GitLimitSize,
+		IsArchived:   t.IsArchived,
 	}
 }
 
@@ -621,37 +716,6 @@ func diffCommits(c *gin.Context) {
 	}
 }
 
-func showDiffTextContent(c *gin.Context) {
-	var req ShowDiffTextContentReqVO
-	if util.ShouldBindQuery(&req, c) {
-		lines, err := reposrv.Outer.ShowDiffTextContent(c, reposrv.ShowDiffTextContentReqDTO{
-			RepoId:    req.RepoId,
-			CommitId:  req.CommitId,
-			FileName:  req.FileName,
-			Offset:    req.Offset,
-			Limit:     req.Limit,
-			Direction: req.Direction,
-			Operator:  apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		data, _ := listutil.Map(lines, func(t reposrv.DiffLineDTO) (DiffLineVO, error) {
-			return DiffLineVO{
-				LeftNo:  t.LeftNo,
-				Prefix:  t.Prefix,
-				RightNo: t.RightNo,
-				Text:    t.Text,
-			}, nil
-		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]DiffLineVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     data,
-		})
-	}
-}
-
 func historyCommits(c *gin.Context) {
 	var req HistoryCommitsReqVO
 	if util.ShouldBindQuery(&req, c) {
@@ -673,15 +737,6 @@ func historyCommits(c *gin.Context) {
 		})
 		c.JSON(http.StatusOK, ret)
 	}
-}
-
-func refreshAllGitHooks(c *gin.Context) {
-	go func() {
-		reposrv.Outer.RefreshAllGitHooks(c, reposrv.RefreshAllGitHooksReqDTO{
-			Operator: apisession.MustGetLoginUser(c),
-		})
-	}()
-	util.DefaultOkResponse(c)
 }
 
 func transferTeam(c *gin.Context) {

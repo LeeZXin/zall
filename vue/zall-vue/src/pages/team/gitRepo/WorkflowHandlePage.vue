@@ -51,7 +51,7 @@
         </div>
         <Codemirror
           v-model="formState.yamlContent"
-          :style="codemirroStyle"
+          :style="codemirrorStyle"
           :extensions="extensions"
         />
         <div class="section-body">
@@ -97,7 +97,7 @@ const getMode = () => {
 const mode = getMode();
 const router = useRouter();
 const extensions = [yaml(), oneDark];
-const codemirroStyle = { height: "380px", width: "100%" };
+const codemirrorStyle = { height: "380px", width: "100%" };
 const radioStyle = reactive({
   display: "flex",
   alignItems: "flex-start"

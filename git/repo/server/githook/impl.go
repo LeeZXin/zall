@@ -40,16 +40,20 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 	if !b {
 		return util.InvalidArgsError()
 	}
+	// 检查仓库是否归档
+	if repo.IsArchived {
+		return util.NewBizErr(apicode.OperationFailedErrCode, i18n.SystemForbidden)
+	}
 	repoPath := filepath.Join(git.RepoDir(), repo.Path)
 	// 检查仓库大小是否大于配置大小
-	if repo.Cfg.MaxGitLimitSize > 0 {
+	if repo.GetCfg().GitLimitSize > 0 {
 		repoSize, err := git.GetDirSize(repoPath)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return util.InternalError(err)
 		}
-		if repoSize > repo.Cfg.MaxGitLimitSize {
-			return util.NewBizErr(apicode.ForcePushForbiddenCode, i18n.RepoSizeExceedLimit, util.VolumeReadable(repo.Cfg.MaxGitLimitSize))
+		if repoSize > repo.Cfg.GitLimitSize {
+			return util.NewBizErr(apicode.ForcePushForbiddenCode, i18n.RepoSizeExceedLimit, util.VolumeReadable(repo.Cfg.GitLimitSize))
 		}
 	}
 	var pbList branchmd.ProtectedBranchList
@@ -74,14 +78,7 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 				case branch.NotAllowPush:
 					return util.NewBizErr(apicode.ProtectedBranchNotAllowPushCode, i18n.ProtectedBranchNotAllowPush)
 				case branch.WhiteListPush:
-					has := false
-					for _, account := range cfg.PushWhiteList {
-						if account == opts.PusherAccount {
-							has = true
-							break
-						}
-					}
-					if !has {
+					if !cfg.PushWhiteList.Contains(opts.PusherAccount) {
 						return util.NewBizErr(apicode.ProtectedBranchNotAllowPushCode, i18n.ProtectedBranchNotAllowPush)
 					}
 				case branch.AllowPush:
@@ -132,12 +129,12 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
-	repoSize, lfsSize, err := store.Srv.GetRepoSize(ctx, reqvo.GetRepoSizeReq{
+	gitSize, lfsSize, err := store.Srv.GetRepoSize(ctx, reqvo.GetRepoSizeReq{
 		RepoPath: repo.Path,
 	})
 	if err == nil {
 		// 更新仓库大小
-		err = repomd.UpdateGitSizeAndLfsSize(ctx, opts.RepoId, repoSize+lfsSize, lfsSize)
+		err = repomd.UpdateGitSizeAndLfsSize(ctx, opts.RepoId, gitSize, lfsSize)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 		}
@@ -149,7 +146,7 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 		return
 	}
 	// 查找工作流
-	workflowList, err := workflowmd.ListWorkflow(ctx, repo.Id)
+	workflowList, err := workflowmd.ListWorkflowByRepoId(ctx, repo.Id)
 	if err != nil {
 		logger.Logger.Error(err)
 		return

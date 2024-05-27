@@ -164,19 +164,30 @@ func batch(c *gin.Context) {
 	}
 	var isUpload bool
 	if req.Operation == "upload" {
+		r := getRepo(c)
+		// 仓库归档或禁用lfs
+		if r.IsArchived || r.GetCfg().DisableLfs {
+			c.JSON(http.StatusForbidden, ErrVO{
+				Message:   i18n.GetByKey(i18n.SystemForbidden),
+				RequestID: logger.GetTraceId(c),
+			})
+			return
+		}
 		isUpload = true
 	} else if req.Operation == "download" {
 		isUpload = false
 	} else {
 		c.JSON(http.StatusBadRequest, ErrVO{
-			Message: "bad request",
+			Message:   "bad request",
+			RequestID: logger.GetTraceId(c),
 		})
 		return
 	}
 	cfg, b := cfgsrv.Inner.GetGitCfg(c)
 	if !b {
 		c.JSON(http.StatusInternalServerError, ErrVO{
-			Message: i18n.GetByKey(i18n.SystemInternalError),
+			Message:   i18n.GetByKey(i18n.SystemInternalError),
+			RequestID: logger.GetTraceId(c),
 		})
 		return
 	}
@@ -495,11 +506,13 @@ func upload(c *gin.Context) {
 		return
 	}
 	repo := getRepo(c)
-	if repo.Cfg != nil && repo.Cfg.DisableLfs {
+	// 仓库归档或禁用lfs
+	if repo.IsArchived || repo.GetCfg().DisableLfs {
 		c.JSON(http.StatusForbidden, ErrVO{
 			Message:   i18n.GetByKey(i18n.SystemForbidden),
 			RequestID: logger.GetTraceId(c),
 		})
+		return
 	}
 	oid := c.Param("oid")
 	err = lfssrv.Outer.Upload(c, lfssrv.UploadReqDTO{
@@ -511,11 +524,11 @@ func upload(c *gin.Context) {
 	})
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, ErrVO{
-			Message: err.Error(),
+			Message:   err.Error(),
+			RequestID: logger.GetTraceId(c),
 		})
 		return
 	}
-	writeRespMessage(c, http.StatusOK, "")
 }
 
 func model2LockVO(l lfssrv.LfsLockDTO, locker usermd.UserInfo) LockVO {

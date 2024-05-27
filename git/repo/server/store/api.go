@@ -20,7 +20,7 @@ func InitApi() {
 		group := e.Group("/api/v1/git/store")
 		{
 			group.POST("/initRepo", initRepo)
-			group.POST("/delRepo", delRepo)
+			group.POST("/deleteRepo", deleteRepo)
 			group.POST("/getAllBranches", getAllBranches)
 			group.POST("/pageBranchAndLastCommit", pageBranchAndLastCommit)
 			group.POST("/pageTagAndCommit", pageTagAndCommit)
@@ -78,7 +78,7 @@ func initRepo(c *gin.Context) {
 	}
 }
 
-func delRepo(c *gin.Context) {
+func deleteRepo(c *gin.Context) {
 	var req reqvo.DeleteRepoReq
 	if util.ShouldBindJSON(&req, c) {
 		err := Srv.DeleteRepo(c, req)

@@ -23,11 +23,11 @@
           <div>
             <a-radio-group v-model:value="formState.pushOption">
               <a-radio :style="radioStyle" :value="0">允许推送</a-radio>
-              <div class="push-option-desc">任何拥有写访问权限的人将被允许推送到此分支(但不能强行推送)。</div>
+              <div class="radio-option-desc">任何拥有写访问权限的人将被允许推送到此分支(但不能强行推送)。</div>
               <a-radio :style="radioStyle" :value="1">禁止推送</a-radio>
-              <div class="push-option-desc">此分支不允许推送。</div>
+              <div class="radio-option-desc">此分支不允许推送。</div>
               <a-radio :style="radioStyle" :value="2">白名单推送</a-radio>
-              <div class="push-option-desc">只有列入白名单的用户或团队才能被允许推送到此分支(但不能强行推送)。</div>
+              <div class="radio-option-desc">只有列入白名单的用户或团队才能被允许推送到此分支(但不能强行推送)。</div>
             </a-radio-group>
           </div>
           <div style="margin-top:6px" v-if="formState.pushOption === 2">
@@ -56,12 +56,7 @@
             />
           </div>
           <div class="input-item">
-            <div class="input-title">
-              <div>审批人白名单</div>
-              <div
-                style="font-size:13px;color:gray;padding-top:4px"
-              >只有白名单用户或团队的审核才能计数。 没有批准的白名单，来自任何有写访问权限的人的审核都将计数。</div>
-            </div>
+            <div class="input-title">审批人白名单</div>
             <a-select
               v-model:value="formState.reviewerList"
               style="width:100%"
@@ -70,6 +65,7 @@
               mode="multiple"
               :filter-option="filterUserListOption"
             />
+            <div class="input-desc">只有白名单用户或团队的审核才能计数。 没有批准的白名单，来自任何有写访问权限的人的审核都将计数。</div>
           </div>
           <div style="margin-top: 14px">
             <a-checkbox
@@ -202,11 +198,5 @@ if (mode !== "create") {
   font-size: 18px;
   margin-bottom: 10px;
   font-weight: bold;
-}
-.push-option-desc {
-  font-size: 13px;
-  padding-left: 24px;
-  color: gray;
-  margin-bottom: 6px;
 }
 </style>

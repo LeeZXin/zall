@@ -10,6 +10,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
 	"github.com/LeeZXin/zall/git/modules/api/lfsapi"
+	"github.com/LeeZXin/zall/git/modules/api/oplogapi"
 	"github.com/LeeZXin/zall/git/modules/api/pullrequestapi"
 	"github.com/LeeZXin/zall/git/modules/api/repoapi"
 	"github.com/LeeZXin/zall/git/modules/api/smartapi"
@@ -71,6 +72,7 @@ func runZall(*cli.Context) error {
 		pullrequestapi.InitApi()
 		smartapi.InitApi()
 		repoapi.InitApi()
+		oplogapi.InitApi()
 		sshkeyapi.InitApi()
 		gpgkeyapi.InitApi()
 		webhookapi.InitApi()

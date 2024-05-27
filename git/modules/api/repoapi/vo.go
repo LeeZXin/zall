@@ -15,10 +15,6 @@ type CreateRepoReqVO struct {
 	DefaultBranch string `json:"defaultBranch"`
 }
 
-type DeleteRepoReqVO struct {
-	RepoId int64 `json:"repoId"`
-}
-
 type IndexRepoReqVO struct {
 	RepoId  int64       `json:"repoId"`
 	Ref     string      `json:"ref"`
@@ -82,14 +78,21 @@ type RepoVO struct {
 	RepoId       int64  `json:"repoId"`
 	Name         string `json:"name"`
 	Path         string `json:"path"`
-	Author       string `json:"author"`
 	RepoDesc     string `json:"repoDesc"`
 	GitSize      int64  `json:"gitSize"`
 	LfsSize      int64  `json:"lfsSize"`
 	Created      string `json:"created"`
-	Updated      string `json:"updated"`
 	TeamId       int64  `json:"teamId"`
 	LastOperated string `json:"lastOperated"`
+	DisableLfs   bool   `json:"disableLfs"`
+	LfsLimitSize int64  `json:"lfsLimitSize"`
+	GitLimitSize int64  `json:"gitLimitSize"`
+	IsArchived   bool   `json:"isArchived"`
+}
+
+type DeletedRepoVO struct {
+	RepoVO
+	Deleted string `json:"deleted"`
 }
 
 type CatFileReqVO struct {
@@ -193,15 +196,6 @@ type DiffLineVO struct {
 	Text    string `json:"text"`
 }
 
-type ShowDiffTextContentReqVO struct {
-	RepoId    int64  `json:"repoId"`
-	CommitId  string `json:"commitId"`
-	FileName  string `json:"fileName"`
-	Offset    int    `json:"offset"`
-	Limit     int    `json:"limit"`
-	Direction string `json:"direction"`
-}
-
 type HistoryCommitsReqVO struct {
 	RepoId int64  `json:"repoId"`
 	Ref    string `json:"ref"`
@@ -261,4 +255,17 @@ type CreateArchiveReqVO struct {
 type DeleteTagReqVO struct {
 	RepoId int64  `json:"repoId"`
 	Tag    string `json:"tag"`
+}
+
+type GetRepoSizeRespVO struct {
+	GitSize int64 `json:"gitSize"`
+	LfsSize int64 `json:"lfsSize"`
+}
+
+type UpdateRepoReqVO struct {
+	RepoId       int64  `json:"repoId"`
+	Desc         string `json:"desc"`
+	DisableLfs   bool   `json:"disableLfs"`
+	LfsLimitSize int64  `json:"lfsLimitSize"`
+	GitLimitSize int64  `json:"gitLimitSize"`
 }

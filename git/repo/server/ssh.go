@@ -236,9 +236,9 @@ func checkAccessMode(ctx context.Context, account, repoPath string, permCode int
 	pass := false
 	switch permCode {
 	case accessRepo:
-		pass = p.PermDetail.GetRepoPerm(repo.Id).CanUpdateRepo
+		pass = p.IsAdmin || p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo
 	case updateRepo:
-		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo
+		pass = (p.IsAdmin || p.PermDetail.GetRepoPerm(repo.Id).CanPushRepo) && !repo.IsArchived
 	case noneRepo:
 		pass = true
 	}

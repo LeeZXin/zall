@@ -198,6 +198,13 @@ func DeleteTimelineById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
+func DeletePullRequestByRepoId(ctx context.Context, repoId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("repo_id = ?", repoId).
+		Delete(new(PullRequest))
+	return err
+}
+
 func IncrCommentCount(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).

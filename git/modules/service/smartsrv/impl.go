@@ -131,7 +131,7 @@ func getPerm(ctx context.Context, repo repomd.Repo, operator usermd.UserInfo, pe
 	case accessRepo:
 		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo
 	case updateRepo:
-		pass = p.PermDetail.GetRepoPerm(repo.Id).CanUpdateRepo
+		pass = p.PermDetail.GetRepoPerm(repo.Id).CanPushRepo
 	}
 	if !pass {
 		return util.UnauthorizedError()

@@ -133,7 +133,7 @@ ul {
 .input-desc {
     font-size: 13px;
     color: gray;
-    margin-top: 10px;
+    margin-top: 6px;
     line-height: 20px;
     word-break: break-all;
 }
@@ -153,4 +153,12 @@ ul {
 
 .input-item+.input-item {
     margin-top: 16px;
+}
+
+.radio-option-desc,
+.checkbox-option-desc {
+    font-size: 13px;
+    padding-left: 24px;
+    color: gray;
+    margin-bottom: 6px;
 }

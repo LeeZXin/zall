@@ -6,6 +6,7 @@ import (
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/pkg/files"
 	"github.com/LeeZXin/zall/pkg/git"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
 	"net/http"
@@ -55,7 +56,8 @@ func (s *lfsImpl) Upload(ctx context.Context, req reqvo.LfsUploadReq) {
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		util.LfsRet(req.C, http.StatusInternalServerError, reqvo.LfsErrVO{
-			Message: "internal error",
+			Message:   i18n.GetByKey(i18n.SystemInternalError),
+			RequestID: logger.GetTraceId(req.C),
 		})
 	}
 	util.LfsRet(req.C, http.StatusOK, "")

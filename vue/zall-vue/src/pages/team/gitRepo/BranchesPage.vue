@@ -26,14 +26,13 @@
               <delete-outlined @click="deleteBranch(dataItem['name'])" />
             </a-tooltip>
           </div>
-          <a-popover placement="bottomRight" trigger="click">
+          <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="goToHistoryCommits(dataItem['name'])">
                   <control-outlined />
                   <span style="margin-left:4px">查看所有的活动</span>
                 </li>
-                <li></li>
               </ul>
             </template>
             <div class="op-icon">

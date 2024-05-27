@@ -321,7 +321,7 @@ func (*outerImpl) UpsertUser(ctx context.Context, reqDTO UpsertUserReqDTO) (err 
 		return
 	}
 	// 校验groupId是否正确
-	group, b, err := teammd.GetByRoleId(ctx, reqDTO.RoleId)
+	group, b, err := teammd.GetRoleById(ctx, reqDTO.RoleId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -403,7 +403,7 @@ func checkPerm(ctx context.Context, teamId int64, operator apisession.UserInfo) 
 
 func checkTeamUserPermByGroupId(ctx context.Context, operator apisession.UserInfo, groupId int64) (teammd.Role, error) {
 	// 检查权限
-	group, b, err := teammd.GetByRoleId(ctx, groupId)
+	group, b, err := teammd.GetRoleById(ctx, groupId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return teammd.Role{}, util.InternalError(err)

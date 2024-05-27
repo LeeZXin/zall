@@ -3,48 +3,61 @@ package branchsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
-	"github.com/LeeZXin/zall/git/modules/service/reposrv"
-	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
+	"github.com/LeeZXin/zall/git/modules/model/repomd"
+	"github.com/LeeZXin/zall/git/modules/service/oplogsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/eventbus"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"time"
 )
 
 type outerImpl struct{}
 
-func (*outerImpl) CreateProtectedBranch(ctx context.Context, reqDTO CreateProtectedBranchReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.BranchSrvKeysVO.InsertProtectedBranch),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
+func (*outerImpl) CreateProtectedBranch(ctx context.Context, reqDTO CreateProtectedBranchReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err = checkAdminPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, err := checkAdminPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
-		return
+		return err
 	}
-	if err = branchmd.InsertProtectedBranch(ctx, branchmd.InsertProtectedBranchReqDTO{
+	err = branchmd.InsertProtectedBranch(ctx, branchmd.InsertProtectedBranchReqDTO{
 		RepoId:  reqDTO.RepoId,
 		Pattern: reqDTO.Pattern,
 		Cfg:     reqDTO.Cfg,
-	}); err != nil {
+	})
+	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	// 插入日志
+	oplogsrv.Inner.InsertOpLog(oplogsrv.OpLog{
+		RepoId:   reqDTO.RepoId,
+		Operator: reqDTO.Operator.Account,
+		Log:      oplogsrv.FormatI18n(i18n.BranchSrvKeysVO.CreateProtectedBranch, reqDTO.Pattern),
+		Req:      reqDTO,
+	})
+	// 通知其他领域
+	notifyEventBus(
+		repo,
+		reqDTO.Operator.Account,
+		nil,
+		&eventbus.ProtectedBranchObj{
+			Pattern:            reqDTO.Pattern,
+			ProtectedBranchCfg: reqDTO.Cfg,
+		},
+		webhook.PbCreateAction,
+	)
+	return nil
 }
 
 // UpdateProtectedBranch 编辑保护分支
@@ -62,7 +75,7 @@ func (*outerImpl) UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtec
 	if !b {
 		return util.InvalidArgsError()
 	}
-	err = checkAdminPerm(ctx, protectedBranch.RepoId, reqDTO.Operator)
+	repo, err := checkAdminPerm(ctx, protectedBranch.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -75,44 +88,77 @@ func (*outerImpl) UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtec
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	// 插入日志
+	oplogsrv.Inner.InsertOpLog(oplogsrv.OpLog{
+		RepoId:   repo.Id,
+		Operator: reqDTO.Operator.Account,
+		Log:      oplogsrv.FormatI18n(i18n.BranchSrvKeysVO.UpdateProtectedBranch, reqDTO.Pattern),
+		Req:      reqDTO,
+	})
+	notifyEventBus(
+		repo,
+		reqDTO.Operator.Account,
+		&eventbus.ProtectedBranchObj{
+			Pattern:            protectedBranch.Pattern,
+			ProtectedBranchCfg: protectedBranch.GetCfg(),
+		},
+		&eventbus.ProtectedBranchObj{
+			Pattern:            reqDTO.Pattern,
+			ProtectedBranchCfg: reqDTO.Cfg,
+		},
+		webhook.PbUpdateAction,
+	)
 	return nil
 }
 
-func (*outerImpl) DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtectedBranchReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.BranchSrvKeysVO.DeleteProtectedBranch),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (*outerImpl) DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtectedBranchReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	pb, b, err := branchmd.GetById(ctx, reqDTO.ProtectedBranchId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if !b {
-		err = util.InvalidArgsError()
-		return
+		return util.InvalidArgsError()
 	}
-	err = checkAdminPerm(ctx, pb.RepoId, reqDTO.Operator)
+	repo, err := checkAdminPerm(ctx, pb.RepoId, reqDTO.Operator)
 	if err != nil {
-		return
+		return err
 	}
 	_, err = branchmd.DeleteById(ctx, reqDTO.ProtectedBranchId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
+		return util.InternalError(err)
 	}
-	return
+	// 插入日志
+	oplogsrv.Inner.InsertOpLog(oplogsrv.OpLog{
+		RepoId:   repo.Id,
+		Operator: reqDTO.Operator.Account,
+		Log:      oplogsrv.FormatI18n(i18n.BranchSrvKeysVO.CreateProtectedBranch, pb.Pattern),
+		Req:      reqDTO,
+	})
+	notifyEventBus(repo, reqDTO.Operator.Account, &eventbus.ProtectedBranchObj{
+		Pattern:            pb.Pattern,
+		ProtectedBranchCfg: pb.GetCfg(),
+	}, nil, webhook.PbDeleteAction)
+	return nil
+}
+
+func notifyEventBus(repo repomd.Repo, operator string, before, after *eventbus.ProtectedBranchObj, action webhook.ProtectedBranchAction) {
+	psub.Publish(eventbus.ProtectedBranchEventTopic, eventbus.ProtectedBranchEvent{
+		RepoId:    repo.Id,
+		Name:      repo.Name,
+		Path:      repo.Path,
+		Operator:  operator,
+		Action:    string(action),
+		Before:    before,
+		After:     after,
+		EventTime: time.Now(),
+	})
 }
 
 func (*outerImpl) ListProtectedBranch(ctx context.Context, reqDTO ListProtectedBranchReqDTO) ([]ProtectedBranchDTO, error) {
@@ -141,27 +187,35 @@ func (*outerImpl) ListProtectedBranch(ctx context.Context, reqDTO ListProtectedB
 }
 
 // checkAdminPerm 检查权限
-func checkAdminPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) error {
+func checkAdminPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
 	// 检查仓库是否存在
-	repo, b := reposrv.Inner.GetByRepoId(ctx, repoId)
+	repo, b, err := repomd.GetByRepoId(ctx, repoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repo, util.InternalError(err)
+	}
 	if !b {
-		return util.InvalidArgsError()
+		return repo, util.InvalidArgsError()
 	}
 	if operator.IsAdmin {
-		return nil
+		return repo, nil
 	}
 	// 如果不是 检查用户组权限
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if !b || !p.IsAdmin {
-		return util.UnauthorizedError()
+		return repo, util.UnauthorizedError()
 	}
-	return nil
+	return repo, nil
 }
 
 // checkTeamPerm 仅检查是否属于团队权限
 func checkTeamPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) error {
 	// 检查仓库是否存在
-	repo, b := reposrv.Inner.GetByRepoId(ctx, repoId)
+	repo, b, err := repomd.GetByRepoId(ctx, repoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.InvalidArgsError()
 	}

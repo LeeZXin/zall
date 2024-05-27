@@ -23,10 +23,10 @@ const (
 	*/
 	PullRequestEvent
 	/*
-		RepoEvent
+		GitRepoEvent
 		仓库创建、删除
 	*/
-	RepoEvent
+	GitRepoEvent
 	/*
 		PingEvent ping
 	*/
@@ -41,8 +41,8 @@ func (e Event) String() string {
 		return "git-push-event"
 	case PullRequestEvent:
 		return "pull-request-event"
-	case RepoEvent:
-		return "repo-event"
+	case GitRepoEvent:
+		return "git-repo-event"
 	case PingEvent:
 		return "ping-event"
 	default:
@@ -52,7 +52,7 @@ func (e Event) String() string {
 
 func (e Event) IsValid() bool {
 	switch e {
-	case ProtectedBranchEvent, GitPushEvent, PullRequestEvent, RepoEvent:
+	case ProtectedBranchEvent, GitPushEvent, PullRequestEvent, GitRepoEvent:
 		return true
 	default:
 		return false

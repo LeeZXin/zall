@@ -6,7 +6,6 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/git"
 	zssh "github.com/LeeZXin/zall/pkg/ssh"
-	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/zsf"
@@ -32,7 +31,7 @@ func InitProxy() zsf.LifeCycle {
 		},
 		SessionHandler: func(session ssh.Session) {
 			if err := handleGitCommand(session); err != nil {
-				util.ExitWithErrMsg(session, "internal error")
+				session.Exit(1)
 			} else {
 				session.Exit(0)
 			}

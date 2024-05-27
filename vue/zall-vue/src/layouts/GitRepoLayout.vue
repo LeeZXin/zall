@@ -41,7 +41,7 @@
             <api-outlined />
             <span>Webhook</span>
           </a-menu-item>
-          <a-menu-item key="/team/gitRepo/opLogs" v-if="isAdmin">
+          <a-menu-item key="/opLogs" v-if="isAdmin">
             <calendar-outlined />
             <span>操作日志</span>
           </a-menu-item>
@@ -102,7 +102,9 @@ const pagesMap = {
   "/tag": "/tag/list",
   "/protectedBranch": "/protectedBranch/list",
   "/webhook": "/webhook/list",
-  "/workflow": "/workflow/list"
+  "/workflow": "/workflow/list",
+  "/config": "/config",
+  "/opLogs": "/opLogs"
 };
 const switchRepo = () => {
   router.push(`/team/${repo.teamId}/gitRepo/list`);

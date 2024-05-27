@@ -21,6 +21,10 @@ var (
 		Id:         "system.forbidden",
 		DefaultRet: "禁止操作",
 	}
+	SystemProxyAbnormal = KeyItem{
+		Id:         "system.proxyAbnormal",
+		DefaultRet: "代理执行异常",
+	}
 	SystemAlreadyExists = KeyItem{
 		Id:         "system.dataAlreadyExists",
 		DefaultRet: "数据已存在",
@@ -133,15 +137,11 @@ var (
 	}
 	RepoSizeExceedLimit = KeyItem{
 		Id:         "repo.sizeExceedLimit",
-		DefaultRet: "仓库大小超过上限%s",
+		DefaultRet: "大小超过上限%s",
 	}
 	RepoRemainCountGreaterThanZero = KeyItem{
 		Id:         "repo.remainCountGreaterThanZero",
 		DefaultRet: "仓库数量仍大于0",
-	}
-	RepoPermsContainsTargetRepoId = KeyItem{
-		Id:         "repo.permsContainsTargetRepoId",
-		DefaultRet: "该项目组仍包含该仓库的特殊权限配置",
 	}
 )
 

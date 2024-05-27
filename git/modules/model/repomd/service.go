@@ -2,12 +2,38 @@ package repomd
 
 import (
 	"context"
-	"errors"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
+	"regexp"
 	"time"
 )
 
+var (
+	validRepoNamePattern = regexp.MustCompile(`^[\w-]{1,32}$`)
+	validBranchPattern   = regexp.MustCompile(`^[\w.-]{0,128}$`)
+)
+
+func IsRepoDescValid(desc string) bool {
+	return len(desc) < 255
+}
+
+func IsRepoNameValid(name string) bool {
+	return validRepoNamePattern.MatchString(name)
+}
+
+func IsBranchValid(branch string) bool {
+	return validBranchPattern.MatchString(branch)
+}
+
 func GetByPath(ctx context.Context, path string) (Repo, bool, error) {
+	var ret Repo
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("path = ?", path).
+		And("is_deleted = 0").
+		Get(&ret)
+	return ret, b, err
+}
+
+func GetByPathWithoutJudgingDeleted(ctx context.Context, path string) (Repo, bool, error) {
 	var ret Repo
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("path = ?", path).
@@ -16,6 +42,15 @@ func GetByPath(ctx context.Context, path string) (Repo, bool, error) {
 }
 
 func GetByRepoId(ctx context.Context, repoId int64) (Repo, bool, error) {
+	var ret Repo
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", repoId).
+		And("is_deleted = 0").
+		Get(&ret)
+	return ret, b, err
+}
+
+func GetByRepoIdWithoutJudgingDeleted(ctx context.Context, repoId int64) (Repo, bool, error) {
 	var ret Repo
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", repoId).
@@ -37,19 +72,10 @@ func UpdateGitSizeAndLfsSize(ctx context.Context, repoId int64, gitSize, lfsSize
 func UpdateGitSize(ctx context.Context, repoId int64, gitSize int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", repoId).
+		And("is_deleted = 0").
 		Cols("git_size").
 		Update(&Repo{
 			GitSize: gitSize,
-		})
-	return err
-}
-
-func UpdateLfsSize(ctx context.Context, repoId int64, lfsSize int64) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", repoId).
-		Cols("lfs_size").
-		Update(&Repo{
-			LfsSize: lfsSize,
 		})
 	return err
 }
@@ -68,6 +94,17 @@ func GetRepoListByTeamId(ctx context.Context, teamId int64) ([]Repo, error) {
 	ret := make([]Repo, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
+		And("is_deleted = 0").
+		Find(&ret)
+	return ret, err
+}
+
+func GetDeletedRepoListByTeamId(ctx context.Context, teamId int64) ([]Repo, error) {
+	ret := make([]Repo, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("team_id = ?", teamId).
+		And("is_deleted = 1").
+		Desc("deleted").
 		Find(&ret)
 	return ret, err
 }
@@ -76,6 +113,7 @@ func GetRepoByIdList(ctx context.Context, repoIdList []int64) ([]Repo, error) {
 	ret := make([]Repo, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		In("id", repoIdList).
+		And("is_deleted = 0").
 		Find(&ret)
 	return ret, err
 }
@@ -84,14 +122,12 @@ func InsertRepo(ctx context.Context, reqDTO InsertRepoReqDTO) (Repo, error) {
 	r := Repo{
 		Name:          reqDTO.Name,
 		Path:          reqDTO.Path,
-		Author:        reqDTO.Author,
 		TeamId:        reqDTO.TeamId,
 		RepoDesc:      reqDTO.RepoDesc,
 		DefaultBranch: reqDTO.DefaultBranch,
 		GitSize:       reqDTO.GitSize,
 		LfsSize:       reqDTO.LfsSize,
 		Cfg:           &reqDTO.Cfg,
-		RepoStatus:    reqDTO.RepoStatus,
 		LastOperated:  reqDTO.LastOperated,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&r)
@@ -105,22 +141,32 @@ func DeleteRepo(ctx context.Context, repoId int64) (bool, error) {
 	return rows == 1, err
 }
 
+func SetRepoDeleted(ctx context.Context, repoId int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", repoId).
+		Cols("is_deleted", "deleted").
+		Update(&Repo{
+			IsDeleted: true,
+			Deleted:   time.Now(),
+		})
+	return rows == 1, err
+}
+
+func SetRepoUnDeleted(ctx context.Context, repoId int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", repoId).
+		Cols("is_deleted").
+		Update(&Repo{
+			IsDeleted: false,
+		})
+	return rows == 1, err
+}
+
 func CountByTeamId(ctx context.Context, teamId int64) (int64, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
+		And("is_deleted = 0").
 		Count(new(Repo))
-}
-
-func IterateRepo(ctx context.Context, fn func(*Repo) error) error {
-	if fn == nil {
-		return errors.New("nil iterate fn")
-	}
-	return xormutil.MustGetXormSession(ctx).
-		Iterate(
-			new(Repo),
-			func(_ int, bean any) error {
-				return fn(bean.(*Repo))
-			})
 }
 
 func TransferTeam(ctx context.Context, repoId, teamId int64) (bool, error) {
@@ -130,6 +176,25 @@ func TransferTeam(ctx context.Context, repoId, teamId int64) (bool, error) {
 		Limit(1).
 		Update(&Repo{
 			TeamId: teamId,
+		})
+	return rows == 1, err
+}
+
+func UpdateRepoIsArchived(ctx context.Context, repoId int64, isArchived bool) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).Where("id = ?", repoId).
+		Cols("is_archived").
+		Update(&Repo{
+			IsArchived: isArchived,
+		})
+	return rows == 1, err
+}
+
+func UpdateRepo(ctx context.Context, reqDTO UpdateRepoReqDTO) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).Where("id = ?", reqDTO.Id).
+		Cols("cfg", "repo_desc").
+		Update(&Repo{
+			RepoDesc: reqDTO.RepoDesc,
+			Cfg:      &reqDTO.Cfg,
 		})
 	return rows == 1, err
 }

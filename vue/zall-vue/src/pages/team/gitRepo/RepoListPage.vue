@@ -13,12 +13,24 @@
         v-if="canCreateRepo"
         :icon="h(PlusOutlined)"
       >{{t("gitRepo.createRepoText")}}</a-button>
+      <a-button
+        type="primary"
+        @click="gotoRecyclePage"
+        :icon="h(DeleteOutlined)"
+        danger
+        style="float:right"
+      >仓库回收站</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="repoList" v-if="wholeRepoList.length > 0">
       <template #bodyCell="{dataIndex, dataItem}">
         <span @click="checkRepo(dataItem)" class="check-btn" v-if="dataIndex === 'operation'">查看</span>
         <span v-else-if="dataIndex === 'gitSize'">{{readableVolumeSize(dataItem[dataIndex])}}</span>
         <span v-else-if="dataIndex === 'lfsSize'">{{readableVolumeSize(dataItem[dataIndex])}}</span>
+        <span v-else-if="dataIndex === 'lastOperated'">{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
+        <span v-else-if="dataIndex === 'name'">
+          <span>{{dataItem[dataIndex]}}</span>
+          <a-tag v-if="dataItem['isArchived']" color="red" style="margin-left:4px">已归档</a-tag>
+        </span>
         <span v-else>{{dataItem[dataIndex]}}</span>
       </template>
     </ZTable>
@@ -35,7 +47,7 @@
 <script setup>
 import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
-import { PlusOutlined } from "@ant-design/icons-vue";
+import { PlusOutlined, DeleteOutlined } from "@ant-design/icons-vue";
 import { ref, h } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter, useRoute } from "vue-router";
@@ -43,6 +55,7 @@ import { getTeamPermRequest } from "@/api/team/teamApi";
 import { getRepoListRequest } from "@/api/git/repoApi";
 import { useRepoStore } from "@/pinia/repoStore";
 import { readableVolumeSize } from "@/utils/size";
+import { readableTimeComparingNow } from "@/utils/time";
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -69,7 +82,10 @@ const searchChange = () => {
 const gotoCreatePage = () => {
   router.push(`/team/${route.params.teamId}/gitRepo/create`);
 };
-
+// 跳转仓库回收站页面
+const gotoRecyclePage = () => {
+  router.push(`/team/${route.params.teamId}/gitRepo/recycle`);
+};
 const columns = ref([
   {
     title: "仓库名称",

@@ -11,6 +11,15 @@ const (
 	ReviewType
 )
 
+func (t ActionType) IsRelatedToComment() bool {
+	switch t {
+	case CommentType, ReplyType:
+		return true
+	default:
+		return false
+	}
+}
+
 type PrAction struct {
 	Id     int64    `json:"id"`
 	Status PrStatus `json:"status"`
@@ -37,6 +46,20 @@ type Action struct {
 	Pr         *PrAction      `json:"pr,omitempty"`
 	Review     *ReviewAction  `json:"review,omitempty"`
 	ActionType ActionType     `json:"actionType"`
+}
+
+func (c *Action) GetCommentText() string {
+	switch c.ActionType {
+	case CommentType:
+		if c.Comment != nil {
+			return c.Comment.Comment
+		}
+	case ReplyType:
+		if c.Reply != nil {
+			return c.Reply.ReplyComment
+		}
+	}
+	return ""
 }
 
 func (c *Action) FromDB(content []byte) error {

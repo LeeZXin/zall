@@ -28,7 +28,7 @@ func newOuterService() OuterService {
 			defer closer.Close()
 			// 触发webhook
 			hookList, err := webhookmd.ListWebhook(ctx, event.RepoId)
-			if err == nil {
+			if err == nil && len(hookList) > 0 {
 				req := &webhook.PullRequestEventReq{
 					PrId:    event.PrId,
 					PrTitle: event.PrTitle,
@@ -45,8 +45,68 @@ func newOuterService() OuterService {
 						webhook.TriggerWebhook(hook.HookUrl, hook.Secret, req)
 					}
 				}
-			} else {
-				logger.Logger.Error(err)
+			}
+		}
+	})
+	psub.Subscribe(eventbus.GitRepoEventTopic, func(data any) {
+		event, ok := data.(eventbus.GitRepoEvent)
+		if ok {
+			ctx, closer := xormstore.Context(context.Background())
+			defer closer.Close()
+			// 触发webhook
+			hookList, err := webhookmd.ListWebhook(ctx, event.RepoId)
+			if err == nil && len(hookList) > 0 {
+				req := &webhook.GitRepoEventReq{
+					Action: webhook.GitRepoAction(event.Action),
+					BaseRepoReq: webhook.BaseRepoReq{
+						RepoId:    event.RepoId,
+						RepoName:  event.Name,
+						Account:   event.Operator,
+						EventTime: event.EventTime.UnixMilli(),
+					},
+				}
+				for _, hook := range hookList {
+					if hook.Events.Has(webhook.GitRepoEvent) {
+						webhook.TriggerWebhook(hook.HookUrl, hook.Secret, req)
+					}
+				}
+			}
+		}
+	})
+	psub.Subscribe(eventbus.ProtectedBranchEventTopic, func(data any) {
+		event, ok := data.(eventbus.ProtectedBranchEvent)
+		if ok {
+			ctx, closer := xormstore.Context(context.Background())
+			defer closer.Close()
+			// 触发webhook
+			hookList, err := webhookmd.ListWebhook(ctx, event.RepoId)
+			if err == nil && len(hookList) > 0 {
+				req := &webhook.ProtectedBranchEventReq{
+					BaseRepoReq: webhook.BaseRepoReq{
+						RepoId:    event.RepoId,
+						RepoName:  event.Name,
+						Account:   event.Operator,
+						EventTime: event.EventTime.UnixMilli(),
+					},
+					Action: webhook.ProtectedBranchAction(event.Action),
+				}
+				if event.Before != nil {
+					req.Before = &webhook.ProtectedBranchObj{
+						Pattern:            event.Before.Pattern,
+						ProtectedBranchCfg: event.Before.ProtectedBranchCfg,
+					}
+				}
+				if event.After != nil {
+					req.After = &webhook.ProtectedBranchObj{
+						Pattern:            event.After.Pattern,
+						ProtectedBranchCfg: event.After.ProtectedBranchCfg,
+					}
+				}
+				for _, hook := range hookList {
+					if hook.Events.Has(webhook.ProtectedBranchEvent) {
+						webhook.TriggerWebhook(hook.HookUrl, hook.Secret, req)
+					}
+				}
 			}
 		}
 	})

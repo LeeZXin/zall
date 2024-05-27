@@ -5,6 +5,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
+	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/git/modules/service/gpgkeysrv"
 	"github.com/LeeZXin/zall/git/modules/service/sshkeysrv"
 	"github.com/LeeZXin/zall/git/repo/client"
@@ -15,21 +16,22 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/eventbus"
 	"github.com/LeeZXin/zall/pkg/git/signature"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/limiter"
 	"github.com/LeeZXin/zall/pkg/perm"
+	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/keybase/go-crypto/openpgp"
-	"github.com/patrickmn/go-cache"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -41,55 +43,16 @@ const (
 	updateToken
 )
 
-const (
-	createRepo = iota
-	deleteRepo
-)
-
 type innerImpl struct {
-	pathCache *cache.Cache
-	idCache   *cache.Cache
 }
 
 // GetByRepoPath 通过相对路径获取仓库信息
 func (s *innerImpl) GetByRepoPath(ctx context.Context, path string) (repomd.Repo, bool) {
-	v, b := s.pathCache.Get(path)
-	if b {
-		r := v.(repomd.Repo)
-		return r, r.Id != 0
-	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	r, b, err := repomd.GetByPath(ctx, path)
-	if err != nil || !b {
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-		}
-		s.pathCache.Set(path, r, time.Second)
-	} else {
-		s.pathCache.Set(path, r, time.Minute)
-	}
-	return r, b
-}
-
-// GetByRepoId 通过id获取仓库信息
-func (s *innerImpl) GetByRepoId(ctx context.Context, id int64) (repomd.Repo, bool) {
-	key := strconv.FormatInt(id, 10)
-	v, b := s.idCache.Get(key)
-	if b {
-		r := v.(repomd.Repo)
-		return r, r.Id != 0
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	r, b, err := repomd.GetByRepoId(ctx, id)
-	if err != nil || !b {
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-		}
-		s.idCache.Set(key, r, time.Second)
-	} else {
-		s.idCache.Set(key, r, time.Minute)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
 	}
 	return r, b
 }
@@ -103,24 +66,90 @@ func newOuterImpl() OuterService {
 	if limit <= 0 {
 		limit = 10
 	}
+	psub.Subscribe(eventbus.GitRepoEventTopic, func(data any) {
+		event, ok := data.(eventbus.GitRepoEvent)
+		if ok {
+			ctx, closer := xormstore.Context(context.Background())
+			defer closer.Close()
+			/*
+				如果是永久删除某个仓库
+				则需要删除相关数据
+					1、合并请求
+					2、工作流、任务记录、密钥
+			*/
+			if event.Action == string(webhook.RepoDeletePermanentlyAction) {
+				// 删除合并请求
+				err := pullrequestmd.DeletePullRequestByRepoId(ctx, event.RepoId)
+				if err != nil {
+					logger.Logger.Error(err)
+				}
+				// 删除工作流任务
+				wflist, _ := workflowmd.ListWorkflowByRepoId(ctx, event.RepoId)
+				if len(wflist) > 0 {
+					wfIdList, _ := listutil.Map(wflist, func(t workflowmd.Workflow) (int64, error) {
+						return t.Id, nil
+					})
+					err = workflowmd.DeleteTaskByWorkflowIdList(ctx, wfIdList)
+					if err != nil {
+						logger.Logger.Error(err)
+					}
+				}
+				// 删除工作流
+				err = workflowmd.DeleteWorkflowsByRepoId(ctx, event.RepoId)
+				if err != nil {
+					logger.Logger.Error(err)
+				}
+				// 删除工作流密钥
+				err = workflowmd.DeleteSecretsByRepoId(ctx, event.RepoId)
+				if err != nil {
+					logger.Logger.Error(err)
+				}
+			}
+		}
+	})
 	return &outerImpl{
 		CreateArchiveLimiter: limiter.NewCountLimiter(limit),
 	}
 }
 
 // GetRepo 获取仓库信息
-func (s *outerImpl) GetRepo(ctx context.Context, reqDTO GetRepoReqDTO) (repomd.Repo, bool, error) {
+func (s *outerImpl) GetRepo(ctx context.Context, reqDTO GetRepoReqDTO) (RepoDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return repomd.Repo{}, false, err
+		return RepoDTO{}, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return repomd.Repo{}, false, util.InternalError(err)
+		return RepoDTO{}, util.InternalError(err)
 	}
-	return repo, b, nil
+	if !b {
+		return RepoDTO{}, util.InvalidArgsError()
+	}
+	return repo2Dto(repo), nil
+}
+
+func repo2Dto(t repomd.Repo) RepoDTO {
+	ret := RepoDTO{
+		Id:            t.Id,
+		Path:          t.Path,
+		Name:          t.Name,
+		TeamId:        t.TeamId,
+		RepoDesc:      t.RepoDesc,
+		DefaultBranch: t.DefaultBranch,
+		GitSize:       t.GitSize,
+		LfsSize:       t.LfsSize,
+		LastOperated:  t.LastOperated,
+		IsArchived:    t.IsArchived,
+		Created:       t.Created,
+	}
+	if t.Cfg != nil {
+		ret.DisableLfs = t.Cfg.DisableLfs
+		ret.LfsLimitSize = t.Cfg.LfsLimitSize
+		ret.GitLimitSize = t.Cfg.GitLimitSize
+	}
+	return ret
 }
 
 func (s *outerImpl) EntriesRepo(ctx context.Context, reqDTO EntriesRepoReqDTO) ([]BlobDTO, error) {
@@ -129,11 +158,15 @@ func (s *outerImpl) EntriesRepo(ctx context.Context, reqDTO EntriesRepoReqDTO) (
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
 	if !b {
 		return nil, util.InvalidArgsError()
 	}
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +190,7 @@ func (s *outerImpl) EntriesRepo(ctx context.Context, reqDTO EntriesRepoReqDTO) (
 }
 
 // ListRepo 展示仓库列表
-func (*outerImpl) ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]repomd.Repo, error) {
+func (*outerImpl) ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]RepoDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
@@ -201,7 +234,33 @@ func (*outerImpl) ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]repomd
 	sort.SliceStable(repoList, func(i, j int) bool {
 		return repoList[i].LastOperated.After(repoList[j].LastOperated)
 	})
-	return repoList, nil
+	return listutil.Map(repoList, func(t repomd.Repo) (RepoDTO, error) {
+		return repo2Dto(t), nil
+	})
+}
+
+// ListDeletedRepo 展示已删除仓库
+func (*outerImpl) ListDeletedRepo(ctx context.Context, reqDTO ListDeletedRepoReqDTO) ([]DeletedRepoDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err := checkTeamAdmin(ctx, reqDTO.TeamId, reqDTO.Operator)
+	if err != nil {
+		return nil, err
+	}
+	repoList, err := repomd.GetDeletedRepoListByTeamId(ctx, reqDTO.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, err
+	}
+	return listutil.Map(repoList, func(t repomd.Repo) (DeletedRepoDTO, error) {
+		return DeletedRepoDTO{
+			RepoDTO: repo2Dto(t),
+			Deleted: t.Deleted,
+		}, nil
+	})
 }
 
 // CatFile 展示文件内容
@@ -211,11 +270,15 @@ func (s *outerImpl) CatFile(ctx context.Context, reqDTO CatFileReqDTO) (CatFileR
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return CatFileRespDTO{}, util.InternalError(err)
+	}
 	if !b {
 		return CatFileRespDTO{}, util.InvalidArgsError()
 	}
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return CatFileRespDTO{}, err
 	}
@@ -245,11 +308,15 @@ func (s *outerImpl) IndexRepo(ctx context.Context, reqDTO IndexRepoReqDTO) (Inde
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return IndexRepoRespDTO{}, util.InternalError(err)
+	}
 	if !b {
 		return IndexRepoRespDTO{}, util.InvalidArgsError()
 	}
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return IndexRepoRespDTO{}, err
 	}
@@ -277,11 +344,14 @@ func (s *outerImpl) SimpleInfo(ctx context.Context, reqDTO SimpleInfoReqDTO) (Si
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		return SimpleInfoRespDTO{}, util.InternalError(err)
+	}
 	if !b {
 		return SimpleInfoRespDTO{}, util.InvalidArgsError()
 	}
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return SimpleInfoRespDTO{}, err
 	}
@@ -348,14 +418,14 @@ func (s *outerImpl) CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) (er
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err = checkTeamPerm(ctx, reqDTO.TeamId, reqDTO.Operator, createRepo)
+	err = checkTeamPermIfCanCreateRepo(ctx, reqDTO.TeamId, reqDTO.Operator)
 	if err != nil {
 		return
 	}
 	var b bool
 	// 相对路径
 	relativePath := filepath.Join("zgit", reqDTO.Name+".git")
-	_, b, err = repomd.GetByPath(ctx, relativePath)
+	_, b, err = repomd.GetByPathWithoutJudgingDeleted(ctx, relativePath)
 	// 数据库异常
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -373,11 +443,9 @@ func (s *outerImpl) CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) (er
 		repo, err2 := repomd.InsertRepo(ctx, repomd.InsertRepoReqDTO{
 			Name:          reqDTO.Name,
 			Path:          relativePath,
-			Author:        reqDTO.Operator.Account,
 			TeamId:        reqDTO.TeamId,
 			RepoDesc:      reqDTO.Desc,
 			DefaultBranch: reqDTO.DefaultBranch,
-			RepoStatus:    repomd.OpenRepoStatus,
 			LastOperated:  time.Now(),
 		})
 		if err2 != nil {
@@ -415,45 +483,108 @@ func (*outerImpl) AllGitIgnoreTemplateList() []string {
 
 // DeleteRepo 删除仓库
 func (s *outerImpl) DeleteRepo(ctx context.Context, reqDTO DeleteRepoReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.DeleteRepo),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	err = checkTeamPerm(ctx, repo.TeamId, reqDTO.Operator, deleteRepo)
-	if err != nil {
-		return
-	}
-	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		err := client.DeleteRepo(ctx, reqvo.DeleteRepoReq{
-			RepoPath: repo.Path,
-		})
-		if err != nil {
-			return err
-		}
-		_, err = repomd.DeleteRepo(ctx, reqDTO.RepoId)
-		return err
-	})
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 		return
 	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
+	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	if err != nil {
+		return
+	}
+	_, err = repomd.SetRepoDeleted(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoDeleteTemporarilyAction)
 	return
+}
+
+// RecoverFromRecycle 恢复仓库
+func (s *outerImpl) RecoverFromRecycle(ctx context.Context, reqDTO RecoverFromRecycleReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b, err := repomd.GetByRepoIdWithoutJudgingDeleted(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b || !repo.IsDeleted {
+		return util.InvalidArgsError()
+	}
+	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	if err != nil {
+		return err
+	}
+	_, err = repomd.SetRepoUnDeleted(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoRecoverFromRecycle)
+	return nil
+}
+
+// DeleteRepoPermanently 永久删除仓库
+func (s *outerImpl) DeleteRepoPermanently(ctx context.Context, reqDTO DeleteRepoReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b, err := repomd.GetByRepoIdWithoutJudgingDeleted(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b || !repo.IsDeleted {
+		return util.InvalidArgsError()
+	}
+	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	if err != nil {
+		return err
+	}
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		_, err2 := repomd.DeleteRepo(ctx, reqDTO.RepoId)
+		if err2 != nil {
+			return err2
+		}
+		return client.DeleteRepo(ctx, reqvo.DeleteRepoReq{
+			RepoPath: repo.Path,
+		})
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoDeletePermanentlyAction)
+	return nil
+}
+
+func notifyEventBus(repo repomd.Repo, operator string, action webhook.GitRepoAction) {
+	psub.Publish(eventbus.GitRepoEventTopic, eventbus.GitRepoEvent{
+		RepoId:    repo.Id,
+		Name:      repo.Name,
+		Path:      repo.Path,
+		Operator:  operator,
+		Action:    string(action),
+		EventTime: time.Now(),
+	})
 }
 
 // AllBranches 仓库所有分支
@@ -463,12 +594,16 @@ func (s *outerImpl) AllBranches(ctx context.Context, reqDTO AllBranchesReqDTO) (
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
 	if !b {
 		return nil, util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -491,11 +626,15 @@ func (s *outerImpl) DeleteBranch(ctx context.Context, reqDTO DeleteBranchReqDTO)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.InvalidArgsError()
 	}
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, updateRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, updateRepo)
 	if err != nil {
 		return err
 	}
@@ -525,11 +664,15 @@ func (s *outerImpl) DeleteTag(ctx context.Context, reqDTO DeleteTagReqDTO) error
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.InvalidArgsError()
 	}
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, updateRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, updateRepo)
 	if err != nil {
 		return err
 	}
@@ -551,12 +694,16 @@ func (s *outerImpl) AllTags(ctx context.Context, reqDTO AllTagsReqDTO) ([]string
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
 	if !b {
 		return nil, util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -587,8 +734,8 @@ func (s *outerImpl) Gc(ctx context.Context, reqDTO GcReqDTO) error {
 	if !b {
 		return util.InvalidArgsError()
 	}
-	// 校验权限
-	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	// 管理员权限
+	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -613,12 +760,16 @@ func (s *outerImpl) DiffRefs(ctx context.Context, reqDTO DiffRefsReqDTO) (DiffRe
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return DiffRefsRespDTO{}, util.InternalError(err)
+	}
 	if !b {
 		return DiffRefsRespDTO{}, util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return DiffRefsRespDTO{}, err
 	}
@@ -671,12 +822,16 @@ func (s *outerImpl) DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return DiffCommitsRespDTO{}, util.InternalError(err)
+	}
 	if !b {
 		return DiffCommitsRespDTO{}, util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return DiffCommitsRespDTO{}, err
 	}
@@ -718,12 +873,16 @@ func (s *outerImpl) Blame(ctx context.Context, reqDTO BlameReqDTO) ([]BlameLineD
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
 	if !b {
 		return nil, util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -754,12 +913,16 @@ func (s *outerImpl) DiffFile(ctx context.Context, reqDTO DiffFileReqDTO) (DiffFi
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return DiffFileRespDTO{}, util.InternalError(err)
+	}
 	if !b {
 		return DiffFileRespDTO{}, util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return DiffFileRespDTO{}, err
 	}
@@ -825,70 +988,22 @@ func commit2Dto(c reqvo.CommitVO) CommitDTO {
 	}
 }
 
-func (s *outerImpl) ShowDiffTextContent(ctx context.Context, reqDTO ShowDiffTextContentReqDTO) ([]DiffLineDTO, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
-	if !b {
-		return nil, util.InvalidArgsError()
-	}
-	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
-	if err != nil {
-		return nil, err
-	}
-	var startLine int
-	if reqDTO.Direction == UpDirection {
-		if reqDTO.Limit < 0 {
-			startLine = 0
-		} else {
-			startLine = reqDTO.Offset - reqDTO.Limit
-		}
-	} else {
-		startLine = reqDTO.Offset
-	}
-	if startLine < 0 {
-		startLine = 0
-	}
-	lines, err := client.ShowDiffTextContent(ctx, reqvo.ShowDiffTextContentReq{
-		RepoPath:  repo.Path,
-		CommitId:  reqDTO.CommitId,
-		FileName:  reqDTO.FileName,
-		StartLine: startLine,
-		Limit:     reqDTO.Limit,
-	})
-	if err != nil {
-		if bizerr.IsBizErr(err) {
-			return nil, err
-		}
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	return listutil.Map(lines, func(t reqvo.DiffLineVO) (DiffLineDTO, error) {
-		return DiffLineDTO{
-			LeftNo:  t.LeftNo,
-			Prefix:  t.Prefix,
-			RightNo: t.RightNo,
-			Text:    t.Text,
-		}, nil
-	})
-}
-
 func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReqDTO) (HistoryCommitsRespDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return HistoryCommitsRespDTO{}, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return HistoryCommitsRespDTO{}, util.InternalError(err)
+	}
 	if !b {
 		return HistoryCommitsRespDTO{}, util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return HistoryCommitsRespDTO{}, err
 	}
@@ -953,6 +1068,21 @@ func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReq
 	return ret, nil
 }
 
+func checkTeamAdmin(ctx context.Context, teamId int64, operator apisession.UserInfo) error {
+	if operator.IsAdmin {
+		return nil
+	}
+	p, b, err := teammd.GetUserPermDetail(ctx, teamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b || !p.IsAdmin {
+		return util.UnauthorizedError()
+	}
+	return nil
+}
+
 func checkPermByRepo(ctx context.Context, repo repomd.Repo, operator apisession.UserInfo, permCode int) error {
 	if operator.IsAdmin {
 		return nil
@@ -969,7 +1099,7 @@ func checkPermByRepo(ctx context.Context, repo repomd.Repo, operator apisession.
 	case accessRepo:
 		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo
 	case updateRepo:
-		pass = p.PermDetail.GetRepoPerm(repo.Id).CanUpdateRepo
+		pass = p.PermDetail.GetRepoPerm(repo.Id).CanPushRepo
 	case accessToken:
 		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessToken
 	case updateToken:
@@ -981,7 +1111,7 @@ func checkPermByRepo(ctx context.Context, repo repomd.Repo, operator apisession.
 	return util.UnauthorizedError()
 }
 
-func checkTeamPerm(ctx context.Context, teamId int64, operator apisession.UserInfo, permCode int) error {
+func checkTeamPermIfCanCreateRepo(ctx context.Context, teamId int64, operator apisession.UserInfo) error {
 	_, b, err := teammd.GetByTeamId(ctx, teamId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -997,52 +1127,10 @@ func checkTeamPerm(ctx context.Context, teamId int64, operator apisession.UserIn
 	if !b {
 		return util.UnauthorizedError()
 	}
-	if p.IsAdmin {
-		return nil
-	}
-	pass := false
-	switch permCode {
-	case createRepo:
-		pass = p.PermDetail.TeamPerm.CanCreateRepo
-	case deleteRepo:
-		pass = p.PermDetail.TeamPerm.CanDeleteRepo
-	}
-	if pass {
+	if p.IsAdmin || p.PermDetail.TeamPerm.CanCreateRepo {
 		return nil
 	}
 	return util.UnauthorizedError()
-}
-
-func (s *outerImpl) RefreshAllGitHooks(ctx context.Context, reqDTO RefreshAllGitHooksReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.RefreshAllGitHooks),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return err
-	}
-	// 没有权限
-	if !reqDTO.Operator.IsAdmin {
-		return util.UnauthorizedError()
-	}
-	go func() {
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		err := repomd.IterateRepo(ctx, func(repo *repomd.Repo) error {
-			return client.InitRepoHook(context.Background(), reqvo.InitRepoHookReq{
-				RepoPath: repo.Path,
-			})
-		})
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-		}
-	}()
-	return
 }
 
 func (*outerImpl) TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (err error) {
@@ -1079,12 +1167,16 @@ func (*outerImpl) PageBranchCommits(ctx context.Context, reqDTO PageRefCommitsRe
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	if !b {
 		return nil, 0, util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1147,12 +1239,16 @@ func (*outerImpl) PageTagCommits(ctx context.Context, reqDTO PageRefCommitsReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	if !b {
 		return nil, 0, util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1180,12 +1276,16 @@ func (s *outerImpl) CreateArchive(ctx context.Context, reqDTO CreateArchiveReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b := Inner.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.InvalidArgsError()
 	}
 	// 校验权限
-	err := checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
+	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
 		return err
 	}
@@ -1203,4 +1303,71 @@ func (s *outerImpl) CreateArchive(ctx context.Context, reqDTO CreateArchiveReqDT
 		return nil
 	}
 	return util.NewBizErrWithMsg(apicode.TooManyOperationCode, i18n.GetByKey(i18n.SystemTooManyOperation))
+}
+
+// UpdateRepo 更新仓库配置
+func (s *outerImpl) UpdateRepo(ctx context.Context, reqDTO UpdateRepoReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	if err != nil {
+		return err
+	}
+	_, err = repomd.UpdateRepo(ctx, repomd.UpdateRepoReqDTO{
+		Id:       reqDTO.RepoId,
+		RepoDesc: reqDTO.Desc,
+		Cfg: repomd.RepoCfg{
+			DisableLfs:   reqDTO.DisableLfs,
+			LfsLimitSize: reqDTO.LfsLimitSize,
+			GitLimitSize: reqDTO.GitLimitSize,
+		},
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// SetRepoArchivedStatus 归档或非归档仓库
+func (s *outerImpl) SetRepoArchivedStatus(ctx context.Context, reqDTO SetRepoArchivedStatusReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	if err != nil {
+		return err
+	}
+	_, err = repomd.UpdateRepoIsArchived(ctx, reqDTO.RepoId, reqDTO.IsArchived)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if reqDTO.IsArchived {
+		notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoArchivedAction)
+	} else {
+		notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoUnArchivedAction)
+	}
+	return nil
 }

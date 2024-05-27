@@ -61,10 +61,10 @@ func (r *ListProtectedBranchReqDTO) IsValid() error {
 }
 
 type UpdateProtectedBranchReqDTO struct {
-	ProtectedBranchId int64
-	Pattern           string
-	Cfg               branch.ProtectedBranchCfg
-	Operator          apisession.UserInfo `json:"operator"`
+	ProtectedBranchId int64                     `json:"protectedBranchId"`
+	Pattern           string                    `json:"pattern"`
+	Cfg               branch.ProtectedBranchCfg `json:"cfg"`
+	Operator          apisession.UserInfo       `json:"operator"`
 }
 
 func (r *UpdateProtectedBranchReqDTO) IsValid() error {

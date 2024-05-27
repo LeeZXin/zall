@@ -25,6 +25,7 @@ const (
 	OperationFailedErrCode
 	TooManyOperationCode
 	OutOfWorkflowCapacityErrCode
+	ProxyAbnormalErrCode
 )
 
 func (c Code) Int() int {

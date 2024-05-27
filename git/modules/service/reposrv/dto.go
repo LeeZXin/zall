@@ -2,24 +2,14 @@ package reposrv
 
 import (
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
+	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/gin-gonic/gin"
-	"regexp"
 	"strings"
 	"time"
-)
-
-const (
-	UpDirection   = "up"
-	DownDirection = "down"
-)
-
-var (
-	validRepoNamePattern = regexp.MustCompile(`^[\w-]{1,32}$`)
-	validBranchPattern   = regexp.MustCompile(`^[\w.-]{0,128}$`)
 )
 
 type CreateRepoReqDTO struct {
@@ -36,13 +26,10 @@ func (r *CreateRepoReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !validRepoNamePattern.MatchString(r.Name) {
+	if !repomd.IsRepoNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if len(r.Desc) > 255 {
-		return util.InvalidArgsError()
-	}
-	if !validBranchPattern.MatchString(r.DefaultBranch) {
+	if !repomd.IsBranchValid(r.DefaultBranch) {
 		return util.InvalidArgsError()
 	}
 	if r.GitIgnoreName != "" && !gitignoreSet.Contains(r.GitIgnoreName) {
@@ -72,6 +59,21 @@ type DeleteRepoReqDTO struct {
 }
 
 func (r *DeleteRepoReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type RecoverFromRecycleReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *RecoverFromRecycleReqDTO) IsValid() error {
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -317,6 +319,21 @@ func (r *GcReqDTO) IsValid() error {
 	return nil
 }
 
+type GetRepoSizeReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetRepoSizeReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 var gitignoreSet = hashset.NewHashSet(
 	"AL", "Actionscript", "Ada", "Agda", "AltiumDesigner", "Android", "Anjuta", "Ansible", "AppEngine",
 	"AppceleratorTitanium", "ArchLinuxPackages", "Archives", "AtmelStudio", "AutoIt", "Autotools", "B4X", "Backup",
@@ -445,38 +462,6 @@ type DiffLineDTO struct {
 	Text    string `json:"text"`
 }
 
-type ShowDiffTextContentReqDTO struct {
-	RepoId    int64               `json:"repoId"`
-	CommitId  string              `json:"commitId"`
-	FileName  string              `json:"fileName"`
-	Offset    int                 `json:"offset"`
-	Limit     int                 `json:"limit"`
-	Direction string              `json:"direction"`
-	Operator  apisession.UserInfo `json:"operator"`
-}
-
-func (r *ShowDiffTextContentReqDTO) IsValid() error {
-	if r.RepoId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	if !util.ValidateCommitId(r.CommitId) {
-		return util.InvalidArgsError()
-	}
-	if r.Offset < 0 {
-		return util.InvalidArgsError()
-	}
-	if len(r.Direction) == 0 || len(r.Direction) > 10 {
-		return util.InvalidArgsError()
-	}
-	if r.Direction != UpDirection && r.Direction != DownDirection {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
 type DiffFileReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Target   string              `json:"target"`
@@ -527,17 +512,6 @@ func (r *HistoryCommitsReqDTO) IsValid() error {
 type HistoryCommitsRespDTO struct {
 	Data   []CommitDTO
 	Cursor int
-}
-
-type RefreshAllGitHooksReqDTO struct {
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *RefreshAllGitHooksReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
 }
 
 type TransferTeamReqDTO struct {
@@ -680,4 +654,82 @@ func (r *CreateArchiveReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	return nil
+}
+
+type RepoDTO struct {
+	Id            int64
+	Path          string
+	Name          string
+	TeamId        int64
+	RepoDesc      string
+	DefaultBranch string
+	GitSize       int64
+	LfsSize       int64
+	DisableLfs    bool
+	LfsLimitSize  int64
+	GitLimitSize  int64
+	LastOperated  time.Time
+	IsArchived    bool
+	Created       time.Time
+}
+
+type UpdateRepoReqDTO struct {
+	RepoId       int64               `json:"repoId"`
+	Desc         string              `json:"desc"`
+	DisableLfs   bool                `json:"disableLfs"`
+	LfsLimitSize int64               `json:"lfsLimitSize"`
+	GitLimitSize int64               `json:"gitLimitSize"`
+	Operator     apisession.UserInfo `json:"operator"`
+}
+
+func (r *UpdateRepoReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !repomd.IsRepoDescValid(r.Desc) {
+		return util.InvalidArgsError()
+	}
+	if r.GitLimitSize < 0 || r.LfsLimitSize < 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type SetRepoArchivedStatusReqDTO struct {
+	RepoId     int64               `json:"repoId"`
+	IsArchived bool                `json:"isArchived"`
+	Operator   apisession.UserInfo `json:"operator"`
+}
+
+func (r *SetRepoArchivedStatusReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListDeletedRepoReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListDeletedRepoReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DeletedRepoDTO struct {
+	RepoDTO
+	Deleted time.Time
 }

@@ -14,7 +14,6 @@ var (
 		AllowUserCreateTeam:     true,
 	}
 	DefaultGitCfg = &GitCfg{
-		LfsEnabled:   true,
 		LfsJwtExpiry: 3600,
 		LfsJwtSecret: idutil.RandomUuid(),
 	}
@@ -50,8 +49,6 @@ type GitCfg struct {
 	HttpUrl string `json:"httpUrl"`
 	// SshUrl ssh url
 	SshUrl string `json:"sshUrl"`
-	// LfsEnabled 是否启用lfs
-	LfsEnabled bool `json:"lfsEnabled"`
 	// LfsJwtExpiry lfs jwt过期时间 单位秒
 	LfsJwtExpiry int64 `json:"lfsJwtExpiry"`
 	// LfsJwtSecret lfs 密钥

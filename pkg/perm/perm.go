@@ -5,7 +5,6 @@ import "encoding/json"
 var (
 	DefaultTeamPerm = TeamPerm{
 		CanCreateRepo:         true,
-		CanDeleteRepo:         true,
 		CanHandleTimer:        true,
 		CanAccessAction:       true,
 		CanUpdateAction:       true,
@@ -15,8 +14,7 @@ var (
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:        true,
-		CanUpdateRepo:        true,
-		CanCloseRepo:         true,
+		CanPushRepo:          true,
 		CanHandlePullRequest: true,
 		CanHandleWebhook:     true,
 		CanAccessToken:       true,
@@ -78,9 +76,7 @@ type RepoPerm struct {
 	// 可访问
 	CanAccessRepo bool `json:"canAccessRepo"`
 	// 可推送代码
-	CanUpdateRepo bool `json:"canUpdateRepo"`
-	// 是否可归档
-	CanCloseRepo bool `json:"canCloseRepo"`
+	CanPushRepo bool `json:"canPushRepo"`
 	// 是否可处理pr
 	CanHandlePullRequest bool `json:"canHandlePullRequest"`
 	// 是否可配置webhook
@@ -100,8 +96,6 @@ type RepoPerm struct {
 type TeamPerm struct {
 	// 是否可创建仓库
 	CanCreateRepo bool `json:"canCreateRepo"`
-	// 是否可删除仓库
-	CanDeleteRepo bool `json:"canDeleteRepo"`
 	// 是否可处理定时任务
 	CanHandleTimer bool `json:"canHandleTimer"`
 	// 是否可查看action

@@ -45,7 +45,7 @@ func DeleteRepo(ctx context.Context, req reqvo.DeleteRepoReq) error {
 	var resp ginutil.BaseResp
 	err := postHttp(
 		ctx,
-		"/api/v1/git/store/delRepo",
+		"/api/v1/git/store/deleteRepo",
 		req,
 		&resp,
 	)

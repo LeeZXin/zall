@@ -39,6 +39,11 @@ const router = createRouter({
                         import ("../pages/team/gitRepo/RepoListPage")
                 },
                 {
+                    path: "/team/:teamId(\\d+)/gitRepo/recycle",
+                    component: () =>
+                        import ("../pages/team/gitRepo/RepoRecyclePage")
+                },
+                {
                     path: "/team/app/list",
                     component: () =>
                         import ("../pages/team/appService/AppListPage")
@@ -180,6 +185,10 @@ const router = createRouter({
                 path: "/gitRepo/:repoId(\\d+)/config",
                 component: () =>
                     import ("../pages/team/gitRepo/RepoConfigPage")
+            }, {
+                path: "/gitRepo/:repoId(\\d+)/opLogs",
+                component: () =>
+                    import ("../pages/team/gitRepo/OpLogsPage")
             }]
         },
         {
