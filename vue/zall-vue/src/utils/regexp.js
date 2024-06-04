@@ -26,6 +26,10 @@ const workflowAgentTokenRegexp = /^.{1,1024}$/;
 const workflowDescRegexp = /^.{1,1024}$/;
 const workflowSecretNameRegexp = /^\w{1,32}$/;
 const workflowSecretContentRegexp = /^[\s\S]{1,10240}$/;
+// 角色
+const teamRoleNameRegexp = /^.{1,32}$/;
+// 定时任务
+const timerTaskNameRegexp = /^.{1,64}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -47,5 +51,7 @@ export {
     workflowAgentTokenRegexp,
     workflowDescRegexp,
     workflowSecretNameRegexp,
-    workflowSecretContentRegexp
+    workflowSecretContentRegexp,
+    teamRoleNameRegexp,
+    timerTaskNameRegexp
 }

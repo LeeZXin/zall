@@ -50,3 +50,8 @@ type SetUserProhibitedReqDTO struct {
 	Account      string
 	IsProhibited bool
 }
+
+type SimpleUserDTO struct {
+	Account string
+	Name    string
+}

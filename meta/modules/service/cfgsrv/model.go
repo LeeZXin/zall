@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
+	"regexp"
 	"time"
 )
 
@@ -22,6 +23,7 @@ var (
 			"prd",
 		},
 	}
+	validZonesRegexp = regexp.MustCompile(`^\w+$`)
 )
 
 type SysCfg struct {
@@ -125,5 +127,22 @@ func (c *GitRepoServerCfg) Val() string {
 }
 
 func (c *GitRepoServerCfg) FromStore(val string) error {
+	return json.Unmarshal([]byte(val), c)
+}
+
+type ZonesCfg struct {
+	Zones []string `json:"zones"`
+}
+
+func (*ZonesCfg) Key() string {
+	return "zones_cfg"
+}
+
+func (c *ZonesCfg) Val() string {
+	ret, _ := json.Marshal(c)
+	return string(ret)
+}
+
+func (c *ZonesCfg) FromStore(val string) error {
 	return json.Unmarshal([]byte(val), c)
 }

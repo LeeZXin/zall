@@ -13,61 +13,42 @@ type UpdateTeamReqVO struct {
 	Name   string `json:"name"`
 }
 
-type UpsertTeamUserReqVO struct {
-	TeamId  int64  `json:"teamId"`
+type CreateTeamUserReqVO struct {
+	RoleId   int64    `json:"roleId"`
+	Accounts []string `json:"accounts"`
+}
+
+type UserVO struct {
 	Account string `json:"account"`
-	GroupId int64  `json:"groupId"`
+	Name    string `json:"name"`
 }
 
-type DeleteTeamUserReqVO struct {
-	TeamId  int64  `json:"teamId"`
-	Account string `json:"account"`
+type RoleUserVO struct {
+	Id       int64  `json:"id"`
+	Account  string `json:"account"`
+	Name     string `json:"name"`
+	RoleId   int64  `json:"roleId"`
+	RoleName string `json:"roleName"`
 }
 
-type ListTeamUserReqVO struct {
-	TeamId  int64  `json:"teamId"`
-	Account string `json:"account"`
-	Cursor  int64  `json:"cursor"`
-	Limit   int    `json:"limit"`
-}
-
-type TeamUserVO struct {
-	TeamId    int64  `json:"teamId"`
-	Account   string `json:"account"`
-	GroupId   int64  `json:"groupId"`
-	GroupName string `json:"groupName"`
-	Created   string `json:"created"`
-}
-
-type InsertTeamUserGroupReqVO struct {
+type CreateRoleReqVO struct {
 	TeamId int64       `json:"teamId"`
 	Name   string      `json:"name"`
 	Perm   perm.Detail `json:"perm"`
 }
 
-type UpdateTeamUserGroupNameReqVO struct {
-	GroupId int64  `json:"groupId"`
-	Name    string `json:"name"`
+type UpdateRoleReqVO struct {
+	RoleId int64       `json:"roleId"`
+	Name   string      `json:"name"`
+	Perm   perm.Detail `json:"perm"`
 }
 
-type UpdateTeamUserGroupPermReqVO struct {
-	GroupId int64       `json:"groupId"`
-	Perm    perm.Detail `json:"perm"`
-}
-
-type DeleteTeamUserGroupReqVO struct {
-	GroupId int64 `json:"groupId"`
-}
-
-type ListTeamUserGroupReqVO struct {
-	TeamId int64 `json:"teamId"`
-}
-
-type TeamUserGroupVO struct {
-	GroupId int64       `json:"groupId"`
+type RoleVO struct {
+	RoleId  int64       `json:"roleId"`
 	TeamId  int64       `json:"teamId"`
 	Name    string      `json:"name"`
 	Perm    perm.Detail `json:"perm"`
+	IsAdmin bool        `json:"isAdmin"`
 }
 
 type TeamVO struct {
@@ -77,4 +58,9 @@ type TeamVO struct {
 
 type DeleteTeamReqVO struct {
 	TeamId int64 `json:"teamId"`
+}
+
+type ChangeRoleReqVO struct {
+	RelationId int64 `json:"relationId"`
+	RoleId     int64 `json:"roleId"`
 }

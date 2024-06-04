@@ -82,17 +82,45 @@ func (r *GetGitRepoServerUrlReqDTO) IsValid() error {
 	return nil
 }
 
-type UpdateGitRepoServerUrlReqDTO struct {
+type UpdateGitRepoServerCfgReqDTO struct {
 	GitRepoServerCfg
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpdateGitRepoServerUrlReqDTO) IsValid() error {
+func (r *UpdateGitRepoServerCfgReqDTO) IsValid() error {
 	if !util.IpPortPattern.MatchString(r.HttpHost) {
 		return util.InvalidArgsError()
 	}
 	if !util.IpPortPattern.MatchString(r.SshHost) {
 		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type GetZonesCfgReqDTO struct {
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetZonesCfgReqDTO) IsValid() error {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type UpdateZonesCfgReqDTO struct {
+	ZonesCfg
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *UpdateZonesCfgReqDTO) IsValid() error {
+	for _, zone := range r.Zones {
+		if !validZonesRegexp.MatchString(zone) {
+			return util.InvalidArgsError()
+		}
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()

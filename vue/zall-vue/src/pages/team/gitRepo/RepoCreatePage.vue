@@ -1,7 +1,7 @@
 <template>
   <div style="padding:14px">
     <div class="create-form container">
-      <div class="title">{{t("createGitRepo.createText")}}</div>
+      <div class="header">{{t("createGitRepo.createText")}}</div>
       <div class="section">
         <div class="section-title">{{t("createGitRepo.repoName")}}</div>
         <div class="section-body">
@@ -113,12 +113,6 @@ const create = () => {
 };
 </script>
 <style scoped>
-.create-form > .title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 10px;
-  line-height: 32px;
-}
 .star-text {
   font-size: 14px;
   line-height: 24px;

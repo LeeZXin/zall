@@ -34,7 +34,7 @@
             <a-select
               v-model:value="formState.pushWhiteList"
               style="width:100%"
-              :options="userList.map(item=>({ value: item }))"
+              :options="userList"
               show-search
               mode="multiple"
               :filter-option="filterUserListOption"
@@ -60,7 +60,7 @@
             <a-select
               v-model:value="formState.reviewerList"
               style="width:100%"
-              :options="userList.map(item=>({ value: item }))"
+              :options="userList"
               show-search
               mode="multiple"
               :filter-option="filterUserListOption"
@@ -75,8 +75,7 @@
           </div>
         </div>
       </div>
-      <div style="width:100%;border-top:1px solid #d9d9d9;margin: 10px 0"></div>
-      <div style="margin-bottom:20px">
+      <div class="save-btn-line">
         <a-button type="primary" @click="createOrUpdateProtectedBranch">立即保存</a-button>
       </div>
     </div>
@@ -84,7 +83,7 @@
 </template>
 <script setup>
 import { reactive, ref } from "vue";
-import { listAccountRequest } from "@/api/team/teamApi";
+import { listUserByTeamIdRequest } from "@/api/team/teamApi";
 import {
   createProtectedBranchRequest,
   updateProtectedBranchRequest
@@ -118,6 +117,16 @@ const radioStyle = reactive({
 });
 const filterUserListOption = (input, option) => {
   return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+const listUser = () => {
+  listUserByTeamIdRequest(repoStore.teamId).then(res => {
+    userList.value = res.data.map(item=>{
+      return {
+        value: item.account,
+        label: `${item.account}(${item.name})`
+      }
+    });
+  });
 };
 const createOrUpdateProtectedBranch = () => {
   if (!protectedBranchPatternRegexp.test(formState.pattern)) {
@@ -183,20 +192,11 @@ if (mode !== "create") {
       formState.cancelOldReviewApprovalWhenNewCommit =
         protectedBranchStore.cfg?.cancelOldReviewApprovalWhenNewCommit;
     }
-    listAccountRequest(repoStore.teamId).then(res => {
-      userList.value = res.data;
-    });
+    listUser();
   }
 } else {
-  listAccountRequest(repoStore.teamId).then(res => {
-    userList.value = res.data;
-  });
+  listUser();
 }
 </script>
 <style scoped>
-.header {
-  font-size: 18px;
-  margin-bottom: 10px;
-  font-weight: bold;
-}
 </style>

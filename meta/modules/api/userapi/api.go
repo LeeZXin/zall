@@ -43,7 +43,29 @@ func InitApi() {
 			group.POST("/updateAdmin", updateAdmin)
 			// 禁用用户
 			group.POST("/setProhibited", setProhibited)
+			// 管理员角色展示所有用户列表
+			group.GET("/listAll", listAll)
 		}
+	})
+}
+
+func listAll(c *gin.Context) {
+	users, err := usersrv.Outer.ListAllUser(c, usersrv.ListAllUserReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(users, func(t usersrv.SimpleUserDTO) (SimpleUserVO, error) {
+		return SimpleUserVO{
+			Account: t.Account,
+			Name:    t.Name,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleUserVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
 	})
 }
 

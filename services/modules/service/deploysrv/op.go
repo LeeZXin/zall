@@ -37,7 +37,7 @@ func checkDeployConfigPerm(ctx context.Context, appId string, operator apisessio
 	if !b {
 		return util.UnauthorizedError()
 	}
-	if p.IsAdmin || p.PermDetail.TeamPerm.CanHandleDeployConfig {
+	if p.IsAdmin || p.PermDetail.TeamPerm.CanManageDeployConfig {
 		return nil
 	}
 	return util.UnauthorizedError()
@@ -93,7 +93,7 @@ func checkDeployPlanPerm(ctx context.Context, teamId int64, operator apisession.
 	if !b {
 		return util.UnauthorizedError()
 	}
-	if p.IsAdmin || p.PermDetail.TeamPerm.CanHandleDeployPlan {
+	if p.IsAdmin || p.PermDetail.TeamPerm.CanCreateDeployPlan {
 		return nil
 	}
 	return util.UnauthorizedError()

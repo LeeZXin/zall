@@ -12,6 +12,6 @@ func init() {
 	)
 }
 
-func parseCron(spec string) (cron.Schedule, error) {
+func ParseCron(spec string) (cron.Schedule, error) {
 	return parser.Parse(spec)
 }

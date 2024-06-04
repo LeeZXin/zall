@@ -17,11 +17,11 @@ import (
 )
 
 type innerImpl struct {
-	task *taskutil.ChunkTask[OpLog]
+	executeFunc taskutil.ChunkTaskExecuteFunc[OpLog]
 }
 
 func newInnerService() InnerService {
-	task, _ := taskutil.NewChunkTask[OpLog](
+	executeFunc, _, stopFunc, _ := taskutil.RunChunkTask[OpLog](
 		1024,
 		func(chunks []taskutil.Chunk[OpLog]) {
 			ctx, closer := xormstore.Context(context.Background())
@@ -47,15 +47,14 @@ func newInnerService() InnerService {
 		},
 		5*time.Second,
 	)
-	task.Start()
-	quit.AddShutdownHook(task.Stop, true)
+	quit.AddShutdownHook(quit.ShutdownHook(stopFunc), true)
 	return &innerImpl{
-		task: task,
+		executeFunc: executeFunc,
 	}
 }
 
 func (s *innerImpl) InsertOpLog(oplog OpLog) {
-	s.task.Execute(oplog, 1)
+	s.executeFunc(oplog, 1)
 }
 
 type outerImpl struct{}

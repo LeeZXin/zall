@@ -733,3 +733,23 @@ type DeletedRepoDTO struct {
 	RepoDTO
 	Deleted time.Time
 }
+
+type ListRepoByAdminReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListRepoByAdminReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type SimpleRepoDTO struct {
+	RepoId int64
+	Name   string
+}

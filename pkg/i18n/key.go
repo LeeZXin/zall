@@ -86,9 +86,9 @@ var (
 )
 
 var (
-	EmptyGitNodesError = KeyItem{
-		Id:         "gitNodes.emptyError",
-		DefaultRet: "可用存储节点为空",
+	CronExpError = KeyItem{
+		Id:         "cronExp.valueError",
+		DefaultRet: "cron表达式错误",
 	}
 )
 

@@ -1,62 +1,53 @@
 package taskapi
 
 import (
-	"context"
-	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
 	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
-	"github.com/LeeZXin/zsf/http/httptask"
-	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
 	"net/http"
-	"net/url"
 	"time"
 )
 
 func InitApi() {
+	tasksrv.InitTask()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/timerTask", apisession.CheckLogin)
 		{
-			group.POST("/insert", insertTask)
-			group.POST("/list", listTask)
-			group.POST("/enable", enableTask)
-			group.POST("/disable", disableTask)
-			group.POST("/delete", deleteTask)
-			group.POST("/listLog", listLog)
-			group.POST("/trigger", trigger)
-			group.POST("/update", update)
+			// 创建定时任务
+			group.POST("/create", createTask)
+			// 定时任务列表
+			group.GET("/list", listTask)
+			// 启动定时任务
+			group.PUT("/enable/:taskId", enableTask)
+			// 关闭定时任务
+			group.PUT("/disable/:taskId", disableTask)
+			// 删除定时任务
+			group.DELETE("/delete/:taskId", deleteTask)
+			// 触发定时任务
+			group.PUT("/trigger/:taskId", triggerTask)
+			// 编辑定时任务
+			group.POST("/update", updateTask)
 		}
-	})
-	httptask.AppendHttpTask("clearTimerInvalidInstances", func(_ []byte, _ url.Values) {
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		envs, b := cfgsrv.Inner.GetEnvCfg(context.Background())
-		if b {
-			for _, e := range envs {
-				err := taskmd.DeleteInValidInstances(ctx, time.Now().Add(-30*time.Second).UnixMilli(), e)
-				if err != nil {
-					logger.Logger.Error(err)
-				}
-			}
+		group = e.Group("/api/timerLog", apisession.CheckLogin)
+		{
+			group.GET("/list", pageLog)
 		}
 	})
 }
 
-func insertTask(c *gin.Context) {
-	var req InsertTaskReqVO
+func createTask(c *gin.Context) {
+	var req CreateTaskReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := tasksrv.Outer.InsertTask(c, tasksrv.InsertTaskReqDTO{
+		err := tasksrv.Outer.CreateTask(c, tasksrv.CreateTaskReqDTO{
 			Name:     req.Name,
 			CronExp:  req.CronExp,
-			TaskType: req.TaskType,
-			HttpTask: req.HttpTask,
 			TeamId:   req.TeamId,
+			Task:     req.Task,
 			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -69,61 +60,48 @@ func insertTask(c *gin.Context) {
 }
 
 func enableTask(c *gin.Context) {
-	var req EnabledTaskReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := tasksrv.Outer.EnableTask(c, tasksrv.EnableTaskReqDTO{
-			Id:       req.Id,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+	err := tasksrv.Outer.EnableTask(c, tasksrv.EnableTaskReqDTO{
+		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
 func disableTask(c *gin.Context) {
-	var req DisableTaskReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := tasksrv.Outer.DisableTask(c, tasksrv.DisableTaskReqDTO{
-			Id:       req.Id,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+	err := tasksrv.Outer.DisableTask(c, tasksrv.DisableTaskReqDTO{
+		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
 func deleteTask(c *gin.Context) {
-	var req EnabledTaskReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := tasksrv.Outer.DeleteTask(c, tasksrv.DeleteTaskReqDTO{
-			Id:       req.Id,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+	err := tasksrv.Outer.DeleteTask(c, tasksrv.DeleteTaskReqDTO{
+		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
 func listTask(c *gin.Context) {
 	var req ListTaskReqVO
-	if util.ShouldBindJSON(&req, c) {
-		tasks, cursor, err := tasksrv.Outer.ListTask(c, tasksrv.ListTaskReqDTO{
+	if util.ShouldBindQuery(&req, c) {
+		tasks, total, err := tasksrv.Outer.ListTask(c, tasksrv.ListTaskReqDTO{
 			TeamId:   req.TeamId,
 			Name:     req.Name,
-			Cursor:   req.Cursor,
-			Limit:    req.Limit,
+			PageNum:  req.PageNum,
 			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -133,34 +111,33 @@ func listTask(c *gin.Context) {
 		}
 		data, _ := listutil.Map(tasks, func(t tasksrv.TaskDTO) (TaskVO, error) {
 			return TaskVO{
-				Id:         t.Id,
-				Name:       t.Name,
-				CronExp:    t.CronExp,
-				TaskType:   t.TaskType,
-				HttpTask:   t.HttpTask,
-				TeamId:     t.TeamId,
-				NextTime:   time.UnixMilli(t.NextTime).Format(time.DateTime),
-				TaskStatus: t.TaskStatus.Readable(),
+				Id:        t.Id,
+				Name:      t.Name,
+				CronExp:   t.CronExp,
+				Task:      t.Task,
+				TeamId:    t.TeamId,
+				IsEnabled: t.IsEnabled,
+				Env:       t.Env,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[TaskVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[TaskVO]{
 			DataResp: ginutil.DataResp[[]TaskVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},
-			Next: cursor,
+			PageNum:    req.PageNum,
+			TotalCount: total,
 		})
 	}
 }
 
-func listLog(c *gin.Context) {
-	var req ListLogReqVO
-	if util.ShouldBindJSON(&req, c) {
-		logs, cursor, err := tasksrv.Outer.ListTaskLog(c, tasksrv.ListTaskLogReqDTO{
-			Id:       req.Id,
-			Cursor:   req.Cursor,
-			Limit:    req.Limit,
-			Env:      req.Env,
+func pageLog(c *gin.Context) {
+	var req PageLogReqVO
+	if util.ShouldBindQuery(&req, c) {
+		logs, cursor, err := tasksrv.Outer.PageTaskLog(c, tasksrv.PageTaskLogReqDTO{
+			TaskId:   req.TaskId,
+			PageNum:  req.PageNum,
+			DateStr:  req.DateStr,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -169,12 +146,11 @@ func listLog(c *gin.Context) {
 		}
 		data, _ := listutil.Map(logs, func(t tasksrv.TaskLogDTO) (TaskLogVO, error) {
 			return TaskLogVO{
-				TaskType:    t.TaskType,
-				HttpTask:    t.HttpTask,
-				LogContent:  t.LogContent,
+				Task:        t.Task,
+				ErrLog:      t.ErrLog,
 				TriggerType: t.TriggerType.Readable(),
 				TriggerBy:   t.TriggerBy,
-				TaskStatus:  t.TaskStatus.Readable(),
+				IsSuccess:   t.IsSuccess,
 				Created:     t.Created.Format(time.DateTime),
 			}, nil
 		})
@@ -188,32 +164,26 @@ func listLog(c *gin.Context) {
 	}
 }
 
-func trigger(c *gin.Context) {
-	var req TriggerTaskReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := tasksrv.Outer.TriggerTask(c, tasksrv.TriggerTaskReqDTO{
-			Id:       req.Id,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+func triggerTask(c *gin.Context) {
+	err := tasksrv.Outer.TriggerTask(c, tasksrv.TriggerTaskReqDTO{
+		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
-func update(c *gin.Context) {
+func updateTask(c *gin.Context) {
 	var req UpdateTaskReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := tasksrv.Outer.UpdateTask(c, tasksrv.UpdateTaskReqDTO{
-			Id:       req.Id,
+			TaskId:   req.TaskId,
 			Name:     req.Name,
 			CronExp:  req.CronExp,
-			TaskType: req.TaskType,
-			HttpTask: req.HttpTask,
-			Env:      req.Env,
+			Task:     req.Task,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {

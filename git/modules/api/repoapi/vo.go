@@ -269,3 +269,8 @@ type UpdateRepoReqVO struct {
 	LfsLimitSize int64  `json:"lfsLimitSize"`
 	GitLimitSize int64  `json:"gitLimitSize"`
 }
+
+type SimpleRepoVO struct {
+	RepoId int64  `json:"repoId"`
+	Name   string `json:"name"`
+}

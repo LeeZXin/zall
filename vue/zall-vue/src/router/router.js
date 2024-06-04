@@ -20,7 +20,7 @@ const router = createRouter({
                 {
                     path: "/createTeam",
                     component: () =>
-                        import ("../pages/team/team/CreateTeamPage")
+                        import ("../pages/team/team/TeamCreatePage")
                 }
             ]
         },
@@ -32,21 +32,42 @@ const router = createRouter({
                     path: "/team/:teamId(\\d+)/gitRepo/create",
                     component: () =>
                         import ("../pages/team/gitRepo/RepoCreatePage")
-                },
-                {
+                }, {
                     path: "/team/:teamId(\\d+)/gitRepo/list",
                     component: () =>
                         import ("../pages/team/gitRepo/RepoListPage")
-                },
-                {
+                }, {
                     path: "/team/:teamId(\\d+)/gitRepo/recycle",
                     component: () =>
                         import ("../pages/team/gitRepo/RepoRecyclePage")
-                },
-                {
-                    path: "/team/app/list",
+                }, {
+                    path: "/team/:teamId(\\d+)/role/list",
                     component: () =>
-                        import ("../pages/team/appService/AppListPage")
+                        import ("../pages/team/team/RoleListPage")
+                }, {
+                    path: "/team/:teamId(\\d+)/role/create",
+                    component: () =>
+                        import ("../pages/team/team/RoleHandlePage")
+                }, {
+                    path: "/team/:teamId(\\d+)/role/:roleId(\\d+)/update",
+                    component: () =>
+                        import ("../pages/team/team/RoleHandlePage")
+                }, {
+                    path: "/team/:teamId(\\d+)/role/user/list",
+                    component: () =>
+                        import ("../pages/team/team/UserListPage")
+                }, {
+                    path: "/team/:teamId(\\d+)/timerTask/list",
+                    component: () =>
+                        import ("../pages/team/team/TimerTaskListPage")
+                }, {
+                    path: "/team/:teamId(\\d+)/timerTask/create",
+                    component: () =>
+                        import ("../pages/team/team/TimerTaskHandlePage")
+                }, {
+                    path: "/team/:teamId(\\d+)/timerTask/:taskId(\\d+)/update",
+                    component: () =>
+                        import ("../pages/team/team/TimerTaskHandlePage")
                 },
                 {
                     path: "/team/app/create",
@@ -77,11 +98,6 @@ const router = createRouter({
                     path: "/team/action/task/:actionId(\\d+)",
                     component: () =>
                         import ("../pages/team/action/ActionTaskPage")
-                },
-                {
-                    path: "/team/action/task/:actionId(\\d+)/step/:taskId(\\d+)",
-                    component: () =>
-                        import ("../pages/team/action/ActionStepPage")
                 }
             ]
         },

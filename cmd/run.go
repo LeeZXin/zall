@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/alert/modules/api/alertapi"
-	"github.com/LeeZXin/zall/alert/modules/service/alertsrv"
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
@@ -34,7 +33,6 @@ import (
 	"github.com/LeeZXin/zall/tcpdetect/modules/api/detectapi"
 	"github.com/LeeZXin/zall/tcpdetect/modules/service/detectsrv"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
-	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
 	"github.com/LeeZXin/zsf/actuator"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
@@ -94,10 +92,6 @@ func runZall(*cli.Context) error {
 	// for timer
 	{
 		taskapi.InitApi()
-		if static.GetBool("timer.enabled") {
-			logger.Logger.Info("timer executor enabled")
-			tasksrv.InitTask()
-		}
 	}
 	// for prop
 	{
@@ -149,7 +143,7 @@ func runZall(*cli.Context) error {
 	{
 		alertapi.InitApi()
 		if static.GetBool("alert.enabled") {
-			alertsrv.InitTask()
+			//alertsrv.InitTask()
 		}
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer(), prom.NewServer())

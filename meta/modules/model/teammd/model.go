@@ -23,10 +23,9 @@ func (*Team) TableName() string {
 }
 
 type User struct {
-	Id      int64  `json:"id" xorm:"pk autoincr"`
-	TeamId  int64  `json:"teamId"`
-	Account string `json:"account"`
-	// 关联用户组
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	TeamId  int64     `json:"teamId"`
+	Account string    `json:"account"`
 	RoleId  int64     `json:"roleId"`
 	Created time.Time `json:"created" xorm:"created"`
 	Updated time.Time `json:"updated" xorm:"updated"`

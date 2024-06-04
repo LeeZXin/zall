@@ -11,7 +11,7 @@ var (
 	Inner InnerService = &innerImpl{
 		userCache: util.NewGoCache(),
 	}
-	Outer OuterService = new(outerImpl)
+	Outer = newOuterService()
 )
 
 type InnerService interface {
@@ -35,4 +35,6 @@ type OuterService interface {
 	UpdatePassword(context.Context, UpdatePasswordReqDTO) error
 	// UpdateAdmin 变更管理员
 	UpdateAdmin(context.Context, UpdateAdminReqDTO) error
+	// ListAllUser 管理员角色获取所有用户列表
+	ListAllUser(context.Context, ListAllUserReqDTO) ([]SimpleUserDTO, error)
 }

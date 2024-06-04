@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/alert/modules/model/alertmd"
 	"github.com/LeeZXin/zall/pkg/alert"
-	"github.com/LeeZXin/zall/pkg/sharding/handler"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf/common"
@@ -19,9 +18,9 @@ import (
 
 var (
 	taskExecutor *executor.Executor
-	taskHandler  *handler.ShardingPeriodicalHandler
-	httpClient   *http.Client
-	limiter      *Limiter
+	//taskHandler  *handler.ShardingPeriodicalHandler
+	httpClient *http.Client
+	limiter    *Limiter
 )
 
 func InitTask() {
@@ -29,14 +28,14 @@ func InitTask() {
 	limiter = NewLimiter()
 	httpClient = httputil.NewRetryableHttpClient()
 	taskExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
-	taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
-		HeartbeatInterval:     5 * time.Second,
-		HeartbeatHandler:      doHeartbeat,
-		DeleteInstanceHandler: deleteInstance,
-		TaskInterval:          5 * time.Second,
-		TaskHandler:           doExecuteTask,
-	})
-	taskHandler.Start()
+	//taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
+	//	HeartbeatInterval:     5 * time.Second,
+	//	HeartbeatHandler:      doHeartbeat,
+	//	DeleteInstanceHandler: deleteInstance,
+	//	TaskInterval:          5 * time.Second,
+	//	TaskHandler:           doExecuteTask,
+	//})
+	//taskHandler.Start()
 }
 
 func doHeartbeat() {

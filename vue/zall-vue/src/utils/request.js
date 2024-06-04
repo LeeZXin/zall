@@ -17,7 +17,10 @@ request.interceptors.request.use(
     (config) => {
         const user = useUserStore();
         const now = new Date().getTime();
-        if (user && user.sessionExpireAt && user.sessionExpireAt < now && user.sessionExpireAt > (now - 10 * 60 * 1000)) {
+        if (user &&
+            user.sessionExpireAt &&
+            user.sessionExpireAt < now &&
+            user.sessionExpireAt > (now - 10 * 60 * 1000)) {
             console.log("refresh token")
         }
         return config
@@ -60,6 +63,8 @@ request.interceptors.response.use(
             }
         } else if (status === 403) {
             message.error(t("system.request403"))
+        } else if (status === 400) {
+            message.error(t("system.request400"))
         } else {
             message.error(t("system.internalError"))
         }

@@ -67,6 +67,33 @@ func (s *innerImpl) CheckAccountAndPassword(ctx context.Context, reqDTO CheckAcc
 
 type outerImpl struct{}
 
+func newOuterService() OuterService {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	_, b, err := usermd.GetByAccount(ctx, "superAdmin")
+	if err != nil {
+		logger.Logger.Fatalf("create super admin failed: %v", err)
+	}
+	if !b {
+		password := "superAdmin"
+		const account = "superAdmin"
+		err = usermd.InsertUser(ctx, usermd.InsertUserReqDTO{
+			Account:   account,
+			Name:      "SuperAdmin",
+			Email:     "admin@noreply.com",
+			Password:  util.EncryptUserPassword(password),
+			AvatarUrl: "",
+			IsAdmin:   true,
+			RoleType:  usermd.DeveloperRole,
+		})
+		if err != nil {
+			logger.Logger.Fatalf("create super admin failed: %v", err)
+		}
+		logger.Logger.Infof("create administrator account: %s, password: %s, please change password first!!!", account, password)
+	}
+	return new(outerImpl)
+}
+
 func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (session apisession.Session, err error) {
 	// 插入日志
 	defer func() {
@@ -236,20 +263,13 @@ func (*outerImpl) RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (
 		err = util.NewBizErr(apicode.UserAlreadyExistsCode, i18n.UserAlreadyExists)
 		return
 	}
-	// 计算企业里面的用户数量，否则第一个注册者就是企业管理员
-	countUser, err := usermd.CountUser(ctx)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
 	// 添加账号
 	err = usermd.InsertUser(ctx, usermd.InsertUserReqDTO{
 		Account:  reqDTO.Account,
 		Name:     reqDTO.Name,
 		Email:    reqDTO.Email,
 		Password: util.EncryptUserPassword(reqDTO.Password),
-		IsAdmin:  countUser == 0,
+		IsAdmin:  false,
 		RoleType: usermd.DeveloperRole,
 	})
 	if err != nil {
@@ -518,4 +538,24 @@ func (s *outerImpl) SetProhibited(ctx context.Context, reqDTO SetProhibitedReqDT
 		err = util.InternalError(err)
 	}
 	return
+}
+
+// ListAllUser 所有用户列表
+func (s *outerImpl) ListAllUser(ctx context.Context, reqDTO ListAllUserReqDTO) ([]SimpleUserDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	users, err := usermd.ListAllUser(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(users, func(t usermd.SimpleUserDTO) (SimpleUserDTO, error) {
+		return SimpleUserDTO{
+			Account: t.Account,
+			Name:    t.Name,
+		}, nil
+	})
 }

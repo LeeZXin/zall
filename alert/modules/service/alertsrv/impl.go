@@ -187,10 +187,7 @@ func checkPermByAppId(ctx context.Context, appId string, operator apisession.Use
 	if p.IsAdmin {
 		return nil
 	}
-	contains, _ := listutil.Contains(p.PermDetail.DevelopAppList, func(s string) (bool, error) {
-		return s == appId, nil
-	})
-	if contains {
+	if p.PermDetail.DevelopAppList.Contains(appId) {
 		return nil
 	}
 	return util.UnauthorizedError()

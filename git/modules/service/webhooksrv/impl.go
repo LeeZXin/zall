@@ -261,7 +261,7 @@ func checkPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) 
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || (!p.IsAdmin && !p.PermDetail.GetRepoPerm(repo.Id).CanHandleWebhook) {
+	if !b || (!p.IsAdmin && !p.PermDetail.GetRepoPerm(repo.Id).CanManageWebhook) {
 		return util.UnauthorizedError()
 	}
 	return nil

@@ -1,6 +1,7 @@
 package alertsrv
 
 import (
+	"context"
 	"errors"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/quit"
@@ -18,9 +19,9 @@ const (
 )
 
 type Limiter struct {
-	store        *cache.Cache
-	lock         sync.RWMutex
-	snapshotTask *taskutil.PeriodicalTask
+	store                *cache.Cache
+	lock                 sync.RWMutex
+	snapshotTaskStopFunc taskutil.StopFunc
 }
 
 func NewLimiter() *Limiter {
@@ -30,14 +31,13 @@ func NewLimiter() *Limiter {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		logger.Logger.Errorf("load limiter snapshot: %v failed with err: %v", SnapshotPath, err)
 	}
-	ret.snapshotTask, _ = taskutil.NewPeriodicalTask(30*time.Second, func() {
+	ret.snapshotTaskStopFunc, _ = taskutil.RunPeriodicalTask(30*time.Second, 30*time.Second, func(context.Context) {
 		err := ret.store.SaveFile(SnapshotPath)
 		if err != nil {
 			logger.Logger.Errorf("save limiter snapshot: %v failed with err: %v", SnapshotPath, err)
 		}
 	})
-	ret.snapshotTask.Start()
-	quit.AddShutdownHook(ret.snapshotTask.Stop, true)
+	quit.AddShutdownHook(quit.ShutdownHook(ret.snapshotTaskStopFunc), true)
 	return ret
 }
 

@@ -77,7 +77,30 @@ func InitApi() {
 			group.PUT("/setArchived/:repoId", setArchived)
 			// 归档仓库变为正常仓库
 			group.PUT("/setUnArchived/:repoId", setUnArchived)
+			// 管理员查看仓库列表
+			group.GET("/listByAdmin/:teamId", listRepoByAdmin)
 		}
+	})
+}
+
+func listRepoByAdmin(c *gin.Context) {
+	repos, err := reposrv.Outer.ListRepoByAdmin(c, reposrv.ListRepoByAdminReqDTO{
+		TeamId:   cast.ToInt64(c.Param("teamId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(repos, func(t reposrv.SimpleRepoDTO) (SimpleRepoVO, error) {
+		return SimpleRepoVO{
+			RepoId: t.RepoId,
+			Name:   t.Name,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleRepoVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
 	})
 }
 

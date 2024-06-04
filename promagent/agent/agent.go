@@ -8,8 +8,6 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf-utils/quit"
-	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/services/discovery"
@@ -19,11 +17,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 )
 
 var (
-	watchTask   *taskutil.PeriodicalTask
+	//watchTask   *taskutil.PeriodicalTask
 	serverUrl   string
 	agentEnv    string
 	lastHashSum uint32
@@ -44,9 +41,9 @@ func StartAgent() {
 		logger.Logger.Fatalf("wrong prom.agent.filesd.path: %v", filePath)
 	}
 	logger.Logger.Infof("prom agent started with env: %v serverUrl: %v filePath: %v", agentEnv, serverUrl, filePath)
-	watchTask, _ = taskutil.NewPeriodicalTask(5*time.Second, updateFileSd)
-	watchTask.Start()
-	quit.AddShutdownHook(watchTask.Stop, true)
+	//watchTask, _ = taskutil.NewPeriodicalTask(5*time.Second, updateFileSd)
+	//watchTask.Start()
+	//quit.AddShutdownHook(watchTask.Stop, true)
 }
 
 func updateFileSd() {

@@ -235,7 +235,7 @@ func (s *outerImpl) UpdateGitCfg(ctx context.Context, reqDTO UpdateGitCfgReqDTO)
 	return
 }
 
-// GetEnvCfg 所有人都可以获取 不校验权限
+// GetEnvCfg 所有人都可以获取 不校验权限 获取环境列表
 func (s *outerImpl) GetEnvCfg(ctx context.Context, reqDTO GetEnvCfgReqDTO) ([]string, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
@@ -248,38 +248,31 @@ func (s *outerImpl) GetEnvCfg(ctx context.Context, reqDTO GetEnvCfgReqDTO) ([]st
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return envConfig.Envs, nil
+	ret := envConfig.Envs
+	if ret == nil {
+		ret = make([]string, 0)
+	}
+	return ret, nil
 }
 
-func (s *outerImpl) UpdateEnvCfg(ctx context.Context, reqDTO UpdateEnvCfgReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.CfgSrvKeysVO.UpdateGitCfg),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (s *outerImpl) UpdateEnvCfg(ctx context.Context, reqDTO UpdateEnvCfgReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	if !reqDTO.Operator.IsAdmin {
-		err = util.UnauthorizedError()
-		return
+		return util.UnauthorizedError()
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	cfg := EnvCfg{
 		Envs: reqDTO.Envs,
 	}
-	_, err = cfgmd.UpdateByKey(ctx, &cfg)
+	_, err := cfgmd.UpdateByKey(ctx, &cfg)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
 // GetGitRepoServerCfg 获取git服务器地址
@@ -301,32 +294,21 @@ func (s *outerImpl) GetGitRepoServerCfg(ctx context.Context, reqDTO GetGitRepoSe
 	return cfg, nil
 }
 
-// UpdateGitRepoServerUrl 更新git服务器地址
-func (s *outerImpl) UpdateGitRepoServerUrl(ctx context.Context, reqDTO UpdateGitRepoServerUrlReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.CfgSrvKeysVO.UpdateGitRepoServerUrl),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+// UpdateGitRepoServerCfg 更新git服务器地址
+func (s *outerImpl) UpdateGitRepoServerCfg(ctx context.Context, reqDTO UpdateGitRepoServerCfgReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	if !reqDTO.Operator.IsAdmin {
-		err = util.UnauthorizedError()
-		return
+		return util.UnauthorizedError()
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var b bool
-	b, err = cfgmd.ExistByKey(ctx, reqDTO.GitRepoServerCfg.Key())
+	b, err := cfgmd.ExistByKey(ctx, reqDTO.GitRepoServerCfg.Key())
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if b {
 		_, err = cfgmd.UpdateByKey(ctx, &reqDTO.GitRepoServerCfg)
@@ -335,8 +317,54 @@ func (s *outerImpl) UpdateGitRepoServerUrl(ctx context.Context, reqDTO UpdateGit
 	}
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
+}
+
+// GetZonesCfg 获取单元调用配置
+func (s *outerImpl) GetZonesCfg(ctx context.Context, reqDTO GetZonesCfgReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var cfg ZonesCfg
+	_, err := cfgmd.GetByKey(ctx, &cfg)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	ret := cfg.Zones
+	if ret == nil {
+		ret = make([]string, 0)
+	}
+	return ret, nil
+}
+
+// UpdateZonesCfg 编辑单元调用配置
+func (s *outerImpl) UpdateZonesCfg(ctx context.Context, reqDTO UpdateZonesCfgReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	b, err := cfgmd.ExistByKey(ctx, reqDTO.ZonesCfg.Key())
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if b {
+		_, err = cfgmd.UpdateByKey(ctx, &reqDTO.ZonesCfg)
+	} else {
+		err = cfgmd.InsertCfg(ctx, &reqDTO.ZonesCfg)
+	}
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }

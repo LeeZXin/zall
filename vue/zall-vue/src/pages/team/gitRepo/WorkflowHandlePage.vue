@@ -36,9 +36,9 @@
         <div class="section-body">
           <a-radio-group v-model:value="formState.source">
             <a-radio :style="radioStyle" :value="1">分支</a-radio>
-            <div class="push-option-desc">当分支push操作时, 将触发工作流</div>
+            <div class="radio-option-desc">当分支push操作时, 将触发工作流</div>
             <a-radio :style="radioStyle" :value="2">合并请求</a-radio>
-            <div class="push-option-desc">当提交分支的合并请求时, 将触发工作流</div>
+            <div class="radio-option-desc">当提交分支的合并请求时, 将触发工作流</div>
           </a-radio-group>
           <a-input type="input" v-model:value="formState.wildBranches" />
           <div class="input-desc">以glob方式保存, 以分号隔开, 例如dev_*</div>
@@ -61,8 +61,7 @@
           </div>
         </div>
       </div>
-      <div style="width:100%;border-top:1px solid #d9d9d9;margin: 10px 0"></div>
-      <div style="margin-bottom:20px">
+      <div class="save-btn-line">
         <a-button type="primary" @click="createOrUpdateWorkflow">立即保存</a-button>
       </div>
     </div>
@@ -259,11 +258,5 @@ if (mode === "update") {
 }
 .insert-template:hover {
   color: #1677ff;
-}
-.push-option-desc {
-  font-size: 13px;
-  padding-left: 24px;
-  color: gray;
-  margin-bottom: 6px;
 }
 </style>

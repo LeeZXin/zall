@@ -9,11 +9,15 @@ export default {
     backToIndex: "回到首页",
     previousPage: "上一页",
     nextPage: "下一页",
+    ztable: {
+        noDataText: "暂无数据",
+    },
     system: {
         requestFailed: "请求发送似乎有点问题, 请稍后重试",
         notLogin: "未登录, 即将跳转登录页面",
         request404: "服务器似乎有点问题, 请稍后重试",
         request403: "暂时无权限访问",
+        request400: "请求格式错误",
         internalError: "请求发送似乎有点问题, 请稍后重试"
     },
     login: {
@@ -49,7 +53,11 @@ export default {
         applyApproval: "审批申请",
         dbAudit: "数据库审计",
         monitorAlert: "监控告警",
-        teamSettings: "团队设置"
+        roleAndMembers: "角色&成员"
+    },
+    roleListPage: {
+        roleList: "角色列表",
+        roleName: "角色名称"
     },
     settings: {
         sshAndGpg: "SSH和GPG密钥"
@@ -98,5 +106,7 @@ export default {
     hourBefore: "小时前",
     dayBefore: "天前",
     monthBefore: "月前",
-    yearBefore: "年前"
+    yearBefore: "年前",
+    yes: "是",
+    no: "否"
 }

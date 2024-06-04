@@ -1,79 +1,52 @@
 package taskapi
 
 import (
-	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
+	"github.com/LeeZXin/zall/pkg/timer"
 )
 
-type InsertTaskReqVO struct {
-	Name     string           `json:"name"`
-	CronExp  string           `json:"cronExp"`
-	TaskType string           `json:"taskType"`
-	HttpTask tasksrv.HttpTask `json:"httpTask"`
-	TeamId   int64            `json:"teamId"`
-	Env      string           `json:"env"`
-}
-
-type EnabledTaskReqVO struct {
-	Id  int64  `json:"id"`
-	Env string `json:"env"`
-}
-
-type DisableTaskReqVO struct {
-	Id  int64  `json:"id"`
-	Env string `json:"env"`
-}
-
-type DeleteTaskReqVO struct {
-	Id  int64  `json:"id"`
-	Env string `json:"env"`
-}
-
-type TriggerTaskReqVO struct {
-	Id  int64  `json:"id"`
-	Env string `json:"env"`
+type CreateTaskReqVO struct {
+	Name    string     `json:"name"`
+	CronExp string     `json:"cronExp"`
+	Task    timer.Task `json:"task"`
+	TeamId  int64      `json:"teamId"`
+	Env     string     `json:"env"`
 }
 
 type ListTaskReqVO struct {
-	TeamId int64  `json:"teamId"`
-	Name   string `json:"name"`
-	Cursor int64  `json:"cursor"`
-	Limit  int    `json:"limit"`
-	Env    string `json:"env"`
+	TeamId  int64  `json:"teamId"`
+	Name    string `json:"name"`
+	PageNum int    `json:"pageNum"`
+	Env     string `json:"env"`
 }
 
 type TaskVO struct {
-	Id         int64            `json:"id"`
-	Name       string           `json:"name"`
-	CronExp    string           `json:"cronExp"`
-	TaskType   string           `json:"taskType"`
-	HttpTask   tasksrv.HttpTask `json:"httpTask"`
-	TeamId     int64            `json:"teamId"`
-	NextTime   string           `json:"nextTime"`
-	TaskStatus string           `json:"taskStatus"`
+	Id        int64      `json:"id"`
+	Name      string     `json:"name"`
+	CronExp   string     `json:"cronExp"`
+	Task      timer.Task `json:"task"`
+	TeamId    int64      `json:"teamId"`
+	IsEnabled bool       `json:"isEnabled"`
+	Env       string     `json:"env"`
 }
 
-type ListLogReqVO struct {
-	Id     int64  `json:"id"`
-	Cursor int64  `json:"cursor"`
-	Limit  int    `json:"limit"`
-	Env    string `json:"env"`
+type PageLogReqVO struct {
+	TaskId  int64  `json:"taskId"`
+	PageNum int    `json:"pageNum"`
+	DateStr string `json:"dateStr"`
 }
 
 type TaskLogVO struct {
-	TaskType    string           `json:"taskType"`
-	HttpTask    tasksrv.HttpTask `json:"httpTask"`
-	LogContent  string           `json:"logContent"`
-	TriggerType string           `json:"triggerType"`
-	TriggerBy   string           `json:"triggerBy"`
-	TaskStatus  string           `json:"taskStatus"`
-	Created     string           `json:"created"`
+	Task        timer.Task `json:"task"`
+	ErrLog      string     `json:"errLog"`
+	TriggerType string     `json:"triggerType"`
+	TriggerBy   string     `json:"triggerBy"`
+	IsSuccess   bool       `json:"isSuccess"`
+	Created     string     `json:"created"`
 }
 
 type UpdateTaskReqVO struct {
-	Id       int64            `json:"id"`
-	Name     string           `json:"name"`
-	CronExp  string           `json:"cronExp"`
-	TaskType string           `json:"taskType"`
-	HttpTask tasksrv.HttpTask `json:"httpTask"`
-	Env      string           `json:"env"`
+	TaskId  int64      `json:"taskId"`
+	Name    string     `json:"name"`
+	CronExp string     `json:"cronExp"`
+	Task    timer.Task `json:"task"`
 }

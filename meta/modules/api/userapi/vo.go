@@ -77,3 +77,8 @@ type SetProhibitedReqVO struct {
 	Account      string `json:"account"`
 	IsProhibited bool   `json:"isProhibited"`
 }
+
+type SimpleUserVO struct {
+	Account string `json:"account"`
+	Name    string `json:"name"`
+}

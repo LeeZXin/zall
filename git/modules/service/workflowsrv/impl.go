@@ -473,9 +473,10 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 	var pass bool
 	switch permCode {
 	case accessWorkflow:
-		pass = p.PermDetail.GetRepoPerm(repoId).CanAccessWorkflow
+		pass = p.PermDetail.GetRepoPerm(repoId).CanManageWorkflow ||
+			p.PermDetail.GetRepoPerm(repoId).CanTriggerWorkflow
 	case updateWorkflow:
-		pass = p.PermDetail.GetRepoPerm(repoId).CanUpdateWorkflow
+		pass = p.PermDetail.GetRepoPerm(repoId).CanManageWorkflow
 	case triggerWorkflow:
 		pass = p.PermDetail.GetRepoPerm(repoId).CanTriggerWorkflow
 	default:

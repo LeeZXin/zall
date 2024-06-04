@@ -3,7 +3,6 @@ package detectsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/pkg/detecttool"
-	"github.com/LeeZXin/zall/pkg/sharding/handler"
 	"github.com/LeeZXin/zall/tcpdetect/modules/model/detectmd"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf/common"
@@ -14,20 +13,20 @@ import (
 
 var (
 	detectExecutor *executor.Executor
-	taskHandler    *handler.ShardingPeriodicalHandler
+	//taskHandler    *handler.ShardingPeriodicalHandler
 )
 
 func InitDetect() {
 	logger.Logger.Infof("start tcp detect service")
 	detectExecutor, _ = executor.NewExecutor(10, 1024, time.Minute, executor.CallerRunsStrategy)
-	taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
-		HeartbeatInterval:     8 * time.Second,
-		HeartbeatHandler:      doHeartbeat,
-		DeleteInstanceHandler: deleteInstance,
-		TaskInterval:          10 * time.Second,
-		TaskHandler:           doExecuteTask,
-	})
-	taskHandler.Start()
+	//taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
+	//	HeartbeatInterval:     8 * time.Second,
+	//	HeartbeatHandler:      doHeartbeat,
+	//	DeleteInstanceHandler: deleteInstance,
+	//	TaskInterval:          10 * time.Second,
+	//	TaskHandler:           doExecuteTask,
+	//})
+	//taskHandler.Start()
 }
 
 func doHeartbeat() {

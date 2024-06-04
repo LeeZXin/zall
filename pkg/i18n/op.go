@@ -19,11 +19,11 @@ var (
 			DefaultRet: "删除项目组用户",
 		},
 		UpsertTeamUser: KeyItem{
-			Id:         "teamSrv.UpsertUser",
+			Id:         "teamSrv.CreateUser",
 			DefaultRet: "新增或编辑项目组用户",
 		},
 		InsertTeamUserGroup: KeyItem{
-			Id:         "teamSrv.InsertRole",
+			Id:         "teamSrv.CreateRole",
 			DefaultRet: "添加项目组用户组",
 		},
 		UpdateTeamUserGroupName: KeyItem{
@@ -31,7 +31,7 @@ var (
 			DefaultRet: "编辑项目组用户组名称",
 		},
 		UpdateTeamUserGroupPerm: KeyItem{
-			Id:         "teamSrv.UpdateRolePerm",
+			Id:         "teamSrv.UpdateRole",
 			DefaultRet: "编辑项目组用户组权限",
 		},
 		DeleteTeamUserGroup: KeyItem{
@@ -181,7 +181,7 @@ var (
 			DefaultRet: "编辑git配置",
 		},
 		UpdateGitRepoServerUrl: KeyItem{
-			Id:         "cfgSrv.UpdateGitRepoServerUrl",
+			Id:         "cfgSrv.UpdateGitRepoServerCfg",
 			DefaultRet: "编辑git仓库服务器地址",
 		},
 	}
@@ -236,7 +236,7 @@ var (
 
 	TimerTaskSrvKeysVO = TimerTaskSrvKeys{
 		InsertTask: KeyItem{
-			Id:         "timerTaskSrv.InsertTask",
+			Id:         "timerTaskSrv.CreateTask",
 			DefaultRet: "新增定时任务",
 		},
 		UpdateTask: KeyItem{

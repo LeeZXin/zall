@@ -2,9 +2,8 @@ package tasksrv
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
+	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
@@ -17,46 +16,39 @@ import (
 
 type outerImpl struct{}
 
-// InsertTask 新增任务
-func (o *outerImpl) InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (err error) {
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.TimerTaskSrvKeysVO.InsertTask),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+// CreateTask 新增任务
+func (o *outerImpl) CreateTask(ctx context.Context, reqDTO CreateTaskReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err = checkPerm(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
-		return
+	if err := checkPerm(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
+		return err
 	}
-	obj := TaskObj{
-		TaskType: reqDTO.TaskType,
-	}
-	switch reqDTO.TaskType {
-	case HttpTaskType:
-		m, _ := json.Marshal(reqDTO.HttpTask)
-		obj.Content = string(m)
-	}
-	objJson, _ := json.Marshal(obj)
-	if err = taskmd.InsertTask(ctx, taskmd.InsertTaskReqDTO{
-		Name:       reqDTO.Name,
-		CronExp:    reqDTO.CronExp,
-		Content:    string(objJson),
-		NextTime:   0,
-		TaskStatus: taskmd.Closed,
-		TeamId:     reqDTO.TeamId,
-		Env:        reqDTO.Env,
-	}); err != nil {
+	err := xormstore.WithTx(ctx, func(ctx context.Context) error {
+		task, err2 := taskmd.InsertTask(ctx, taskmd.InsertTaskReqDTO{
+			Name:      reqDTO.Name,
+			CronExp:   reqDTO.CronExp,
+			Content:   reqDTO.Task,
+			TeamId:    reqDTO.TeamId,
+			Env:       reqDTO.Env,
+			IsEnabled: false,
+		})
+		if err2 != nil {
+			return err2
+		}
+		return taskmd.InsertExecute(ctx, taskmd.InsertExecuteReqDTO{
+			TaskId:    task.Id,
+			IsEnabled: false,
+			Env:       reqDTO.Env,
+		})
+	})
+	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
 // ListTask 展示任务列表
@@ -69,321 +61,202 @@ func (o *outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]Task
 	if err := checkPerm(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
 		return nil, 0, err
 	}
-	tasks, err := taskmd.ListTask(ctx, taskmd.ListTaskReqDTO{
-		TeamId: reqDTO.TeamId,
-		Name:   reqDTO.Name,
-		Cursor: reqDTO.Cursor,
-		Limit:  reqDTO.Limit,
-		Env:    reqDTO.Env,
+	const pageSize = 10
+	tasks, total, err := taskmd.PageTask(ctx, taskmd.ListTaskReqDTO{
+		TeamId:   reqDTO.TeamId,
+		Name:     reqDTO.Name,
+		PageNum:  reqDTO.PageNum,
+		PageSize: pageSize,
+		Env:      reqDTO.Env,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
 	ret, _ := listutil.Map(tasks, func(t taskmd.Task) (TaskDTO, error) {
-		var obj TaskObj
-		_ = json.Unmarshal([]byte(t.Content), &obj)
-		dto := TaskDTO{
-			Id:         t.Id,
-			Name:       t.Name,
-			CronExp:    t.CronExp,
-			TaskType:   obj.TaskType,
-			TeamId:     t.TeamId,
-			NextTime:   t.NextTime,
-			TaskStatus: t.TaskStatus,
-		}
-		switch obj.TaskType {
-		case HttpTaskType:
-			var h HttpTask
-			_ = json.Unmarshal([]byte(obj.Content), &h)
-			dto.HttpTask = h
-		}
-		return dto, nil
+		return TaskDTO{
+			Id:        t.Id,
+			Name:      t.Name,
+			CronExp:   t.CronExp,
+			Task:      t.GetContent(),
+			TeamId:    t.TeamId,
+			IsEnabled: t.IsEnabled,
+			Env:       t.Env,
+		}, nil
 	})
-	if len(tasks) == reqDTO.Limit {
-		return ret, tasks[len(tasks)-1].Id, nil
-	}
-	return ret, 0, nil
+	return ret, total, nil
 }
 
 // EnableTask 启动任务
-func (o *outerImpl) EnableTask(ctx context.Context, reqDTO EnableTaskReqDTO) (err error) {
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.TimerTaskSrvKeysVO.EnableTask),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (o *outerImpl) EnableTask(ctx context.Context, reqDTO EnableTaskReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	var (
-		task taskmd.Task
-		b    bool
-	)
-	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
+	task, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
 	if err != nil {
-		return
+		return err
 	}
-	cron, err := parseCron(task.CronExp)
+	cron, err := ParseCron(task.CronExp)
 	if err != nil {
 		return util.ThereHasBugErr()
 	}
-	next := cron.Next(time.Now())
-	for i := 0; i < 10; i++ {
-		b, err = taskmd.UpdateTaskNextTimeAndStatus(ctx, taskmd.UpdateTaskNextTimeAndStatusReqDTO{
-			TaskId:   reqDTO.Id,
-			Status:   taskmd.Pending,
-			NextTime: next.UnixMilli(),
-			Version:  task.Version,
-			Env:      reqDTO.Env,
-		})
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-		if b {
-			return
-		}
-		task, b, err = taskmd.GetTaskById(ctx, reqDTO.Id, reqDTO.Env)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-		if !b {
-			err = util.OperationFailedError()
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
+	now := time.Now()
+	nextTime := cron.Next(now)
+	if nextTime.Before(now) {
+		return util.NewBizErr(apicode.OperationFailedErrCode, i18n.CronExpError)
 	}
-	err = util.OperationFailedError()
-	return
-}
-
-// DisableTask 关闭任务
-func (o *outerImpl) DisableTask(ctx context.Context, reqDTO DisableTaskReqDTO) (err error) {
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.TimerTaskSrvKeysVO.DisableTask),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	var (
-		task taskmd.Task
-		b    bool
-	)
-	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		_, err2 := taskmd.EnableExecute(ctx,
+			reqDTO.TaskId,
+			nextTime.UnixMilli(),
+		)
+		if err2 != nil {
+			return err2
+		}
+		_, err2 = taskmd.EnableTask(ctx, reqDTO.TaskId)
+		return err2
+	})
 	if err != nil {
-		return
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
 	}
-	for i := 0; i < 10; i++ {
-		b, err = taskmd.UpdateTaskStatus(ctx, taskmd.UpdateTaskStatusReqDTO{
-			TaskId:    reqDTO.Id,
-			NewStatus: taskmd.Closed,
-			Version:   task.Version,
-			Env:       reqDTO.Env,
-		})
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-		if b {
-			return
-		}
-		task, b, err = taskmd.GetTaskById(ctx, reqDTO.Id, reqDTO.Env)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-		if !b {
-			err = util.OperationFailedError()
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	err = util.OperationFailedError()
-	return
-}
-
-// DeleteTask 删除任务
-func (o *outerImpl) DeleteTask(ctx context.Context, reqDTO DeleteTaskReqDTO) (err error) {
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.TimerTaskSrvKeysVO.DeleteTask),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	_, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
-	if err != nil {
-		return
-	}
-	err = taskmd.DeleteTask(ctx, reqDTO.Id, reqDTO.Env)
-	if err != nil {
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
-// TriggerTask 手动执行任务
-func (o *outerImpl) TriggerTask(ctx context.Context, reqDTO TriggerTaskReqDTO) (err error) {
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.TimerTaskSrvKeysVO.TriggerTask),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	var (
-		task taskmd.Task
-	)
-	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
-	if err != nil {
-		return
-	}
-	triggerTask(&task, reqDTO.Operator.Account, reqDTO.Env)
 	return nil
 }
 
-// ListTaskLog 获取执行历史
-func (o *outerImpl) ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) ([]TaskLogDTO, int64, error) {
+// DisableTask 关闭任务
+func (o *outerImpl) DisableTask(ctx context.Context, reqDTO DisableTaskReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
+	if err != nil {
+		return err
+	}
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		_, err2 := taskmd.DisableExecute(ctx, reqDTO.TaskId)
+		if err2 != nil {
+			return err2
+		}
+		_, err2 = taskmd.DisableTask(ctx, reqDTO.TaskId)
+		return err2
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// DeleteTask 删除任务
+func (o *outerImpl) DeleteTask(ctx context.Context, reqDTO DeleteTaskReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
+	if err != nil {
+		return err
+	}
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		err2 := taskmd.DeleteTask(ctx, reqDTO.TaskId)
+		if err2 != nil {
+			return err2
+		}
+		_, err2 = taskmd.DeleteExecuteByTaskId(ctx, reqDTO.TaskId)
+		if err2 != nil {
+			return err2
+		}
+		err2 = taskmd.DeleteLogByTaskId(ctx, reqDTO.TaskId)
+		return err2
+	})
+	if err != nil {
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// TriggerTask 手动执行任务
+func (o *outerImpl) TriggerTask(ctx context.Context, reqDTO TriggerTaskReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var (
+		task taskmd.Task
+	)
+	task, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
+	if err != nil {
+		return err
+	}
+	triggerTask(&task, reqDTO.Operator.Account)
+	return nil
+}
+
+// PageTaskLog 获取执行历史
+func (o *outerImpl) PageTaskLog(ctx context.Context, reqDTO PageTaskLogReqDTO) ([]TaskLogDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
+	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
 	if err != nil {
 		return nil, 0, err
 	}
-	logs, err := taskmd.ListTaskLog(ctx, taskmd.ListTaskLogReqDTO{
-		Id:     reqDTO.Id,
-		Cursor: reqDTO.Cursor,
-		Limit:  reqDTO.Limit,
-		Env:    reqDTO.Env,
+	const pageSize = 10
+	d := reqDTO.dateTime
+	logs, total, err := taskmd.ListTaskLog(ctx, taskmd.ListTaskLogReqDTO{
+		TaskId:    reqDTO.TaskId,
+		PageNum:   reqDTO.PageNum,
+		PageSize:  pageSize,
+		BeginTime: time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, d.Location()),
+		EndTime:   time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, 0, d.Location()),
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
 	ret, _ := listutil.Map(logs, func(t taskmd.TaskLog) (TaskLogDTO, error) {
-		var obj TaskObj
-		_ = json.Unmarshal([]byte(t.TaskContent), &obj)
-		dto := TaskLogDTO{
-			TaskType:    obj.TaskType,
-			LogContent:  t.LogContent,
+		return TaskLogDTO{
+			Task:        t.GetTaskContent(),
+			ErrLog:      t.ErrLog,
 			TriggerType: t.TriggerType,
 			TriggerBy:   t.TriggerBy,
-			TaskStatus:  t.TaskStatus,
+			IsSuccess:   t.IsSuccess,
 			Created:     t.Created,
-		}
-		switch obj.TaskType {
-		case HttpTaskType:
-			var h HttpTask
-			_ = json.Unmarshal([]byte(obj.Content), &h)
-			dto.HttpTask = h
-		}
-		return dto, nil
+		}, nil
 	})
-	if len(logs) == reqDTO.Limit {
-		return ret, logs[len(logs)-1].Id, nil
-	}
-	return ret, 0, nil
+	return ret, total, nil
 }
 
 // UpdateTask 更新任务
-func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (err error) {
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.TimerTaskSrvKeysVO.UpdateTask),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	var (
-		task taskmd.Task
-		b    bool
-	)
-	task, err = checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env)
+	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
 	if err != nil {
-		return
+		return err
 	}
-	obj := TaskObj{
-		TaskType: reqDTO.TaskType,
+	_, err = taskmd.UpdateTask(ctx, taskmd.UpdateTaskReqDTO{
+		TaskId:  reqDTO.TaskId,
+		Name:    reqDTO.Name,
+		CronExp: reqDTO.CronExp,
+		Content: reqDTO.Task,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
 	}
-	switch reqDTO.TaskType {
-	case HttpTaskType:
-		m, _ := json.Marshal(reqDTO.HttpTask)
-		obj.Content = string(m)
-	}
-	objJson, _ := json.Marshal(obj)
-	for i := 0; i < 10; i++ {
-		b, err = taskmd.UpdateTask(ctx, taskmd.UpdateTaskReqDTO{
-			Id:         reqDTO.Id,
-			Name:       reqDTO.Name,
-			CronExp:    reqDTO.CronExp,
-			Content:    string(objJson),
-			TaskStatus: taskmd.Closed,
-			NextTime:   0,
-			Version:    task.Version,
-			Env:        reqDTO.Env,
-		})
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-		if b {
-			return
-		}
-		task, b, err = taskmd.GetTaskById(ctx, reqDTO.Id, reqDTO.Env)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
-		}
-		if !b {
-			err = util.OperationFailedError()
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	err = util.OperationFailedError()
-	return
+	return nil
 }
 
 func checkPerm(ctx context.Context, operator apisession.UserInfo, teamId int64) error {
@@ -391,14 +264,14 @@ func checkPerm(ctx context.Context, operator apisession.UserInfo, teamId int64) 
 	if !b {
 		return util.UnauthorizedError()
 	}
-	if !p.IsAdmin && !p.PermDetail.TeamPerm.CanHandleTimer {
+	if !p.IsAdmin && !p.PermDetail.TeamPerm.CanManageTimer {
 		return util.UnauthorizedError()
 	}
 	return nil
 }
 
-func checkPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId int64, env string) (taskmd.Task, error) {
-	task, b, err := taskmd.GetTaskById(ctx, taskId, env)
+func checkPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId int64) (taskmd.Task, error) {
+	task, b, err := taskmd.GetTaskById(ctx, taskId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return taskmd.Task{}, util.InternalError(err)
@@ -410,7 +283,7 @@ func checkPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId
 	if !b {
 		return task, util.UnauthorizedError()
 	}
-	if !p.IsAdmin && !p.PermDetail.TeamPerm.CanHandleTimer {
+	if !p.IsAdmin && !p.PermDetail.TeamPerm.CanManageTimer {
 		return task, util.UnauthorizedError()
 	}
 	return task, nil

@@ -71,4 +71,6 @@ type OuterService interface {
 	SetRepoArchivedStatus(context.Context, SetRepoArchivedStatusReqDTO) error
 	// ListDeletedRepo 展示已删除仓库
 	ListDeletedRepo(context.Context, ListDeletedRepoReqDTO) ([]DeletedRepoDTO, error)
+	// ListRepoByAdmin 管理员展示仓库列表
+	ListRepoByAdmin(context.Context, ListRepoByAdminReqDTO) ([]SimpleRepoDTO, error)
 }

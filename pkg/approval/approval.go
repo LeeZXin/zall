@@ -80,25 +80,22 @@ type KvCfg struct {
 type Kvs []Kv
 
 func (k *Kvs) FromDB(content []byte) error {
-	ret := make(Kvs, 0)
-	err := json.Unmarshal(content, &ret)
-	if err != nil {
-		return err
+	if k == nil {
+		*k = make([]Kv, 0)
 	}
-	*k = ret
-	return nil
+	return json.Unmarshal(content, k)
 }
 
-func (k Kvs) ToDB() ([]byte, error) {
+func (k *Kvs) ToDB() ([]byte, error) {
 	return json.Marshal(k)
 }
 
-func (k Kvs) ToMap() map[string]string {
-	if len(k) == 0 {
+func (k *Kvs) ToMap() map[string]string {
+	if len(*k) == 0 {
 		return map[string]string{}
 	}
 	ret := make(map[string]string)
-	for _, kv := range k {
+	for _, kv := range *k {
 		ret[kv.Key] = kv.Value
 	}
 	return ret

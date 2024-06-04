@@ -2,12 +2,12 @@ package teammd
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/pkg/perm"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
 func IsRoleNameValid(name string) bool {
-	return len(name) > 0 && len(name) <= 64
+	return len(name) > 0 && len(name) <= 32
 }
 
 func IsTeamNameValid(name string) bool {
@@ -62,39 +62,23 @@ func InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) error {
 	return err
 }
 
-func UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("team_id = ?", reqDTO.TeamId).
-		And("account = ?", reqDTO.Account).
-		Cols("group_id").
-		Limit(1).
-		Update(&User{
-			RoleId: reqDTO.RoleId,
-		})
-	return rows == 1, err
+func BatchInsertUser(ctx context.Context, reqDTOList []InsertUserReqDTO) error {
+	userList, _ := listutil.Map(reqDTOList, func(t InsertUserReqDTO) (*User, error) {
+		return &User{
+			TeamId:  t.TeamId,
+			Account: t.Account,
+			RoleId:  t.RoleId,
+		}, nil
+	})
+	_, err := xormutil.MustGetXormSession(ctx).Insert(userList)
+	return err
 }
 
-func DeleteUser(ctx context.Context, teamId int64, account string) (bool, error) {
+func DeleteUserById(ctx context.Context, relationId int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("team_id = ?", teamId).
-		And("account = ?", account).
-		Limit(1).
+		Where("id = ?", relationId).
 		Delete(new(User))
 	return rows == 1, err
-}
-
-func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]User, error) {
-	session := xormutil.MustGetXormSession(ctx).
-		Where("team_id = ?", reqDTO.TeamId)
-	if reqDTO.Account != "" {
-		session.And("account like ?", "%"+reqDTO.Account+"%")
-	}
-	if reqDTO.Cursor > 0 {
-		session.And("id > ?", reqDTO.Cursor)
-	}
-	ret := make([]User, 0)
-	err := session.Limit(reqDTO.Limit).OrderBy("id asc").Find(&ret)
-	return ret, err
 }
 
 func DeleteAllTeamUserByAccount(ctx context.Context, account string) (int64, error) {
@@ -110,6 +94,31 @@ func GetTeamUser(ctx context.Context, teamId int64, account string) (User, bool,
 		And("account = ?", account).
 		Get(&ret)
 	return ret, b, err
+}
+
+func GetTeamUserById(ctx context.Context, relationId int64) (User, bool, error) {
+	ret := User{}
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", relationId).
+		Get(&ret)
+	return ret, b, err
+}
+
+func ChangeRoleById(ctx context.Context, relationId, roleId int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", relationId).
+		Cols("role_id").
+		Update(&User{
+			RoleId: roleId,
+		})
+	return rows == 1, err
+}
+
+func ExistUserByTeamIdAndAccounts(ctx context.Context, teamId int64, accounts []string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("team_id = ?", teamId).
+		In("account", accounts).
+		Exist(new(User))
 }
 
 func InsertRole(ctx context.Context, reqDTO InsertRoleReqDTO) (Role, error) {
@@ -131,6 +140,12 @@ func GetRoleById(ctx context.Context, id int64) (Role, bool, error) {
 	return ret, b, err
 }
 
+func ExistRoleById(ctx context.Context, id int64) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Exist(new(Role))
+}
+
 func GetRoleByTeamIdAndAccount(ctx context.Context, teamId int64, account string) (Role, bool, error) {
 	var ret Role
 	b, err := xormutil.MustGetXormSession(ctx).
@@ -140,24 +155,14 @@ func GetRoleByTeamIdAndAccount(ctx context.Context, teamId int64, account string
 	return ret, b, err
 }
 
-func UpdateRoleName(ctx context.Context, id int64, name string) (bool, error) {
+func UpdateRole(ctx context.Context, reqDTO UpdateRoleReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", id).
-		Cols("name").
+		Where("id = ?", reqDTO.RoleId).
+		Cols("perm", "name").
 		Limit(1).
 		Update(&Role{
-			Name: name,
-		})
-	return rows == 1, err
-}
-
-func UpdateRolePerm(ctx context.Context, id int64, detail perm.Detail) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", id).
-		Cols("perm").
-		Limit(1).
-		Update(&Role{
-			Perm: &detail,
+			Name: reqDTO.Name,
+			Perm: &reqDTO.Perm,
 		})
 	return rows == 1, err
 }
@@ -168,13 +173,6 @@ func DeleteRole(ctx context.Context, id int64) (bool, error) {
 		Limit(1).
 		Delete(new(Role))
 	return rows == 1, err
-}
-
-func ExistRole(ctx context.Context, teamId, roleId int64) (bool, error) {
-	return xormutil.MustGetXormSession(ctx).
-		Where("team_id = ?", teamId).
-		And("role_id = ?", roleId).
-		Exist(new(User))
 }
 
 func ListRole(ctx context.Context, teamId int64) ([]Role, error) {
@@ -205,6 +203,12 @@ func DeleteAllUserByTeamId(ctx context.Context, teamId int64) (int64, error) {
 		Delete(new(User))
 }
 
+func DeleteAllUserByRoleId(ctx context.Context, roleId int64) (int64, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("role_id = ?", roleId).
+		Delete(new(User))
+}
+
 func ListUserByAccount(ctx context.Context, account string) ([]User, error) {
 	ret := make([]User, 0)
 	err := xormutil.MustGetXormSession(ctx).
@@ -229,7 +233,7 @@ func GetByRoleIdList(ctx context.Context, roleIdList []int64) ([]Role, error) {
 	return ret, err
 }
 
-func ListAccountByTeamId(ctx context.Context, teamId int64) ([]string, error) {
+func ListUserAccountByTeamId(ctx context.Context, teamId int64) ([]string, error) {
 	ret := make([]string, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
@@ -237,4 +241,20 @@ func ListAccountByTeamId(ctx context.Context, teamId int64) ([]string, error) {
 		Table(TeamUserTableName).
 		Find(&ret)
 	return ret, err
+}
+
+func ListUserByTeamId(ctx context.Context, teamId int64) ([]User, error) {
+	ret := make([]User, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("team_id = ?", teamId).
+		Asc("role_id", "id").
+		Find(&ret)
+	return ret, err
+}
+
+func IsUserAnyTeamAdmin(ctx context.Context, account string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("account = ?", account).
+		And("is_admin = ?", 1).
+		Exist(new(User))
 }

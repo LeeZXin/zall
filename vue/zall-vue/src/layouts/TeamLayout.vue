@@ -21,7 +21,7 @@
             <desktop-outlined />
             <span>{{t("teamMenu.action")}}</span>
           </a-menu-item>
-          <a-menu-item key="/team/timerTask">
+          <a-menu-item key="/timerTask/list">
             <clock-circle-outlined />
             <span>{{t("teamMenu.timerTask")}}</span>
           </a-menu-item>
@@ -37,9 +37,13 @@
             <alert-outlined />
             <span>{{t("teamMenu.monitorAlert")}}</span>
           </a-menu-item>
-          <a-menu-item key="/team/monitorAlert" v-if="isAdmin">
+          <a-menu-item key="/role/list" v-if="isAdmin">
+            <user-outlined />
+            <span>{{t("teamMenu.roleAndMembers")}}</span>
+          </a-menu-item>
+          <a-menu-item key="/team/settings" v-if="isAdmin">
             <setting-outlined />
-            <span>{{t("teamMenu.teamSettings")}}</span>
+            <span>设置</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -64,7 +68,8 @@ import {
   FormOutlined,
   DatabaseOutlined,
   AlertOutlined,
-  SettingOutlined
+  SettingOutlined,
+  UserOutlined
 } from "@ant-design/icons-vue";
 import { isTeamAdminRequest, getTeamRequest } from "@/api/team/teamApi";
 const team = useTeamStore();
@@ -96,7 +101,9 @@ const changeSelectedKey = path => {
 };
 // 为了子页面能体现在导航栏
 const pagesMap = {
-  "/gitRepo": "/gitRepo/list"
+  "/gitRepo": "/gitRepo/list",
+  "/role": "/role/list",
+  "/timerTask": "/timerTask/list"
 };
 changeSelectedKey(route.path);
 isTeamAdminRequest(route.params.teamId).then(res => {

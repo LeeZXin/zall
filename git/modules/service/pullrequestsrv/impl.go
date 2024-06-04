@@ -791,11 +791,14 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 	if !b {
 		return repo, util.InvalidArgsError()
 	}
+	if operator.IsAdmin {
+		return repo, nil
+	}
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if !b {
 		return repo, util.UnauthorizedError()
 	}
-	if !p.PermDetail.GetRepoPerm(repoId).CanHandlePullRequest {
+	if !p.IsAdmin && !p.PermDetail.GetRepoPerm(repoId).CanSubmitPullRequest {
 		return repo, util.UnauthorizedError()
 	}
 	return repo, nil

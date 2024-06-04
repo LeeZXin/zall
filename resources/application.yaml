@@ -31,7 +31,7 @@ git:
 
 timer:
   enabled: true
-  env: dev
+  env: sit
 
 idserver:
   enabled: true

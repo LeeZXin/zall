@@ -18,13 +18,6 @@ type UpdateUserReqDTO struct {
 	RoleId  int64
 }
 
-type ListUserReqDTO struct {
-	TeamId  int64
-	Account string
-	Cursor  int64
-	Limit   int
-}
-
 type InsertRoleReqDTO struct {
 	Name       string
 	TeamId     int64
@@ -41,4 +34,10 @@ type UserPermDetailDTO struct {
 type UpdateTeamReqDTO struct {
 	TeamId int64
 	Name   string
+}
+
+type UpdateRoleReqDTO struct {
+	RoleId int64
+	Name   string
+	Perm   perm.Detail
 }

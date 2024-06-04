@@ -6,7 +6,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/util"
-	"time"
 )
 
 type CreateTeamReqDTO struct {
@@ -86,13 +85,12 @@ func (r *GetTeamPermReqDTO) IsValid() error {
 }
 
 type DeleteUserReqDTO struct {
-	TeamId   int64               `json:"teamId"`
-	Account  string              `json:"account"`
-	Operator apisession.UserInfo `json:"operator"`
+	RelationId int64               `json:"relationId"`
+	Operator   apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteUserReqDTO) IsValid() error {
-	if !usermd.IsAccountValid(r.Account) {
+	if r.RelationId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -101,37 +99,35 @@ func (r *DeleteUserReqDTO) IsValid() error {
 	return nil
 }
 
-type ListUserReqDTO struct {
+type ListRoleUserReqDTO struct {
 	TeamId   int64               `json:"teamId"`
-	Account  string              `json:"account"`
-	Cursor   int64               `json:"cursor"`
-	Limit    int                 `json:"limit"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListUserReqDTO) IsValid() error {
-	if r.Account != "" && !usermd.IsAccountValid(r.Account) {
+func (r *ListRoleUserReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if r.Limit <= 0 || r.Limit > 1000 {
-		return util.InvalidArgsError()
-	}
 	return nil
 }
 
-type UpsertUserReqDTO struct {
-	TeamId   int64               `json:"teamId"`
-	Account  string              `json:"account"`
+type CreateUserReqDTO struct {
 	RoleId   int64               `json:"roleId"`
+	Accounts []string            `json:"accounts"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpsertUserReqDTO) IsValid() error {
-	if !usermd.IsAccountValid(r.Account) {
+func (r *CreateUserReqDTO) IsValid() error {
+	if len(r.Accounts) == 0 || len(r.Accounts) > 1000 {
 		return util.InvalidArgsError()
+	}
+	for _, account := range r.Accounts {
+		if !usermd.IsAccountValid(account) {
+			return util.InvalidArgsError()
+		}
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
@@ -142,15 +138,21 @@ func (r *UpsertUserReqDTO) IsValid() error {
 	return nil
 }
 
-type InsertRoleReqDTO struct {
+type CreateRoleReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Name     string              `json:"name"`
 	Perm     perm.Detail         `json:"perm"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertRoleReqDTO) IsValid() error {
+func (r *CreateRoleReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !teammd.IsRoleNameValid(r.Name) {
+		return util.InvalidArgsError()
+	}
+	if !r.Perm.IsValid() {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -159,29 +161,20 @@ func (r *InsertRoleReqDTO) IsValid() error {
 	return nil
 }
 
-type UpdateRoleNameReqDTO struct {
+type UpdateRoleReqDTO struct {
 	RoleId   int64               `json:"roleId"`
 	Name     string              `json:"name"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *UpdateRoleNameReqDTO) IsValid() error {
-	if !teammd.IsRoleNameValid(r.Name) {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type UpdateRolePermReqDTO struct {
-	RoleId   int64               `json:"roleId"`
 	Perm     perm.Detail         `json:"perm"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpdateRolePermReqDTO) IsValid() error {
+func (r *UpdateRoleReqDTO) IsValid() error {
+	if r.RoleId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !teammd.IsRoleNameValid(r.Name) {
+		return util.InvalidArgsError()
+	}
 	if !r.Perm.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -219,10 +212,11 @@ func (r *ListRoleReqDTO) IsValid() error {
 }
 
 type RoleDTO struct {
-	RoleId int64       `json:"roleId"`
-	TeamId int64       `json:"teamId"`
-	Name   string      `json:"name"`
-	Perm   perm.Detail `json:"perm"`
+	RoleId  int64       `json:"roleId"`
+	TeamId  int64       `json:"teamId"`
+	Name    string      `json:"name"`
+	Perm    perm.Detail `json:"perm"`
+	IsAdmin bool        `json:"isAdmin"`
 }
 
 type ListTeamReqDTO struct {
@@ -237,11 +231,16 @@ func (r *ListTeamReqDTO) IsValid() error {
 }
 
 type UserDTO struct {
-	TeamId   int64     `json:"teamId"`
-	Account  string    `json:"account"`
-	RoleId   int64     `json:"roleId"`
-	RoleName string    `json:"roleName"`
-	Created  time.Time `json:"created"`
+	Account string `json:"account"`
+	Name    string `json:"name"`
+}
+
+type RoleUserDTO struct {
+	Id       int64  `json:"id"`
+	Account  string `json:"account"`
+	Name     string `json:"name"`
+	RoleId   int64  `json:"roleId"`
+	RoleName string `json:"roleName"`
 }
 
 type GetTeamReqDTO struct {
@@ -259,13 +258,32 @@ func (r *GetTeamReqDTO) IsValid() error {
 	return nil
 }
 
-type ListAccountReqDTO struct {
+type ListUserByTeamIdReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListAccountReqDTO) IsValid() error {
+func (r *ListUserByTeamIdReqDTO) IsValid() error {
 	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ChangeRoleReqDTO struct {
+	RelationId int64               `json:"relationId"`
+	RoleId     int64               `json:"roleId"`
+	Operator   apisession.UserInfo `json:"operator"`
+}
+
+func (r *ChangeRoleReqDTO) IsValid() error {
+	if r.RelationId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.RoleId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

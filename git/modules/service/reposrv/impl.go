@@ -39,8 +39,6 @@ import (
 const (
 	accessRepo = iota
 	updateRepo
-	accessToken
-	updateToken
 )
 
 type innerImpl struct {
@@ -1100,10 +1098,6 @@ func checkPermByRepo(ctx context.Context, repo repomd.Repo, operator apisession.
 		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessRepo
 	case updateRepo:
 		pass = p.PermDetail.GetRepoPerm(repo.Id).CanPushRepo
-	case accessToken:
-		pass = p.PermDetail.GetRepoPerm(repo.Id).CanAccessToken
-	case updateToken:
-		pass = p.PermDetail.GetRepoPerm(repo.Id).CanUpdateToken
 	}
 	if pass {
 		return nil
@@ -1370,4 +1364,28 @@ func (s *outerImpl) SetRepoArchivedStatus(ctx context.Context, reqDTO SetRepoArc
 		notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoUnArchivedAction)
 	}
 	return nil
+}
+
+// ListRepoByAdmin 管理员展示仓库列表
+func (s *outerImpl) ListRepoByAdmin(ctx context.Context, reqDTO ListRepoByAdminReqDTO) ([]SimpleRepoDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err := checkTeamAdmin(ctx, reqDTO.TeamId, reqDTO.Operator)
+	if err != nil {
+		return nil, err
+	}
+	repos, err := repomd.GetRepoListByTeamId(ctx, reqDTO.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, err
+	}
+	return listutil.Map(repos, func(t repomd.Repo) (SimpleRepoDTO, error) {
+		return SimpleRepoDTO{
+			RepoId: t.Id,
+			Name:   t.Name,
+		}, nil
+	})
 }

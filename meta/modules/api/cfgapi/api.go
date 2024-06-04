@@ -28,6 +28,7 @@ func InitApi() {
 		}
 		group = e.Group("/api/envCfg", apisession.CheckLogin)
 		{
+			// 获取环境列表
 			group.GET("/get", getEnvCfg)
 			group.POST("/update", updateEnvCfg)
 		}
@@ -38,7 +39,44 @@ func InitApi() {
 			// 编辑git仓库服务url
 			group.POST("/update", updateGitRepoServerCfg)
 		}
+		group = e.Group("/api/zonesCfg", apisession.CheckLogin)
+		{
+			// 获取单元调用列表
+			group.GET("/get", getZonesCfg)
+			// 编辑git仓库服务url
+			group.POST("/update", updateZonesCfg)
+
+		}
 	})
+}
+
+func getZonesCfg(c *gin.Context) {
+	zones, err := cfgsrv.Outer.GetZonesCfg(c, cfgsrv.GetZonesCfgReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     zones,
+	})
+}
+
+func updateZonesCfg(c *gin.Context) {
+	var req UpdateZonesCfgReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := cfgsrv.Outer.UpdateZonesCfg(c, cfgsrv.UpdateZonesCfgReqDTO{
+			ZonesCfg: req.ZonesCfg,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
 }
 
 func getSysCfg(c *gin.Context) {
@@ -141,9 +179,9 @@ func getGitRepoServerCfg(c *gin.Context) {
 }
 
 func updateGitRepoServerCfg(c *gin.Context) {
-	var req UpdateGitRepoServerUrlReqVO
+	var req UpdateGitRepoServerCfgReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := cfgsrv.Outer.UpdateGitRepoServerUrl(c, cfgsrv.UpdateGitRepoServerUrlReqDTO{
+		err := cfgsrv.Outer.UpdateGitRepoServerCfg(c, cfgsrv.UpdateGitRepoServerCfgReqDTO{
 			GitRepoServerCfg: req.GitRepoServerCfg,
 			Operator:         apisession.MustGetLoginUser(c),
 		})

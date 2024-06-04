@@ -2,12 +2,12 @@ package tasksrv
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/LeeZXin/zall/pkg/sharding/handler"
+	"github.com/LeeZXin/zall/pkg/timer"
 	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
-	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/executor"
+	"github.com/LeeZXin/zsf-utils/lease"
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/common"
@@ -18,11 +18,8 @@ import (
 )
 
 var (
-	taskExecutor   *executor.Executor
-	compensateTask *taskutil.PeriodicalTask
-
-	taskEnv     string
-	taskHandler *handler.ShardingPeriodicalHandler
+	taskExecutor *executor.Executor
+	taskEnv      string
 )
 
 func InitTask() {
@@ -32,202 +29,147 @@ func InitTask() {
 	}
 	logger.Logger.Infof("start timer task service with env: %s", taskEnv)
 	taskExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
-	taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
-		HeartbeatInterval:     8 * time.Second,
-		HeartbeatHandler:      doHeartbeat,
-		DeleteInstanceHandler: deleteInstance,
-		TaskInterval:          10 * time.Second,
-		TaskHandler:           doExecuteTask,
-	})
-	taskHandler.Start()
-	// 异常检查任务
-	compensateTask, _ = taskutil.NewPeriodicalTask(5*time.Minute, doCompensateTask)
-	compensateTask.Start()
-	quit.AddShutdownHook(compensateTask.Stop, true)
+	leaser, _ := lease.NewDbLease(
+		"timer-lock-"+taskEnv,
+		common.GetInstanceId(),
+		"ztimer_lock",
+		xormstore.GetEngine(),
+		20*time.Second,
+	)
+	stopFunc, _ := taskutil.RunMainLoopTask(
+		taskutil.MainLoopTaskOpts{
+			Handler: func(ctx context.Context) {
+				for ctx.Err() == nil {
+					doExecuteTask(ctx)
+					time.Sleep(10 * time.Second)
+				}
+			},
+			Leaser: leaser,
+			// 抢锁失败 空转等待时间
+			WaitDuration: 30 * time.Second,
+			// 锁过期时间有20秒 每8秒续命 至少2次续命成功的机会
+			RenewDuration: 8 * time.Second,
+			GrantCallback: func(err error, b bool) {
+				if err != nil {
+					logger.Logger.Errorf("task grant lease failed with err: %v", err)
+					return
+				}
+				if b {
+					logger.Logger.Infof("task grant lease success: %v", common.GetInstanceId())
+				}
+			},
+		},
+	)
+	quit.AddShutdownHook(quit.ShutdownHook(stopFunc), true)
 }
 
-func deleteInstance() {
+func doExecuteTask(runCtx context.Context) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	// 删除数据
-	taskmd.DeleteInstance(ctx, common.GetInstanceId(), taskEnv)
-}
-
-func getInstanceIndex(ctx context.Context) (int64, int64) {
-	instances, err := taskmd.GetValidInstances(ctx, time.Now().Add(-10*time.Second).UnixMilli(), taskEnv)
+	err := taskmd.IterateExecute(ctx, time.Now().UnixMilli(), taskEnv, func(execute *taskmd.Execute) error {
+		rerr := runCtx.Err()
+		if rerr == nil {
+			handleExecute(execute)
+			return nil
+		}
+		return rerr
+	})
 	if err != nil {
 		logger.Logger.Error(err)
-		return int64(len(instances)), -1
 	}
-	if len(instances) == 0 {
-		logger.Logger.Error("can not find instances")
-		return int64(len(instances)), -1
-	}
-	for i, instance := range instances {
-		if instance.InstanceId == common.GetInstanceId() {
-			return int64(len(instances)), int64(i)
-		}
-	}
-	logger.Logger.Error("can not find instances")
-	return int64(len(instances)), -1
 }
 
-func doHeartbeat() {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	b, err := taskmd.UpdateHeartbeatTime(ctx, common.GetInstanceId(), time.Now().UnixMilli(), taskEnv)
+func triggerTask(task *taskmd.Task, triggerBy string) {
+	taskExecutor.Execute(func() {
+		handleTimerTaskAndAppendLog(
+			task,
+			triggerBy,
+			taskmd.ManualTriggerType,
+		)
+	})
+}
+
+func handleTimerTaskAndAppendLog(task *taskmd.Task, triggerBy string, triggerType taskmd.TriggerType) {
+	var (
+		errLog    string
+		isSuccess bool
+	)
+	err := handleTimerTask(task)
 	if err != nil {
-		logger.Logger.Error(err)
-		return
+		errLog = err.Error()
+	} else {
+		isSuccess = true
 	}
-	if !b {
-		err = taskmd.InsertInstance(ctx, common.GetInstanceId(), taskEnv)
-		if err != nil {
-			logger.Logger.Error(err)
-		}
-	}
-}
-
-func doExecuteTask() {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	total, index := getInstanceIndex(ctx)
-	if total > 0 && index >= 0 {
-		err := taskmd.IterateTask(ctx, time.Now().UnixMilli(), taskmd.Pending, taskEnv, func(task *taskmd.Task) error {
-			if task.Id%total == index {
-				handleTask(task)
-			}
-			return nil
-		})
-		if err != nil {
-			logger.Logger.Error(err)
-		}
-	}
+	taskmd.InsertTaskLog(ctx, taskmd.InsertTaskLogReqDTO{
+		TaskId:      task.Id,
+		TaskContent: task.Content,
+		ErrLog:      errLog,
+		TriggerType: triggerType,
+		TriggerBy:   triggerBy,
+		IsSuccess:   isSuccess,
+	})
 }
 
-func doCompensateTask() {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	total, index := getInstanceIndex(ctx)
-	if index > 0 {
-		// 过去五分钟内未执行完成的任务重置下次执行时间
-		err := taskmd.IterateTask(ctx, time.Now().Add(-5*time.Minute).UnixMilli(), taskmd.Running, taskEnv, func(task *taskmd.Task) error {
-			if task.Id%total == index {
-				resetNextTime(task, taskmd.Failed)
-			}
-			return nil
-		})
-		if err != nil {
-			logger.Logger.Error(err)
-		}
-	}
-}
-
-func triggerTask(task *taskmd.Task, triggerBy, env string) {
+func handleExecute(execute *taskmd.Execute) {
 	taskExecutor.Execute(func() {
 		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		logContent, status := handleTaskContent(task)
-		err := taskmd.InsertTaskLog(ctx, taskmd.InsertTaskLogReqDTO{
-			TaskId:      task.Id,
-			TaskContent: task.Content,
-			LogContent:  logContent,
-			TriggerType: taskmd.ManualTriggerType,
-			TriggerBy:   triggerBy,
-			TaskStatus:  status,
-			Env:         env,
-		})
-		if err != nil {
-			logger.Logger.Error(err)
+		task, b, err := taskmd.GetTaskById(ctx, execute.TaskId)
+		closer.Close()
+		if err == nil && b && resetNextTime(&task, execute.RunVersion) {
+			handleTimerTaskAndAppendLog(
+				&task,
+				taskmd.DefaultTrigger,
+				taskmd.AutoTriggerType,
+			)
 		}
 	})
 }
 
-func handleTask(task *taskmd.Task) {
-	taskExecutor.Execute(func() {
-		ctx, closer := xormstore.Context(context.Background())
-		defer closer.Close()
-		b, err := taskmd.UpdateTaskStatus(ctx, taskmd.UpdateTaskStatusReqDTO{
-			TaskId:    task.Id,
-			NewStatus: taskmd.Running,
-			Version:   task.Version,
-			Env:       taskEnv,
-		})
-		if err != nil {
-			logger.Logger.Error(err)
-			return
-		}
-		if !b {
-			return
-		}
-		logContent, status := handleTaskContent(task)
-		err = taskmd.InsertTaskLog(ctx, taskmd.InsertTaskLogReqDTO{
-			TaskId:      task.Id,
-			TaskContent: task.Content,
-			LogContent:  logContent,
-			TriggerType: taskmd.AutoTriggerType,
-			TriggerBy:   taskmd.DefaultTrigger,
-			TaskStatus:  status,
-			Env:         taskEnv,
-		})
-		if err != nil {
-			logger.Logger.Error(err)
-		}
-		// 重新计算下次执行时间
-		task.Version += 1
-		resetNextTime(task, status)
-	})
-
-}
-
-func handleTaskContent(task *taskmd.Task) (string, taskmd.TaskStatus) {
-	var obj TaskObj
-	err := json.Unmarshal([]byte(task.Content), &obj)
-	if err != nil {
-		return fmt.Sprintf("invalid task: %d, content: %v ", task.Id, task.Content), taskmd.Failed
+func handleTimerTask(task *taskmd.Task) error {
+	if task.Content == nil {
+		return errors.New("empty task content")
 	}
-	log := util.NewSimpleLogger()
-	switch obj.TaskType {
-	case HttpTaskType:
-		if handleHttpTask(obj.Content, log) {
-			return log.ToString(), taskmd.Successful
+	t := task.Content
+	switch t.TaskType {
+	case timer.HttpTask:
+		if t.HttpTask == nil {
+			return errors.New("empty http task")
 		}
-		return log.ToString(), taskmd.Failed
+		return t.HttpTask.DoRequest(httpClient)
 	default:
-		return fmt.Sprintf("unsupported task type: %s", obj.TaskType), taskmd.Failed
+		return fmt.Errorf("unsupported task type: %s", t.TaskType)
 	}
 }
 
-func resetNextTime(task *taskmd.Task, runStatus taskmd.TaskStatus) {
+func resetNextTime(task *taskmd.Task, runVersion int64) bool {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	cron, err := parseCron(task.CronExp)
+	cron, err := ParseCron(task.CronExp)
 	if err != nil {
 		logger.Logger.Errorf("parse cron: %s err: %v", task.CronExp, err)
-		return
+		return false
 	}
 	now := time.Now()
 	next := cron.Next(now)
 	if next.After(now) {
-		_, err = taskmd.UpdateTaskNextTimeAndStatus(ctx, taskmd.UpdateTaskNextTimeAndStatusReqDTO{
-			TaskId:   task.Id,
-			Status:   taskmd.Pending,
-			NextTime: next.UnixMilli(),
-			Version:  task.Version,
-			Env:      taskEnv,
-		})
+		b, err := taskmd.UpdateExecuteNextTime(ctx, task.Id, next.UnixMilli(), runVersion)
 		if err != nil {
 			logger.Logger.Error(err)
 		}
-	} else {
-		_, err = taskmd.UpdateTaskStatus(ctx, taskmd.UpdateTaskStatusReqDTO{
-			TaskId:    task.Id,
-			NewStatus: runStatus,
-			Version:   task.Version,
-			Env:       taskEnv,
-		})
-		if err != nil {
-			logger.Logger.Error(err)
-		}
+		return err == nil && b
 	}
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		_, err2 := taskmd.DisableTask(ctx, task.Id)
+		if err2 != nil {
+			return err2
+		}
+		_, err2 = taskmd.DisableExecute(ctx, task.Id)
+		return err2
+	})
+	if err != nil {
+		logger.Logger.Error(err)
+	}
+	return false
 }

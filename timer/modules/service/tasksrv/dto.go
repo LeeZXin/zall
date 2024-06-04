@@ -3,39 +3,30 @@ package tasksrv
 import (
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/timer"
 	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
 	"github.com/LeeZXin/zall/util"
 	"time"
 )
 
-const (
-	HttpTaskType = "http"
-)
-
-type InsertTaskReqDTO struct {
+type CreateTaskReqDTO struct {
 	Name     string              `json:"name"`
 	CronExp  string              `json:"cronExp"`
-	TaskType string              `json:"taskType"`
-	HttpTask HttpTask            `json:"httpTask"`
+	Task     timer.Task          `json:"task"`
 	TeamId   int64               `json:"teamId"`
 	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertTaskReqDTO) IsValid() error {
+func (r *CreateTaskReqDTO) IsValid() error {
 	if !taskmd.IsTaskNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	_, err := parseCron(r.CronExp)
+	_, err := ParseCron(r.CronExp)
 	if err != nil {
 		return util.InvalidArgsError()
 	}
-	switch r.TaskType {
-	case HttpTaskType:
-		if !r.HttpTask.IsValid() {
-			return util.InvalidArgsError()
-		}
-	default:
+	if !r.Task.IsValid() {
 		return util.InvalidArgsError()
 	}
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
@@ -50,8 +41,7 @@ func (r *InsertTaskReqDTO) IsValid() error {
 type ListTaskReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Name     string              `json:"name"`
-	Cursor   int64               `json:"cursor"`
-	Limit    int                 `json:"limit"`
+	PageNum  int                 `json:"pageNum"`
 	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
@@ -60,7 +50,7 @@ func (r *ListTaskReqDTO) IsValid() error {
 	if len(r.Name) > 0 && !taskmd.IsTaskNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if r.TeamId <= 0 || r.Limit < 0 || r.Cursor < 0 || r.Limit > 1000 {
+	if r.TeamId <= 0 || r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -73,16 +63,12 @@ func (r *ListTaskReqDTO) IsValid() error {
 }
 
 type EnableTaskReqDTO struct {
-	Id       int64               `json:"id"`
-	Env      string              `json:"env"`
+	TaskId   int64               `json:"taskId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *EnableTaskReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if r.Id <= 0 {
+	if r.TaskId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -92,16 +78,12 @@ func (r *EnableTaskReqDTO) IsValid() error {
 }
 
 type DisableTaskReqDTO struct {
-	Id       int64               `json:"id"`
-	Env      string              `json:"env"`
+	TaskId   int64               `json:"taskId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DisableTaskReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if r.Id <= 0 {
+	if r.TaskId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -111,16 +93,12 @@ func (r *DisableTaskReqDTO) IsValid() error {
 }
 
 type DeleteTaskReqDTO struct {
-	Id       int64               `json:"id"`
-	Env      string              `json:"env"`
+	TaskId   int64               `json:"taskId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteTaskReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if r.Id <= 0 {
+	if r.TaskId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -130,29 +108,31 @@ func (r *DeleteTaskReqDTO) IsValid() error {
 }
 
 type TaskDTO struct {
-	Id         int64             `json:"id"`
-	Name       string            `json:"name"`
-	CronExp    string            `json:"cronExp"`
-	TaskType   string            `json:"taskType"`
-	HttpTask   HttpTask          `json:"httpTask"`
-	TeamId     int64             `json:"teamId"`
-	NextTime   int64             `json:"nextTime"`
-	TaskStatus taskmd.TaskStatus `json:"taskStatus"`
+	Id        int64      `json:"id"`
+	Name      string     `json:"name"`
+	CronExp   string     `json:"cronExp"`
+	Task      timer.Task `json:"task"`
+	TeamId    int64      `json:"teamId"`
+	IsEnabled bool       `json:"isEnabled"`
+	Env       string     `json:"env"`
 }
 
-type ListTaskLogReqDTO struct {
-	Id       int64               `json:"id"`
-	Cursor   int64               `json:"cursor"`
-	Limit    int                 `json:"limit"`
-	Env      string              `json:"env"`
+type PageTaskLogReqDTO struct {
+	TaskId   int64               `json:"taskId"`
+	PageNum  int                 `json:"pageNum"`
+	DateStr  string              `json:"dateStr"`
 	Operator apisession.UserInfo `json:"operator"`
+
+	dateTime time.Time
 }
 
-func (r *ListTaskLogReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+func (r *PageTaskLogReqDTO) IsValid() error {
+	if r.TaskId <= 0 || r.PageNum <= 0 || r.DateStr == "" {
 		return util.InvalidArgsError()
 	}
-	if r.Id <= 0 || r.Cursor < 0 || r.Limit < 0 {
+	var err error
+	r.dateTime, err = time.Parse(time.DateOnly, r.DateStr)
+	if err != nil {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -162,26 +142,21 @@ func (r *ListTaskLogReqDTO) IsValid() error {
 }
 
 type TaskLogDTO struct {
-	TaskType    string             `json:"taskType"`
-	HttpTask    HttpTask           `json:"httpTask"`
-	LogContent  string             `json:"logContent"`
-	TriggerType taskmd.TriggerType `json:"triggerType"`
-	TriggerBy   string             `json:"triggerBy"`
-	TaskStatus  taskmd.TaskStatus  `json:"taskStatus"`
-	Created     time.Time          `json:"created"`
+	Task        timer.Task
+	ErrLog      string
+	TriggerType taskmd.TriggerType
+	TriggerBy   string
+	IsSuccess   bool
+	Created     time.Time
 }
 
 type TriggerTaskReqDTO struct {
-	Id       int64               `json:"id"`
-	Env      string              `json:"env"`
+	TaskId   int64               `json:"taskId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *TriggerTaskReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if r.Id <= 0 {
+	if r.TaskId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -191,32 +166,22 @@ func (r *TriggerTaskReqDTO) IsValid() error {
 }
 
 type UpdateTaskReqDTO struct {
-	Id       int64               `json:"id"`
+	TaskId   int64               `json:"taskId"`
 	Name     string              `json:"name"`
 	CronExp  string              `json:"cronExp"`
-	TaskType string              `json:"taskType"`
-	HttpTask HttpTask            `json:"httpTask"`
-	Env      string              `json:"env"`
+	Task     timer.Task          `json:"task"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdateTaskReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
 	if !taskmd.IsTaskNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	_, err := parseCron(r.CronExp)
+	_, err := ParseCron(r.CronExp)
 	if err != nil {
 		return util.InvalidArgsError()
 	}
-	switch r.TaskType {
-	case HttpTaskType:
-		if !r.HttpTask.IsValid() {
-			return util.InvalidArgsError()
-		}
-	default:
+	if !r.Task.IsValid() {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

@@ -9,11 +9,15 @@ export default {
     backToIndex: "Back to index page",
     previousPage: "Previous",
     nextPage: "Next",
+    ztable: {
+        noDataText: "No data found",
+    },
     system: {
         requestFailed: "something wrong happened, please retry in a while",
         notLogin: "you do not login, will back to login page",
         request404: "can not find request, please retry in a while",
         request403: "you are unauthorized to access",
+        request400: "bad request, check your request",
         internalError: "internal error"
     },
     login: {
@@ -49,7 +53,11 @@ export default {
         applyApproval: "Apply approval",
         dbAudit: "Database audit",
         monitorAlert: "Monitor alert",
-        teamSettings: "Team settings"
+        roleAndMembers: "Role & Members"
+    },
+    roleListPage: {
+        roleList: "Role List",
+        roleName: "Role Name"
     },
     settings: {
         sshAndGpg: "SSH and GPG keys"
@@ -98,5 +106,7 @@ export default {
     hourBefore: " hour ago",
     dayBefore: " day ago",
     monthBefore: " month ago",
-    yearBefore: " year ago"
+    yearBefore: " year ago",
+    yes: "Yes",
+    no: "No"
 }

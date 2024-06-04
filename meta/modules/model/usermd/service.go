@@ -2,6 +2,7 @@ package usermd
 
 import (
 	"context"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"regexp"
 )
@@ -53,6 +54,10 @@ func ListUserByAccounts(ctx context.Context, accounts []string) ([]User, error) 
 	return ret, err
 }
 
+func CountUserByAccounts(ctx context.Context, accounts []string) (int64, error) {
+	return xormutil.MustGetXormSession(ctx).In("account", accounts).Count(new(User))
+}
+
 func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]User, error) {
 	ret := make([]User, 0)
 	session := xormutil.MustGetXormSession(ctx).OrderBy("id asc").Limit(reqDTO.Limit)
@@ -64,6 +69,20 @@ func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]User, error) {
 	}
 	err := session.Find(&ret)
 	return ret, err
+}
+
+func ListAllUser(ctx context.Context) ([]SimpleUserDTO, error) {
+	ret := make([]User, 0)
+	err := xormutil.MustGetXormSession(ctx).Cols("account", "name").Find(&ret)
+	if err != nil {
+		return nil, err
+	}
+	return listutil.Map(ret, func(t User) (SimpleUserDTO, error) {
+		return SimpleUserDTO{
+			Account: t.Account,
+			Name:    t.Name,
+		}, nil
+	})
 }
 
 func UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (bool, error) {
@@ -87,10 +106,6 @@ func UpdatePassword(ctx context.Context, reqDTO UpdatePasswordReqDTO) (bool, err
 			Password: reqDTO.Password,
 		})
 	return rows == 1, err
-}
-
-func CountUser(ctx context.Context) (int64, error) {
-	return xormutil.MustGetXormSession(ctx).Count(new(User))
 }
 
 func UpdateAdmin(ctx context.Context, reqDTO UpdateAdminReqDTO) (bool, error) {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/detecttool"
-	"github.com/LeeZXin/zall/pkg/sharding/handler"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/httputil"
@@ -21,7 +20,7 @@ var (
 	probeEnv      string
 	httpClient    *http.Client
 	probeExecutor *executor.Executor
-	taskHandler   *handler.ShardingPeriodicalHandler
+	//taskHandler   *handler.ShardingPeriodicalHandler
 )
 
 func InitProbeTask() {
@@ -32,14 +31,14 @@ func InitProbeTask() {
 	}
 	logger.Logger.Infof("start probe service with env: %s", probeEnv)
 	httpClient = httputil.NewRetryableHttpClient()
-	taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
-		HeartbeatInterval:     5 * time.Second,
-		HeartbeatHandler:      doHeartbeat,
-		DeleteInstanceHandler: deleteInstance,
-		TaskInterval:          10 * time.Second,
-		TaskHandler:           probeAction,
-	})
-	taskHandler.Start()
+	//taskHandler, _ = handler.NewShardingPeriodicalHandler(&handler.Config{
+	//	HeartbeatInterval:     5 * time.Second,
+	//	HeartbeatHandler:      doHeartbeat,
+	//	DeleteInstanceHandler: deleteInstance,
+	//	TaskInterval:          10 * time.Second,
+	//	TaskHandler:           probeAction,
+	//})
+	//taskHandler.Start()
 }
 
 func probeAction() {

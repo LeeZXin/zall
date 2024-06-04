@@ -277,3 +277,19 @@ func validateUserEmail(email string) bool {
 func validatePassword(password string) bool {
 	return validPasswordPattern.MatchString(password)
 }
+
+type ListAllUserReqDTO struct {
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAllUserReqDTO) IsValid() error {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type SimpleUserDTO struct {
+	Account string
+	Name    string
+}

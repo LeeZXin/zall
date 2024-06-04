@@ -46,10 +46,10 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/IGLOU-EU/go-wildcard/v2 v2.0.2 h1:eQ0nOlEyGfM0NiemevUK55JoNu3IW9R8eRFZMc/apyU=
 github.com/IGLOU-EU/go-wildcard/v2 v2.0.2/go.mod h1:/sUMQ5dk2owR0ZcjRI/4AZ+bUFF5DxGCQrDMNBXUf5o=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
-github.com/LeeZXin/zsf v1.1.69 h1:4w5mvWi2H7eYbf513SOiCiC9SEHEvj/oryIqHkQMPdo=
-github.com/LeeZXin/zsf v1.1.69/go.mod h1:hTWv0Qa+el/6H6JnwOySu+wwHxCYNQfKpwy+oXnDCR8=
-github.com/LeeZXin/zsf-utils v1.0.58 h1:CU1b/t7lYdkQ6rmbPXKI5p4ZtaiiGsPzhhaST1AosqQ=
-github.com/LeeZXin/zsf-utils v1.0.58/go.mod h1:Qx3UQ9RHnvWQNzxk7la92zK1OCVmpNFCxDwwStdDIvc=
+github.com/LeeZXin/zsf v1.1.76 h1:4HjZCf2xd09fb0DbPnS6al3tMoNHvJQoSiUcQvKArYU=
+github.com/LeeZXin/zsf v1.1.76/go.mod h1:/2upQVGXLx0mjp6z2/AS6bbHI9miVaeUDibj3X/VphQ=
+github.com/LeeZXin/zsf-utils v1.0.66 h1:jCRFZmQ/ayKSbdc31R9X4Ti3U7Y3KXheustL2JMhXWc=
+github.com/LeeZXin/zsf-utils v1.0.66/go.mod h1:eyphv8fG1qe0k9rtc75hxDdyJeXKp91tyRUNm5xDGZg=
 github.com/Masterminds/semver/v3 v3.1.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
 github.com/PaesslerAG/gval v1.2.2 h1:Y7iBzhgE09IGTt5QgGQ2IdaYYYOU134YGHBThD+wm9E=
 github.com/PaesslerAG/gval v1.2.2/go.mod h1:XRFLwvmkTEdYziLdaCeCa5ImcGVrfQbeNUbVR+C6xac=

@@ -2,10 +2,8 @@ package apisession
 
 import (
 	"context"
-	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"net/url"
 	"time"
 )
 
@@ -40,11 +38,7 @@ func (s *SessionModel) ToSession() Session {
 type mysqlStore struct{}
 
 func newMysqlStore() *mysqlStore {
-	ret := new(mysqlStore)
-	httptask.AppendHttpTask("clearExpiredLoginSession", func(_ []byte, _ url.Values) {
-		ret.ClearExpired()
-	})
-	return ret
+	return new(mysqlStore)
 }
 
 func (m *mysqlStore) GetBySessionId(sessionId string) (Session, bool, error) {

@@ -1,6 +1,7 @@
 package apisession
 
 import (
+	"context"
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
 	"sync"
@@ -10,9 +11,9 @@ import (
 // memStore 内存
 type memStore struct {
 	sync.RWMutex
-	session     map[string]Session
-	userSession map[string]Session
-	cleanTask   *taskutil.PeriodicalTask
+	session           map[string]Session
+	userSession       map[string]Session
+	clearTaskStopFunc taskutil.StopFunc
 }
 
 func newMemStore() Store {
@@ -21,9 +22,13 @@ func newMemStore() Store {
 		session:     make(map[string]Session, 8),
 		userSession: make(map[string]Session, 8),
 	}
-	m.cleanTask, _ = taskutil.NewPeriodicalTask(10*time.Minute, m.ClearExpired)
-	m.cleanTask.Start()
-	quit.AddShutdownHook(m.cleanTask.Stop)
+	m.clearTaskStopFunc, _ = taskutil.RunPeriodicalTask(
+		10*time.Minute,
+		10*time.Minute,
+		func(context.Context) {
+			m.ClearExpired()
+		})
+	quit.AddShutdownHook(quit.ShutdownHook(m.clearTaskStopFunc))
 	return m
 }
 

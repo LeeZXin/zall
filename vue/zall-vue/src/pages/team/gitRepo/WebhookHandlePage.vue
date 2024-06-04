@@ -31,26 +31,25 @@
         <div class="section-body">
           <ul class="event-list">
             <li>
-              <a-checkbox v-model:checked="checkboxes.protectedBranch" style="flex-start">保护分支</a-checkbox>
+              <a-checkbox v-model:checked="checkboxes.protectedBranch">保护分支</a-checkbox>
               <div class="checkbox-desc">保护分支的添加、删除、修改事件</div>
             </li>
             <li>
-              <a-checkbox v-model:checked="checkboxes.gitPush" style="flex-start">Git push</a-checkbox>
+              <a-checkbox v-model:checked="checkboxes.gitPush">Git push</a-checkbox>
               <div class="checkbox-desc">通过ssh或http对git仓库进行push操作</div>
             </li>
             <li>
-              <a-checkbox v-model:checked="checkboxes.pullRequest" style="flex-start">合并请求</a-checkbox>
+              <a-checkbox v-model:checked="checkboxes.pullRequest">合并请求</a-checkbox>
               <div class="checkbox-desc">合并请求的新增、关闭、合并、评审</div>
             </li>
             <li>
-              <a-checkbox v-model:checked="checkboxes.repo" style="flex-start">仓库</a-checkbox>
+              <a-checkbox v-model:checked="checkboxes.repo">仓库</a-checkbox>
               <div class="checkbox-desc">仓库的删除、归档</div>
             </li>
           </ul>
         </div>
       </div>
-      <div style="width:100%;border-top:1px solid #d9d9d9;margin: 10px 0"></div>
-      <div style="margin-bottom:20px">
+      <div class="save-btn-line">
         <a-button type="primary" @click="createOrUpdateWebhook">立即保存</a-button>
       </div>
     </div>
