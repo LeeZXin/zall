@@ -45,6 +45,13 @@ const updateTimerTaskRequest = (data, env) => request.post("/api/timerTask/updat
         [ENV_HEADER]: env
     }
 });
+// 查看定时任务日志
+const pageTimerTaskLogRequest = (data, env) => request.get("/api/timerLog/list", {
+    params: data,
+    headers: {
+        [ENV_HEADER]: env
+    }
+});
 export {
     listTimerTaskRequest,
     createTimerTaskRequest,
@@ -52,5 +59,6 @@ export {
     disableTimerTaskRequest,
     deleteTimerTaskRequest,
     triggerTimerTaskRequest,
-    updateTimerTaskRequest
+    updateTimerTaskRequest,
+    pageTimerTaskLogRequest
 }

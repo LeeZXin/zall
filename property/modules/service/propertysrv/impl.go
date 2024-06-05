@@ -1,4 +1,4 @@
-package propsrv
+package propertysrv
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	"github.com/LeeZXin/zall/prop/modules/model/propmd"
+	"github.com/LeeZXin/zall/property/modules/model/propertymd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/strutil"
@@ -31,12 +31,12 @@ type outerImpl struct {
 func (*outerImpl) ListSimpleEtcdNode(ctx context.Context, env string) ([]string, error) {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	nodes, err := propmd.ListEtcdNode(ctx, env)
+	nodes, err := propertymd.ListEtcdNode(ctx, env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(nodes, func(t propmd.EtcdNode) (string, error) {
+	return listutil.Map(nodes, func(t propertymd.EtcdNode) (string, error) {
 		return t.NodeId, nil
 	})
 }
@@ -51,12 +51,12 @@ func (*outerImpl) ListEtcdNode(ctx context.Context, reqDTO ListEtcdNodeReqDTO) (
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	nodes, err := propmd.ListEtcdNode(ctx, reqDTO.Env)
+	nodes, err := propertymd.ListEtcdNode(ctx, reqDTO.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(nodes, func(t propmd.EtcdNode) (EtcdNodeDTO, error) {
+	return listutil.Map(nodes, func(t propertymd.EtcdNode) (EtcdNodeDTO, error) {
 		return EtcdNodeDTO{
 			NodeId:    t.NodeId,
 			Endpoints: strings.Split(t.Endpoints, ";"),
@@ -86,7 +86,7 @@ func (*outerImpl) InsertEtcdNode(ctx context.Context, reqDTO InsertEtcdNodeReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, b, err := propmd.GetEtcdNodeByNodeId(ctx, reqDTO.NodeId, reqDTO.Env)
+	_, b, err := propertymd.GetEtcdNodeByNodeId(ctx, reqDTO.NodeId, reqDTO.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -96,7 +96,7 @@ func (*outerImpl) InsertEtcdNode(ctx context.Context, reqDTO InsertEtcdNodeReqDT
 		err = util.AlreadyExistsError()
 		return
 	}
-	err = propmd.InsertEtcdNode(ctx, propmd.InsertEtcdNodeReqDTO{
+	err = propertymd.InsertEtcdNode(ctx, propertymd.InsertEtcdNodeReqDTO{
 		NodeId:    reqDTO.NodeId,
 		Endpoints: strings.Join(reqDTO.Endpoints, ";"),
 		Username:  reqDTO.Username,
@@ -135,7 +135,7 @@ func (*outerImpl) DeleteEtcdNode(ctx context.Context, reqDTO DeleteEtcdNodeReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err = propmd.DeleteEtcdNode(ctx, reqDTO.NodeId, reqDTO.Env)
+	err = propertymd.DeleteEtcdNode(ctx, reqDTO.NodeId, reqDTO.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -164,7 +164,7 @@ func (*outerImpl) UpdateEtcdNode(ctx context.Context, reqDTO UpdateEtcdNodeReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err = propmd.UpdateEtcdNode(ctx, propmd.UpdateEtcdNodeReqDTO{
+	_, err = propertymd.UpdateEtcdNode(ctx, propertymd.UpdateEtcdNodeReqDTO{
 		NodeId:    reqDTO.NodeId,
 		Endpoints: strings.Join(reqDTO.Endpoints, ";"),
 		Username:  reqDTO.Username,
@@ -213,7 +213,7 @@ func (*outerImpl) GetAuth(ctx context.Context, reqDTO GetAuthReqDTO) (string, st
 	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return "", "", err
 	}
-	auth, b, err := propmd.GetAuthByAppId(ctx, reqDTO.AppId, reqDTO.Env)
+	auth, b, err := propertymd.GetAuthByAppId(ctx, reqDTO.AppId, reqDTO.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", "", util.InternalError(err)
@@ -224,91 +224,80 @@ func (*outerImpl) GetAuth(ctx context.Context, reqDTO GetAuthReqDTO) (string, st
 	return auth.Username, auth.Password, nil
 }
 
-func (*outerImpl) InsertPropContent(ctx context.Context, reqDTO InsertPropContentReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.PropSrvKeysVO.InsertPropContent),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (*outerImpl) CreateFile(ctx context.Context, reqDTO CreateFileReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
-		return
+	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+		return err
 	}
-	var b bool
-	_, b, err = propmd.GetPropContentByAppIdAndName(ctx, reqDTO.AppId, reqDTO.Name, reqDTO.Env)
+	b, err := propertymd.ExistFile(ctx, reqDTO.AppId, reqDTO.Name, reqDTO.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if b {
-		err = util.AlreadyExistsError()
-		return
+		return util.AlreadyExistsError()
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		content, err := propmd.InsertPropContent(ctx, propmd.InsertPropContentReqDTO{
+		file, err2 := propertymd.InsertFile(ctx, propertymd.InsertFileReqDTO{
 			AppId: reqDTO.AppId,
 			Name:  reqDTO.Name,
 			Env:   reqDTO.Env,
 		})
-		if err != nil {
-			return err
+		if err2 != nil {
+			return err2
 		}
-		return propmd.InsertHistory(ctx, propmd.InsertHistoryReqDTO{
-			ContentId: content.Id,
-			Content:   reqDTO.Content,
-			Version:   genVersion(),
-			Env:       reqDTO.Env,
-			Creator:   reqDTO.Operator.Account,
+		return propertymd.InsertHistory(ctx, propertymd.InsertHistoryReqDTO{
+			FileId:      file.Id,
+			Content:     reqDTO.Content,
+			Version:     genVersion(),
+			LastVersion: "",
+			Env:         reqDTO.Env,
+			Creator:     reqDTO.Operator.Account,
 		})
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
-func (*outerImpl) UpdatePropContent(ctx context.Context, reqDTO UpdatePropContentReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.PropSrvKeysVO.UpdatePropContent),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (*outerImpl) NewVersion(ctx context.Context, reqDTO NewVersionReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env); err != nil {
-		return
+	file, err := checkPerm(ctx, reqDTO.Operator, reqDTO.FileId)
+	if err != nil {
+		return err
 	}
-	err = propmd.InsertHistory(ctx, propmd.InsertHistoryReqDTO{
-		ContentId: reqDTO.Id,
-		Content:   reqDTO.Content,
-		Version:   genVersion(),
-		Env:       reqDTO.Env,
-		Creator:   reqDTO.Operator.Account,
+	// 检查lastVersion是否正确
+	exist, err := propertymd.ExistHistoryByVersion(ctx, reqDTO.FileId, reqDTO.LastVersion)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !exist {
+		return util.InvalidArgsError()
+	}
+	err = propertymd.InsertHistory(ctx, propertymd.InsertHistoryReqDTO{
+		FileId:      reqDTO.FileId,
+		Content:     reqDTO.Content,
+		Version:     genVersion(),
+		LastVersion: reqDTO.LastVersion,
+		Env:         file.Env,
+		Creator:     reqDTO.Operator.Account,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
 func (*outerImpl) DeletePropContent(ctx context.Context, reqDTO DeletePropContentReqDTO) (err error) {
@@ -326,23 +315,23 @@ func (*outerImpl) DeletePropContent(ctx context.Context, reqDTO DeletePropConten
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	var content propmd.PropContent
-	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env); err != nil {
+	var content propertymd.File
+	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
 		return
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 删除配置文件
-		_, err := propmd.DeletePropContent(ctx, reqDTO.Id, reqDTO.Env)
+		_, err := propertymd.DeletePropContent(ctx, reqDTO.Id, reqDTO.Env)
 		if err != nil {
 			return err
 		}
 		// 删除配置历史
-		err = propmd.DeleteHistory(ctx, reqDTO.Id, reqDTO.Env)
+		err = propertymd.DeleteHistory(ctx, reqDTO.Id, reqDTO.Env)
 		if err != nil {
 			return err
 		}
 		// 删除部署记录
-		return propmd.DeleteDeploy(ctx, reqDTO.Id, reqDTO.Env)
+		return propertymd.DeleteDeploy(ctx, reqDTO.Id, reqDTO.Env)
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -353,7 +342,8 @@ func (*outerImpl) DeletePropContent(ctx context.Context, reqDTO DeletePropConten
 	return
 }
 
-func (*outerImpl) ListPropContent(ctx context.Context, reqDTO ListPropContentReqDTO) ([]PropContentDTO, error) {
+// ListFile 配置文件列表
+func (*outerImpl) ListFile(ctx context.Context, reqDTO ListFileReqDTO) ([]FileDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
@@ -362,18 +352,46 @@ func (*outerImpl) ListPropContent(ctx context.Context, reqDTO ListPropContentReq
 	if err := checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return nil, err
 	}
-	contents, err := propmd.ListPropContent(ctx, reqDTO.AppId, reqDTO.Env)
+	contents, err := propertymd.ListFile(ctx, reqDTO.AppId, reqDTO.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(contents, func(t propmd.PropContent) (PropContentDTO, error) {
-		return PropContentDTO{
+	return listutil.Map(contents, func(t propertymd.File) (FileDTO, error) {
+		return FileDTO{
 			Id:    t.Id,
 			AppId: t.AppId,
 			Name:  t.Name,
+			Env:   t.Env,
 		}, nil
 	})
+}
+
+// GetHistoryByVersion 获取最新版本的配置
+func (*outerImpl) GetHistoryByVersion(ctx context.Context, reqDTO GetHistoryByVersionReqDTO) (HistoryDTO, bool, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return HistoryDTO{}, false, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.FileId); err != nil {
+		return HistoryDTO{}, false, err
+	}
+	history, b, err := propertymd.GetHistoryByVersion(ctx, reqDTO.FileId, reqDTO.Version)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return HistoryDTO{}, false, util.InternalError(err)
+	}
+	if !b {
+		return HistoryDTO{}, false, nil
+	}
+	return HistoryDTO{
+		FileId:  history.FileId,
+		Content: history.Content,
+		Version: history.Version,
+		Created: history.Created,
+		Creator: history.Creator,
+	}, true, nil
 }
 
 func (*outerImpl) DeployPropContent(ctx context.Context, reqDTO DeployPropContentReqDTO) (err error) {
@@ -391,11 +409,11 @@ func (*outerImpl) DeployPropContent(ctx context.Context, reqDTO DeployPropConten
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	var content propmd.PropContent
-	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id, reqDTO.Env); err != nil {
+	var content propertymd.File
+	if content, err = checkPerm(ctx, reqDTO.Operator, reqDTO.Id); err != nil {
 		return
 	}
-	nodes, err := propmd.BatchGetEtcdNodes(ctx, reqDTO.EtcdNodeList, reqDTO.Env)
+	nodes, err := propertymd.BatchGetEtcdNodes(ctx, reqDTO.EtcdNodeList, reqDTO.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -406,10 +424,10 @@ func (*outerImpl) DeployPropContent(ctx context.Context, reqDTO DeployPropConten
 	}
 	// 获取历史版本记录
 	var (
-		history propmd.PropHistory
+		history propertymd.History
 		b       bool
 	)
-	history, b, err = propmd.GetHistoryByVersion(ctx, reqDTO.Id, reqDTO.Version, reqDTO.Env)
+	history, b, err = propertymd.GetHistoryByVersion(ctx, reqDTO.Id, reqDTO.Version)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -427,40 +445,37 @@ func (*outerImpl) DeployPropContent(ctx context.Context, reqDTO DeployPropConten
 	return nil
 }
 
-func (*outerImpl) ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]HistoryDTO, int64, error) {
+func (*outerImpl) PageHistory(ctx context.Context, reqDTO PageHistoryReqDTO) ([]HistoryDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId, reqDTO.Env); err != nil {
+	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.FileId); err != nil {
 		return nil, 0, err
 	}
-	histories, err := propmd.ListHistory(ctx, propmd.ListHistoryReqDTO{
-		ContentId: reqDTO.ContentId,
-		Version:   reqDTO.Version,
-		Cursor:    reqDTO.Cursor,
-		Limit:     reqDTO.Limit,
-		Env:       reqDTO.Env,
+	const pageSize = 10
+	histories, total, err := propertymd.PageHistory(ctx, propertymd.PageHistoryReqDTO{
+		FileId:   reqDTO.FileId,
+		PageNum:  reqDTO.PageNum,
+		PageSize: pageSize,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	var cursor int64 = 0
-	if len(histories) == reqDTO.Limit {
-		cursor = histories[len(histories)-1].Id
-	}
-	ret, _ := listutil.Map(histories, func(t propmd.PropHistory) (HistoryDTO, error) {
+	ret, _ := listutil.Map(histories, func(t propertymd.History) (HistoryDTO, error) {
 		return HistoryDTO{
-			ContentId: t.ContentId,
-			Content:   t.Content,
-			Version:   t.Version,
-			Created:   t.Created,
-			Creator:   t.Creator,
+			Id:          t.Id,
+			FileId:      t.FileId,
+			Content:     t.Content,
+			Version:     t.Version,
+			Created:     t.Created,
+			Creator:     t.Creator,
+			LastVersion: t.LastVersion,
 		}, nil
 	})
-	return ret, cursor, nil
+	return ret, total, nil
 }
 
 func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]DeployDTO, int64, error) {
@@ -469,10 +484,10 @@ func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]De
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId, reqDTO.Env); err != nil {
+	if _, err := checkPerm(ctx, reqDTO.Operator, reqDTO.ContentId); err != nil {
 		return nil, 0, err
 	}
-	deploys, err := propmd.ListDeploy(ctx, propmd.ListDeployReqDTO{
+	deploys, err := propertymd.ListDeploy(ctx, propertymd.ListDeployReqDTO{
 		ContentId: reqDTO.ContentId,
 		Version:   reqDTO.Version,
 		Cursor:    reqDTO.Cursor,
@@ -488,7 +503,7 @@ func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]De
 	if len(deploys) == reqDTO.Limit {
 		cursor = deploys[len(deploys)-1].Id
 	}
-	ret, _ := listutil.Map(deploys, func(t propmd.PropDeploy) (DeployDTO, error) {
+	ret, _ := listutil.Map(deploys, func(t propertymd.PropDeploy) (DeployDTO, error) {
 		return DeployDTO{
 			ContentId: t.ContentId,
 			Content:   t.Content,
@@ -501,10 +516,10 @@ func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]De
 	return ret, cursor, nil
 }
 
-func deleteFromEtcd(content propmd.PropContent, env string) {
+func deleteFromEtcd(content propertymd.File, env string) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	nodes, err := propmd.ListEtcdNode(ctx, env)
+	nodes, err := propertymd.ListEtcdNode(ctx, env)
 	if err != nil {
 		logger.Logger.Error(err)
 		return
@@ -524,11 +539,11 @@ func deleteFromEtcd(content propmd.PropContent, env string) {
 	}
 }
 
-func grantAuthToEtcd(auth propmd.EtcdAuth, env string) {
+func grantAuthToEtcd(auth propertymd.EtcdAuth, env string) {
 	ctx := context.Background()
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	nodes, err := propmd.ListEtcdNode(ctx, env)
+	nodes, err := propertymd.ListEtcdNode(ctx, env)
 	if err != nil {
 		logger.Logger.Error(err)
 		return
@@ -598,7 +613,7 @@ type contentVal struct {
 	Content string `json:"content"`
 }
 
-func deployToEtcd(id int64, appId, name, content, version string, node propmd.EtcdNode, env string, creator string) {
+func deployToEtcd(id int64, appId, name, content, version string, node propertymd.EtcdNode, env string, creator string) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	etcdClient, err := newEtcdClient(node)
@@ -609,7 +624,7 @@ func deployToEtcd(id int64, appId, name, content, version string, node propmd.Et
 	defer etcdClient.Close()
 	kv := clientv3.NewKV(etcdClient)
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		err := propmd.InsertDeploy(ctx, propmd.InsertDeployReqDTO{
+		err := propertymd.InsertDeploy(ctx, propertymd.InsertDeployReqDTO{
 			ContentId:    id,
 			Content:      content,
 			Version:      version,
@@ -640,7 +655,7 @@ func deployToEtcd(id int64, appId, name, content, version string, node propmd.Et
 	}
 }
 
-func newEtcdClient(node propmd.EtcdNode) (*clientv3.Client, error) {
+func newEtcdClient(node propertymd.EtcdNode) (*clientv3.Client, error) {
 	return clientv3.New(clientv3.Config{
 		Endpoints:   strings.Split(node.Endpoints, ";"),
 		DialTimeout: 5 * time.Second,
@@ -662,16 +677,16 @@ func genVersion() string {
 	return now.Format("20060102150405") + rint
 }
 
-func checkPerm(ctx context.Context, operator apisession.UserInfo, id int64, env string) (propmd.PropContent, error) {
-	content, b, err := propmd.GetPropContentById(ctx, id, env)
+func checkPerm(ctx context.Context, operator apisession.UserInfo, id int64) (propertymd.File, error) {
+	file, b, err := propertymd.GetFileById(ctx, id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return propmd.PropContent{}, util.InternalError(err)
+		return propertymd.File{}, util.InternalError(err)
 	}
 	if !b {
-		return propmd.PropContent{}, util.InvalidArgsError()
+		return propertymd.File{}, util.InvalidArgsError()
 	}
-	return content, checkPermByAppId(ctx, operator, content.AppId)
+	return file, checkPermByAppId(ctx, operator, file.AppId)
 }
 
 func checkPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
@@ -693,10 +708,7 @@ func checkPermByAppId(ctx context.Context, operator apisession.UserInfo, appId s
 	if p.IsAdmin {
 		return nil
 	}
-	contains, _ := listutil.Contains(p.PermDetail.DevelopAppList, func(s string) (bool, error) {
-		return s == appId, nil
-	})
-	if contains {
+	if p.PermDetail.DevelopAppList.Contains(appId) {
 		return nil
 	}
 	return util.UnauthorizedError()
@@ -717,7 +729,7 @@ func (*innerImpl) CheckConsistent(env string) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	// 检查数据库->etcd
-	nodes, err := propmd.ListEtcdNode(ctx, env)
+	nodes, err := propertymd.ListEtcdNode(ctx, env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return
@@ -728,7 +740,7 @@ func (*innerImpl) CheckConsistent(env string) {
 			client.Close()
 		}
 	}()
-	if err = propmd.IteratePropContent(ctx, env, func(content *propmd.PropContent) error {
+	if err = propertymd.IteratePropContent(ctx, env, func(content *propertymd.File) error {
 		return checkDb2EtcdConsistent(content, nodes, clientMap, env)
 	}); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -739,11 +751,11 @@ func (*innerImpl) CheckConsistent(env string) {
 }
 
 // checkEtcd2DbConsistent etcd -> db数据一致性
-func checkEtcd2DbConsistent(nodes []propmd.EtcdNode, clientMap map[string]*clientv3.Client, env string) error {
+func checkEtcd2DbConsistent(nodes []propertymd.EtcdNode, clientMap map[string]*clientv3.Client, env string) error {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	for _, node := range nodes {
-		if err := propmd.IterateDeletedDeployByNodeId(ctx, node.NodeId, env, func(deploy *propmd.PropDeploy) error {
+		if err := propertymd.IterateDeletedDeployByNodeId(ctx, node.NodeId, env, func(deploy *propertymd.PropDeploy) error {
 			client := clientMap[node.NodeId]
 			var err error
 			if client == nil {
@@ -780,11 +792,11 @@ func checkEtcd2DbConsistent(nodes []propmd.EtcdNode, clientMap map[string]*clien
 }
 
 // checkDb2EtcdConsistent db -> etcd数据一致性
-func checkDb2EtcdConsistent(content *propmd.PropContent, nodes []propmd.EtcdNode, clientMap map[string]*clientv3.Client, env string) error {
+func checkDb2EtcdConsistent(content *propertymd.File, nodes []propertymd.EtcdNode, clientMap map[string]*clientv3.Client, env string) error {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	for _, node := range nodes {
-		deploy, b, err := propmd.GetLatestDeployByNodeId(ctx, content.Id, node.NodeId, env)
+		deploy, b, err := propertymd.GetLatestDeployByNodeId(ctx, content.Id, node.NodeId, env)
 		if err != nil {
 			return err
 		}
@@ -838,22 +850,22 @@ func checkConsistentVersion(val []byte, appId, name, version string) bool {
 }
 
 func grantAuth(ctx context.Context, appId, env string) error {
-	auth, b, err := propmd.GetAuthByAppId(ctx, appId, env)
+	auth, b, err := propertymd.GetAuthByAppId(ctx, appId, env)
 	if err != nil {
 		return err
 	}
 	if !b {
-		insertReq := propmd.InsertAuthReqDTO{
+		insertReq := propertymd.InsertAuthReqDTO{
 			AppId:    appId,
 			Username: "prop_" + appId,
 			Password: strutil.RandomStr(16),
 			Env:      env,
 		}
-		err = propmd.InsertAuth(ctx, insertReq)
+		err = propertymd.InsertAuth(ctx, insertReq)
 		if err != nil {
 			return err
 		}
-		auth = propmd.EtcdAuth{
+		auth = propertymd.EtcdAuth{
 			AppId:    insertReq.AppId,
 			Username: insertReq.Username,
 			Password: insertReq.Password,

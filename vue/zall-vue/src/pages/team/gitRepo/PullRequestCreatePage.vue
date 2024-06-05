@@ -91,7 +91,7 @@ const repoId = parseInt(route.params.repoId);
 const canMerge = ref(false);
 const showLoading = ref(false);
 const submitFormVisible = ref(false);
-const naviBackUrl = `/gitRepo/${route.params.repoId}/pullRequest/list`;
+const naviBackUrl = `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/list`;
 const showSubmitForm = () => {
   submitFormVisible.value = true;
 };
@@ -219,7 +219,7 @@ const submitPr = () => {
   }).then(() => {
     message.success("创建成功");
     setTimeout(() => {
-      router.push(`/gitRepo/${route.params.repoId}/pullRequest/list`);
+      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/list`);
     }, 1000);
   });
 };

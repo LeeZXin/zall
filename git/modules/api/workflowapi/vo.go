@@ -64,23 +64,23 @@ type WorkflowVO struct {
 	AgentToken  string            `json:"agentToken"`
 }
 
-type CreateSecretReqVO struct {
+type CreateVarsReqVO struct {
 	RepoId  int64  `json:"repoId"`
 	Name    string `json:"name"`
 	Content string `json:"content"`
 }
 
-type UpdateSecretReqVO struct {
-	SecretId int64  `json:"secretId"`
-	Content  string `json:"content"`
+type UpdateVarsReqVO struct {
+	VarsId  int64  `json:"varsId"`
+	Content string `json:"content"`
 }
 
-type SecretWithoutContentVO struct {
+type VarsWithoutContentVO struct {
 	Id   int64  `json:"id"`
 	Name string `json:"name"`
 }
 
-type SecretVO struct {
-	SecretWithoutContentVO
+type VarsVO struct {
+	VarsWithoutContentVO
 	Content string `json:"content"`
 }

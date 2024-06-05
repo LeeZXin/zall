@@ -88,7 +88,7 @@ const router = useRouter();
 const route = useRoute();
 const repo = useRepoStore();
 const selectedKeys = ref([]);
-const routeKey = `/gitRepo/${route.params.repoId}`;
+const routeKey = `/team/${route.params.teamId}/gitRepo/${route.params.repoId}`;
 const routerActive = ref(true);
 const container = ref(null);
 const isAdmin = ref(false);
@@ -107,7 +107,7 @@ const pagesMap = {
   "/opLogs": "/opLogs"
 };
 const switchRepo = () => {
-  router.push(`/team/${repo.teamId}/gitRepo/list`);
+  router.push(`/team/${route.params.teamId}/gitRepo/list`);
 };
 const clickPage = event => {
   router.push({

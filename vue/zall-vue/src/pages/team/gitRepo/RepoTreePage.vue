@@ -209,7 +209,7 @@ const selectNode = (node, e) => {
     history.replaceState(
       {},
       "",
-      `/gitRepo/${route.params.repoId}/tree/${route.params.refType}/${route.params.ref}/${filePath}`
+      `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/tree/${route.params.refType}/${route.params.ref}/${filePath}`
     );
     files.value = filePath.split("/");
     getAndCatFile(filePath);

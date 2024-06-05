@@ -2,8 +2,8 @@
   <div style="padding:14px">
     <div class="container">
       <div class="header">
-        <span v-if="mode === 'create'">添加密钥</span>
-        <span v-else-if="mode === 'update'">更新密钥</span>
+        <span v-if="mode === 'create'">添加变量</span>
+        <span v-else-if="mode === 'update'">更新变量</span>
       </div>
       <div class="section">
         <div class="section-title">
@@ -11,7 +11,7 @@
         </div>
         <div class="section-body">
           <a-input style="width:100%" v-model:value="formState.name" :disabled="mode==='update'" />
-          <div class="input-desc">key用来唯一标识密钥, 不为空, 长度不得超过32</div>
+          <div class="input-desc">key用来唯一标识变量, 不为空, 长度不得超过32</div>
         </div>
       </div>
       <div class="section">
@@ -24,12 +24,12 @@
             v-model:value="formState.content"
             :auto-size="{ minRows: 5, maxRows: 10 }"
           />
-          <div class="input-desc">密钥的具体内容</div>
+          <div class="input-desc">变量的具体内容</div>
         </div>
       </div>
       <div style="width:100%;border-top:1px solid #d9d9d9;margin: 10px 0"></div>
       <div style="margin-bottom:20px">
-        <a-button type="primary" @click="createOrUpdateSecret">立即保存</a-button>
+        <a-button type="primary" @click="createOrUpdateVars">立即保存</a-button>
       </div>
     </div>
   </div>
@@ -37,12 +37,12 @@
 <script setup>
 import { reactive } from "vue";
 import {
-  createSecretRequest,
-  updateSecretRequest,
-  getSecretContentRequest
+  createVarsRequest,
+  updateVarsRequest,
+  getVarsContentRequest
 } from "@/api/git/workflowApi";
 import { useRoute, useRouter } from "vue-router";
-import { workflowSecretNameRegexp, workflowSecretContentRegexp } from "@/utils/regexp";
+import { workflowVarsNameRegexp, workflowVarsContentRegexp } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 const route = useRoute();
 const getMode = () => {
@@ -55,36 +55,36 @@ const formState = reactive({
   name: "",
   content: ""
 });
-const createOrUpdateSecret = () => {
-  if (!workflowSecretNameRegexp.test(formState.name)) {
+const createOrUpdateVars = () => {
+  if (!workflowVarsNameRegexp.test(formState.name)) {
     message.warn("key格式错误");
     return;
   }
-  if (!workflowSecretContentRegexp.test(formState.content)) {
+  if (!workflowVarsContentRegexp.test(formState.content)) {
     message.warn("内容格式错误");
     return;
   }
   if (mode === "create") {
-    createSecretRequest({
+    createVarsRequest({
       repoId: parseInt(route.params.repoId),
       name: formState.name,
       content: formState.content
     }).then(() => {
       message.success("添加成功");
-      router.push(`/gitRepo/${route.params.repoId}/workflow/secrets`);
+      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`);
     });
   } else if (mode === "update") {
-    updateSecretRequest({
-      secretId: parseInt(route.params.secretId),
+    updateVarsRequest({
+      varsId: parseInt(route.params.varsId),
       content: formState.content
     }).then(() => {
       message.success("更新成功");
-      router.push(`/gitRepo/${route.params.repoId}/workflow/secrets`);
+      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`);
     });
   }
 };
 if (mode === "update") {
-  getSecretContentRequest(route.params.secretId).then(res => {
+  getVarsContentRequest(route.params.varsId).then(res => {
     formState.name = res.data.name;
     formState.content = res.data.content;
   });

@@ -139,7 +139,7 @@ const checkRepo = item => {
   repo.repoId = item.repoId;
   repo.name = item.name;
   repo.teamId = item.teamId;
-  router.push(`/gitRepo/${item.repoId}/index`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${item.repoId}/index`);
 };
 </script>
 <style scoped>

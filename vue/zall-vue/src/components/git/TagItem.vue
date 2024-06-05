@@ -74,12 +74,12 @@ const showCommitMsg = ref(false);
 const toggleShowCommitMsg = () => {
   showCommitMsg.value = !showCommitMsg.value;
 };
-const props = defineProps(["data", "repoId"]);
+const props = defineProps(["data", "repoId", "teamId"]);
 const download = path => {
   window.open(`/api/gitRepo/archive?repoId=${props.repoId}&fileName=${path}`);
 };
 const gotoCommitDiff = commitId => {
-  router.push(`/gitRepo/${props.repoId}/commit/diff/${commitId}`);
+  router.push(`/team/${props.teamId}/gitRepo/${props.repoId}/commit/diff/${commitId}`);
 };
 const deleteTag = tag => {
   Modal.confirm({

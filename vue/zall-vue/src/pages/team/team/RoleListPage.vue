@@ -2,7 +2,12 @@
   <div style="padding:14px">
     <div style="margin-bottom:10px">
       <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建角色</a-button>
-      <a-button type="primary" :icon="h(UserOutlined)" @click="gotoUserPage" style="margin-left:6px">成员列表</a-button>
+      <a-button
+        type="primary"
+        :icon="h(UserOutlined)"
+        @click="gotoUserPage"
+        style="margin-left:6px"
+      >成员列表</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -102,6 +107,7 @@ const gotoUpdatePage = item => {
   teamRoleStore.teamPerm = item.perm.teamPerm;
   teamRoleStore.defaultRepoPerm = item.perm.defaultRepoPerm;
   teamRoleStore.repoPermList = item.perm.repoPermList;
+  teamRoleStore.developAppList = item.perm.developAppList;
   router.push(`/team/${route.params.teamId}/role/${item.roleId}/update`);
 };
 const gotoUserPage = () => {

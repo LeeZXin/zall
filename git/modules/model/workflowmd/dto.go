@@ -41,18 +41,18 @@ type ListTaskByWorkflowIdReqDTO struct {
 	PageSize   int
 }
 
-type InsertSecretReqDTO struct {
+type InsertVarsReqDTO struct {
 	RepoId  int64
 	Name    string
 	Content string
 }
 
-type UpdateSecretReqDTO struct {
+type UpdateVarsReqDTO struct {
 	Id      int64
 	Content string
 }
 
-type ExistsSecretReqDTO struct {
+type ExistsVarsReqDTO struct {
 	RepoId int64
 	Name   string
 }

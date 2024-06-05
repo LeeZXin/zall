@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
 	"net/http"
-	"time"
 )
 
 func InitApi() {
@@ -134,7 +133,7 @@ func listTask(c *gin.Context) {
 func pageLog(c *gin.Context) {
 	var req PageLogReqVO
 	if util.ShouldBindQuery(&req, c) {
-		logs, cursor, err := tasksrv.Outer.PageTaskLog(c, tasksrv.PageTaskLogReqDTO{
+		logs, total, err := tasksrv.Outer.PageTaskLog(c, tasksrv.PageTaskLogReqDTO{
 			TaskId:   req.TaskId,
 			PageNum:  req.PageNum,
 			DateStr:  req.DateStr,
@@ -148,18 +147,19 @@ func pageLog(c *gin.Context) {
 			return TaskLogVO{
 				Task:        t.Task,
 				ErrLog:      t.ErrLog,
-				TriggerType: t.TriggerType.Readable(),
+				TriggerType: t.TriggerType,
 				TriggerBy:   t.TriggerBy,
 				IsSuccess:   t.IsSuccess,
-				Created:     t.Created.Format(time.DateTime),
+				Created:     t.Created.Format("2006-01-02 15:04"),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[TaskLogVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[TaskLogVO]{
 			DataResp: ginutil.DataResp[[]TaskLogVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},
-			Next: cursor,
+			PageNum:    req.PageNum,
+			TotalCount: total,
 		})
 	}
 }

@@ -13,7 +13,7 @@
             <branches-outlined />
             <span>{{t("teamMenu.gitRepo")}}</span>
           </a-menu-item>
-          <a-menu-item key="/team/app/list">
+          <a-menu-item key="/app/list">
             <appstore-outlined />
             <span>{{t("teamMenu.app")}}</span>
           </a-menu-item>
@@ -103,7 +103,8 @@ const changeSelectedKey = path => {
 const pagesMap = {
   "/gitRepo": "/gitRepo/list",
   "/role": "/role/list",
-  "/timerTask": "/timerTask/list"
+  "/timerTask": "/timerTask/list",
+  "/app": "/app/list"
 };
 changeSelectedKey(route.path);
 isTeamAdminRequest(route.params.teamId).then(res => {

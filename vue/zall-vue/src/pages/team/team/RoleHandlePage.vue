@@ -71,6 +71,21 @@
           <span>添加仓库权限</span>
         </div>
       </div>
+      <div class="section">
+        <div class="section-title">
+          <span>可开发应用服务列表</span>
+          <span class="select-all-btn" @click="selectAllApp">全选</span>
+        </div>
+        <div class="section-body">
+          <a-select
+            style="width: 100%"
+            v-model:value="formState.appList"
+            :options="allAppList"
+            mode="multiple"
+          />
+          <div class="input-desc">可对应用服务配置中心、发布部署等有权限操作</div>
+        </div>
+      </div>
       <div class="save-btn-line">
         <a-button type="primary" @click="createOrUpdateRole">立即保存</a-button>
       </div>
@@ -131,6 +146,7 @@ import { ref, reactive, nextTick } from "vue";
 import { message } from "ant-design-vue";
 import { getRepoListByAdminRequest } from "@/api/git/repoApi";
 import { createRoleRequest, updateRoleRequest } from "@/api/team/teamApi";
+import { listAllAppByAdminRequest } from "@/api/app/appApi";
 import { useRoute, useRouter } from "vue-router";
 import { teamRoleNameRegexp } from "@/utils/regexp";
 import { useTeamRoleStore } from "@/pinia/teamRoleStore";
@@ -145,6 +161,7 @@ const router = useRouter();
 const addPermModalOpen = ref(false);
 const updatePermModalOpen = ref(false);
 const addModalCheckboxs = ref({});
+const allAppList = ref([]);
 const updateRepoPerm = reactive({
   repoId: 0,
   name: "",
@@ -165,7 +182,8 @@ const formState = reactive({
     canAddCommentInPullRequest: true,
     canTriggerWorkflow: true
   },
-  useDefaultRepoPerm: true
+  useDefaultRepoPerm: true,
+  appList: []
 });
 const addRepoPermList = ref([]);
 const repoSelect = ref([]);
@@ -342,6 +360,19 @@ const getAllRepoList = callback => {
     });
   });
 };
+const listAllApp = () => {
+  listAllAppByAdminRequest(route.params.teamId).then(res => {
+    allAppList.value = res.data.map(item => {
+      return {
+        value: item.appId,
+        label: item.name
+      };
+    });
+  });
+};
+const selectAllApp = () => {
+  formState.appList = allAppList.value.map(item => item.value);
+};
 const createOrUpdateRole = () => {
   if (!teamRoleNameRegexp.test(formState.name)) {
     message.warn("名称不正确");
@@ -366,7 +397,8 @@ const createOrUpdateRole = () => {
       perm: {
         teamPerm: formState.teamPerm,
         defaultRepoPerm: formState.defaultRepoPerm,
-        repoPermList: repoPermList
+        repoPermList: repoPermList,
+        developAppList: formState.appList
       }
     }).then(() => {
       message.success("添加成功");
@@ -379,7 +411,8 @@ const createOrUpdateRole = () => {
       perm: {
         teamPerm: formState.teamPerm,
         defaultRepoPerm: formState.defaultRepoPerm,
-        repoPermList: repoPermList
+        repoPermList: repoPermList,
+        developAppList: formState.appList
       }
     }).then(() => {
       message.success("编辑成功");
@@ -395,6 +428,7 @@ if (mode === "update") {
       formState.name = teamRoleStore.name;
       formState.teamPerm = teamRoleStore.teamPerm;
       formState.defaultRepoPerm = teamRoleStore.defaultRepoPerm;
+      formState.appList = teamRoleStore.developAppList;
       if (teamRoleStore.repoPermList && teamRoleStore.repoPermList.length > 0) {
         addRepoPermList.value = teamRoleStore.repoPermList.map(item => {
           let r = data.find(repo => {
@@ -427,6 +461,7 @@ if (mode === "update") {
 } else {
   getAllRepoList();
 }
+listAllApp();
 </script>
 <style scoped>
 .perm-title {
@@ -473,5 +508,13 @@ if (mode === "update") {
 }
 .repo-ul > li:hover {
   background-color: #f0f0f0;
+}
+.select-all-btn {
+  font-size: 14px;
+  float: right;
+}
+.select-all-btn:hover {
+  color: #1677ff;
+  cursor: pointer;
 }
 </style>

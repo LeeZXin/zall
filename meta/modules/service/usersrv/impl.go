@@ -68,6 +68,10 @@ func (s *innerImpl) CheckAccountAndPassword(ctx context.Context, reqDTO CheckAcc
 type outerImpl struct{}
 
 func newOuterService() OuterService {
+	return new(outerImpl)
+}
+
+func CreateSuperAdmin() {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	_, b, err := usermd.GetByAccount(ctx, "superAdmin")
@@ -91,7 +95,6 @@ func newOuterService() OuterService {
 		}
 		logger.Logger.Infof("create administrator account: %s, password: %s, please change password first!!!", account, password)
 	}
-	return new(outerImpl)
 }
 
 func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (session apisession.Session, err error) {

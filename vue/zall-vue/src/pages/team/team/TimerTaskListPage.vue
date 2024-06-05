@@ -1,7 +1,16 @@
 <template>
   <div style="padding:14px">
     <div style="margin-bottom:10px;font-size:14px" class="flex-between">
-      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建定时任务</a-button>
+      <div class="flex-center">
+        <a-input
+          placeholder="搜索名称"
+          style="width: 240px;margin-right:10px"
+          v-model:value="searchName"
+          @pressEnter="()=>listTimerTask()"
+        />
+        <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建定时任务</a-button>
+      </div>
+
       <div>
         <span style="margin-right:6px">环境:</span>
         <a-select
@@ -40,6 +49,10 @@
                   <play-circle-outlined />
                   <span style="margin-left:4px">手动触发任务</span>
                 </li>
+                <li @click="viewLogs(dataItem)">
+                  <eye-outlined />
+                  <span style="margin-left:4px">查看日志</span>
+                </li>
               </ul>
             </template>
             <div class="op-icon">
@@ -71,7 +84,8 @@ import {
   ExclamationCircleOutlined,
   EllipsisOutlined,
   PlusOutlined,
-  PlayCircleOutlined
+  PlayCircleOutlined,
+  EyeOutlined
 } from "@ant-design/icons-vue";
 import {
   listTimerTaskRequest,
@@ -92,6 +106,7 @@ const pageSize = 10;
 const totalCount = ref(0);
 const selectedEnv = ref();
 const envList = ref([]);
+const searchName = ref("");
 const columns = ref([
   {
     title: "名称",
@@ -119,6 +134,7 @@ const listTimerTask = () => {
     {
       teamId: parseInt(route.params.teamId),
       pageNum: currPage.value,
+      name: searchName.value,
       env: selectedEnv.value
     },
     selectedEnv.value
@@ -140,7 +156,9 @@ const getEnvList = () => {
         label: item
       };
     });
-    if (res.data.length > 0) {
+    if (route.params.env && res.data?.includes(route.params.env)) {
+      selectedEnv.value = route.params.env;
+    } else if (res.data.length > 0) {
       selectedEnv.value = res.data[0];
     }
   });
@@ -161,7 +179,9 @@ const deleteTimerTask = item => {
   });
 };
 const gotoCreatePage = () => {
-  router.push(`/team/${route.params.teamId}/timerTask/create`);
+  router.push(
+    `/team/${route.params.teamId}/timerTask/create?env=${selectedEnv.value}`
+  );
 };
 const triggerTimerTask = item => {
   Modal.confirm({
@@ -200,9 +220,20 @@ const enableOrDisableTask = item => {
     });
   }
 };
+const viewLogs = item => {
+  timerTaskStore.id = item.id;
+  timerTaskStore.name = item.name;
+  timerTaskStore.cronExp = item.cronExp;
+  timerTaskStore.task = item.task;
+  timerTaskStore.teamId = item.teamId;
+  timerTaskStore.isEnabled = item.isEnabled;
+  timerTaskStore.env = item.env;
+  router.push(`/team/${route.params.teamId}/timerTask/${item.id}/logs`);
+}
 watch(
   () => selectedEnv.value,
-  () => {
+  newVal => {
+    router.replace(`/team/${route.params.teamId}/timerTask/list/${newVal}`);
     listTimerTask();
   }
 );

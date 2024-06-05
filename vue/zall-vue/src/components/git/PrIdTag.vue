@@ -5,9 +5,9 @@
 import { defineProps } from "vue";
 import { useRouter } from "vue-router";
 const router = useRouter();
-const props = defineProps(["repoId", "prId"]);
+const props = defineProps(["repoId", "prId", "teamId"]);
 const toPrDetail = () => {
-  router.push(`/gitRepo/${props.repoId}/pullRequest/${props.prId}/detail`);
+  router.push(`/team/${props.teamId}/gitRepo/${props.repoId}/pullRequest/${props.prId}/detail`);
 };
 </script>
 <style scoped>

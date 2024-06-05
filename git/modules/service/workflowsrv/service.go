@@ -49,14 +49,14 @@ type OuterService interface {
 	GetTaskStatus(context.Context, GetTaskStatusReqDTO) (workflow.TaskStatus, error)
 	// GetLogContent 获取日志内容
 	GetLogContent(context.Context, GetLogContentReqDTO) ([]string, error)
-	// ListSecret 展示密钥列表
-	ListSecret(context.Context, ListSecretReqDTO) ([]SecretWithoutContentDTO, error)
-	// CreateSecret 新增密钥
-	CreateSecret(context.Context, CreateSecretReqDTO) error
-	// UpdateSecret 编辑密钥
-	UpdateSecret(context.Context, UpdateSecretReqDTO) error
-	// DeleteSecret 删除密钥
-	DeleteSecret(context.Context, DeleteSecretReqDTO) error
-	// GetSecretContent 获取密钥内容
-	GetSecretContent(context.Context, GetSecretContentReqDTO) (SecretDTO, error)
+	// ListVars 展示变量列表
+	ListVars(context.Context, ListVarsReqDTO) ([]VarsWithoutContentDTO, error)
+	// CreateVars 新增变量
+	CreateVars(context.Context, CreateVarsReqDTO) error
+	// UpdateVars 编辑密钥
+	UpdateVars(context.Context, UpdateVarsReqDTO) error
+	// DeleteVars 删除密钥
+	DeleteVars(context.Context, DeleteVarsReqDTO) error
+	// GetVarsContent 获取密钥内容
+	GetVarsContent(context.Context, GetVarsContentReqDTO) (VarsDTO, error)
 }

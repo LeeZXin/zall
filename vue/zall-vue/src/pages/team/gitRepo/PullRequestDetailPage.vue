@@ -728,7 +728,7 @@ const initGetWorkflowTaskInterval = () => {
 };
 const gotoTaskDetailPage = item => {
   router.push(
-    `/gitRepo/${route.params.repoId}/workflow/${item.workflowId}/${item.id}/steps`
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${item.workflowId}/${item.id}/steps`
   );
 };
 onUnmounted(() => {

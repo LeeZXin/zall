@@ -37,7 +37,7 @@ const route = useRoute();
 const branches = ref([]);
 const protectedBranchStore = useProtectedBranchStore();
 const gotoCreatePage = () => {
-  router.push(`/gitRepo/${route.params.repoId}/protectedBranch/create`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/create`);
 };
 const deleteProtectedBranch = item => {
   Modal.confirm({
@@ -64,7 +64,7 @@ const handleProtectedBranch = item => {
   protectedBranchStore.pattern = item.pattern;
   protectedBranchStore.cfg = item.cfg;
   router.push(
-    `/gitRepo/${route.params.repoId}/protectedBranch/${item.id}/update`
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/${item.id}/update`
   );
 };
 listProtectedBranch();

@@ -25,15 +25,15 @@ const getTaskStatusRequest = (taskId) => request.get("/api/workflowTask/status/"
 // 获取日志内容
 const getLogContentRequest = (taskId, jobName, stepIndex) => request.get("/api/workflowTask/log/" + taskId, { params: { jobName, stepIndex } });
 // 展示工作流密钥
-const listSecretRequest = (repoId) => request.get("/api/workflowSecret/list/" + repoId);
+const listVarsRequest = (repoId) => request.get("/api/workflowVars/list/" + repoId);
 // 新增密钥
-const createSecretRequest = (data) => request.post("/api/workflowSecret/create", data);
+const createVarsRequest = (data) => request.post("/api/workflowVars/create", data);
 // 编辑密钥
-const updateSecretRequest = (data) => request.post("/api/workflowSecret/update", data);
+const updateVarsRequest = (data) => request.post("/api/workflowVars/update", data);
 // 删除密钥
-const deleteSecretRequest = (secretId) => request.delete("/api/workflowSecret/delete/" + secretId);
+const deleteVarsRequest = (secretId) => request.delete("/api/workflowVars/delete/" + secretId);
 // 获取密钥内容
-const getSecretContentRequest = (secretId) => request.get("/api/workflowSecret/content/" + secretId);
+const getVarsContentRequest = (secretId) => request.get("/api/workflowVars/content/" + secretId);
 export {
     createWorkflowRequest,
     listWorkflowRequest,
@@ -47,9 +47,9 @@ export {
     getTaskStatusRequest,
     getLogContentRequest,
     listTaskByPrIdRequest,
-    listSecretRequest,
-    createSecretRequest,
-    updateSecretRequest,
-    deleteSecretRequest,
-    getSecretContentRequest
+    listVarsRequest,
+    createVarsRequest,
+    updateVarsRequest,
+    deleteVarsRequest,
+    getVarsContentRequest
 }

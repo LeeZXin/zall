@@ -5,7 +5,6 @@
       :columns="columns"
       :dataSource="dataSource"
       style="margin-top:0px"
-      v-if="totalCount > 0"
     >
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'created'">
@@ -31,7 +30,6 @@
         </template>
       </template>
     </ZTable>
-    <ZNoData v-else />
     <a-pagination
       v-model:current="currPage"
       :total="totalCount"
@@ -53,7 +51,6 @@
   </div>
 </template>
 <script setup>
-import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import { ref } from "vue";
 import { useRoute } from "vue-router";
@@ -100,7 +97,6 @@ const showReqBody = (req) => {
   reqBodyModalOpen.value = true;
   let jsonReq = JSON.parse(req);
   reqBody.value = JSON.stringify(jsonReq, null, 4);
-  console.log(reqBody.value);
 }
 const pageLog = () => {
   pageLogRequest({

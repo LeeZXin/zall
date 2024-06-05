@@ -136,7 +136,7 @@ const gotoTaskDetail = item => {
   taskStore.branch = item.branch;
   taskStore.prId = item.prId;
   taskStore.yamlContent = item.yamlContent;
-  router.push(`/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/${item.id}/steps`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/${item.id}/steps`);
 };
 const listTask = () => {
   listTaskRequest(route.params.workflowId, {
@@ -191,7 +191,7 @@ onUnmounted(() => {
   clearListInterval();
 });
 if (workflowStore.id === 0) {
-  router.push(`/gitRepo/${route.params.repoId}/workflow/list`)
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/list`)
 } else {
   listTask();
 }

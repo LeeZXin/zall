@@ -13,6 +13,7 @@ import (
 )
 
 func InitApi() {
+	usersrv.CreateSuperAdmin()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/login")
 		{

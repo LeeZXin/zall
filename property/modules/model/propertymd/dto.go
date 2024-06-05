@@ -1,4 +1,4 @@
-package propmd
+package propertymd
 
 type InsertEtcdNodeReqDTO struct {
 	NodeId    string
@@ -16,18 +16,19 @@ type UpdateEtcdNodeReqDTO struct {
 	Env       string
 }
 
-type InsertPropContentReqDTO struct {
+type InsertFileReqDTO struct {
 	AppId string
 	Name  string
 	Env   string
 }
 
 type InsertHistoryReqDTO struct {
-	ContentId int64
-	Content   string
-	Version   string
-	Env       string
-	Creator   string
+	FileId      int64
+	Content     string
+	Version     string
+	LastVersion string
+	Env         string
+	Creator     string
 }
 
 type InsertDeployReqDTO struct {
@@ -44,12 +45,10 @@ type InsertDeployReqDTO struct {
 	Env          string
 }
 
-type ListHistoryReqDTO struct {
-	ContentId int64
-	Version   string
-	Cursor    int64
-	Limit     int
-	Env       string
+type PageHistoryReqDTO struct {
+	FileId   int64
+	PageNum  int
+	PageSize int
 }
 
 type ListDeployReqDTO struct {

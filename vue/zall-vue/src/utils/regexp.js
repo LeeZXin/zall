@@ -24,12 +24,17 @@ const workflowBranchRegexp = /^.{1,1024}$/;
 const workflowAgentHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
 const workflowAgentTokenRegexp = /^.{1,1024}$/;
 const workflowDescRegexp = /^.{1,1024}$/;
-const workflowSecretNameRegexp = /^\w{1,32}$/;
-const workflowSecretContentRegexp = /^[\s\S]{1,10240}$/;
+const workflowVarsNameRegexp = /^\w{1,32}$/;
+const workflowVarsContentRegexp = /^[\s\S]{1,10240}$/;
 // 角色
 const teamRoleNameRegexp = /^.{1,32}$/;
 // 定时任务
 const timerTaskNameRegexp = /^.{1,64}$/;
+// 应用服务
+const appIdRegexp = /^[\w-]{1,32}$/;
+const appNameRegexp = /^.{1,32}$/;
+// 配置中心
+const propertyFileNameRegexp = /^[\w-]+$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -50,8 +55,11 @@ export {
     workflowAgentHostRegexp,
     workflowAgentTokenRegexp,
     workflowDescRegexp,
-    workflowSecretNameRegexp,
-    workflowSecretContentRegexp,
+    workflowVarsNameRegexp,
+    workflowVarsContentRegexp,
     teamRoleNameRegexp,
-    timerTaskNameRegexp
+    timerTaskNameRegexp,
+    appIdRegexp,
+    appNameRegexp,
+    propertyFileNameRegexp
 }

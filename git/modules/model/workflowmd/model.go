@@ -54,7 +54,7 @@ func (s TaskStatus) IsEndType() bool {
 
 const (
 	TaskTableName     = "zgit_workflow_task"
-	SecretTableName   = "zgit_workflow_secret"
+	VarsTableName     = "zgit_workflow_vars"
 	WorkflowTableName = "zgit_workflow"
 	TokenTableName    = "zgit_workflow_token"
 )
@@ -98,7 +98,7 @@ func (*Workflow) TableName() string {
 	return WorkflowTableName
 }
 
-type Secret struct {
+type Vars struct {
 	Id      int64     `json:"id" xorm:"pk autoincr"`
 	RepoId  int64     `json:"repoId"`
 	Name    string    `json:"name"`
@@ -107,8 +107,8 @@ type Secret struct {
 	Updated time.Time `json:"updated" xorm:"updated"`
 }
 
-func (*Secret) TableName() string {
-	return SecretTableName
+func (*Vars) TableName() string {
+	return VarsTableName
 }
 
 type Token struct {

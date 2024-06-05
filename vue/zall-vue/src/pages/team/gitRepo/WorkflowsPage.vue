@@ -2,7 +2,7 @@
   <div style="padding:14px">
     <div style="margin-bottom:10px">
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建工作流</a-button>
-      <a-button type="primary" @click="gotoSecretPage" :icon="h(KeyOutlined)" style="margin-left:8px">管理密钥</a-button>
+      <a-button type="primary" @click="gotoVarsPage" :icon="h(KeyOutlined)" style="margin-left:8px">管理变量</a-button>
     </div>
     <ul class="workflow-list" v-if="workflowList.length > 0">
       <li v-for="item in workflowList" v-bind:key="item.id">
@@ -148,7 +148,7 @@ const branchModalTitle = ref("");
 const triggerBranch = ref("");
 const triggerWfId = ref(0);
 const gotoCreatePage = () => {
-  router.push(`/gitRepo/${route.params.repoId}/workflow/create`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/create`);
 };
 const listWorkflow = () => {
   listWorkflowRequest(route.params.repoId).then(res => {
@@ -156,16 +156,16 @@ const listWorkflow = () => {
   });
 };
 const gotoDetailPage = id => {
-  router.push(`/gitRepo/${route.params.repoId}/workflow/${id}/update`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${id}/update`);
 };
-const gotoSecretPage = () => {
-  router.push(`/gitRepo/${route.params.repoId}/workflow/secrets`);
+const gotoVarsPage = () => {
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`);
 }
 const gotoTasksPage = item => {
   workflowStore.id = item.id;
   workflowStore.name = item.name;
   workflowStore.desc = item.desc;
-  router.push(`/gitRepo/${route.params.repoId}/workflow/${item.id}/tasks`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${item.id}/tasks`);
 };
 const showBranchModal = item => {
   branchModalOpen.value = true;

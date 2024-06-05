@@ -27,7 +27,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/workflow"
 	"github.com/LeeZXin/zall/promagent/agent"
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
-	"github.com/LeeZXin/zall/prop/modules/api/propapi"
+	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
 	"github.com/LeeZXin/zall/services/modules/api/deployapi"
 	"github.com/LeeZXin/zall/services/modules/service/deploysrv"
 	"github.com/LeeZXin/zall/tcpdetect/modules/api/detectapi"
@@ -95,7 +95,7 @@ func runZall(*cli.Context) error {
 	}
 	// for prop
 	{
-		propapi.InitApi()
+		propertyapi.InitApi()
 	}
 	// for tcp detect
 	{

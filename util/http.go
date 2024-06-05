@@ -7,18 +7,15 @@ import (
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/ginutil"
-	"github.com/LeeZXin/zsf/http/httpclient"
-	"github.com/LeeZXin/zsf/property/static"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
 )
 
-var (
-	HttpTokenOpts = httpclient.WithHeader(map[string]string{
-		"z-token": static.GetString("http.token"),
-	})
-)
+type ValueWithExist[T any] struct {
+	Exist bool `json:"exist"`
+	Value T    `json:"value"`
+}
 
 func HandleApiErr(err error, c *gin.Context) {
 	if err != nil {

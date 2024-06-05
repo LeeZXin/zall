@@ -1,10 +1,10 @@
-package propsrv
+package propertysrv
 
 import (
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/prop/modules/model/propmd"
+	"github.com/LeeZXin/zall/property/modules/model/propertymd"
 	"github.com/LeeZXin/zall/util"
 	"time"
 )
@@ -44,7 +44,7 @@ func (r *InsertEtcdNodeReqDTO) IsValid() error {
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
-	if !propmd.IsNodeIdValid(r.NodeId) {
+	if !propertymd.IsNodeIdValid(r.NodeId) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Endpoints) == 0 {
@@ -66,7 +66,7 @@ func (r *DeleteEtcdNodeReqDTO) IsValid() error {
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
-	if !propmd.IsNodeIdValid(r.NodeId) {
+	if !propertymd.IsNodeIdValid(r.NodeId) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -88,7 +88,7 @@ func (r *UpdateEtcdNodeReqDTO) IsValid() error {
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
-	if !propmd.IsNodeIdValid(r.NodeId) {
+	if !propertymd.IsNodeIdValid(r.NodeId) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Endpoints) == 0 {
@@ -138,7 +138,7 @@ func (r *GetAuthReqDTO) IsValid() error {
 	return nil
 }
 
-type InsertPropContentReqDTO struct {
+type CreateFileReqDTO struct {
 	AppId    string              `json:"appId"`
 	Name     string              `json:"name"`
 	Content  string              `json:"content"`
@@ -146,14 +146,14 @@ type InsertPropContentReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertPropContentReqDTO) IsValid() error {
+func (r *CreateFileReqDTO) IsValid() error {
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
-	if !propmd.IsPropContentNameValid(r.Name) {
+	if !propertymd.IsFileNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -162,18 +162,18 @@ func (r *InsertPropContentReqDTO) IsValid() error {
 	return nil
 }
 
-type UpdatePropContentReqDTO struct {
-	Id       int64               `json:"id"`
-	Content  string              `json:"content"`
-	Env      string              `json:"env"`
-	Operator apisession.UserInfo `json:"operator"`
+type NewVersionReqDTO struct {
+	FileId      int64               `json:"fileId"`
+	Content     string              `json:"content"`
+	LastVersion string              `json:"lastVersion"`
+	Operator    apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpdatePropContentReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+func (r *NewVersionReqDTO) IsValid() error {
+	if r.LastVersion == "" {
 		return util.InvalidArgsError()
 	}
-	if r.Id <= 0 {
+	if r.FileId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -201,13 +201,13 @@ func (r *DeletePropContentReqDTO) IsValid() error {
 	return nil
 }
 
-type ListPropContentReqDTO struct {
+type ListFileReqDTO struct {
 	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListPropContentReqDTO) IsValid() error {
+func (r *ListFileReqDTO) IsValid() error {
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
@@ -220,10 +220,11 @@ func (r *ListPropContentReqDTO) IsValid() error {
 	return nil
 }
 
-type PropContentDTO struct {
+type FileDTO struct {
 	Id    int64  `json:"id"`
 	AppId string `json:"appId"`
 	Name  string `json:"name"`
+	Env   string `json:"env"`
 }
 
 type DeployPropContentReqDTO struct {
@@ -253,26 +254,17 @@ func (r *DeployPropContentReqDTO) IsValid() error {
 	return nil
 }
 
-type ListHistoryReqDTO struct {
-	ContentId int64               `json:"contentId"`
-	Version   string              `json:"version"`
-	Cursor    int64               `json:"cursor"`
-	Limit     int                 `json:"limit"`
-	Env       string              `json:"env"`
-	Operator  apisession.UserInfo `json:"operator"`
+type PageHistoryReqDTO struct {
+	FileId   int64               `json:"fileId"`
+	PageNum  int                 `json:"pageNum"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListHistoryReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+func (r *PageHistoryReqDTO) IsValid() error {
+	if r.FileId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if r.ContentId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if len(r.Version) > 32 {
-		return util.InvalidArgsError()
-	}
-	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+	if r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -298,7 +290,7 @@ func (r *ListDeployReqDTO) IsValid() error {
 	if len(r.Version) > 32 {
 		return util.InvalidArgsError()
 	}
-	if len(r.NodeId) > 0 && !propmd.IsNodeIdValid(r.NodeId) {
+	if len(r.NodeId) > 0 && !propertymd.IsNodeIdValid(r.NodeId) {
 		return util.InvalidArgsError()
 	}
 	if r.ContentId <= 0 {
@@ -314,11 +306,13 @@ func (r *ListDeployReqDTO) IsValid() error {
 }
 
 type HistoryDTO struct {
-	ContentId int64     `json:"contentId"`
-	Content   string    `json:"content"`
-	Version   string    `json:"version"`
-	Created   time.Time `json:"created"`
-	Creator   string    `json:"creator"`
+	Id          int64     `json:"id"`
+	FileId      int64     `json:"fileId"`
+	Content     string    `json:"content"`
+	Version     string    `json:"version"`
+	LastVersion string    `json:"lastVersion"`
+	Created     time.Time `json:"created"`
+	Creator     string    `json:"creator"`
 }
 
 type DeployDTO struct {
@@ -328,4 +322,23 @@ type DeployDTO struct {
 	NodeId    string    `json:"nodeId"`
 	Created   time.Time `json:"created"`
 	Creator   string    `json:"creator"`
+}
+
+type GetHistoryByVersionReqDTO struct {
+	FileId   int64               `json:"fileId"`
+	Version  string              `json:"version"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetHistoryByVersionReqDTO) IsValid() error {
+	if r.FileId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.Version == "" || len(r.Version) > 64 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
 }

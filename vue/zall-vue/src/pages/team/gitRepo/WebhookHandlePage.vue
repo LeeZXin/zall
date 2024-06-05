@@ -127,7 +127,7 @@ const createOrUpdateWebhook = () => {
       events: events
     }).then(() => {
       message.success("添加成功");
-      router.push(`/gitRepo/${route.params.repoId}/webhook/list`);
+      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`);
     });
   } else if (mode === "update") {
     updateWebhookRequest({
@@ -137,7 +137,7 @@ const createOrUpdateWebhook = () => {
       events: events
     }).then(() => {
       message.success("更新成功");
-      router.push(`/gitRepo/${route.params.repoId}/webhook/list`);
+      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`);
     });
   }
 };
@@ -146,7 +146,7 @@ if (mode !== "create") {
     webhookStore.id === 0 ||
     parseInt(route.params.webhookId) !== webhookStore.id
   ) {
-    router.push(`/gitRepo/${route.params.repoId}/webhook/list`);
+    router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`);
   } else {
     if (mode !== "create") {
       formState.hookUrl = webhookStore.hookUrl;

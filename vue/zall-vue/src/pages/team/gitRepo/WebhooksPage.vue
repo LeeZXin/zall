@@ -36,7 +36,7 @@ const route = useRoute();
 const webhooks = ref([]);
 const webhookStore = useWebhookStore();
 const gotoCreatePage = () => {
-  router.push(`/gitRepo/${route.params.repoId}/webhook/create`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/create`);
 };
 const deleteWebhook = item => {
   Modal.confirm({
@@ -63,7 +63,7 @@ const handleWebhook = item => {
   webhookStore.hookUrl = item.hookUrl;
   webhookStore.events = item.events;
   webhookStore.secret = item.secret;
-  router.push(`/gitRepo/${route.params.repoId}/webhook/${item.id}/update`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/${item.id}/update`);
 };
 const pingWebhook = item => {
   pingWebhookRequest(item.id).then(()=>{

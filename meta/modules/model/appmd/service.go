@@ -42,18 +42,18 @@ func DeleteByAppId(ctx context.Context, appId string) (bool, error) {
 	return rows == 1, err
 }
 
-func ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]App, error) {
-	session := xormutil.MustGetXormSession(ctx).Where("team_id = ?", reqDTO.TeamId)
-	if reqDTO.AppId != "" {
-		session.And("app_id like ?", reqDTO.AppId+"%")
-	}
+func ListAppByTeamId(ctx context.Context, teamId int64) ([]App, error) {
 	ret := make([]App, 0)
-	return ret, session.OrderBy("id asc").Find(&ret)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("team_id = ?", teamId).
+		Desc("id").
+		Find(&ret)
+	return ret, err
 }
 
 func GetByAppIdList(ctx context.Context, appIdList []string) ([]App, error) {
 	ret := make([]App, 0)
-	err := xormutil.MustGetXormSession(ctx).In("app_id", appIdList).Find(&ret)
+	err := xormutil.MustGetXormSession(ctx).In("app_id", appIdList).Desc("id").Find(&ret)
 	return ret, err
 }
 
@@ -63,6 +63,12 @@ func GetByAppId(ctx context.Context, appId string) (App, bool, error) {
 		Where("app_id = ?", appId).
 		Get(&ret)
 	return ret, b, err
+}
+
+func ExistByAppId(ctx context.Context, appId string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		Exist(new(App))
 }
 
 func CountByTeamId(ctx context.Context, teamId int64) (int64, error) {

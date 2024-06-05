@@ -112,7 +112,7 @@
                 :options="zonesList"
                 mode="multiple"
               />
-              <div class="input-desc">多选单元,将会依次调用每个单元请求</div>
+              <div class="input-desc">仅在需要服务发现时有效,多选单元,将会依次调用每个单元请求</div>
             </li>
           </ul>
         </div>
@@ -192,7 +192,9 @@ const getEnvCfg = () => {
         label: item
       };
     });
-    if (res.data.length > 0) {
+    if (route.query.env && res.data?.includes(route.query.env)) {
+      formState.selectedEnv = route.query.env;
+    } else if (res.data.length > 0) {
       formState.selectedEnv = res.data[0];
     }
   });
@@ -251,9 +253,13 @@ const saveOrUpdateTimerTask = () => {
     });
     let contentType = "";
     let body = "";
+    let zones = [];
     if (formState.method === "POST") {
       contentType = formState.contentType;
       body = formState.body;
+    }
+    if (formState.zonesEnabled) {
+      zones = formState.zones;
     }
     task.httpTask = {
       url: formState.url,
@@ -261,7 +267,7 @@ const saveOrUpdateTimerTask = () => {
       headers: headers,
       bodyStr: body,
       contentType: contentType,
-      zones: formState.zones
+      zones: zones
     };
   }
   if (mode === "create") {
@@ -276,7 +282,7 @@ const saveOrUpdateTimerTask = () => {
       formState.selectedEnv
     ).then(() => {
       message.success("创建成功");
-      router.push(`/team/${route.params.teamId}/timerTask/list`);
+      router.push(`/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`);
     });
   } else if (mode === "update") {
     updateTimerTaskRequest(
@@ -289,7 +295,7 @@ const saveOrUpdateTimerTask = () => {
       formState.selectedEnv
     ).then(() => {
       message.success("编辑成功");
-      router.push(`/team/${route.params.teamId}/timerTask/list`);
+      router.push(`/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`);
     });
   }
 };
@@ -311,6 +317,9 @@ if (mode === "create") {
       formState.body = timerTaskStore.task.httpTask.bodyStr;
       formState.contentType = timerTaskStore.task.httpTask.contentType;
       formState.zones = timerTaskStore.task.httpTask.zones;
+      if (formState?.zones?.length > 0) {
+        formState.zonesEnabled = true;
+      }
       let headers = timerTaskStore.task.httpTask.headers;
       let retHeaders = [];
       if (headers) {

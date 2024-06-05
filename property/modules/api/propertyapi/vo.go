@@ -1,4 +1,4 @@
-package propapi
+package propertyapi
 
 import (
 	"github.com/LeeZXin/zsf-utils/ginutil"
@@ -32,27 +32,22 @@ type EtcdNodeVO struct {
 	Password  string   `json:"password"`
 }
 
-type InsertContentReqVO struct {
+type CreateFileReqVO struct {
 	AppId   string `json:"appId"`
 	Name    string `json:"name"`
 	Content string `json:"content"`
 	Env     string `json:"env"`
 }
 
-type UpdateContentReqVO struct {
-	Id      int64  `json:"id"`
-	Content string `json:"content"`
-	Env     string `json:"env"`
+type NewVersionReqVO struct {
+	FileId      int64  `json:"fileId"`
+	Content     string `json:"content"`
+	LastVersion string `json:"lastVersion"`
 }
 
 type DeleteContentReqVO struct {
 	Id  int64  `json:"id"`
 	Env string `json:"env"`
-}
-
-type ListContentReqVO struct {
-	AppId string `json:"appId"`
-	Env   string `json:"env"`
 }
 
 type DeployContentReqVO struct {
@@ -62,12 +57,9 @@ type DeployContentReqVO struct {
 	Env          string   `json:"env"`
 }
 
-type ListHistoryReqVO struct {
-	ContentId int64  `json:"contentId"`
-	Version   string `json:"version"`
-	Cursor    int64  `json:"cursor"`
-	Limit     int    `json:"limit"`
-	Env       string `json:"env"`
+type PageHistoryReqVO struct {
+	FileId  int64 `json:"fileId"`
+	PageNum int   `json:"pageNum"`
 }
 
 type ListDeployReqVO struct {
@@ -79,18 +71,21 @@ type ListDeployReqVO struct {
 	Env       string `json:"env"`
 }
 
-type PropContentVO struct {
+type FileVO struct {
 	Id    int64  `json:"id"`
 	AppId string `json:"appId"`
 	Name  string `json:"name"`
+	Env   string `json:"env"`
 }
 
 type HistoryVO struct {
-	ContentId int64  `json:"contentId"`
-	Content   string `json:"content"`
-	Version   string `json:"version"`
-	Created   string `json:"created"`
-	Creator   string `json:"creator"`
+	Id          int64  `json:"id"`
+	FileId      int64  `json:"fileId"`
+	Content     string `json:"content"`
+	Version     string `json:"version"`
+	Created     string `json:"created"`
+	Creator     string `json:"creator"`
+	LastVersion string `json:"lastVersion"`
 }
 
 type DeployVO struct {

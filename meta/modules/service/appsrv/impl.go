@@ -4,12 +4,10 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
-	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	"github.com/LeeZXin/zall/prop/modules/service/propsrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
@@ -18,44 +16,35 @@ import (
 
 type outerImpl struct{}
 
-func (*outerImpl) InsertApp(ctx context.Context, reqDTO InsertAppReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.AppSrvKeysVO.InsertApp),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+// CreateApp 创建应用服务
+func (*outerImpl) CreateApp(ctx context.Context, reqDTO CreateAppReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	// 校验teamId
-	if err = checkPermAdmin(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
-		return
+	// 校验teamId 只有管理员有权限
+	if err := checkPermAdmin(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
+		return err
 	}
-	_, b, err := appmd.GetByAppId(ctx, reqDTO.AppId)
+	b, err := appmd.ExistByAppId(ctx, reqDTO.AppId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if b {
-		err = util.AlreadyExistsError()
-		return
+		return util.AlreadyExistsError()
 	}
-	go func() {
-		envs, b := cfgsrv.Inner.GetEnvCfg(ctx)
-		if b {
-			for _, env := range envs {
-				propsrv.Inner.GrantAuth(ctx, reqDTO.AppId, env)
-			}
-		}
-	}()
-	return
+	err = appmd.InsertApp(ctx, appmd.InsertAppReqDTO{
+		AppId:  reqDTO.AppId,
+		TeamId: reqDTO.TeamId,
+		Name:   reqDTO.Name,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }
 
 func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err error) {
@@ -87,6 +76,7 @@ func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err er
 	return
 }
 
+// ListApp 应用服务列表
 func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
@@ -104,13 +94,39 @@ func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, 
 		apps, err = appmd.GetByAppIdList(ctx, appIdList)
 	} else if isAdmin {
 		// 管理员可访问所有app
-		apps, err = appmd.ListApp(ctx, appmd.ListAppReqDTO{
-			AppId:  reqDTO.AppId,
-			TeamId: reqDTO.TeamId,
-		})
+		apps, err = appmd.ListAppByTeamId(ctx, reqDTO.TeamId)
 	} else {
 		apps = make([]appmd.App, 0)
 	}
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	ret, _ := listutil.Map(apps, func(t appmd.App) (AppDTO, error) {
+		return AppDTO{
+			AppId: t.AppId,
+			Name:  t.Name,
+		}, nil
+	})
+	return ret, nil
+}
+
+// ListAllAppByAdmin 所有应用服务列表 管理员权限
+func (*outerImpl) ListAllAppByAdmin(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, isAdmin, err := checkAppList(ctx, reqDTO.Operator, reqDTO.TeamId)
+	if err != nil {
+		return nil, err
+	}
+	if !isAdmin {
+		return nil, util.UnauthorizedError()
+	}
+	// 管理员可访问所有app
+	apps, err := appmd.ListAppByTeamId(ctx, reqDTO.TeamId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)

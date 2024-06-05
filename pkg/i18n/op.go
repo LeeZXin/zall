@@ -290,11 +290,11 @@ var (
 			DefaultRet: "编辑prop etcd节点",
 		},
 		InsertPropContent: KeyItem{
-			Id:         "propSrv.InsertPropContent",
+			Id:         "propSrv.CreateFile",
 			DefaultRet: "新增配置",
 		},
 		UpdatePropContent: KeyItem{
-			Id:         "propSrv.UpdatePropContent",
+			Id:         "propSrv.NewVersion",
 			DefaultRet: "编辑配置",
 		},
 		DeletePropContent: KeyItem{
@@ -309,7 +309,7 @@ var (
 
 	AppSrvKeysVO = AppSrvKeys{
 		InsertApp: KeyItem{
-			Id:         "appSrv.InsertApp",
+			Id:         "appSrv.CreateApp",
 			DefaultRet: "新增app",
 		},
 		DeleteApp: KeyItem{

@@ -26,7 +26,7 @@
           <search-outlined />
         </template>
       </a-input>
-      <a-button type="primary" style="margin-left:10px" @click="toCreatePage">创建合并请求</a-button>
+      <a-button type="primary" style="margin-left:10px" @click="toCreatePage" :icon="h(PlusOutlined)">创建合并请求</a-button>
     </div>
     <ul class="pr-list" v-show="prList.length > 0">
       <li v-for="item in prList" v-bind:key="item.id" @click="toDetail(item)">
@@ -67,11 +67,12 @@ import {
   CloseCircleOutlined,
   CheckCircleOutlined,
   MessageOutlined,
-  PlusCircleOutlined
+  PlusCircleOutlined,
+  PlusOutlined
 } from "@ant-design/icons-vue";
 import ZNoData from "@/components/common/ZNoData";
 import PrStatusTag from "@/components/git/PrStatusTag";
-import { ref, reactive } from "vue";
+import { ref, reactive, h } from "vue";
 import {
   listPullRequestRequest,
   statsPullRequestRequest
@@ -113,11 +114,11 @@ const selectPrStatus = () => {
 };
 // 跳转创建请求页面
 const toCreatePage = () => {
-  router.push(`/gitRepo/${route.params.repoId}/pullRequest/create`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/create`);
 };
 // 详情页
 const toDetail = item => {
-  router.push(`/gitRepo/${route.params.repoId}/pullRequest/${item.id}/detail`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/${item.id}/detail`);
 };
 listPullRequest();
 statsPullRequestRequest(repoId).then(res => {

@@ -98,7 +98,7 @@ func newOuterImpl() OuterService {
 					logger.Logger.Error(err)
 				}
 				// 删除工作流密钥
-				err = workflowmd.DeleteSecretsByRepoId(ctx, event.RepoId)
+				err = workflowmd.DeleteVarsByRepoId(ctx, event.RepoId)
 				if err != nil {
 					logger.Logger.Error(err)
 				}

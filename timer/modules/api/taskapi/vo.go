@@ -2,6 +2,7 @@ package taskapi
 
 import (
 	"github.com/LeeZXin/zall/pkg/timer"
+	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
 )
 
 type CreateTaskReqVO struct {
@@ -36,12 +37,12 @@ type PageLogReqVO struct {
 }
 
 type TaskLogVO struct {
-	Task        timer.Task `json:"task"`
-	ErrLog      string     `json:"errLog"`
-	TriggerType string     `json:"triggerType"`
-	TriggerBy   string     `json:"triggerBy"`
-	IsSuccess   bool       `json:"isSuccess"`
-	Created     string     `json:"created"`
+	Task        timer.Task         `json:"task"`
+	ErrLog      string             `json:"errLog"`
+	TriggerType taskmd.TriggerType `json:"triggerType"`
+	TriggerBy   string             `json:"triggerBy"`
+	IsSuccess   bool               `json:"isSuccess"`
+	Created     string             `json:"created"`
 }
 
 type UpdateTaskReqVO struct {

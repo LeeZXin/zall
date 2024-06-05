@@ -27,8 +27,16 @@ func InitTask() {
 	if taskEnv == "" {
 		logger.Logger.Fatal("timer task started with empty env")
 	}
-	logger.Logger.Infof("start timer task service with env: %s", taskEnv)
-	taskExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
+	poolSize := static.GetInt("timer.poolSize")
+	if poolSize <= 0 {
+		poolSize = 10
+	}
+	queueSize := static.GetInt("timer.queueSize")
+	if queueSize <= 0 {
+		queueSize = 1024
+	}
+	logger.Logger.Infof("start timer task service with env: %s poolSize: %v queueSize: %v", taskEnv, poolSize, queueSize)
+	taskExecutor, _ = executor.NewExecutor(poolSize, queueSize, time.Minute, executor.AbortStrategy)
 	leaser, _ := lease.NewDbLease(
 		"timer-lock-"+taskEnv,
 		common.GetInstanceId(),
@@ -69,8 +77,7 @@ func doExecuteTask(runCtx context.Context) {
 	err := taskmd.IterateExecute(ctx, time.Now().UnixMilli(), taskEnv, func(execute *taskmd.Execute) error {
 		rerr := runCtx.Err()
 		if rerr == nil {
-			handleExecute(execute)
-			return nil
+			return handleExecute(execute)
 		}
 		return rerr
 	})
@@ -112,8 +119,8 @@ func handleTimerTaskAndAppendLog(task *taskmd.Task, triggerBy string, triggerTyp
 	})
 }
 
-func handleExecute(execute *taskmd.Execute) {
-	taskExecutor.Execute(func() {
+func handleExecute(execute *taskmd.Execute) error {
+	return taskExecutor.Execute(func() {
 		ctx, closer := xormstore.Context(context.Background())
 		task, b, err := taskmd.GetTaskById(ctx, execute.TaskId)
 		closer.Close()

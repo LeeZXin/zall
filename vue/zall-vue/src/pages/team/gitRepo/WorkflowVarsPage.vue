@@ -1,14 +1,14 @@
 <template>
   <div style="padding:14px">
     <div class="header">
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加密钥</a-button>
+      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加变量</a-button>
     </div>
-    <ul class="secret-list" v-if="secrets.length > 0">
+    <ul class="vars-list" v-if="secrets.length > 0">
       <li v-for="item in secrets" v-bind:key="item.id">
-        <div class="secret-pattern no-wrap">{{item.name}}</div>
+        <div class="vars-pattern no-wrap">{{item.name}}</div>
         <ul class="op-btns">
-          <li class="update-btn" @click="handleSecret(item)">编辑</li>
-          <li class="del-btn" @click="deleteSecret(item)">删除</li>
+          <li class="update-btn" @click="handleVars(item)">编辑</li>
+          <li class="del-btn" @click="deleteVars(item)">删除</li>
         </ul>
       </li>
     </ul>
@@ -16,7 +16,7 @@
       <template #desc>
         <div
           class="no-data-text"
-        >Secrets are encrypted and are used for sensitive data. Learn more about encrypted secrets.</div>
+        >Variables are encrypted and are used for sensitive or long data</div>
       </template>
     </ZNoData>
   </div>
@@ -27,55 +27,55 @@ import { useRouter, useRoute } from "vue-router";
 import ZNoData from "@/components/common/ZNoData";
 import { ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
-import { listSecretRequest, deleteSecretRequest } from "@/api/git/workflowApi";
+import { listVarsRequest, deleteVarsRequest } from "@/api/git/workflowApi";
 const router = useRouter();
 const route = useRoute();
 const secrets = ref([]);
 const gotoCreatePage = () => {
-  router.push(`/gitRepo/${route.params.repoId}/workflow/secret/create`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars/create`);
 };
-const deleteSecret = item => {
+const deleteVars = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteSecretRequest(item.id).then(() => {
+      deleteVarsRequest(item.id).then(() => {
         message.success("删除成功");
-        listSecret();
+        listVars();
       });
     },
     onCancel() {}
   });
 };
-const listSecret = () => {
-  listSecretRequest(route.params.repoId).then(res => {
+const listVars = () => {
+  listVarsRequest(route.params.repoId).then(res => {
     secrets.value = res.data;
   });
 };
-const handleSecret = item => {
+const handleVars = item => {
   router.push(
-    `/gitRepo/${route.params.repoId}/workflow/secret/${item.id}/update`
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars/${item.id}/update`
   );
 };
-listSecret();
+listVars();
 </script>
 <style scoped>
-.secret-list {
+.vars-list {
   border: 1px solid #d9d9d9;
   border-radius: 4px;
 }
-.secret-list > li {
+.vars-list > li {
   padding: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.secret-list > li + li {
+.vars-list > li + li {
   border-top: 1px solid #d9d9d9;
 }
-.secret-pattern {
+.vars-pattern {
   font-size: 14px;
   line-height: 32px;
   width: 60%;

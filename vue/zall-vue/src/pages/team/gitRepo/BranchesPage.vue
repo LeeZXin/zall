@@ -150,10 +150,10 @@ const deleteBranch = branch => {
   });
 };
 const goToHistoryCommits = branch => {
-  router.push(`/gitRepo/${route.params.repoId}/commit/list/${branch}`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/commit/list/${branch}`);
 };
 const gotoIndex = () => {
-  router.push(`/gitRepo/${route.params.repoId}/index`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/index`);
 };
 listBranch();
 </script>

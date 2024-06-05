@@ -289,12 +289,12 @@ func (r *GetLogContentReqDTO) IsValid() error {
 	return nil
 }
 
-type ListSecretReqDTO struct {
+type ListVarsReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListSecretReqDTO) IsValid() error {
+func (r *ListVarsReqDTO) IsValid() error {
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -304,21 +304,21 @@ func (r *ListSecretReqDTO) IsValid() error {
 	return nil
 }
 
-type CreateSecretReqDTO struct {
+type CreateVarsReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Name     string              `json:"name"`
 	Content  string              `json:"content"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *CreateSecretReqDTO) IsValid() error {
+func (r *CreateVarsReqDTO) IsValid() error {
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !workflowmd.IsSecretNameValid(r.Name) {
+	if !workflowmd.IsVarsNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if !workflowmd.IsSecretContentValid(r.Content) {
+	if !workflowmd.IsVarsContentValid(r.Content) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -327,17 +327,17 @@ func (r *CreateSecretReqDTO) IsValid() error {
 	return nil
 }
 
-type UpdateSecretReqDTO struct {
-	SecretId int64               `json:"secretId"`
+type UpdateVarsReqDTO struct {
+	VarsId   int64               `json:"varsId"`
 	Content  string              `json:"content"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpdateSecretReqDTO) IsValid() error {
-	if r.SecretId <= 0 {
+func (r *UpdateVarsReqDTO) IsValid() error {
+	if r.VarsId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !workflowmd.IsSecretContentValid(r.Content) {
+	if !workflowmd.IsVarsContentValid(r.Content) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -346,13 +346,13 @@ func (r *UpdateSecretReqDTO) IsValid() error {
 	return nil
 }
 
-type DeleteSecretReqDTO struct {
-	SecretId int64               `json:"secretId"`
+type DeleteVarsReqDTO struct {
+	VarsId   int64               `json:"varsId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeleteSecretReqDTO) IsValid() error {
-	if r.SecretId <= 0 {
+func (r *DeleteVarsReqDTO) IsValid() error {
+	if r.VarsId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -361,13 +361,13 @@ func (r *DeleteSecretReqDTO) IsValid() error {
 	return nil
 }
 
-type GetSecretContentReqDTO struct {
-	SecretId int64               `json:"secretId"`
+type GetVarsContentReqDTO struct {
+	VarsId   int64               `json:"varsId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *GetSecretContentReqDTO) IsValid() error {
-	if r.SecretId <= 0 {
+func (r *GetVarsContentReqDTO) IsValid() error {
+	if r.VarsId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -376,13 +376,13 @@ func (r *GetSecretContentReqDTO) IsValid() error {
 	return nil
 }
 
-type SecretWithoutContentDTO struct {
-	SecretId int64
-	Name     string
+type VarsWithoutContentDTO struct {
+	VarsId int64
+	Name   string
 }
 
-type SecretDTO struct {
-	SecretWithoutContentDTO
+type VarsDTO struct {
+	VarsWithoutContentDTO
 	Content string
 }
 

@@ -1,4 +1,4 @@
-package propsrv
+package propertysrv
 
 import (
 	"context"
@@ -24,12 +24,17 @@ type OuterService interface {
 
 	GrantAuth(context.Context, GrantAuthReqDTO) error
 	GetAuth(context.Context, GetAuthReqDTO) (string, string, error)
-	InsertPropContent(context.Context, InsertPropContentReqDTO) error
-	UpdatePropContent(context.Context, UpdatePropContentReqDTO) error
+	// CreateFile 创建配置文件
+	CreateFile(context.Context, CreateFileReqDTO) error
+	// NewVersion 新增版本
+	NewVersion(context.Context, NewVersionReqDTO) error
 	DeletePropContent(context.Context, DeletePropContentReqDTO) error
-	ListPropContent(context.Context, ListPropContentReqDTO) ([]PropContentDTO, error)
+	// ListFile 配置文件列表
+	ListFile(context.Context, ListFileReqDTO) ([]FileDTO, error)
 	DeployPropContent(context.Context, DeployPropContentReqDTO) error
-
-	ListHistory(context.Context, ListHistoryReqDTO) ([]HistoryDTO, int64, error)
+	// GetHistoryByVersion 获取指定版本的配置
+	GetHistoryByVersion(context.Context, GetHistoryByVersionReqDTO) (HistoryDTO, bool, error)
+	// PageHistory 版本列表
+	PageHistory(context.Context, PageHistoryReqDTO) ([]HistoryDTO, int64, error)
 	ListDeploy(context.Context, ListDeployReqDTO) ([]DeployDTO, int64, error)
 }

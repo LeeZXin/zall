@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/LeeZXin/zall/prop/modules/api/propapi"
+	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
@@ -15,7 +15,7 @@ var PropServer = &cli.Command{
 }
 
 func runPropServer(*cli.Context) error {
-	propapi.InitApi()
+	propertyapi.InitApi()
 	zsf.Run(
 		zsf.WithLifeCycles(
 			httpserver.NewServer(),

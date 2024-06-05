@@ -221,7 +221,7 @@ const createOrUpdateWorkflow = () => {
       desc: formState.desc
     };
     createWorkflowRequest(httpReq).then(() => {
-      router.push(`/gitRepo/${route.params.repoId}/workflow/list`);
+      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/list`);
     });
   }
 };

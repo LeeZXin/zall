@@ -1,4 +1,4 @@
-package propmd
+package propertymd
 
 import (
 	"context"
@@ -7,16 +7,16 @@ import (
 )
 
 var (
-	validNodeIdPattern      = regexp.MustCompile("[\\w-]{1,32}")
-	validContentNamePattern = regexp.MustCompile("[\\w-]+\\.[a-zA-Z]+")
+	validNodeIdPattern   = regexp.MustCompile("[\\w-]{1,32}")
+	validFileNamePattern = regexp.MustCompile("[\\w-]+\\.[a-zA-Z]+")
 )
 
 func IsNodeIdValid(nodeId string) bool {
 	return validNodeIdPattern.MatchString(nodeId)
 }
 
-func IsPropContentNameValid(name string) bool {
-	return validContentNamePattern.MatchString(name)
+func IsFileNameValid(name string) bool {
+	return validFileNamePattern.MatchString(name)
 }
 
 func ListEtcdNode(ctx context.Context, env string) ([]EtcdNode, error) {
@@ -71,14 +71,13 @@ func UpdateEtcdNode(ctx context.Context, reqDTO UpdateEtcdNodeReqDTO) (bool, err
 	return rows == 1, err
 }
 
-func InsertPropContent(ctx context.Context, reqDTO InsertPropContentReqDTO) (PropContent, error) {
-	ret := PropContent{
+func InsertFile(ctx context.Context, reqDTO InsertFileReqDTO) (File, error) {
+	ret := File{
 		AppId: reqDTO.AppId,
 		Name:  reqDTO.Name,
+		Env:   reqDTO.Env,
 	}
-	_, err := xormutil.MustGetXormSession(ctx).
-		Table("zprop_prop_content_" + reqDTO.Env).
-		Insert(&ret)
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
 }
 
@@ -87,34 +86,31 @@ func DeletePropContent(ctx context.Context, id int64, env string) (bool, error) 
 		Where("id = ?", id).
 		Table("zprop_prop_content_" + env).
 		Limit(1).
-		Delete(new(PropContent))
+		Delete(new(File))
 	return rows == 1, err
 }
 
-func GetPropContentById(ctx context.Context, id int64, env string) (PropContent, bool, error) {
-	ret := PropContent{}
+func GetFileById(ctx context.Context, id int64) (File, bool, error) {
+	ret := File{}
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
-		Table("zprop_prop_content_" + env).
 		Get(&ret)
 	return ret, b, err
 }
 
-func GetPropContentByAppIdAndName(ctx context.Context, appId, name, env string) (PropContent, bool, error) {
-	ret := PropContent{}
-	b, err := xormutil.MustGetXormSession(ctx).
+func ExistFile(ctx context.Context, appId, name, env string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
 		Where("app_id = ?", appId).
 		And("name = ?", name).
-		Table("zprop_prop_content_" + env).
-		Get(&ret)
-	return ret, b, err
+		And("env = ?", env).
+		Exist(new(File))
 }
 
-func IteratePropContent(ctx context.Context, env string, fn func(content *PropContent) error) error {
+func IteratePropContent(ctx context.Context, env string, fn func(content *File) error) error {
 	return xormutil.MustGetXormSession(ctx).
 		Table("zprop_prop_content_"+env).
-		Iterate(new(PropContent), func(_ int, bean interface{}) error {
-			return fn(bean.(*PropContent))
+		Iterate(new(File), func(_ int, bean interface{}) error {
+			return fn(bean.(*File))
 		})
 }
 
@@ -129,12 +125,13 @@ func IterateDeletedDeployByNodeId(ctx context.Context, nodeId, env string, fn fu
 
 func InsertHistory(ctx context.Context, reqDTO InsertHistoryReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
-		Table("zprop_prop_history_" + reqDTO.Env).
-		Insert(&PropHistory{
-			ContentId: reqDTO.ContentId,
-			Content:   reqDTO.Content,
-			Version:   reqDTO.Version,
-			Creator:   reqDTO.Creator,
+		Insert(&History{
+			FileId:      reqDTO.FileId,
+			Content:     reqDTO.Content,
+			Version:     reqDTO.Version,
+			LastVersion: reqDTO.LastVersion,
+			Creator:     reqDTO.Creator,
+			Env:         reqDTO.Env,
 		})
 	return err
 }
@@ -143,7 +140,7 @@ func DeleteHistory(ctx context.Context, contentId int64, env string) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Where("content_id = ?", contentId).
 		Table("zprop_prop_history_" + env).
-		Delete(new(PropHistory))
+		Delete(new(History))
 	return err
 }
 
@@ -159,11 +156,11 @@ func DeleteDeploy(ctx context.Context, contentId int64, env string) error {
 	return err
 }
 
-func ListPropContent(ctx context.Context, appId, env string) ([]PropContent, error) {
-	ret := make([]PropContent, 0)
+func ListFile(ctx context.Context, appId, env string) ([]File, error) {
+	ret := make([]File, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("app_id = ?", appId).
-		Table("zprop_prop_content_" + env).
+		And("env = ?", env).
 		Find(&ret)
 	return ret, err
 }
@@ -196,32 +193,30 @@ func InsertDeploy(ctx context.Context, reqDTO InsertDeployReqDTO) error {
 	return err
 }
 
-func GetHistoryByVersion(ctx context.Context, contentId int64, version, env string) (PropHistory, bool, error) {
-	var ret PropHistory
+func GetHistoryByVersion(ctx context.Context, fileId int64, version string) (History, bool, error) {
+	var ret History
 	b, err := xormutil.MustGetXormSession(ctx).
-		Where("content_id = ?", contentId).
+		Where("file_id = ?", fileId).
 		And("version = ?", version).
-		Table("zprop_prop_history_" + env).
 		Get(&ret)
 	return ret, b, err
 }
 
-func ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]PropHistory, error) {
-	ret := make([]PropHistory, 0)
-	session := xormutil.MustGetXormSession(ctx).
-		Where("content_id = ?", reqDTO.ContentId).
-		Table("zprop_prop_history_" + reqDTO.Env)
-	if reqDTO.Version != "" {
-		session.And("version like ?", reqDTO.Version+"%")
-	}
-	if reqDTO.Cursor > 0 {
-		session.And("id < ?", reqDTO.Cursor)
-	}
-	if reqDTO.Limit > 0 {
-		session.Limit(reqDTO.Limit)
-	}
-	err := session.OrderBy("id desc").Find(&ret)
-	return ret, err
+func ExistHistoryByVersion(ctx context.Context, fileId int64, version string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("file_id = ?", fileId).
+		And("version = ?", version).
+		Get(new(History))
+}
+
+func PageHistory(ctx context.Context, reqDTO PageHistoryReqDTO) ([]History, int64, error) {
+	ret := make([]History, 0)
+	total, err := xormutil.MustGetXormSession(ctx).
+		Where("file_id = ?", reqDTO.FileId).
+		Desc("id").
+		Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).
+		FindAndCount(&ret)
+	return ret, total, err
 }
 
 func ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]PropDeploy, error) {

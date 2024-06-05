@@ -47,26 +47,26 @@ func InitApi() {
 			// 获取任务详情
 			group.GET("/detail/:taskId", getTaskDetail)
 		}
-		group = e.Group("/api/workflowSecret", apisession.CheckLogin)
+		group = e.Group("/api/workflowVars", apisession.CheckLogin)
 		{
 			// 获取密钥列表
-			group.GET("/list/:workflowId", listSecret)
+			group.GET("/list/:workflowId", listVars)
 			// 新增密钥
-			group.POST("/create", createSecret)
+			group.POST("/create", createVars)
 			// 删除密钥
-			group.DELETE("/delete/:secretId", deleteSecret)
+			group.DELETE("/delete/:varsId", deleteVars)
 			// 编辑密钥
-			group.POST("/update", updateSecret)
+			group.POST("/update", updateVars)
 			// 获取密钥内容
-			group.GET("/content/:secretId", getSecretContent)
+			group.GET("/content/:varsId", getVarsContent)
 		}
 		// 用于工作流agent回调状态用的
 		e.POST("/api/v1/workflow/internal/taskCallBack", internalTaskCallback)
 	})
 }
 
-func listSecret(c *gin.Context) {
-	secrets, err := workflowsrv.Outer.ListSecret(c, workflowsrv.ListSecretReqDTO{
+func listVars(c *gin.Context) {
+	varsList, err := workflowsrv.Outer.ListVars(c, workflowsrv.ListVarsReqDTO{
 		RepoId:   cast.ToInt64(c.Param("workflowId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -74,22 +74,22 @@ func listSecret(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(secrets, func(t workflowsrv.SecretWithoutContentDTO) (SecretWithoutContentVO, error) {
-		return SecretWithoutContentVO{
-			Id:   t.SecretId,
+	data, _ := listutil.Map(varsList, func(t workflowsrv.VarsWithoutContentDTO) (VarsWithoutContentVO, error) {
+		return VarsWithoutContentVO{
+			Id:   t.VarsId,
 			Name: t.Name,
 		}, nil
 	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]SecretWithoutContentVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]VarsWithoutContentVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     data,
 	})
 }
 
-func createSecret(c *gin.Context) {
-	var req CreateSecretReqVO
+func createVars(c *gin.Context) {
+	var req CreateVarsReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := workflowsrv.Outer.CreateSecret(c, workflowsrv.CreateSecretReqDTO{
+		err := workflowsrv.Outer.CreateVars(c, workflowsrv.CreateVarsReqDTO{
 			RepoId:   req.RepoId,
 			Name:     req.Name,
 			Content:  req.Content,
@@ -103,9 +103,9 @@ func createSecret(c *gin.Context) {
 	}
 }
 
-func deleteSecret(c *gin.Context) {
-	err := workflowsrv.Outer.DeleteSecret(c, workflowsrv.DeleteSecretReqDTO{
-		SecretId: cast.ToInt64(c.Param("secretId")),
+func deleteVars(c *gin.Context) {
+	err := workflowsrv.Outer.DeleteVars(c, workflowsrv.DeleteVarsReqDTO{
+		VarsId:   cast.ToInt64(c.Param("varsId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -115,11 +115,11 @@ func deleteSecret(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func updateSecret(c *gin.Context) {
-	var req UpdateSecretReqVO
+func updateVars(c *gin.Context) {
+	var req UpdateVarsReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := workflowsrv.Outer.UpdateSecret(c, workflowsrv.UpdateSecretReqDTO{
-			SecretId: req.SecretId,
+		err := workflowsrv.Outer.UpdateVars(c, workflowsrv.UpdateVarsReqDTO{
+			VarsId:   req.VarsId,
 			Content:  req.Content,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -131,23 +131,23 @@ func updateSecret(c *gin.Context) {
 	}
 }
 
-func getSecretContent(c *gin.Context) {
-	secret, err := workflowsrv.Outer.GetSecretContent(c, workflowsrv.GetSecretContentReqDTO{
-		SecretId: cast.ToInt64(c.Param("secretId")),
+func getVarsContent(c *gin.Context) {
+	vars, err := workflowsrv.Outer.GetVarsContent(c, workflowsrv.GetVarsContentReqDTO{
+		VarsId:   cast.ToInt64(c.Param("varsId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, ginutil.DataResp[SecretVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[VarsVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data: SecretVO{
-			SecretWithoutContentVO: SecretWithoutContentVO{
-				Id:   secret.SecretId,
-				Name: secret.Name,
+		Data: VarsVO{
+			VarsWithoutContentVO: VarsWithoutContentVO{
+				Id:   vars.VarsId,
+				Name: vars.Name,
 			},
-			Content: secret.Content,
+			Content: vars.Content,
 		},
 	})
 }

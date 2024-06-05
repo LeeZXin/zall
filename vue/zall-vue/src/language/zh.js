@@ -108,5 +108,9 @@ export default {
     monthBefore: "月前",
     yearBefore: "年前",
     yes: "是",
-    no: "否"
+    no: "否",
+    timerTask: {
+        autoTriggerType: "自动触发",
+        manualTriggerType: "手动触发"
+    }
 }

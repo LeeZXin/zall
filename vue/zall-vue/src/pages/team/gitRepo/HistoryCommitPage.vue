@@ -66,11 +66,7 @@ const getCommits = () => {
   });
 };
 const onBranchSelect = ({ value }) => {
-  history.replaceState(
-    {},
-    "",
-    `/gitRepo/${route.params.repoId}/commit/list/${value}`
-  );
+  router.replace(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/commit/list/${value}`);
   selectedBranch.value = value;
   commits.value = [];
   nextTick(() => {
@@ -78,10 +74,10 @@ const onBranchSelect = ({ value }) => {
   });
 };
 const treeCommit = item => {
-  router.push(`/gitRepo/${route.params.repoId}/commit/diff/${item.commitId}`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/commit/diff/${item.commitId}`);
 };
 const gotoIndex = () => {
-  router.push(`/gitRepo/${route.params.repoId}/index`);
+  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/index`);
 };
 </script>
 <style scoped>

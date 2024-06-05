@@ -10,8 +10,3 @@ type UpdateAppReqDTO struct {
 	AppId string
 	Name  string
 }
-
-type ListAppReqDTO struct {
-	AppId  string
-	TeamId int64
-}

@@ -1,7 +1,6 @@
 package taskmd
 
 import (
-	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/timer"
 	"time"
 )
@@ -22,17 +21,6 @@ func (t TriggerType) IsValid() bool {
 		return true
 	default:
 		return false
-	}
-}
-
-func (t TriggerType) Readable() string {
-	switch t {
-	case AutoTriggerType:
-		return i18n.GetByKey(i18n.TimerTaskAutoTriggerType)
-	case ManualTriggerType:
-		return i18n.GetByKey(i18n.TimerTaskManualTriggerType)
-	default:
-		return i18n.GetByKey(i18n.TimerTaskUnknownTriggerType)
 	}
 }
 

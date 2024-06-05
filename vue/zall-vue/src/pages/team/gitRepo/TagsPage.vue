@@ -2,7 +2,7 @@
   <div style="padding:14px">
     <ul class="tag-list" v-if="dataSource.length > 0">
       <li v-for="item in dataSource" v-bind:key="item.name">
-        <TagItem :data="item" :repoId="route.params.repoId" @delete="()=>listTag()"/>
+        <TagItem :data="item" :repoId="route.params.repoId" :teamId="route.params.teamId" @delete="()=>listTag()"/>
       </li>
     </ul>
     <ZNoData v-else>

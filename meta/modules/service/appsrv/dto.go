@@ -12,26 +12,28 @@ type AppDTO struct {
 }
 
 type ListAppReqDTO struct {
-	AppId    string              `json:"appId"`
 	TeamId   int64               `json:"teamId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListAppReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type InsertAppReqDTO struct {
+type CreateAppReqDTO struct {
 	AppId    string              `json:"appId"`
 	TeamId   int64               `json:"teamId"`
 	Name     string              `json:"name"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertAppReqDTO) IsValid() error {
+func (r *CreateAppReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}

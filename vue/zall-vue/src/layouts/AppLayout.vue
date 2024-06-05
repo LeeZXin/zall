@@ -1,21 +1,21 @@
 <template>
   <a-layout>
     <a-layout-header style="font-size:22px;color:white">
-      <span>zall</span>
+      <span>{{route.params.appId}}</span>
       <span class="switch-app-text" @click="switchApp">{{t("appService.switchApp")}}</span>
       <AvatarName style="float:right;" />
       <I18nSelect style="float:right;margin-right: 20px" />
     </a-layout-header>
     <a-layout>
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
-        <a-menu theme="dark" mode="inline" @select="onselect">
+        <a-menu theme="dark" mode="inline" @click="onselect" v-model:selectedKeys="selectedKeys">
+          <a-menu-item key="/property/list">
+            <pull-request-outlined />
+            <span>配置中心</span>
+          </a-menu-item>
           <a-menu-item key="/team/gitRepo/list">
             <file-outlined />
             <span>应用设置</span>
-          </a-menu-item>
-          <a-menu-item key="/team/gitRepo/pullRequestsList">
-            <pull-request-outlined />
-            <span>配置中心</span>
           </a-menu-item>
           <a-menu-item key="/team/gitRepo/branches">
             <branches-outlined />
@@ -37,8 +37,8 @@
 import I18nSelect from "../components/i18n/I18nSelect";
 import AvatarName from "../components/user/AvatarName";
 import { useI18n } from "vue-i18n";
-import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { ref, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import {
   BranchesOutlined,
   FileOutlined,
@@ -46,15 +46,40 @@ import {
   TagOutlined
 } from "@ant-design/icons-vue";
 const { t } = useI18n();
+const route = useRoute();
 const collapsed = ref(false);
 const router = useRouter();
+const selectedKeys = ref([]);
+const routeKey = `/team/${route.params.teamId}/app/${route.params.appId}`;
 const switchApp = () => {
-  router.push("/team/gitRepo/list");
+  router.push(`/team/${route.params.teamId}/app/list`);
 };
 const onselect = event => {
-  console.log(event.key);
-  //router.push(event.key);
+  router.push({
+    path: routeKey + event.key,
+    force: true
+  });
 };
+const changeSelectedKey = path => {
+  const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
+  console.log(routeSuffix, "cnms");
+  for (let key in pagesMap) {
+    let value = pagesMap[key];
+    if (routeSuffix.startsWith(key)) {
+      selectedKeys.value = [value];
+      break;
+    }
+  }
+};
+// 为了子页面能体现在导航栏
+const pagesMap = {
+  "/property": "/property/list"
+};
+watch(
+  () => router.currentRoute.value.path,
+  newPath => changeSelectedKey(newPath)
+);
+changeSelectedKey(route.path);
 </script>
 <style scoped>
 .switch-app-text {

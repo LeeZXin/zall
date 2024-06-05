@@ -29,212 +29,193 @@ const router = createRouter({
             component: () =>
                 import ("../layouts/TeamLayout"),
             children: [{
-                    path: "/team/:teamId(\\d+)/gitRepo/create",
-                    component: () =>
-                        import ("../pages/team/gitRepo/RepoCreatePage")
-                }, {
-                    path: "/team/:teamId(\\d+)/gitRepo/list",
-                    component: () =>
-                        import ("../pages/team/gitRepo/RepoListPage")
-                }, {
-                    path: "/team/:teamId(\\d+)/gitRepo/recycle",
-                    component: () =>
-                        import ("../pages/team/gitRepo/RepoRecyclePage")
-                }, {
-                    path: "/team/:teamId(\\d+)/role/list",
-                    component: () =>
-                        import ("../pages/team/team/RoleListPage")
-                }, {
-                    path: "/team/:teamId(\\d+)/role/create",
-                    component: () =>
-                        import ("../pages/team/team/RoleHandlePage")
-                }, {
-                    path: "/team/:teamId(\\d+)/role/:roleId(\\d+)/update",
-                    component: () =>
-                        import ("../pages/team/team/RoleHandlePage")
-                }, {
-                    path: "/team/:teamId(\\d+)/role/user/list",
-                    component: () =>
-                        import ("../pages/team/team/UserListPage")
-                }, {
-                    path: "/team/:teamId(\\d+)/timerTask/list",
-                    component: () =>
-                        import ("../pages/team/team/TimerTaskListPage")
-                }, {
-                    path: "/team/:teamId(\\d+)/timerTask/create",
-                    component: () =>
-                        import ("../pages/team/team/TimerTaskHandlePage")
-                }, {
-                    path: "/team/:teamId(\\d+)/timerTask/:taskId(\\d+)/update",
-                    component: () =>
-                        import ("../pages/team/team/TimerTaskHandlePage")
-                },
-                {
-                    path: "/team/app/create",
-                    component: () =>
-                        import ("../pages/team/appService/CreateAppPage")
-                },
-                {
-                    path: "/team/action/list",
-                    component: () =>
-                        import ("../pages/team/action/ActionListPage")
-                },
-                {
-                    path: "/team/action/create",
-                    component: () =>
-                        import ("../pages/team/action/CreateActionPage")
-                },
-                {
-                    path: "/team/action/update/:actionId(\\d+)",
-                    component: () =>
-                        import ("../pages/team/action/UpdateActionPage")
-                },
-                {
-                    path: "/team/action/detail/:actionId(\\d+)",
-                    component: () =>
-                        import ("../pages/team/action/ActionDetailPage")
-                },
-                {
-                    path: "/team/action/task/:actionId(\\d+)",
-                    component: () =>
-                        import ("../pages/team/action/ActionTaskPage")
-                }
-            ]
+                path: "/team/:teamId(\\d+)/gitRepo/create",
+                component: () =>
+                    import ("../pages/team/gitRepo/RepoCreatePage")
+            }, {
+                path: "/team/:teamId(\\d+)/gitRepo/list",
+                component: () =>
+                    import ("../pages/team/gitRepo/RepoListPage")
+            }, {
+                path: "/team/:teamId(\\d+)/gitRepo/recycle",
+                component: () =>
+                    import ("../pages/team/gitRepo/RepoRecyclePage")
+            }, {
+                path: "/team/:teamId(\\d+)/role/list",
+                component: () =>
+                    import ("../pages/team/team/RoleListPage")
+            }, {
+                path: "/team/:teamId(\\d+)/role/create",
+                component: () =>
+                    import ("../pages/team/team/RoleHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/role/:roleId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/team/RoleHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/role/user/list",
+                component: () =>
+                    import ("../pages/team/team/UserListPage")
+            }, {
+                path: "/team/:teamId(\\d+)/timerTask/list/:env?",
+                component: () =>
+                    import ("../pages/team/team/TimerTaskListPage")
+            }, {
+                path: "/team/:teamId(\\d+)/timerTask/create",
+                component: () =>
+                    import ("../pages/team/team/TimerTaskHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/timerTask/:taskId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/team/TimerTaskHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/timerTask/:taskId(\\d+)/logs",
+                component: () =>
+                    import ("../pages/team/team/TimerTaskLogsPage")
+            }, {
+                path: "/team/:teamId(\\d+)/app/list",
+                component: () =>
+                    import ("../pages/team/app/AppListPage.vue")
+            }, {
+                path: "/team/:teamId(\\d+)/app/create",
+                component: () =>
+                    import ("../pages/team/app/CreateAppPage")
+            }]
         },
         {
-            path: "/gitRepo",
+            path: "/team/:teamId(\\d+)/gitRepo",
             component: () =>
                 import ("../layouts/GitRepoLayout"),
             children: [{
-                path: "/gitRepo/:repoId(\\d+)/index",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/index",
                 component: () =>
                     import ("../pages/team/gitRepo/RepoIndexPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/tree/:refType/:ref/:files*",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/tree/:refType/:ref/:files*",
                 component: () =>
                     import ("../pages/team/gitRepo/RepoTreePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/pullRequest/list",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/pullRequest/list",
                 component: () =>
                     import ("../pages/team/gitRepo/PullRequestsPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/pullRequest/create",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/pullRequest/create",
                 component: () =>
                     import ("../pages/team/gitRepo/PullRequestCreatePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/pullRequest/:prId(\\d+)/detail",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/pullRequest/:prId(\\d+)/detail",
                 component: () =>
                     import ("../pages/team/gitRepo/PullRequestDetailPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/branch/list",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/branch/list",
                 component: () =>
                     import ("../pages/team/gitRepo/BranchesPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/commit/list/:ref?",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/commit/list/:ref?",
                 component: () =>
                     import ("../pages/team/gitRepo/HistoryCommitPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/commit/diff/:commitId",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/commit/diff/:commitId",
                 component: () =>
                     import ("../pages/team/gitRepo/DiffCommitsPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/tag/list",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/tag/list",
                 component: () =>
                     import ("../pages/team/gitRepo/TagsPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/protectedBranch/list",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/protectedBranch/list",
                 component: () =>
                     import ("../pages/team/gitRepo/ProtectedBranchesPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/protectedBranch/create",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/protectedBranch/create",
                 component: () =>
                     import ("../pages/team/gitRepo/ProtectedBranchHandlePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/protectedBranch/:protectedBranchId(\\d+)/update",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/protectedBranch/:protectedBranchId(\\d+)/update",
                 component: () =>
                     import ("../pages/team/gitRepo/ProtectedBranchHandlePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/webhook/list",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/webhook/list",
                 component: () =>
                     import ("../pages/team/gitRepo/WebhooksPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/webhook/create",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/webhook/create",
                 component: () =>
                     import ("../pages/team/gitRepo/WebhookHandlePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/webhook/:webhookId(\\d+)/update",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/webhook/:webhookId(\\d+)/update",
                 component: () =>
                     import ("../pages/team/gitRepo/WebhookHandlePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/workflow/list",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/list",
                 component: () =>
                     import ("../pages/team/gitRepo/WorkflowsPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/workflow/create",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/create",
                 component: () =>
                     import ("../pages/team/gitRepo/WorkflowHandlePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/update",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/update",
                 component: () =>
                     import ("../pages/team/gitRepo/WorkflowHandlePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/tasks",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/tasks",
                 component: () =>
                     import ("../pages/team/gitRepo/WorkflowTasksPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/:taskId(\\d+)/steps",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/:workflowId(\\d+)/:taskId(\\d+)/steps",
                 component: () =>
                     import ("../pages/team/gitRepo/WorkflowStepsPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/workflow/secrets",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/vars",
                 component: () =>
-                    import ("../pages/team/gitRepo/SecretsPage")
+                    import ("../pages/team/gitRepo/WorkflowVarsPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/workflow/secret/create",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/vars/create",
                 component: () =>
-                    import ("../pages/team/gitRepo/SecretHandlePage")
+                    import ("../pages/team/gitRepo/WorkflowVarsHandlePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/workflow/secret/:secretId(\\d+)/update",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/vars/:varsId(\\d+)/update",
                 component: () =>
-                    import ("../pages/team/gitRepo/SecretHandlePage")
+                    import ("../pages/team/gitRepo/WorkflowVarsHandlePage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/config",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/config",
                 component: () =>
                     import ("../pages/team/gitRepo/RepoConfigPage")
             }, {
-                path: "/gitRepo/:repoId(\\d+)/opLogs",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/opLogs",
                 component: () =>
                     import ("../pages/team/gitRepo/OpLogsPage")
             }]
         },
         {
-            path: "/appService",
+            path: "/team/:teamId(\\d+)/app",
             component: () =>
-                import ("../layouts/AppServiceLayout"),
+                import ("../layouts/AppLayout"),
             children: [{
-                path: "/appService/property/list",
+                path: "/team/:teamId(\\d+)/app/:appId/property/list/:env?",
                 component: () =>
-                    import ("../pages/team/appService/PropertyListPage")
+                    import ("../pages/team/app/PropertyListPage")
 
             }, {
-                path: "/appService/property/create",
+                path: "/team/:teamId(\\d+)/app/:appId/property/create",
                 component: () =>
-                    import ("../pages/team/appService/CreatePropertyPage")
+                    import ("../pages/team/app/PropertyHandlePage")
 
             }, {
-                path: "/appService/property/update/:id(\\d+)",
+                path: "/team/:teamId(\\d+)/app/:appId/property/:fileId(\\d+)/new",
                 component: () =>
-                    import ("../pages/team/appService/UpdatePropertyPage")
+                    import ("../pages/team/app/PropertyHandlePage")
 
             }, {
-                path: "/appService/property/deploy/:id(\\d+)",
+                path: "/team/:teamId(\\d+)/app/:appId/property/deploy/:id(\\d+)",
                 component: () =>
-                    import ("../pages/team/appService/DeployPropertyPage")
+                    import ("../pages/team/app/DeployPropertyPage")
 
             }, {
-                path: "/appService/property/history/:id(\\d+)",
+                path: "/team/:teamId(\\d+)/app/:appId/property/:fileId(\\d+)/history/list",
                 component: () =>
-                    import ("../pages/team/appService/PropertyHistoryPage")
+                    import ("../pages/team/app/PropertyHistoryPage")
 
             }]
         },
@@ -256,7 +237,8 @@ const router = createRouter({
             }]
         }, {
             path: '/:pathMatch(.*)',
-            component: import ("../layouts/NotFoundLayout")
+            component: () =>
+                import ("../layouts/NotFoundLayout")
         }
     ]
 });

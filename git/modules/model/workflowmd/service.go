@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	validSecretNameRegexp = regexp.MustCompile(`^\w{1,32}$`)
+	validVarsNameRegexp = regexp.MustCompile(`^\w{1,32}$`)
 )
 
 func IsWorkflowNameValid(name string) bool {
@@ -19,11 +19,11 @@ func IsWorkflowDescValid(desc string) bool {
 	return len(desc) > 0 && len(desc) <= 255
 }
 
-func IsSecretNameValid(name string) bool {
-	return validSecretNameRegexp.MatchString(name)
+func IsVarsNameValid(name string) bool {
+	return validVarsNameRegexp.MatchString(name)
 }
 
-func IsSecretContentValid(content string) bool {
+func IsVarsContentValid(content string) bool {
 	return len(content) > 0 && len(content) <= 10240
 }
 
@@ -197,15 +197,15 @@ func DeleteTaskByWorkflowIdList(ctx context.Context, wfIdList []int64) error {
 	return err
 }
 
-func ListSecretByRepoId(ctx context.Context, repoId int64) ([]Secret, error) {
-	ret := make([]Secret, 0)
+func ListVarsByRepoId(ctx context.Context, repoId int64) ([]Vars, error) {
+	ret := make([]Vars, 0)
 	err := xormutil.MustGetXormSession(ctx).Where("repo_id = ?", repoId).Find(&ret)
 	return ret, err
 }
 
-func InsertSecret(ctx context.Context, reqDTO InsertSecretReqDTO) error {
+func InsertVars(ctx context.Context, reqDTO InsertVarsReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&Secret{
+		Insert(&Vars{
 			RepoId:  reqDTO.RepoId,
 			Name:    reqDTO.Name,
 			Content: reqDTO.Content,
@@ -213,39 +213,39 @@ func InsertSecret(ctx context.Context, reqDTO InsertSecretReqDTO) error {
 	return err
 }
 
-func ExistsSecret(ctx context.Context, reqDTO ExistsSecretReqDTO) (bool, error) {
+func ExistsVars(ctx context.Context, reqDTO ExistsVarsReqDTO) (bool, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("repo_id = ?", reqDTO.RepoId).
 		And("name = ?", reqDTO.Name).
-		Exist(new(Secret))
+		Exist(new(Vars))
 }
 
-func UpdateSecret(ctx context.Context, reqDTO UpdateSecretReqDTO) (bool, error) {
+func UpdateVars(ctx context.Context, reqDTO UpdateVarsReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
 		Cols("content").
-		Update(&Secret{
+		Update(&Vars{
 			Content: reqDTO.Content,
 		})
 	return rows == 1, err
 }
 
-func DeleteSecret(ctx context.Context, id int64) (bool, error) {
+func DeleteVars(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
-		Delete(new(Secret))
+		Delete(new(Vars))
 	return rows == 1, err
 }
 
-func DeleteSecretsByRepoId(ctx context.Context, repoId int64) error {
+func DeleteVarsByRepoId(ctx context.Context, repoId int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Where("repo_id = ?", repoId).
-		Delete(new(Secret))
+		Delete(new(Vars))
 	return err
 }
 
-func GetSecretById(ctx context.Context, id int64) (Secret, bool, error) {
-	var ret Secret
+func GetVarsById(ctx context.Context, id int64) (Vars, bool, error) {
+	var ret Vars
 	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
 	return ret, b, err
 }

@@ -154,7 +154,7 @@ const createOrUpdateProtectedBranch = () => {
       }
     }).then(() => {
       message.success("添加成功");
-      router.push(`/gitRepo/${route.params.repoId}/protectedBranch/list`);
+      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`);
     });
   } else if (mode === "update") {
     updateProtectedBranchRequest({
@@ -171,7 +171,7 @@ const createOrUpdateProtectedBranch = () => {
       }
     }).then(() => {
       message.success("更新成功");
-      router.push(`/gitRepo/${route.params.repoId}/protectedBranch/list`);
+      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`);
     });
   }
 };
@@ -180,7 +180,7 @@ if (mode !== "create") {
     protectedBranchStore.id === 0 ||
     parseInt(route.params.protectedBranchId) !== protectedBranchStore.id
   ) {
-    router.push(`/gitRepo/${route.params.repoId}/protectedBranch/list`);
+    router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`);
   } else {
     if (mode !== "create") {
       formState.pattern = protectedBranchStore.pattern;

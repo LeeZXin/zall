@@ -108,5 +108,9 @@ export default {
     monthBefore: " month ago",
     yearBefore: " year ago",
     yes: "Yes",
-    no: "No"
+    no: "No",
+    timerTask: {
+        autoTriggerType: "Automatically",
+        manualTriggerType: "Manually"
+    }
 }

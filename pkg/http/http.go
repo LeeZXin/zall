@@ -59,7 +59,7 @@ func (t *Task) DoRequest(httpClient *http.Client) error {
 			servers, err := discovery.DiscoverWithZone(context.Background(), zone, parsedUrl.Host)
 			err = handleDiscovery(servers, err)
 			if err != nil {
-				zoneErr = append(zoneErr, err)
+				zoneErr = append(zoneErr, fmt.Errorf("zone request: %v with err: %v", zone, err))
 			}
 		}
 		return multierr.Combine(zoneErr...)

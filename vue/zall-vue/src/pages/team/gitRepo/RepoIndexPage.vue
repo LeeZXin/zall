@@ -215,7 +215,7 @@ const copy = type => {
 // 跳转代码详情页
 const toRepoTree = path => {
   router.push(
-    `/gitRepo/${route.params.repoId}/tree/${selectedRef.refType}/${selectedRef.ref}/` +
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/tree/${selectedRef.refType}/${selectedRef.ref}/` +
       path
   );
 };

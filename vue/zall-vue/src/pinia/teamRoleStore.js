@@ -7,6 +7,7 @@ export const useTeamRoleStore = defineStore('teamRoleStore', {
         teamId: 0,
         teamPerm: {},
         defaultRepoPerm: {},
-        repoPermList: []
+        repoPermList: [],
+        developAppList: []
     })
 })
