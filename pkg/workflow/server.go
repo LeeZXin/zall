@@ -30,21 +30,17 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
 var (
-	validCommandIdRegexp = regexp.MustCompile(`^\S+$`)
-	validTaskIdRegexp    = regexp.MustCompile(`^\d{10}\S+$`)
-	validAppIdRegexp     = regexp.MustCompile("[\\w-]{1,32}")
+	validTaskIdRegexp = regexp.MustCompile(`^\d{10}\S+$`)
 )
 
 type handler func(ssh.Session, map[string]string, string, string)
 
 var (
-	serviceDir string
-	pwdDir     string
+	pwdDir string
 )
 
 func init() {
@@ -53,48 +49,12 @@ func init() {
 		logger.Logger.Fatalf("os.Getwd err: %v", err)
 	}
 	pwdDir = pwd
-	serviceDir = filepath.Join(pwd, "data", "services")
-	util.MkdirAll(serviceDir)
 }
 
 var (
 	clientCfg  *gossh.ClientConfig
 	clientOnce sync.Once
 )
-
-type cmdMap struct {
-	sync.Mutex
-	container map[string]*exec.Cmd
-}
-
-func newCmdMap() *cmdMap {
-	return &cmdMap{
-		container: make(map[string]*exec.Cmd),
-	}
-}
-
-func (m *cmdMap) PutIfAbsent(id string, cmd *exec.Cmd) bool {
-	m.Lock()
-	defer m.Unlock()
-	_, b := m.container[id]
-	if b {
-		return false
-	}
-	m.container[id] = cmd
-	return true
-}
-
-func (m *cmdMap) GetById(id string) *exec.Cmd {
-	m.Lock()
-	defer m.Unlock()
-	return m.container[id]
-}
-
-func (m *cmdMap) Remove(id string) {
-	m.Lock()
-	defer m.Unlock()
-	delete(m.container, id)
-}
 
 type graphMap struct {
 	sync.Mutex
@@ -140,24 +100,23 @@ func (m *graphMap) Remove(id string) {
 	delete(m.container, id)
 }
 
-type Agent struct {
+type AgentServer struct {
 	*zssh.Server
 	token            string
 	graphMap         *graphMap
-	cmdMap           *cmdMap
 	handlerMap       map[string]handler
 	workflowDir      string
 	workflowExecutor *executor.Executor
 }
 
-func (a *Agent) GetWorkflowBaseDir(taskId string) string {
+func (a *AgentServer) GetWorkflowBaseDir(taskId string) string {
 	dateStr := taskId[:8]
 	hourStr := taskId[8:10]
 	id := taskId[10:]
 	return filepath.Join(a.workflowDir, "action", dateStr, hourStr, id)
 }
 
-func (a *Agent) CancelAllGraph() {
+func (a *AgentServer) CancelAllGraph() {
 	graphs := a.graphMap.GetAll()
 	for _, graph := range graphs {
 		graph.Cancel(action.TaskCancelErr)
@@ -354,7 +313,7 @@ func notifyCallback(callbackUrl, token, taskId string, req any) {
 }
 
 func NewAgentServer() zsf.LifeCycle {
-	agent := new(Agent)
+	agent := new(AgentServer)
 	poolSize := static.GetInt("workflow.agent.poolSize")
 	if poolSize <= 0 {
 		poolSize = 10
@@ -366,7 +325,6 @@ func NewAgentServer() zsf.LifeCycle {
 	agent.workflowExecutor, _ = executor.NewExecutor(poolSize, queueSize, time.Minute, executor.AbortStrategy)
 	agent.token = static.GetString("workflow.agent.token")
 	agent.graphMap = newGraphMap()
-	agent.cmdMap = newCmdMap()
 	agent.workflowDir = filepath.Join(pwdDir, "workflow")
 	agent.handlerMap = map[string]handler{
 		"getWorkflowStepLog": func(session ssh.Session, args map[string]string, _ string, _ string) {
@@ -568,6 +526,7 @@ func NewAgentServer() zsf.LifeCycle {
 					}
 				}
 			}); rErr != nil {
+				agent.graphMap.Remove(taskId)
 				util.ExitWithErrMsg(session, "out of capacity")
 				return
 			}
@@ -584,78 +543,6 @@ func NewAgentServer() zsf.LifeCycle {
 			taskStore.StoreStatus(CancelStatus, graph.SinceBeginTime())
 			logger.Logger.Infof("cancel task: %s", taskId)
 			graph.Cancel(action.TaskCancelErr)
-			session.Exit(0)
-		},
-		"kill": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
-			id := args["i"]
-			if !validCommandIdRegexp.MatchString(id) {
-				util.ExitWithErrMsg(session, "invalid id")
-				return
-			}
-			cmd := agent.cmdMap.GetById(id)
-			if cmd == nil {
-				util.ExitWithErrMsg(session, "unknown id: "+id)
-				return
-			}
-			// 杀死子进程 带负数的pid
-			err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-			if err != nil {
-				util.ExitWithErrMsg(session, err.Error())
-				return
-			}
-			agent.cmdMap.Remove(id)
-			session.Exit(0)
-		},
-		"execute": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
-			id := args["i"]
-			if !validCommandIdRegexp.MatchString(id) {
-				util.ExitWithErrMsg(session, "invalid id")
-				return
-			}
-			cmd := agent.cmdMap.GetById(id)
-			if cmd != nil {
-				util.ExitWithErrMsg(session, "duplicated id:"+id)
-				return
-			}
-			cmdPath := filepath.Join(tempDir, id)
-			file, err := os.OpenFile(cmdPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
-			if err != nil {
-				util.ExitWithErrMsg(session, err.Error())
-				return
-			}
-			defer util.RemoveAll(cmdPath)
-			_, err = io.Copy(file, session)
-			file.Close()
-			if err != nil {
-				util.ExitWithErrMsg(session, err.Error())
-				return
-			}
-			err = executeCommand("chmod +x "+cmdPath, session, workdir)
-			if err != nil {
-				util.ExitWithErrMsg(session, err.Error())
-				return
-			}
-			cmd, err = newCommand(session.Context(), "bash -c "+cmdPath, session, session, workdir)
-			if err != nil {
-				util.ExitWithErrMsg(session, err.Error())
-				return
-			}
-			err = cmd.Start()
-			if err != nil {
-				logger.Logger.Info()
-				util.ExitWithErrMsg(session, err.Error())
-				return
-			}
-			if !agent.cmdMap.PutIfAbsent(id, cmd) {
-				util.ExitWithErrMsg(session, "duplicated id")
-				return
-			}
-			err = cmd.Wait()
-			agent.cmdMap.Remove(id)
-			if err != nil {
-				util.ExitWithErrMsg(session, err.Error())
-				return
-			}
 			session.Exit(0)
 		},
 	}
@@ -688,61 +575,15 @@ func NewAgentServer() zsf.LifeCycle {
 				util.ExitWithErrMsg(session, "invalid token")
 				return
 			}
-			appId := cmd.Args["s"]
-			dir := cmd.Args["w"]
-			if appId != "" {
-				// appId校验
-				if !validAppIdRegexp.MatchString(appId) {
-					util.ExitWithErrMsg(session, "invalid app id")
-					return
-				}
-				// 创建工作目录
-				workdir := filepath.Join(serviceDir, appId)
-				err = util.Mkdir(workdir)
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				// 创建临时目录
-				tempDir := filepath.Join(workdir, "temp")
-				err = util.Mkdir(tempDir)
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				fn(session, cmd.Args, workdir, tempDir)
-			} else if dir != "" {
-				if !filepath.IsAbs(dir) {
-					util.ExitWithErrMsg(session, "invalid -w arg")
-					return
-				}
-				// 创建工作目录
-				workdir := dir
-				err = util.Mkdir(workdir)
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				// 创建临时目录
-				tempDir := filepath.Join(workdir, "temp")
-				err = util.Mkdir(tempDir)
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				fn(session, cmd.Args, workdir, tempDir)
-			} else {
-				// 没有配置工作目录就用当前agent目录作为工作目录
-				workdir := pwdDir
-				// 创建临时目录
-				tempDir := filepath.Join(workdir, "temp")
-				err = util.Mkdir(tempDir)
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				fn(session, cmd.Args, workdir, tempDir)
+			workdir := pwdDir
+			// 创建临时目录
+			tempDir := filepath.Join(workdir, "temp")
+			err = util.Mkdir(tempDir)
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
 			}
+			fn(session, cmd.Args, workdir, tempDir)
 		},
 	})
 	if err != nil {
@@ -812,11 +653,6 @@ func splitCommand(cmd string) (command, error) {
 	return ret, nil
 }
 
-type Command interface {
-	Execute(io.Reader, map[string]string) (string, error)
-	ExecuteAsync(io.Reader, map[string]string) (io.Reader, error)
-}
-
 func execute(sshHost, command string, cmd io.Reader, envs map[string]string) (string, error) {
 	client, err := gossh.Dial("tcp", sshHost, clientCfg)
 	if err != nil {
@@ -845,52 +681,6 @@ func execute(sshHost, command string, cmd io.Reader, envs map[string]string) (st
 	return output.String(), nil
 }
 
-func executeAsync(sshHost, command string, cmd io.Reader, envs map[string]string) (io.ReadCloser, error) {
-	client, err := gossh.Dial("tcp", sshHost, clientCfg)
-	if err != nil {
-		return nil, err
-	}
-	session, err := client.NewSession()
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range envs {
-		err = session.Setenv(k, v)
-		if err != nil {
-			return nil, err
-		}
-	}
-	stderr := new(bytes.Buffer)
-	pipeReader, pipeWriter := io.Pipe()
-	session.Stdin = cmd
-	session.Stdout = pipeWriter
-	session.Stderr = stderr
-	go func() {
-		err := session.Run(command)
-		if err != nil {
-			pipeWriter.CloseWithError(fmt.Errorf("%w - %s", err, stderr.String()))
-		} else {
-			pipeWriter.Close()
-		}
-		client.Close()
-	}()
-	return pipeReader, nil
-}
-
-type ServiceCommand struct {
-	appId      string
-	agentHost  string
-	agentToken string
-}
-
-func (c *ServiceCommand) Execute(cmd io.Reader, envs map[string]string) (string, error) {
-	return execute(c.agentHost, fmt.Sprintf("execute -s %s -t %s", c.appId, c.agentToken), cmd, envs)
-}
-
-func (c *ServiceCommand) ExecuteAsync(cmd io.Reader, envs map[string]string) (io.Reader, error) {
-	return executeAsync(c.agentHost, fmt.Sprintf("execute -s %s -t %s", c.appId, c.agentToken), cmd, envs)
-}
-
 func initClientCfg() {
 	clientOnce.Do(func() {
 		pwd, err := os.Getwd()
@@ -913,40 +703,17 @@ func initClientCfg() {
 	})
 }
 
-func NewServiceCommand(agentHost, agentToken, appId string) *ServiceCommand {
-	initClientCfg()
-	return &ServiceCommand{
-		appId:      appId,
-		agentHost:  agentHost,
-		agentToken: agentToken,
-	}
-}
-
 type AgentCommand struct {
-	workdir    string
 	agentHost  string
 	agentToken string
 }
 
-func NewAgentCommand(agentHost, agentToken, workdir string) *AgentCommand {
+func NewAgentCommand(agentHost, agentToken string) *AgentCommand {
 	initClientCfg()
 	return &AgentCommand{
-		workdir:    workdir,
 		agentHost:  agentHost,
 		agentToken: agentToken,
 	}
-}
-
-func (c *AgentCommand) Execute(cmd io.Reader, envs map[string]string) (string, error) {
-	return execute(c.agentHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.agentToken), cmd, envs)
-}
-
-func (c *AgentCommand) Kill(cmd io.Reader, envs map[string]string) (string, error) {
-	return execute(c.agentHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.agentToken), cmd, envs)
-}
-
-func (c *AgentCommand) ExecuteAsync(cmd io.Reader, envs map[string]string) (io.Reader, error) {
-	return executeAsync(c.agentHost, fmt.Sprintf("execute -w %s -t %s", c.workdir, c.agentToken), cmd, envs)
 }
 
 func (c *AgentCommand) ExecuteWorkflow(content, bizId string, envs map[string]string) error {

@@ -2,13 +2,11 @@ package deploymd
 
 import (
 	"encoding/json"
-	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
 )
 
 const (
-	TeamConfigTableName     = "zservice_team_config"
 	ConfigTableName         = "zservice_deploy_config"
 	ServiceTableName        = "zservice_deploy_service"
 	DeployLogTableName      = "zservice_deploy_log"
@@ -22,13 +20,14 @@ const (
 
 // Config 部署配置
 type Config struct {
-	Id          int64              `json:"id" xorm:"pk autoincr"`
-	AppId       string             `json:"appId"`
-	Name        string             `json:"name"`
-	ServiceType deploy.ServiceType `json:"serviceType"`
-	Content     string             `json:"content"`
-	Created     time.Time          `json:"created" xorm:"created"`
-	Updated     time.Time          `json:"updated" xorm:"updated"`
+	Id        int64     `json:"id" xorm:"pk autoincr"`
+	AppId     string    `json:"appId"`
+	Name      string    `json:"name"`
+	Content   string    `json:"content"`
+	Env       string    `json:"env"`
+	IsEnabled bool      `json:"isEnabled"`
+	Created   time.Time `json:"created" xorm:"created"`
+	Updated   time.Time `json:"updated" xorm:"updated"`
 }
 
 func (*Config) TableName() string {
@@ -69,14 +68,13 @@ type Service struct {
 	// 当前制品版本
 	CurrProductVersion string `json:"productVersion"`
 	// 上个制品版本
-	LastProductVersion string             `json:"lastProductVersion"`
-	ServiceType        deploy.ServiceType `json:"serviceType"`
-	ServiceConfig      string             `json:"serviceConfig"`
-	ActiveStatus       ActiveStatus       `json:"activeStatus"`
-	StartTime          int64              `json:"startTime"`
-	ProbeTime          int64              `json:"probeTime"`
-	Created            time.Time          `json:"created" xorm:"created"`
-	Updated            time.Time          `json:"updated" xorm:"updated"`
+	LastProductVersion string       `json:"lastProductVersion"`
+	ServiceConfig      string       `json:"serviceConfig"`
+	ActiveStatus       ActiveStatus `json:"activeStatus"`
+	StartTime          int64        `json:"startTime"`
+	ProbeTime          int64        `json:"probeTime"`
+	Created            time.Time    `json:"created" xorm:"created"`
+	Updated            time.Time    `json:"updated" xorm:"updated"`
 }
 
 func (*Service) TableName() string {
@@ -88,14 +86,13 @@ type DeployLog struct {
 	Id       int64 `json:"id" xorm:"pk autoincr"`
 	ConfigId int64 `json:"configId"`
 	// 发布计划id
-	PlanId         int64              `json:"planId"`
-	AppId          string             `json:"appId"`
-	ServiceType    deploy.ServiceType `json:"serviceType"`
-	ServiceConfig  string             `json:"serviceConfig"`
-	ProductVersion string             `json:"productVersion"`
-	Operator       string             `json:"operator"`
-	DeployOutput   string             `json:"deployOutput"`
-	Created        time.Time          `json:"created" xorm:"created"`
+	PlanId         int64     `json:"planId"`
+	AppId          string    `json:"appId"`
+	ServiceConfig  string    `json:"serviceConfig"`
+	ProductVersion string    `json:"productVersion"`
+	Operator       string    `json:"operator"`
+	DeployOutput   string    `json:"deployOutput"`
+	Created        time.Time `json:"created" xorm:"created"`
 }
 
 func (*DeployLog) TableName() string {
@@ -209,18 +206,6 @@ type PlanItem struct {
 
 func (*PlanItem) TableName() string {
 	return PlanItemTableName
-}
-
-type TeamConfig struct {
-	Id      int64                `json:"id" xorm:"pk autoincr"`
-	TeamId  int64                `json:"teamId"`
-	Content *deploy.NormalConfig `json:"content"`
-	Created time.Time            `json:"created" xorm:"created"`
-	Updated time.Time            `json:"updated" xorm:"updated"`
-}
-
-func (*TeamConfig) TableName() string {
-	return TeamConfigTableName
 }
 
 type ProbeInstance struct {

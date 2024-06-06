@@ -22,7 +22,8 @@
           <a-textarea
             style="width:100%"
             v-model:value="formState.content"
-            :auto-size="{ minRows: 5, maxRows: 10 }"
+            :auto-size="{ minRows: 8, maxRows: 15 }"
+            @keydown.tab="handleTab"
           />
           <div class="input-desc">变量的具体内容</div>
         </div>
@@ -55,6 +56,17 @@ const formState = reactive({
   name: "",
   content: ""
 });
+const handleTab = event => {
+  event.preventDefault();
+  let inputElement = event.target;
+  let value = inputElement.value;
+  let selectionStart = inputElement.selectionStart;
+  let leftValue = value.substring(0, selectionStart);
+  let rightValue = value.substring(selectionStart);
+  inputElement.value = leftValue + "    " + rightValue;
+  inputElement.selectionStart = selectionStart + 4;
+  inputElement.selectionEnd = inputElement.selectionStart;
+};
 const createOrUpdateVars = () => {
   if (!workflowVarsNameRegexp.test(formState.name)) {
     message.warn("key格式错误");

@@ -34,7 +34,9 @@ const timerTaskNameRegexp = /^.{1,64}$/;
 const appIdRegexp = /^[\w-]{1,32}$/;
 const appNameRegexp = /^.{1,32}$/;
 // 配置中心
-const propertyFileNameRegexp = /^[\w-]+$/;
+const propertyFileNameRegexp = /^[\w-]{1,32}$/;
+// 部署配置
+const deployConfigNameRegexp = /^.{1,32}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -61,5 +63,6 @@ export {
     timerTaskNameRegexp,
     appIdRegexp,
     appNameRegexp,
-    propertyFileNameRegexp
+    propertyFileNameRegexp,
+    deployConfigNameRegexp
 }

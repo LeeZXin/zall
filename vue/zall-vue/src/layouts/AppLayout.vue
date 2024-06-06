@@ -13,9 +13,9 @@
             <pull-request-outlined />
             <span>配置中心</span>
           </a-menu-item>
-          <a-menu-item key="/team/gitRepo/list">
+          <a-menu-item key="/deployConfig/list">
             <file-outlined />
-            <span>应用设置</span>
+            <span>服务部署</span>
           </a-menu-item>
           <a-menu-item key="/team/gitRepo/branches">
             <branches-outlined />
@@ -62,7 +62,6 @@ const onselect = event => {
 };
 const changeSelectedKey = path => {
   const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
-  console.log(routeSuffix, "cnms");
   for (let key in pagesMap) {
     let value = pagesMap[key];
     if (routeSuffix.startsWith(key)) {
@@ -73,7 +72,8 @@ const changeSelectedKey = path => {
 };
 // 为了子页面能体现在导航栏
 const pagesMap = {
-  "/property": "/property/list"
+  "/property": "/property/list",
+  "/deployConfig": "/deployConfig/list"
 };
 watch(
   () => router.currentRoute.value.path,

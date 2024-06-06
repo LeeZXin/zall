@@ -2,12 +2,10 @@ package deploysrv
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/LeeZXin/zall/fileserv/modules/model/productmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
-	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zall/util"
@@ -27,7 +25,7 @@ func (*outerImpl) ListConfig(ctx context.Context, reqDTO ListConfigReqDTO) ([]Co
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err := checkDeployConfigPerm(ctx, reqDTO.AppId, reqDTO.Operator)
+	err := checkDeployConfigPermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -37,132 +35,121 @@ func (*outerImpl) ListConfig(ctx context.Context, reqDTO ListConfigReqDTO) ([]Co
 		return nil, util.InternalError(err)
 	}
 	return listutil.Map(configs, func(t deploymd.Config) (ConfigDTO, error) {
-		ret := ConfigDTO{
-			Id:          t.Id,
-			AppId:       t.AppId,
-			Name:        t.Name,
-			ServiceType: t.ServiceType,
-			Created:     t.Created,
-		}
-		switch t.ServiceType {
-		case deploy.ProcessServiceType:
-			ret.ProcessConfig = new(deploy.ProcessConfig)
-			json.Unmarshal([]byte(t.Content), ret.ProcessConfig)
-		case deploy.K8sServiceType:
-			ret.K8sConfig = new(deploy.K8sConfig)
-			json.Unmarshal([]byte(t.Content), ret.K8sConfig)
-		}
-		return ret, nil
+		return ConfigDTO{
+			Id:        t.Id,
+			AppId:     t.AppId,
+			Name:      t.Name,
+			Content:   t.Content,
+			Env:       t.Env,
+			IsEnabled: t.IsEnabled,
+		}, nil
 	})
 }
 
 // UpdateConfig 编辑部署配置
-func (*outerImpl) UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.UpdateConfig),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (*outerImpl) UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	cfg, b, err := deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-	}
 	// 校验权限
-	err = checkDeployConfigPerm(ctx, cfg.AppId, reqDTO.Operator)
+	_, err := checkDeployConfigPermByConfigId(ctx, reqDTO.ConfigId, reqDTO.Operator)
 	if err != nil {
-		return
-	}
-	var cfgJson []byte
-	switch cfg.ServiceType {
-	case deploy.ProcessServiceType:
-		if reqDTO.ProcessConfig == nil || !reqDTO.ProcessConfig.IsValid() {
-			err = util.InvalidArgsError()
-			return
-		}
-		cfgJson, _ = json.Marshal(reqDTO.ProcessConfig)
-	case deploy.K8sServiceType:
-		if reqDTO.K8sConfig == nil || !reqDTO.K8sConfig.IsValid() {
-			err = util.InvalidArgsError()
-			return
-		}
-		cfgJson, _ = json.Marshal(reqDTO.K8sConfig)
-	default:
-		logger.Logger.WithContext(ctx).Errorf("configId: %v 's serviceType: %v is unknown", reqDTO.ConfigId, cfg.ServiceType)
-		err = util.ThereHasBugErr()
-		return
+		return err
 	}
 	_, err = deploymd.UpdateConfig(ctx, deploymd.UpdateConfigReqDTO{
 		ConfigId: reqDTO.ConfigId,
 		Name:     reqDTO.Name,
-		Content:  string(cfgJson),
-		Env:      reqDTO.Env,
+		Content:  reqDTO.Content,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
-// InsertConfig 新增部署配置
-func (*outerImpl) InsertConfig(ctx context.Context, reqDTO InsertConfigReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.DeploySrvKeysVO.InsertConfig),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
-	if err = reqDTO.IsValid(); err != nil {
-		return
+// CreateConfig 新增部署配置
+func (*outerImpl) CreateConfig(ctx context.Context, reqDTO CreateConfigReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err = checkDeployConfigPerm(ctx, reqDTO.AppId, reqDTO.Operator)
+	err := checkDeployConfigPermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
 	if err != nil {
-		return
-	}
-	var cfgJson []byte
-	switch reqDTO.ServiceType {
-	case deploy.ProcessServiceType:
-		cfgJson, _ = json.Marshal(reqDTO.ProcessConfig)
-	case deploy.K8sServiceType:
-		cfgJson, _ = json.Marshal(reqDTO.ProcessConfig)
-	default:
-		err = util.ThereHasBugErr()
-		return
+		return err
 	}
 	err = deploymd.InsertConfig(ctx, deploymd.InsertConfigReqDTO{
-		AppId:       reqDTO.AppId,
-		Name:        reqDTO.Name,
-		ServiceType: reqDTO.ServiceType,
-		Content:     string(cfgJson),
-		Env:         reqDTO.Env,
+		AppId:     reqDTO.AppId,
+		Name:      reqDTO.Name,
+		Content:   reqDTO.Content,
+		Env:       reqDTO.Env,
+		IsEnabled: false,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
+}
+
+// EnableConfig 启动配置
+func (*outerImpl) EnableConfig(ctx context.Context, reqDTO EnableConfigReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 校验权限
+	config, err := checkDeployConfigPermByConfigId(ctx, reqDTO.ConfigId, reqDTO.Operator)
+	if err != nil {
+		return err
+	}
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		configs, err2 := deploymd.ListConfigForUpdate(ctx, config.AppId, config.Env)
+		if err2 != nil {
+			return err2
+		}
+		shouldDisabled := make([]int64, 0)
+		for _, config := range configs {
+			if config.Id != reqDTO.ConfigId {
+				shouldDisabled = append(shouldDisabled, config.Id)
+			}
+		}
+		err2 = deploymd.BatchSetConfigIsEnabled(ctx, shouldDisabled, false)
+		if err2 != nil {
+			return err2
+		}
+		return deploymd.BatchSetConfigIsEnabled(ctx, []int64{reqDTO.ConfigId}, true)
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// DisableConfig 关闭配置
+func (*outerImpl) DisableConfig(ctx context.Context, reqDTO DisableConfigReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 校验权限
+	_, err := checkDeployConfigPermByConfigId(ctx, reqDTO.ConfigId, reqDTO.Operator)
+	if err != nil {
+		return err
+	}
+	err = deploymd.BatchSetConfigIsEnabled(ctx, []int64{reqDTO.ConfigId}, false)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }
 
 // InsertPlan 创建发布计划
@@ -202,40 +189,7 @@ func (*outerImpl) InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (err 
 			return
 		}
 		if reqDTO.PlanType == deploymd.AddServiceBeforePlanCreatingType {
-			var cfg deploymd.TeamConfig
-			cfg, b, err = deploymd.GetTeamConfig(ctx, reqDTO.TeamId, reqDTO.Env)
-			if err != nil {
-				err = util.InternalError(err)
-				return
-			}
-			if !b {
-				err = util.UnauthorizedError()
-				return
-			}
-			if len(cfg.Content.DeployPlanApprovers) == 0 {
-				err = util.UnauthorizedError()
-				return
-			}
-			err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-				approval, err := deploymd.InsertPlanApproval(ctx, deploymd.InsertPlanApprovalReqDTO{
-					Name:        reqDTO.Name,
-					TeamId:      reqDTO.TeamId,
-					Env:         reqDTO.Env,
-					DeployItems: reqDTO.DeployItems,
-					Creator:     reqDTO.Operator.Account,
-				})
-				if err != nil {
-					return err
-				}
-				reqs, _ := listutil.Map(cfg.Content.DeployPlanApprovers, func(t string) (deploymd.InsertApprovalNotifyReqDTO, error) {
-					return deploymd.InsertApprovalNotifyReqDTO{
-						Aid:          approval.Id,
-						Account:      t,
-						NotifyStatus: deploymd.WaitStatus,
-					}, nil
-				})
-				return deploymd.BatchInsertApprovalNotify(ctx, reqDTO.Env, reqs...)
-			})
+
 			if err != nil {
 				logger.Logger.WithContext(ctx).Error(err)
 				err = util.InternalError(err)
@@ -449,7 +403,7 @@ func (*outerImpl) ClosePlanItem(ctx context.Context, reqDTO ClosePlanItemReqDTO)
 		return
 	}
 	// 校验权限
-	_, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, planItem.ConfigId, reqDTO.Env)
+	_, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, planItem.ConfigId)
 	if err != nil {
 		return
 	}
@@ -536,23 +490,12 @@ func (*outerImpl) DeployService(ctx context.Context, reqDTO DeployServiceReqDTO)
 	defer closer.Close()
 	// 检查参数
 	var (
-		config  deploymd.Config
-		b       bool
-		teamCfg deploymd.TeamConfig
-		teamId  int64
+		config deploymd.Config
+		b      bool
 	)
 	// 检查权限
-	config, teamId, err = checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env)
+	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId)
 	if err != nil {
-		return
-	}
-	teamCfg, b, err = deploymd.GetTeamConfig(ctx, teamId, reqDTO.Env)
-	if err != nil {
-		err = util.InternalError(err)
-		return
-	}
-	if !b || teamCfg.Content.DisallowDeployServiceWithoutPlan {
-		err = util.UnauthorizedError()
 		return
 	}
 	// 检查制品
@@ -599,7 +542,7 @@ func (*outerImpl) StopService(ctx context.Context, reqDTO StopServiceReqDTO) (er
 		b       bool
 		service deploymd.Service
 	)
-	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env)
+	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId)
 	if err != nil {
 		return
 	}
@@ -644,7 +587,7 @@ func (*outerImpl) RestartService(ctx context.Context, reqDTO RestartServiceReqDT
 		b       bool
 		service deploymd.Service
 	)
-	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env)
+	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId)
 	if err != nil {
 		return
 	}
@@ -704,19 +647,10 @@ func (*outerImpl) ListService(ctx context.Context, reqDTO ListServiceReqDTO) ([]
 		ret := ServiceDTO{
 			CurrProductVersion: t.CurrProductVersion,
 			LastProductVersion: t.LastProductVersion,
-			ServiceType:        t.ServiceType,
 			ActiveStatus:       t.ActiveStatus,
 			StartTime:          t.StartTime,
 			ProbeTime:          t.ProbeTime,
 			Created:            t.Created,
-		}
-		switch t.ServiceType {
-		case deploy.ProcessServiceType:
-			ret.ProcessConfig = new(deploy.ProcessConfig)
-			json.Unmarshal([]byte(t.ServiceConfig), ret.ProcessConfig)
-		case deploy.K8sServiceType:
-			ret.K8sConfig = new(deploy.K8sConfig)
-			json.Unmarshal([]byte(t.ServiceConfig), ret.K8sConfig)
 		}
 		return ret, nil
 	})
@@ -730,7 +664,7 @@ func (*outerImpl) ListDeployLog(ctx context.Context, reqDTO ListDeployLogReqDTO)
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	if _, _, err := checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env); err != nil {
+	if _, _, err := checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId); err != nil {
 		return nil, 0, err
 	}
 	logs, err := deploymd.ListDeployLog(ctx, deploymd.ListDeployLogReqDTO{
@@ -745,7 +679,6 @@ func (*outerImpl) ListDeployLog(ctx context.Context, reqDTO ListDeployLogReqDTO)
 	}
 	ret, _ := listutil.Map(logs, func(t deploymd.DeployLog) (DeployLogDTO, error) {
 		return DeployLogDTO{
-			ServiceType:    t.ServiceType,
 			ServiceConfig:  t.ServiceConfig,
 			ProductVersion: t.ProductVersion,
 			Operator:       t.Operator,
@@ -768,7 +701,7 @@ func (*outerImpl) ListOpLog(ctx context.Context, reqDTO ListOpLogReqDTO) ([]OpLo
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	if _, _, err := checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId, reqDTO.Env); err != nil {
+	if _, _, err := checkAccessConfigPerm(ctx, reqDTO.Operator, reqDTO.ConfigId); err != nil {
 		return nil, 0, err
 	}
 	logs, err := deploymd.ListOpLog(ctx, deploymd.ListOpLogReqDTO{
@@ -842,7 +775,7 @@ func (*outerImpl) DeployServiceWithPlan(ctx context.Context, reqDTO DeployServic
 		err = util.InvalidArgsError()
 		return
 	}
-	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, item.ConfigId, reqDTO.Env)
+	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, item.ConfigId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -913,7 +846,7 @@ func (*outerImpl) RollbackServiceWithPlan(ctx context.Context, reqDTO RollbackSe
 		err = util.InvalidArgsError()
 		return
 	}
-	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, item.ConfigId, reqDTO.Env)
+	config, _, err = checkAccessConfigPerm(ctx, reqDTO.Operator, item.ConfigId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -998,64 +931,32 @@ func (*innerImpl) DeployServiceWithoutPlan(ctx context.Context, reqDTO DeploySer
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	// 如果有configId 优先configId 否则通过appId获取全部的部署配置
-	if reqDTO.ConfigId > 0 {
-		// 检查配置
-		config, b, err := deploymd.GetConfigById(ctx, reqDTO.ConfigId, reqDTO.Env)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
-		}
-		if !b {
-			return util.InvalidArgsError()
-		}
-		// 检查制品
-		_, b, err = productmd.GetProduct(ctx, productmd.GetProductReqDTO{
-			AppId: config.AppId,
-			Name:  reqDTO.ProductVersion,
-			Env:   reqDTO.Env,
-		})
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
-		}
-		if !b {
-			return util.InvalidArgsError()
-		}
-		err = deployService(&config, reqDTO.ProductVersion, reqDTO.Env, reqDTO.Operator, 0)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
-		}
-	} else if reqDTO.AppId != "" {
-		// 检查制品
-		_, b, err := productmd.GetProduct(ctx, productmd.GetProductReqDTO{
-			AppId: reqDTO.AppId,
-			Name:  reqDTO.ProductVersion,
-			Env:   reqDTO.Env,
-		})
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
-		}
-		if !b {
-			return util.InvalidArgsError()
-		}
-		// 获取所有部署配置
-		configs, err := deploymd.ListConfigByAppId(ctx, reqDTO.AppId, reqDTO.Env)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
-		}
-		for i := range configs {
-			err = deployService(&configs[i], reqDTO.ProductVersion, reqDTO.Env, reqDTO.Operator, 0)
-			if err != nil {
-				logger.Logger.WithContext(ctx).Error(err)
-				return util.InternalError(err)
-			}
-		}
-	} else {
+	// 检查制品
+	_, b, err := productmd.GetProduct(ctx, productmd.GetProductReqDTO{
+		AppId: reqDTO.AppId,
+		Name:  reqDTO.Product,
+		Env:   reqDTO.Env,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
 		return util.InvalidArgsError()
+	}
+	// 获取所有部署配置
+	config, b, err := deploymd.GetEnabledConfigByAppId(ctx, reqDTO.AppId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	err = deployService(&config, reqDTO.Product, reqDTO.Env, reqDTO.Operator, 0)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
 	}
 	return nil
 }

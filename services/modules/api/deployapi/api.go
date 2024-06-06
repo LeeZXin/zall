@@ -10,6 +10,7 @@ import (
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
 	"net/http"
 	"time"
 )
@@ -33,9 +34,16 @@ func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/deployConfig", apisession.CheckLogin)
 		{
-			group.POST("/list", listConfig)
+			// 部署配置列表
+			group.GET("/list", listConfig)
+			// 编辑部署配置
 			group.POST("/update", updateConfig)
-			group.POST("/insert", insertConfig)
+			// 新增部署配置
+			group.POST("/create", createConfig)
+			// 启用配置
+			group.PUT("/enable/:configId", enableConfig)
+			// 关闭配置
+			group.PUT("/disable/:configId", disableConfig)
 		}
 
 		group = e.Group("/api/deployPlan", apisession.CheckLogin)
@@ -87,10 +95,55 @@ func checkToken(c *gin.Context) {
 }
 
 func listConfig(c *gin.Context) {
-	var req ListConfigReqVO
+	configs, err := deploysrv.Outer.ListConfig(c, deploysrv.ListConfigReqDTO{
+		AppId:    c.Query("appId"),
+		Env:      c.Query("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(configs, func(t deploysrv.ConfigDTO) (ConfigVO, error) {
+		return ConfigVO{
+			Id:        t.Id,
+			AppId:     t.AppId,
+			Name:      t.Name,
+			Content:   t.Content,
+			Env:       t.Env,
+			IsEnabled: t.IsEnabled,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]ConfigVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func updateConfig(c *gin.Context) {
+	var req UpdateConfigReqVO
 	if util.ShouldBindJSON(&req, c) {
-		configs, err := deploysrv.Outer.ListConfig(c, deploysrv.ListConfigReqDTO{
+		err := deploysrv.Outer.UpdateConfig(c, deploysrv.UpdateConfigReqDTO{
+			ConfigId: req.ConfigId,
+			Content:  req.Content,
+			Name:     req.Name,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func createConfig(c *gin.Context) {
+	var req CreateConfigReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.CreateConfig(c, deploysrv.CreateConfigReqDTO{
 			AppId:    req.AppId,
+			Name:     req.Name,
+			Content:  req.Content,
 			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -98,61 +151,32 @@ func listConfig(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(configs, func(t deploysrv.ConfigDTO) (ConfigVO, error) {
-			return ConfigVO{
-				Id:            t.Id,
-				AppId:         t.AppId,
-				Name:          t.Name,
-				ServiceType:   t.ServiceType.Readable(),
-				ProcessConfig: t.ProcessConfig,
-				K8sConfig:     t.K8sConfig,
-				Created:       t.Created.Format(time.DateTime),
-			}, nil
-		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]ConfigVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     data,
-		})
-	}
-}
-
-func updateConfig(c *gin.Context) {
-	var req UpdateConfigReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.UpdateConfig(c, deploysrv.UpdateConfigReqDTO{
-			ConfigId:      req.ConfigId,
-			Env:           req.Env,
-			ProcessConfig: req.ProcessConfig,
-			K8sConfig:     req.K8sConfig,
-			Name:          req.Name,
-			Operator:      apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
 		util.DefaultOkResponse(c)
 	}
 }
 
-func insertConfig(c *gin.Context) {
-	var req InsertConfigReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.InsertConfig(c, deploysrv.InsertConfigReqDTO{
-			AppId:         req.AppId,
-			Name:          req.Name,
-			ServiceType:   req.ServiceType,
-			ProcessConfig: req.ProcessConfig,
-			K8sConfig:     req.K8sConfig,
-			Env:           req.Env,
-			Operator:      apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+func enableConfig(c *gin.Context) {
+	err := deploysrv.Outer.EnableConfig(c, deploysrv.EnableConfigReqDTO{
+		ConfigId: cast.ToInt64(c.Param("configId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
+}
+
+func disableConfig(c *gin.Context) {
+	err := deploysrv.Outer.DisableConfig(c, deploysrv.DisableConfigReqDTO{
+		ConfigId: cast.ToInt64(c.Param("configId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
 }
 
 func insertPlan(c *gin.Context) {
@@ -259,11 +283,10 @@ func deployWithoutPlan(c *gin.Context) {
 	var req DeployServiceWithoutPlanReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.Inner.DeployServiceWithoutPlan(c, deploysrv.DeployServiceWithoutPlanReqDTO{
-			ConfigId:       req.ConfigId,
-			Env:            req.Env,
-			ProductVersion: req.ProductVersion,
-			Operator:       req.Operator,
-			AppId:          req.AppId,
+			Env:      req.Env,
+			Product:  req.Product,
+			Operator: req.Operator,
+			AppId:    req.AppId,
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -370,9 +393,6 @@ func listService(c *gin.Context) {
 			return ServiceVO{
 				CurrProductVersion: t.CurrProductVersion,
 				LastProductVersion: t.LastProductVersion,
-				ServiceType:        t.ServiceType.Readable(),
-				ProcessConfig:      t.ProcessConfig,
-				K8sConfig:          t.K8sConfig,
 				ActiveStatus:       t.ActiveStatus.Readable(),
 				StartTime:          time.UnixMilli(t.StartTime).Format(time.DateTime),
 				ProbeTime:          time.UnixMilli(t.ProbeTime).Format(time.DateTime),
@@ -402,7 +422,6 @@ func listDeployLog(c *gin.Context) {
 		}
 		data, _ := listutil.Map(logs, func(t deploysrv.DeployLogDTO) (DeployLogVO, error) {
 			return DeployLogVO{
-				ServiceType:    t.ServiceType.Readable(),
 				ServiceConfig:  t.ServiceConfig,
 				ProductVersion: t.ProductVersion,
 				Operator:       t.Operator,

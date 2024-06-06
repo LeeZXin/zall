@@ -397,7 +397,7 @@ var (
 			DefaultRet: "编辑部署配置",
 		},
 		InsertConfig: KeyItem{
-			Id:         "deploySrv.InsertConfig",
+			Id:         "deploySrv.CreateConfig",
 			DefaultRet: "新增部署配置",
 		},
 		InsertPlan: KeyItem{
@@ -478,7 +478,7 @@ var (
 
 	AlertSrvKeysVO = AlertSrvKeys{
 		InsertConfig: KeyItem{
-			Id:         "alertSrv.InsertConfig",
+			Id:         "alertSrv.CreateConfig",
 			DefaultRet: "新增告警配置",
 		},
 		UpdateConfig: KeyItem{
@@ -486,7 +486,7 @@ var (
 			DefaultRet: "编辑告警配置",
 		},
 		DeleteConfig: KeyItem{
-			Id:         "alertSrv.InsertConfig",
+			Id:         "alertSrv.CreateConfig",
 			DefaultRet: "删除告警配置",
 		},
 	}

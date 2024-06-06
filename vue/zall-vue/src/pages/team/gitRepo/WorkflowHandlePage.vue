@@ -45,9 +45,9 @@
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
+        <div class="section-title flex-between">
           <span>工作流配置</span>
-          <span @click="formatYaml" class="format-yaml-text">格式化yaml</span>
+          <span @click="formatYaml" class="format-yaml-btn">格式化yaml</span>
         </div>
         <Codemirror
           v-model="formState.yamlContent"
@@ -221,7 +221,9 @@ const createOrUpdateWorkflow = () => {
       desc: formState.desc
     };
     createWorkflowRequest(httpReq).then(() => {
-      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/list`);
+      router.push(
+        `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/list`
+      );
     });
   }
 };
@@ -244,8 +246,7 @@ if (mode === "update") {
 }
 </script>
 <style scoped>
-.format-yaml-text {
-  float: right;
+.format-yaml-btn {
   cursor: pointer;
 }
 .format-yaml-text:hover {

@@ -195,7 +195,7 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 			envs[vars.Name] = vars.Content
 		}
 	}
-	err = workflow.NewAgentCommand(wf.AgentHost, wf.AgentToken, "").
+	err = workflow.NewAgentCommand(wf.AgentHost, wf.AgentToken).
 		ExecuteWorkflow(wf.YamlContent, bizId, envs)
 	ctx2, closer2 := xormstore.Context(context.Background())
 	defer closer2.Close()
@@ -640,7 +640,7 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 	if err != nil {
 		return err
 	}
-	err = workflow.NewAgentCommand(task.AgentHost, task.AgentToken, "").KillWorkflow(task.BizId)
+	err = workflow.NewAgentCommand(task.AgentHost, task.AgentToken).KillWorkflow(task.BizId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
@@ -687,7 +687,7 @@ func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO)
 		return workflow.TaskStatus{}, err
 	}
 	ret, err := workflow.
-		NewAgentCommand(task.AgentHost, task.AgentToken, "").
+		NewAgentCommand(task.AgentHost, task.AgentToken).
 		GetWorkflowTaskStatus(task.BizId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -753,7 +753,7 @@ func (*outerImpl) GetLogContent(ctx context.Context, reqDTO GetLogContentReqDTO)
 		return nil, err
 	}
 	logContent, err := workflow.
-		NewAgentCommand(task.AgentHost, task.AgentToken, "").
+		NewAgentCommand(task.AgentHost, task.AgentToken).
 		GetLogContent(task.BizId, reqDTO.JobName, reqDTO.StepIndex)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

@@ -29,7 +29,6 @@ import (
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
 	"github.com/LeeZXin/zall/services/modules/api/deployapi"
-	"github.com/LeeZXin/zall/services/modules/service/deploysrv"
 	"github.com/LeeZXin/zall/tcpdetect/modules/api/detectapi"
 	"github.com/LeeZXin/zall/tcpdetect/modules/service/detectsrv"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
@@ -125,7 +124,7 @@ func runZall(*cli.Context) error {
 		deployapi.InitApi()
 		if static.GetBool("probe.enabled") {
 			logger.Logger.Info("service probe enabled")
-			deploysrv.InitProbeTask()
+			//deploysrv.InitProbeTask()
 		}
 	}
 	// prom

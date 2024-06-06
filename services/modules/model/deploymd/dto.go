@@ -1,29 +1,26 @@
 package deploymd
 
 import (
-	"github.com/LeeZXin/zall/pkg/deploy"
 	"time"
 )
 
 type InsertConfigReqDTO struct {
-	AppId       string
-	Name        string
-	ServiceType deploy.ServiceType
-	Content     string
-	Env         string
+	AppId     string
+	Name      string
+	Content   string
+	Env       string
+	IsEnabled bool
 }
 
 type UpdateConfigReqDTO struct {
 	ConfigId int64
 	Name     string
 	Content  string
-	Env      string
 }
 
 type InsertServiceReqDTO struct {
 	ConfigId           int64
 	CurrProductVersion string
-	ServiceType        deploy.ServiceType
 	ServiceConfig      string
 	Env                string
 	ActiveStatus       ActiveStatus
@@ -55,7 +52,6 @@ type InsertDeployLogReqDTO struct {
 	ConfigId       int64
 	AppId          string
 	PlanId         int64
-	ServiceType    deploy.ServiceType
 	ServiceConfig  string
 	ProductVersion string
 	Env            string

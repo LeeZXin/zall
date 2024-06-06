@@ -7,6 +7,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zall/util"
+	"gopkg.in/yaml.v3"
 	"time"
 )
 
@@ -30,12 +31,11 @@ func (r *ListConfigReqDTO) IsValid() error {
 }
 
 type UpdateConfigReqDTO struct {
-	ConfigId      int64                 `json:"configId"`
-	Name          string                `json:"name"`
-	Env           string                `json:"env"`
-	ProcessConfig *deploy.ProcessConfig `json:"processConfig"`
-	K8sConfig     *deploy.K8sConfig     `json:"k8sConfig"`
-	Operator      apisession.UserInfo   `json:"operator"`
+	ConfigId int64               `json:"configId"`
+	Name     string              `json:"name"`
+	Content  string              `json:"content"`
+	Operator apisession.UserInfo `json:"operator"`
+	deploy   deploy.Deploy
 }
 
 func (r *UpdateConfigReqDTO) IsValid() error {
@@ -45,7 +45,8 @@ func (r *UpdateConfigReqDTO) IsValid() error {
 	if r.ConfigId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	err := yaml.Unmarshal([]byte(r.Content), &r.deploy)
+	if err != nil || !r.deploy.IsValid() {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -55,26 +56,24 @@ func (r *UpdateConfigReqDTO) IsValid() error {
 }
 
 type ConfigDTO struct {
-	Id            int64                 `json:"id"`
-	AppId         string                `json:"appId"`
-	Name          string                `json:"name"`
-	ServiceType   deploy.ServiceType    `json:"serviceType"`
-	ProcessConfig *deploy.ProcessConfig `json:"processConfig"`
-	K8sConfig     *deploy.K8sConfig     `json:"k8sConfig"`
-	Created       time.Time             `json:"created"`
+	Id        int64  `json:"id"`
+	AppId     string `json:"appId"`
+	Name      string `json:"name"`
+	Content   string `json:"content"`
+	Env       string `json:"env"`
+	IsEnabled bool   `json:"isEnabled"`
 }
 
-type InsertConfigReqDTO struct {
-	AppId         string                `json:"appId"`
-	Name          string                `json:"name"`
-	ServiceType   deploy.ServiceType    `json:"serviceType"`
-	ProcessConfig *deploy.ProcessConfig `json:"processConfig"`
-	K8sConfig     *deploy.K8sConfig     `json:"k8sConfig"`
-	Env           string                `json:"env"`
-	Operator      apisession.UserInfo   `json:"operator"`
+type CreateConfigReqDTO struct {
+	AppId    string              `json:"appId"`
+	Name     string              `json:"name"`
+	Content  string              `json:"content"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+	deploy   deploy.Deploy
 }
 
-func (r *InsertConfigReqDTO) IsValid() error {
+func (r *CreateConfigReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
@@ -87,16 +86,38 @@ func (r *InsertConfigReqDTO) IsValid() error {
 	if !deploymd.IsConfigNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	switch r.ServiceType {
-	case deploy.ProcessServiceType:
-		if r.ProcessConfig == nil || !r.ProcessConfig.IsValid() {
-			return util.InvalidArgsError()
-		}
-	case deploy.K8sServiceType:
-		if r.K8sConfig == nil || !r.K8sConfig.IsValid() {
-			return util.InvalidArgsError()
-		}
-	default:
+	err := yaml.Unmarshal([]byte(r.Content), &r.deploy)
+	if err != nil || !r.deploy.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type EnableConfigReqDTO struct {
+	ConfigId int64               `json:"configId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *EnableConfigReqDTO) IsValid() error {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.ConfigId <= 0 {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DisableConfigReqDTO struct {
+	ConfigId int64               `json:"configId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *DisableConfigReqDTO) IsValid() error {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.ConfigId <= 0 {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -237,15 +258,17 @@ type PlanItemDTO struct {
 }
 
 type DeployServiceWithoutPlanReqDTO struct {
-	ConfigId       int64  `json:"configId"`
-	AppId          string `json:"appId"`
-	Env            string `json:"env"`
-	ProductVersion string `json:"productVersion"`
-	Operator       string `json:"operator"`
+	AppId    string `json:"appId"`
+	Env      string `json:"env"`
+	Product  string `json:"product"`
+	Operator string `json:"operator"`
 }
 
 func (r *DeployServiceWithoutPlanReqDTO) IsValid() error {
-	if r.ProductVersion == "" {
+	if r.Product == "" {
+		return util.InvalidArgsError()
+	}
+	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
@@ -340,9 +363,6 @@ func (r *ListServiceReqDTO) IsValid() error {
 type ServiceDTO struct {
 	CurrProductVersion string
 	LastProductVersion string
-	ServiceType        deploy.ServiceType
-	ProcessConfig      *deploy.ProcessConfig
-	K8sConfig          *deploy.K8sConfig
 	ActiveStatus       deploymd.ActiveStatus
 	StartTime          int64
 	ProbeTime          int64
@@ -374,7 +394,6 @@ func (r *ListDeployLogReqDTO) IsValid() error {
 }
 
 type DeployLogDTO struct {
-	ServiceType    deploy.ServiceType
 	ServiceConfig  string
 	ProductVersion string
 	Operator       string

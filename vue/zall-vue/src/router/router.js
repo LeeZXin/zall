@@ -79,7 +79,7 @@ const router = createRouter({
             }, {
                 path: "/team/:teamId(\\d+)/app/create",
                 component: () =>
-                    import ("../pages/team/app/CreateAppPage")
+                    import ("../pages/team/app/AppCreatePage")
             }]
         },
         {
@@ -216,6 +216,21 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/app/:appId/property/:fileId(\\d+)/history/list",
                 component: () =>
                     import ("../pages/team/app/PropertyHistoryPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/deployConfig/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/DeployConfigListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/deployConfig/create",
+                component: () =>
+                    import ("../pages/team/app/DeployConfigHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/deployConfig/:configId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/app/DeployConfigHandlePage")
 
             }]
         },

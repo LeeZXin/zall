@@ -19,8 +19,12 @@ type OuterService interface {
 	ListConfig(context.Context, ListConfigReqDTO) ([]ConfigDTO, error)
 	// UpdateConfig 编辑部署配置
 	UpdateConfig(context.Context, UpdateConfigReqDTO) error
-	// InsertConfig 新增部署配置
-	InsertConfig(context.Context, InsertConfigReqDTO) error
+	// CreateConfig 新增部署配置
+	CreateConfig(context.Context, CreateConfigReqDTO) error
+	// EnableConfig 启动配置
+	EnableConfig(context.Context, EnableConfigReqDTO) error
+	// DisableConfig 关闭配置
+	DisableConfig(context.Context, DisableConfigReqDTO) error
 	// InsertPlan 创建发布计划
 	InsertPlan(context.Context, InsertPlanReqDTO) error
 	// ClosePlan 关闭发布计划

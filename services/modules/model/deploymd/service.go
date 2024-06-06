@@ -17,19 +17,18 @@ func IsPlanNameValid(name string) bool {
 
 func InsertConfig(ctx context.Context, reqDTO InsertConfigReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
-		Table("zservice_deploy_config_" + reqDTO.Env).
 		Insert(Config{
-			AppId:       reqDTO.AppId,
-			Name:        reqDTO.Name,
-			Content:     reqDTO.Content,
-			ServiceType: reqDTO.ServiceType,
+			AppId:     reqDTO.AppId,
+			Name:      reqDTO.Name,
+			Content:   reqDTO.Content,
+			Env:       reqDTO.Env,
+			IsEnabled: reqDTO.IsEnabled,
 		})
 	return err
 }
 
 func UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Table("zservice_deploy_config_"+reqDTO.Env).
 		Where("id = ?", reqDTO.ConfigId).
 		Cols("content", "name").
 		Limit(1).
@@ -40,13 +39,32 @@ func UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) (bool, error) 
 	return rows == 1, err
 }
 
-func GetConfigById(ctx context.Context, configId int64, env string) (Config, bool, error) {
+func GetConfigById(ctx context.Context, configId int64) (Config, bool, error) {
 	var ret Config
 	b, err := xormutil.MustGetXormSession(ctx).
-		Table("zservice_deploy_config_"+env).
 		Where("id = ?", configId).
 		Get(&ret)
 	return ret, b, err
+}
+
+func BatchSetConfigIsEnabled(ctx context.Context, configIdList []int64, isEnabled bool) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		In("id", configIdList).
+		Cols("is_enabled").
+		Update(&Config{
+			IsEnabled: isEnabled,
+		})
+	return err
+}
+
+func ListConfigForUpdate(ctx context.Context, appId, env string) ([]Config, error) {
+	ret := make([]Config, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env).
+		ForUpdate().
+		Find(&ret)
+	return ret, err
 }
 
 func DeleteConfigById(ctx context.Context, configId int64, env string) (bool, error) {
@@ -61,10 +79,21 @@ func DeleteConfigById(ctx context.Context, configId int64, env string) (bool, er
 func ListConfigByAppId(ctx context.Context, appId, env string) ([]Config, error) {
 	ret := make([]Config, 0)
 	err := xormutil.MustGetXormSession(ctx).
-		Table("zservice_deploy_config_"+env).
 		Where("app_id = ?", appId).
+		And("env = ?", env).
+		Desc("id").
 		Find(&ret)
 	return ret, err
+}
+
+func GetEnabledConfigByAppId(ctx context.Context, appId, env string) (Config, bool, error) {
+	var ret Config
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env).
+		And("is_enabled = 1").
+		Get(&ret)
+	return ret, b, err
 }
 
 func InsertService(ctx context.Context, reqDTO InsertServiceReqDTO) error {
@@ -72,7 +101,6 @@ func InsertService(ctx context.Context, reqDTO InsertServiceReqDTO) error {
 		Table("zservice_deploy_service_" + reqDTO.Env).
 		Insert(&Service{
 			ConfigId:           reqDTO.ConfigId,
-			ServiceType:        reqDTO.ServiceType,
 			ServiceConfig:      reqDTO.ServiceConfig,
 			ActiveStatus:       reqDTO.ActiveStatus,
 			StartTime:          reqDTO.StartTime,
@@ -182,7 +210,6 @@ func InsertDeployLog(ctx context.Context, reqDTO InsertDeployLogReqDTO) error {
 		Insert(&DeployLog{
 			ConfigId:       reqDTO.ConfigId,
 			AppId:          reqDTO.AppId,
-			ServiceType:    reqDTO.ServiceType,
 			ServiceConfig:  reqDTO.ServiceConfig,
 			ProductVersion: reqDTO.ProductVersion,
 			DeployOutput:   reqDTO.DeployOutput,
@@ -190,15 +217,6 @@ func InsertDeployLog(ctx context.Context, reqDTO InsertDeployLogReqDTO) error {
 			PlanId:         reqDTO.PlanId,
 		})
 	return err
-}
-
-func GetTeamConfig(ctx context.Context, teamId int64, env string) (TeamConfig, bool, error) {
-	var ret TeamConfig
-	b, err := xormutil.MustGetXormSession(ctx).
-		Table("zservice_team_config_"+env).
-		Where("team_id = ?", teamId).
-		Get(&ret)
-	return ret, b, err
 }
 
 func InsertProbeInstance(ctx context.Context, instanceId, env string) error {

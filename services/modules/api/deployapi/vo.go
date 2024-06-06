@@ -1,40 +1,29 @@
 package deployapi
 
 import (
-	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 )
 
-type ListConfigReqVO struct {
-	AppId string `json:"appId"`
-	Env   string `json:"env"`
-}
-
 type UpdateConfigReqVO struct {
-	ConfigId      int64                 `json:"configId"`
-	Name          string                `json:"name"`
-	Env           string                `json:"env"`
-	ProcessConfig *deploy.ProcessConfig `json:"processConfig"`
-	K8sConfig     *deploy.K8sConfig     `json:"k8sConfig"`
+	ConfigId int64  `json:"configId"`
+	Name     string `json:"name"`
+	Content  string `json:"content"`
 }
 
 type ConfigVO struct {
-	Id            int64                 `json:"id"`
-	AppId         string                `json:"appId"`
-	Name          string                `json:"name"`
-	ServiceType   string                `json:"serviceType"`
-	ProcessConfig *deploy.ProcessConfig `json:"processConfig,omitempty"`
-	K8sConfig     *deploy.K8sConfig     `json:"k8sConfig,omitempty"`
-	Created       string                `json:"created"`
+	Id        int64  `json:"id"`
+	AppId     string `json:"appId"`
+	Name      string `json:"name"`
+	Content   string `json:"content"`
+	Env       string `json:"env"`
+	IsEnabled bool   `json:"isEnabled"`
 }
 
-type InsertConfigReqVO struct {
-	AppId         string                `json:"appId"`
-	Name          string                `json:"name"`
-	ServiceType   deploy.ServiceType    `json:"serviceType"`
-	ProcessConfig *deploy.ProcessConfig `json:"processConfig,omitempty"`
-	K8sConfig     *deploy.K8sConfig     `json:"k8SConfig,omitempty"`
-	Env           string                `json:"env"`
+type CreateConfigReqVO struct {
+	AppId   string `json:"appId"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
+	Env     string `json:"env"`
 }
 
 type InsertPlanReqVO struct {
@@ -68,11 +57,10 @@ type ListPlanItemReqVO struct {
 }
 
 type DeployServiceWithoutPlanReqVO struct {
-	ConfigId       int64  `json:"configId"`
-	Env            string `json:"env"`
-	ProductVersion string `json:"productVersion"`
-	Operator       string `json:"operator"`
-	AppId          string `json:"appId"`
+	Env      string `json:"env"`
+	Product  string `json:"product"`
+	Operator string `json:"operator"`
+	AppId    string `json:"appId"`
 }
 
 type DeployServiceReqVO struct {
@@ -107,15 +95,13 @@ type ListServiceReqVO struct {
 }
 
 type ServiceVO struct {
-	CurrProductVersion string                `json:"currProductVersion"`
-	LastProductVersion string                `json:"lastProductVersion"`
-	ServiceType        string                `json:"serviceType"`
-	ProcessConfig      *deploy.ProcessConfig `json:"processConfig,omitempty"`
-	K8sConfig          *deploy.K8sConfig     `json:"k8SConfig,omitempty"`
-	ActiveStatus       string                `json:"activeStatus"`
-	StartTime          string                `json:"startTime"`
-	ProbeTime          string                `json:"probeTime"`
-	Created            string                `json:"created"`
+	CurrProductVersion string `json:"currProductVersion"`
+	LastProductVersion string `json:"lastProductVersion"`
+	ServiceType        string `json:"serviceType"`
+	ActiveStatus       string `json:"activeStatus"`
+	StartTime          string `json:"startTime"`
+	ProbeTime          string `json:"probeTime"`
+	Created            string `json:"created"`
 }
 
 type ListDeployLogReqVO struct {
