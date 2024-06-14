@@ -14,8 +14,8 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/eventbus"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zall/pkg/webhook"
-	"github.com/LeeZXin/zall/pkg/workflow"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -63,7 +63,7 @@ func (s *innerImpl) CheckWorkflowToken(ctx context.Context, repoId int64, token 
 }
 
 // TaskCallback 工作流回调
-func (s *innerImpl) TaskCallback(taskId string, task workflow.TaskStatusCallbackReq) {
+func (s *innerImpl) TaskCallback(taskId string, task sshagent.TaskStatusCallbackReq) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	taskmd, b, err := workflowmd.GetTaskByBizId(ctx, taskId)
@@ -78,16 +78,16 @@ func (s *innerImpl) TaskCallback(taskId string, task workflow.TaskStatusCallback
 		oldStatus, finalStatus workflowmd.TaskStatus
 	)
 	switch task.Status {
-	case workflow.SuccessStatus:
+	case sshagent.SuccessStatus:
 		oldStatus = workflowmd.TaskRunningStatus
 		finalStatus = workflowmd.TaskSuccessStatus
-	case workflow.FailStatus:
+	case sshagent.FailStatus:
 		oldStatus = workflowmd.TaskRunningStatus
 		finalStatus = workflowmd.TaskFailStatus
-	case workflow.TimeoutStatus:
+	case sshagent.TimeoutStatus:
 		oldStatus = workflowmd.TaskRunningStatus
 		finalStatus = workflowmd.TaskTimeoutStatus
-	case workflow.RunningStatus:
+	case sshagent.RunningStatus:
 		oldStatus = workflowmd.TaskQueueStatus
 		finalStatus = workflowmd.TaskRunningStatus
 	default:
@@ -195,7 +195,7 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 			envs[vars.Name] = vars.Content
 		}
 	}
-	err = workflow.NewAgentCommand(wf.AgentHost, wf.AgentToken).
+	err = sshagent.NewAgentCommand(wf.AgentHost, wf.AgentToken).
 		ExecuteWorkflow(wf.YamlContent, bizId, envs)
 	ctx2, closer2 := xormstore.Context(context.Background())
 	defer closer2.Close()
@@ -640,7 +640,7 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 	if err != nil {
 		return err
 	}
-	err = workflow.NewAgentCommand(task.AgentHost, task.AgentToken).KillWorkflow(task.BizId)
+	err = sshagent.NewAgentCommand(task.AgentHost, task.AgentToken).KillWorkflow(task.BizId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
@@ -659,39 +659,39 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 }
 
 // GetTaskStatus 获取任务状态
-func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO) (workflow.TaskStatus, error) {
+func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO) (sshagent.TaskStatus, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return workflow.TaskStatus{}, err
+		return sshagent.TaskStatus{}, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	task, b, err := workflowmd.GetTaskById(ctx, reqDTO.TaskId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return workflow.TaskStatus{}, util.InternalError(err)
+		return sshagent.TaskStatus{}, util.InternalError(err)
 	}
 	if !b {
-		return workflow.TaskStatus{}, util.InvalidArgsError()
+		return sshagent.TaskStatus{}, util.InvalidArgsError()
 	}
 	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return workflow.TaskStatus{}, util.InternalError(err)
+		return sshagent.TaskStatus{}, util.InternalError(err)
 	}
 	if !b {
-		return workflow.TaskStatus{}, util.ThereHasBugErr()
+		return sshagent.TaskStatus{}, util.ThereHasBugErr()
 	}
 	// 校验权限
 	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
 	if err != nil {
-		return workflow.TaskStatus{}, err
+		return sshagent.TaskStatus{}, err
 	}
-	ret, err := workflow.
+	ret, err := sshagent.
 		NewAgentCommand(task.AgentHost, task.AgentToken).
 		GetWorkflowTaskStatus(task.BizId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return workflow.TaskStatus{}, util.NewBizErr(apicode.ProxyAbnormalErrCode, i18n.SystemProxyAbnormal)
+		return sshagent.TaskStatus{}, util.NewBizErr(apicode.ProxyAbnormalErrCode, i18n.SystemProxyAbnormal)
 	}
 	// 检查结果和数据库是否一致
 	{
@@ -707,17 +707,17 @@ func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO)
 
 func mapTaskStatus(status string) workflowmd.TaskStatus {
 	switch status {
-	case workflow.SuccessStatus:
+	case sshagent.SuccessStatus:
 		return workflowmd.TaskSuccessStatus
-	case workflow.QueueStatus:
+	case sshagent.QueueStatus:
 		return workflowmd.TaskQueueStatus
-	case workflow.CancelStatus:
+	case sshagent.CancelStatus:
 		return workflowmd.TaskCancelStatus
-	case workflow.TimeoutStatus:
+	case sshagent.TimeoutStatus:
 		return workflowmd.TaskTimeoutStatus
-	case workflow.FailStatus:
+	case sshagent.FailStatus:
 		return workflowmd.TaskFailStatus
-	case workflow.RunningStatus:
+	case sshagent.RunningStatus:
 		return workflowmd.TaskRunningStatus
 	default:
 		return -1
@@ -752,7 +752,7 @@ func (*outerImpl) GetLogContent(ctx context.Context, reqDTO GetLogContentReqDTO)
 	if err != nil {
 		return nil, err
 	}
-	logContent, err := workflow.
+	logContent, err := sshagent.
 		NewAgentCommand(task.AgentHost, task.AgentToken).
 		GetLogContent(task.BizId, reqDTO.JobName, reqDTO.StepIndex)
 	if err != nil {

@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"regexp"
 	"strings"
@@ -88,6 +89,6 @@ func (a *Agent) RunScript(script, service string, env map[string]string) (string
 	for k, v := range env {
 		args[k] = v
 	}
-	return NewAgentCommand(a.Host, a.Token, service).
+	return sshagent.NewServiceCommand(a.Host, a.Token, service).
 		Execute(strings.NewReader(script), args)
 }

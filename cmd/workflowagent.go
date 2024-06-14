@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/LeeZXin/zall/pkg/workflow"
+	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
@@ -16,7 +16,7 @@ var WorkflowAgentServer = &cli.Command{
 func runActionAgent(*cli.Context) error {
 	zsf.Run(
 		zsf.WithLifeCycles(
-			workflow.NewAgentServer(),
+			sshagent.NewAgentServer(),
 		),
 	)
 	return nil

@@ -3,7 +3,7 @@ package workflowapi
 import (
 	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/pkg/workflow"
+	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -158,7 +158,7 @@ func internalTaskCallback(c *gin.Context) {
 		c.String(http.StatusForbidden, "invalid token")
 		return
 	}
-	var req workflow.TaskStatusCallbackReq
+	var req sshagent.TaskStatusCallbackReq
 	if ginutil.ShouldBind(&req, c) {
 		workflowsrv.Inner.TaskCallback(c.Query("taskId"), req)
 		c.String(http.StatusOK, "")
@@ -372,7 +372,7 @@ func getTaskStatus(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, ginutil.DataResp[workflow.TaskStatus]{
+	c.JSON(http.StatusOK, ginutil.DataResp[sshagent.TaskStatus]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     status,
 	})

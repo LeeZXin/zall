@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
-	"github.com/LeeZXin/zall/pkg/workflow"
+	"github.com/LeeZXin/zall/pkg/sshagent"
 )
 
 var (
@@ -23,7 +23,7 @@ type InnerService interface {
 	// CheckWorkflowToken 检查工作流的token
 	CheckWorkflowToken(context.Context, int64, string) (usermd.UserInfo, bool)
 	// TaskCallback 工作流回调
-	TaskCallback(string, workflow.TaskStatusCallbackReq)
+	TaskCallback(string, sshagent.TaskStatusCallbackReq)
 	// FindAndExecute 匹配仓库id 寻找并执行工作流
 	FindAndExecute(FindAndExecuteWorkflowReqDTO)
 	// Execute 执行工作流
@@ -52,7 +52,7 @@ type OuterService interface {
 	// KillWorkflowTask 停止工作流
 	KillWorkflowTask(context.Context, KillWorkflowTaskReqDTO) error
 	// GetTaskStatus 获取任务状态
-	GetTaskStatus(context.Context, GetTaskStatusReqDTO) (workflow.TaskStatus, error)
+	GetTaskStatus(context.Context, GetTaskStatusReqDTO) (sshagent.TaskStatus, error)
 	// GetLogContent 获取日志内容
 	GetLogContent(context.Context, GetLogContentReqDTO) ([]string, error)
 	// ListVars 展示变量列表

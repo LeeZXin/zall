@@ -2,6 +2,9 @@ application:
   name: zgit
 
 ssh:
+  agent:
+    enabled: true
+    token: nihao
   proxy:
     port: 2222
 

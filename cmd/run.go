@@ -25,9 +25,8 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
-	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/git"
-	"github.com/LeeZXin/zall/pkg/workflow"
+	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zall/promagent/agent"
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
@@ -86,10 +85,6 @@ func runZall(*cli.Context) error {
 	// for workflow
 	{
 		workflowapi.InitApi()
-		if static.GetBool("workflow.agent.enabled") {
-			logger.Logger.Info("workflow agent enabled")
-			lifeCycles = append(lifeCycles, workflow.NewAgentServer())
-		}
 	}
 	// for timer
 	{
@@ -125,9 +120,12 @@ func runZall(*cli.Context) error {
 	// for deploy
 	{
 		deployapi.InitApi()
-		if static.GetBool("deploy.agent.enabled") {
-			logger.Logger.Info("deploy agent server enabled")
-			lifeCycles = append(lifeCycles, deploy.NewAgentServer())
+	}
+	// for ssh agent
+	{
+		if static.GetBool("ssh.agent.enabled") {
+			logger.Logger.Info("ssh agent enabled")
+			lifeCycles = append(lifeCycles, sshagent.NewAgentServer())
 		}
 	}
 	// prom

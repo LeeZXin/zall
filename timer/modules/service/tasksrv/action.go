@@ -63,7 +63,7 @@ func initTask() {
 					return
 				}
 				if b {
-					logger.Logger.Infof("probe task grant lease success: %v", common.GetInstanceId())
+					logger.Logger.Infof("timer task grant lease success: %v", common.GetInstanceId())
 				}
 			},
 		},

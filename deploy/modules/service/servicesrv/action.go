@@ -15,6 +15,7 @@ import (
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"gopkg.in/yaml.v3"
 	"net/http"
 	"time"
 )
@@ -103,23 +104,27 @@ func doExecuteTask(runCtx context.Context) {
 	}
 }
 
-func executeProbe(probe *servicemd.Service) error {
+func executeProbe(service *servicemd.Service) error {
 	return taskExecutor.Execute(func() {
-		if probe != nil {
-			if run(probe.Config) {
-				ctx, closer := xormstore.Context(context.Background())
-				defer closer.Close()
-				servicemd.UpdateProbed(ctx, probe.Id, time.Now().UnixMilli())
+		if service != nil {
+			var c deploy.Service
+			err := yaml.Unmarshal([]byte(service.Config), &c)
+			if err == nil && c.IsValid() {
+				if run(c) {
+					ctx, closer := xormstore.Context(context.Background())
+					defer closer.Close()
+					servicemd.UpdateProbed(ctx, service.Id, time.Now().UnixMilli())
+				}
 			}
 		}
 	})
 }
 
-func run(s *deploy.Service) bool {
-	if s == nil {
+func run(s deploy.Service) bool {
+	p := s.Probe
+	if p == nil {
 		return false
 	}
-	p := s.Probe
 	switch p.Type {
 	case deploy.HttpProbeType:
 		resp, err := httpClient.Get(p.Http.Url)
