@@ -5,8 +5,13 @@ import (
 )
 
 var (
-	Outer OuterService = new(outerImpl)
+	Outer OuterService
 )
+
+func Init() {
+	Outer = new(outerImpl)
+	initTask()
+}
 
 type OuterService interface {
 	// CreateTask 新增任务

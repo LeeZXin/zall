@@ -19,7 +19,6 @@ func InsertProduct(ctx context.Context, reqDTO InsertProductReqDTO) error {
 func GetProduct(ctx context.Context, reqDTO GetProductReqDTO) (Product, bool, error) {
 	ret := Product{}
 	b, err := xormutil.MustGetXormSession(ctx).
-		Table("zfile_product_"+reqDTO.Env).
 		Where("app_id = ?", reqDTO.AppId).
 		And("name = ?", reqDTO.Name).
 		Get(&ret)

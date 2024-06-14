@@ -8,11 +8,18 @@ import (
 )
 
 var (
-	Inner InnerService = &innerImpl{
-		userCache: util.NewGoCache(),
-	}
-	Outer = newOuterService()
+	Inner InnerService
+	Outer OuterService
 )
+
+func Init() {
+	if Inner == nil {
+		Inner = &innerImpl{
+			userCache: util.NewGoCache(),
+		}
+		Outer = newOuterService()
+	}
+}
 
 type InnerService interface {
 	GetByAccount(context.Context, string) (usermd.UserInfo, bool)

@@ -25,63 +25,11 @@ import (
 	"time"
 )
 
-type cmdMap struct {
-	sync.Mutex
-	container map[string]*exec.Cmd
-}
-
-func newCmdMap() *cmdMap {
-	return &cmdMap{
-		container: make(map[string]*exec.Cmd),
-	}
-}
-
-func (m *cmdMap) PutIfAbsent(id string, cmd *exec.Cmd) bool {
-	m.Lock()
-	defer m.Unlock()
-	_, b := m.container[id]
-	if b {
-		return false
-	}
-	m.container[id] = cmd
-	return true
-}
-
-func (m *cmdMap) GetById(id string) *exec.Cmd {
-	m.Lock()
-	defer m.Unlock()
-	return m.container[id]
-}
-
-func (m *cmdMap) Remove(id string) {
-	m.Lock()
-	defer m.Unlock()
-	delete(m.container, id)
-}
-
-func (m *cmdMap) GetAll() map[string]*exec.Cmd {
-	m.Lock()
-	defer m.Unlock()
-	ret := make(map[string]*exec.Cmd, len(m.container))
-	for k, v := range m.container {
-		ret[k] = v
-	}
-	return ret
-}
-
-var (
-	pwdDir string
+const (
+	OutputLimit = 1024 * 1024 * 2
 )
 
 type handler func(ssh.Session, map[string]string, string, string)
-
-func init() {
-	pwd, err := os.Getwd()
-	if err != nil {
-		logger.Logger.Fatalf("os.Getwd err: %v", err)
-	}
-	pwdDir = pwd
-}
 
 type AgentServer struct {
 	*zssh.Server
@@ -101,6 +49,11 @@ func (s *AgentServer) CancelAllCmd() {
 }
 
 func NewAgentServer() zsf.LifeCycle {
+	pwd, err := os.Getwd()
+	if err != nil {
+		logger.Logger.Fatalf("os.Getwd err: %v", err)
+	}
+	pwdDir := pwd
 	agent := new(AgentServer)
 	poolSize := static.GetInt("deploy.agent.poolSize")
 	if poolSize <= 0 {
@@ -147,7 +100,6 @@ func NewAgentServer() zsf.LifeCycle {
 			defer agent.cmdMap.Remove(id)
 			err = cmd.Start()
 			if err != nil {
-				logger.Logger.Info()
 				util.ExitWithErrMsg(session, err.Error())
 				return
 			}
@@ -188,7 +140,13 @@ func NewAgentServer() zsf.LifeCycle {
 				util.ExitWithErrMsg(session, "invalid token")
 				return
 			}
-			workdir := pwdDir
+			//
+			service := cmd.Args["s"]
+			if service == "" {
+				util.ExitWithErrMsg(session, "invalid service")
+				return
+			}
+			workdir := filepath.Join(pwdDir, service)
 			// 创建临时目录
 			tempDir := filepath.Join(workdir, "temp")
 			err = util.Mkdir(tempDir)
@@ -291,39 +249,10 @@ func execute(sshHost, command string, cmd io.Reader, envs map[string]string) (st
 	if err != nil {
 		return "", fmt.Errorf("%w - %s", err, stderr.String())
 	}
+	if output.Len() > OutputLimit {
+		output.Truncate(OutputLimit)
+	}
 	return output.String(), nil
-}
-
-func executeAsync(sshHost, command string, cmd io.Reader, envs map[string]string) (io.ReadCloser, error) {
-	client, err := gossh.Dial("tcp", sshHost, clientCfg)
-	if err != nil {
-		return nil, err
-	}
-	session, err := client.NewSession()
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range envs {
-		err = session.Setenv(k, v)
-		if err != nil {
-			return nil, err
-		}
-	}
-	stderr := new(bytes.Buffer)
-	pipeReader, pipeWriter := io.Pipe()
-	session.Stdin = cmd
-	session.Stdout = pipeWriter
-	session.Stderr = stderr
-	go func() {
-		err := session.Run(command)
-		if err != nil {
-			pipeWriter.CloseWithError(fmt.Errorf("%w - %s", err, stderr.String()))
-		} else {
-			pipeWriter.Close()
-		}
-		client.Close()
-	}()
-	return pipeReader, nil
 }
 
 var (
@@ -356,24 +285,23 @@ func initClientCfg() {
 type AgentCommand struct {
 	agentHost  string
 	agentToken string
+	service    string
 }
 
-func NewAgentCommand(agentHost, agentToken string) *AgentCommand {
+func NewAgentCommand(agentHost, agentToken, service string) *AgentCommand {
 	initClientCfg()
 	return &AgentCommand{
 		agentHost:  agentHost,
 		agentToken: agentToken,
+		service:    service,
 	}
 }
 
 func (c *AgentCommand) Execute(cmd io.Reader, envs map[string]string) (string, error) {
-	return execute(c.agentHost, fmt.Sprintf("execute -t %s", c.agentToken), cmd, envs)
-}
-
-func (c *AgentCommand) Kill(cmd io.Reader, envs map[string]string) (string, error) {
-	return execute(c.agentHost, fmt.Sprintf("execute -t %s", c.agentToken), cmd, envs)
-}
-
-func (c *AgentCommand) ExecuteAsync(cmd io.Reader, envs map[string]string) (io.Reader, error) {
-	return executeAsync(c.agentHost, fmt.Sprintf("execute -t %s", c.agentToken), cmd, envs)
+	return execute(
+		c.agentHost,
+		fmt.Sprintf("execute -t %s -s %s", c.agentToken, c.service),
+		cmd,
+		envs,
+	)
 }

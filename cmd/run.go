@@ -4,6 +4,8 @@ import (
 	"github.com/LeeZXin/zall/alert/modules/api/alertapi"
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
+	"github.com/LeeZXin/zall/deploy/modules/api/deployapi"
+	"github.com/LeeZXin/zall/deploy/modules/api/serviceapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
@@ -23,12 +25,12 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
+	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/workflow"
 	"github.com/LeeZXin/zall/promagent/agent"
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
-	"github.com/LeeZXin/zall/services/modules/api/deployapi"
 	"github.com/LeeZXin/zall/tcpdetect/modules/api/detectapi"
 	"github.com/LeeZXin/zall/tcpdetect/modules/service/detectsrv"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
@@ -51,6 +53,7 @@ var Run = &cli.Command{
 func runZall(*cli.Context) error {
 	// for envs
 	{
+		cfgsrv.Init()
 		cfgsrv.Inner.InitEnvCfg()
 	}
 	lifeCycles := make([]zsf.LifeCycle, 0)
@@ -80,7 +83,7 @@ func runZall(*cli.Context) error {
 			lifeCycles = append(lifeCycles, reposerver.InitSshServer())
 		}
 	}
-	// for action
+	// for workflow
 	{
 		workflowapi.InitApi()
 		if static.GetBool("workflow.agent.enabled") {
@@ -92,7 +95,7 @@ func runZall(*cli.Context) error {
 	{
 		taskapi.InitApi()
 	}
-	// for prop
+	// for property
 	{
 		propertyapi.InitApi()
 	}
@@ -122,9 +125,9 @@ func runZall(*cli.Context) error {
 	// for deploy
 	{
 		deployapi.InitApi()
-		if static.GetBool("probe.enabled") {
-			logger.Logger.Info("service probe enabled")
-			//deploysrv.InitProbeTask()
+		if static.GetBool("deploy.agent.enabled") {
+			logger.Logger.Info("deploy agent server enabled")
+			lifeCycles = append(lifeCycles, deploy.NewAgentServer())
 		}
 	}
 	// prom
@@ -144,6 +147,10 @@ func runZall(*cli.Context) error {
 		if static.GetBool("alert.enabled") {
 			//alertsrv.InitTask()
 		}
+	}
+	// for service
+	{
+		serviceapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer(), prom.NewServer())
 	zsf.Run(

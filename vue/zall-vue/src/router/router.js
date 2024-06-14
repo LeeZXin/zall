@@ -208,11 +208,6 @@ const router = createRouter({
                     import ("../pages/team/app/PropertyHandlePage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/property/deploy/:id(\\d+)",
-                component: () =>
-                    import ("../pages/team/app/DeployPropertyPage")
-
-            }, {
                 path: "/team/:teamId(\\d+)/app/:appId/property/:fileId(\\d+)/history/list",
                 component: () =>
                     import ("../pages/team/app/PropertyHistoryPage")
@@ -231,6 +226,21 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/app/:appId/deployConfig/:configId(\\d+)/update",
                 component: () =>
                     import ("../pages/team/app/DeployConfigHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/probe/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/ProbeListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/probe/create",
+                component: () =>
+                    import ("../pages/team/app/ProbeHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/probe/:probeId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/app/ProbeHandlePage")
 
             }]
         },

@@ -13,6 +13,10 @@ workflow:
     port: 6666
     token: nihao
 
+deploy:
+  agent:
+    enabled: true
+
 app:
   url: http://127.0.0.1
   lang: en-US

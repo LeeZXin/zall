@@ -7,10 +7,7 @@
       style="margin-top:0px"
     >
       <template #bodyCell="{dataIndex, dataItem}">
-        <template v-if="dataIndex === 'created'">
-          <span>{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
-        </template>
-        <template v-else-if="dataIndex !== 'operation'">
+        <template v-if="dataIndex !== 'operation'">
           <span>{{dataItem[dataIndex]}}</span>
         </template>
         <template v-else>
@@ -56,7 +53,6 @@ import { ref } from "vue";
 import { useRoute } from "vue-router";
 import { EllipsisOutlined, ControlOutlined } from "@ant-design/icons-vue";
 import { pageLogRequest } from "@/api/git/oplogApi";
-import { readableTimeComparingNow } from "@/utils/time";
 import dayjs from "dayjs";
 import { Codemirror } from "vue-codemirror";
 import { json } from "@codemirror/lang-json";

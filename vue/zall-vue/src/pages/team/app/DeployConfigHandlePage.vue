@@ -152,10 +152,6 @@ if (mode === "create") {
 }
 </script>
 <style scoped>
-.diff-btn:hover {
-  cursor: pointer;
-  color: #1677ff;
-}
 .format-yaml-btn:hover {
   color: #1677ff;
   cursor: pointer;

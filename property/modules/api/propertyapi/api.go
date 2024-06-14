@@ -18,6 +18,8 @@ import (
 )
 
 func InitApi() {
+	cfgsrv.Init()
+	propertysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/prop/etcdNode", apisession.CheckLogin)
 		{

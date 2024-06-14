@@ -11,10 +11,9 @@ import (
 )
 
 func InitApi() {
-	{
-		// 初始化全局配置
-		cfgsrv.Inner.InitSysCfg()
-	}
+	cfgsrv.Init()
+	// 初始化全局配置
+	cfgsrv.Inner.InitSysCfg()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/sysCfg")
 		{

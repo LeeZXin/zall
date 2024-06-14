@@ -13,6 +13,7 @@ import (
 )
 
 func InitApi() {
+	branchsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		// 保护分支
 		group := e.Group("/api/protectedBranch", apisession.CheckLogin)

@@ -15,7 +15,9 @@ import (
 )
 
 func InitApi() {
+	cfgsrv.Init()
 	cfgsrv.Inner.InitGitCfg()
+	reposrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/gitRepo", apisession.CheckLogin)
 		{

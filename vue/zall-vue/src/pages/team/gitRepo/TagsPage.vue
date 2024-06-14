@@ -2,7 +2,12 @@
   <div style="padding:14px">
     <ul class="tag-list" v-if="dataSource.length > 0">
       <li v-for="item in dataSource" v-bind:key="item.name">
-        <TagItem :data="item" :repoId="route.params.repoId" :teamId="route.params.teamId" @delete="()=>listTag()"/>
+        <TagItem
+          :data="item"
+          :repoId="route.params.repoId"
+          :teamId="route.params.teamId"
+          @delete="onDelete"
+        />
       </li>
     </ul>
     <ZNoData v-else>
@@ -54,6 +59,12 @@ const listTag = () => {
       };
     });
   });
+};
+const onDelete = () => {
+  if (totalCount.value - 1 <= (currPage.value - 1) * pageSize) {
+    currPage.value -= 1;
+  }
+  listTag();
 };
 listTag();
 </script>

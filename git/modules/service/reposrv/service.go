@@ -6,9 +6,16 @@ import (
 )
 
 var (
-	Inner InnerService = new(innerImpl)
-	Outer              = newOuterImpl()
+	Inner InnerService
+	Outer OuterService
 )
+
+func Init() {
+	if Inner == nil {
+		Inner = new(innerImpl)
+		Outer = newOuterImpl()
+	}
+}
 
 type InnerService interface {
 	GetByRepoPath(context.Context, string) (repomd.Repo, bool)

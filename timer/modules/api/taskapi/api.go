@@ -13,7 +13,7 @@ import (
 )
 
 func InitApi() {
-	tasksrv.InitTask()
+	tasksrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/timerTask", apisession.CheckLogin)
 		{

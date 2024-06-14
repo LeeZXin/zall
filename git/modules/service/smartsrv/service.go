@@ -5,8 +5,14 @@ import (
 )
 
 var (
-	Outer OuterService = new(outerImpl)
+	Outer OuterService
 )
+
+func Init() {
+	if Outer == nil {
+		Outer = new(outerImpl)
+	}
+}
 
 type OuterService interface {
 	UploadPack(context.Context, UploadPackReqDTO) error

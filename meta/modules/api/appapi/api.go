@@ -13,6 +13,7 @@ import (
 )
 
 func InitApi() {
+	appsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/app", apisession.CheckLogin)
 		{

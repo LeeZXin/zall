@@ -5,8 +5,12 @@ import (
 )
 
 var (
-	Outer = newOuterService()
+	Outer OuterService
 )
+
+func Init() {
+	Outer = newOuterService()
+}
 
 type OuterService interface {
 	// CreateWebhook 新增webhook

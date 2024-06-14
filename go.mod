@@ -5,9 +5,10 @@ go 1.20
 require (
 	github.com/42wim/sshsig v0.0.0-20211121163825-841cf5bbc121
 	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
-	github.com/LeeZXin/zsf v1.1.76
-	github.com/LeeZXin/zsf-utils v1.0.66
+	github.com/LeeZXin/zsf v1.1.78
+	github.com/LeeZXin/zsf-utils v1.0.67
 	github.com/PaesslerAG/gval v1.2.2
+	github.com/boltdb/bolt v1.3.1
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gliderlabs/ssh v0.3.5
@@ -28,7 +29,7 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.18.0
-	golang.org/x/sys v0.16.0
+	golang.org/x/sys v0.21.0
 	gopkg.in/yaml.v3 v3.0.1
 	xorm.io/builder v0.3.11-0.20220531020008-1bd24a7dc978
 )

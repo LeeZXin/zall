@@ -401,7 +401,7 @@ var (
 			DefaultRet: "新增部署配置",
 		},
 		InsertPlan: KeyItem{
-			Id:         "deploySrv.InsertPlan",
+			Id:         "deploySrv.CreatePlan",
 			DefaultRet: "创建发布计划",
 		},
 		ClosePlan: KeyItem{
@@ -409,11 +409,11 @@ var (
 			DefaultRet: "关闭发布计划",
 		},
 		InsertPlanItem: KeyItem{
-			Id:         "deploySrv.InsertPlanItem",
+			Id:         "deploySrv.AddPlanService",
 			DefaultRet: "添加计划服务",
 		},
 		ClosePlanItem: KeyItem{
-			Id:         "deploySrv.ClosePlanItem",
+			Id:         "deploySrv.DeletePendingPlanService",
 			DefaultRet: "关闭计划服务",
 		},
 		ReDeployService: KeyItem{

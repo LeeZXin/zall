@@ -52,7 +52,7 @@
       <div class="section" v-if="formState.taskType === 'http'">
         <div class="section-title">HTTP请求配置</div>
         <div class="section-body">
-          <ul class="http-ul">
+          <ul class="input-ul">
             <li>
               <div class="input-name">Url</div>
               <a-input v-model:value="formState.url" />
@@ -338,19 +338,6 @@ if (mode === "create") {
 }
 </script>
 <style scoped>
-.http-ul {
-  width: 100%;
-}
-.http-ul > li {
-  width: 100%;
-  font-size: 14px;
-}
-.http-ul > li + li {
-  margin-top: 8px;
-}
-.input-name {
-  margin-bottom: 6px;
-}
 .headers-ul > li {
   height: 32px;
   line-height: 32px;

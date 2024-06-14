@@ -5,11 +5,10 @@ import (
 )
 
 type InsertConfigReqDTO struct {
-	AppId     string
-	Name      string
-	Content   string
-	Env       string
-	IsEnabled bool
+	AppId   string
+	Name    string
+	Content string
+	Env     string
 }
 
 type UpdateConfigReqDTO struct {
@@ -18,13 +17,13 @@ type UpdateConfigReqDTO struct {
 	Content  string
 }
 
-type InsertServiceReqDTO struct {
+type InsertPlanServiceReqDTO struct {
 	ConfigId           int64
 	CurrProductVersion string
-	ServiceConfig      string
-	Env                string
-	ActiveStatus       ActiveStatus
-	StartTime          int64
+	LastProductVersion string
+	DeployConfig       string
+	Status             ServiceStatus
+	PlanId             int64
 }
 
 type UpdateServiceReqDTO struct {
@@ -33,19 +32,18 @@ type UpdateServiceReqDTO struct {
 	LastProductVersion string
 	ServiceConfig      string
 	Env                string
-	ActiveStatus       ActiveStatus
+	ActiveStatus       ServiceStatus
 	StartTime          int64
 	ProbeTime          int64
 }
 
 type InsertPlanReqDTO struct {
-	Name       string
-	PlanStatus PlanStatus
-	PlanType   PlanType
-	TeamId     int64
-	Creator    string
-	Env        string
-	Expired    time.Time
+	Name     string
+	IsClosed bool
+	TeamId   int64
+	Creator  string
+	Env      string
+	Expired  time.Time
 }
 
 type InsertDeployLogReqDTO struct {
@@ -82,31 +80,16 @@ type ListOpLogReqDTO struct {
 	Env      string
 }
 
-type InsertPlanApprovalReqDTO struct {
-	Name        string
-	TeamId      int64
-	Env         string
-	DeployItems DeployItems
-	Creator     string
-}
-
-type InsertApprovalNotifyReqDTO struct {
-	Aid          int64
-	Account      string
-	NotifyStatus NotifyStatus
-}
-
-type InsertPlanItemReqDTO struct {
-	PlanId             int64
-	ConfigId           int64
-	LastProductVersion string
-	ProductVersion     string
-	ItemStatus         PlanItemStatus
-}
-
 type ListPlanReqDTO struct {
-	TeamId int64
-	Cursor int64
-	Limit  int
-	Env    string
+	TeamId   int64
+	PageNum  int
+	PageSize int
+	Env      string
+}
+
+type InsertDeployStepReqDTO struct {
+	ServiceId  int64
+	StepIndex  int
+	Agent      string
+	StepStatus StepStatus
 }

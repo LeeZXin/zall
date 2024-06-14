@@ -5,9 +5,14 @@ import (
 )
 
 var (
-	Outer OuterService = new(outerImpl)
-	Inner InnerService = new(innerImpl)
+	Outer OuterService
+	Inner InnerService
 )
+
+func Init() {
+	Outer = new(outerImpl)
+	Inner = new(innerImpl)
+}
 
 type InnerService interface {
 	GrantAuth(context.Context, string, string)

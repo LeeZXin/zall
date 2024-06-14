@@ -181,3 +181,20 @@ ul {
     margin-top: 10px;
     padding-top: 6px;
 }
+
+.input-name {
+    margin-bottom: 6px;
+}
+
+.input-ul {
+    width: 100%;
+}
+
+.input-ul>li {
+    width: 100%;
+    font-size: 14px;
+}
+
+.input-ul>li+li {
+    margin-top: 10px;
+}

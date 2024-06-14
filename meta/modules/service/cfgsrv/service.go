@@ -6,11 +6,16 @@ import (
 )
 
 var (
-	Inner InnerService = &innerImpl{
+	Inner InnerService
+	Outer OuterService
+)
+
+func Init() {
+	Inner = &innerImpl{
 		cfgCache: util.NewGoCache(),
 	}
-	Outer OuterService = new(outerImpl)
-)
+	Outer = new(outerImpl)
+}
 
 type InnerService interface {
 	GetSysCfg(context.Context) (SysCfg, bool)

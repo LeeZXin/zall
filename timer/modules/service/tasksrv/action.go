@@ -22,7 +22,7 @@ var (
 	taskEnv      string
 )
 
-func InitTask() {
+func initTask() {
 	taskEnv = static.GetString("timer.env")
 	if taskEnv == "" {
 		logger.Logger.Fatal("timer task started with empty env")
@@ -40,7 +40,7 @@ func InitTask() {
 	leaser, _ := lease.NewDbLease(
 		"timer-lock-"+taskEnv,
 		common.GetInstanceId(),
-		"ztimer_lock",
+		"zall_lock",
 		xormstore.GetEngine(),
 		20*time.Second,
 	)
@@ -59,11 +59,11 @@ func InitTask() {
 			RenewDuration: 8 * time.Second,
 			GrantCallback: func(err error, b bool) {
 				if err != nil {
-					logger.Logger.Errorf("task grant lease failed with err: %v", err)
+					logger.Logger.Errorf("timer task grant lease failed with err: %v", err)
 					return
 				}
 				if b {
-					logger.Logger.Infof("task grant lease success: %v", common.GetInstanceId())
+					logger.Logger.Infof("probe task grant lease success: %v", common.GetInstanceId())
 				}
 			},
 		},

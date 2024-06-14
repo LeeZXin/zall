@@ -14,6 +14,7 @@ import (
 )
 
 func InitApi() {
+	pullrequestsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/pullRequest", apisession.CheckLogin)
 		{

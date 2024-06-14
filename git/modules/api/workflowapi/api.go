@@ -16,6 +16,7 @@ import (
 )
 
 func InitApi() {
+	workflowsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/workflow", apisession.CheckLogin)
 		{

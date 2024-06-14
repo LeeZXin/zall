@@ -15,6 +15,7 @@ import (
 )
 
 func InitApi() {
+	teamsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		// 项目
 		group := e.Group("/api/team", apisession.CheckLogin)

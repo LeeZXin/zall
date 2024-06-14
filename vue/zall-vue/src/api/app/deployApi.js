@@ -21,14 +21,8 @@ const updateDeployConfigRequest = (data, env) => request.post("/api/deployConfig
         [ENV_HEADER]: env
     }
 });
-// 启用配置
-const enableDeployConfigRequest = (configId, env) => request.put("/api/deployConfig/enable/" + configId, {}, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
-// 关闭配置
-const disableDeployConfigRequest = (configId, env) => request.put("/api/deployConfig/disable/" + configId, {}, {
+// 删除配置
+const deleteDeployConfigRequest = (configId, env) => request.delete("/api/deployConfig/delete/" + configId, {
     headers: {
         [ENV_HEADER]: env
     }
@@ -37,6 +31,5 @@ export {
     listDeployConfigRequest,
     createDeployConfigRequest,
     updateDeployConfigRequest,
-    enableDeployConfigRequest,
-    disableDeployConfigRequest
+    deleteDeployConfigRequest
 }

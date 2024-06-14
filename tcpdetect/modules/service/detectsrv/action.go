@@ -2,6 +2,7 @@ package detectsrv
 
 import (
 	"context"
+	"fmt"
 	"github.com/LeeZXin/zall/pkg/detecttool"
 	"github.com/LeeZXin/zall/tcpdetect/modules/model/detectmd"
 	"github.com/LeeZXin/zsf-utils/executor"
@@ -71,7 +72,7 @@ func doExecuteTask() {
 
 func doDetect(detect *detectmd.TcpDetect) {
 	detectExecutor.Execute(func() {
-		err := detecttool.CheckTcp(detect.Ip, detect.Port)
+		err := detecttool.CheckTcp(fmt.Sprintf("%s:%d", detect.Ip, detect.Port))
 		ctx, closer := xormstore.Context(context.Background())
 		defer closer.Close()
 		if err == nil {

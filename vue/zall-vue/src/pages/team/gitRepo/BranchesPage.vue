@@ -4,8 +4,8 @@
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'pullRequest'">
           <template v-if="dataItem[dataIndex]">
-            <PrIdTag :repoId="route.params.repoId" :prId="dataItem[dataIndex].id"/>
-            <PrStatusTag :status="dataItem[dataIndex].prStatus"/>
+            <PrIdTag :repoId="route.params.repoId" :prId="dataItem[dataIndex].id" />
+            <PrStatusTag :status="dataItem[dataIndex].prStatus" />
           </template>
         </template>
         <template v-else-if="dataIndex === 'isProtectedBranch'">
@@ -36,7 +36,7 @@
               </ul>
             </template>
             <div class="op-icon">
-              <EllipsisOutlined/>
+              <EllipsisOutlined />
             </div>
           </a-popover>
         </template>
@@ -142,6 +142,9 @@ const deleteBranch = branch => {
         repoId: parseInt(route.params.repoId),
         branch
       }).then(() => {
+        if (totalCount.value - 1 <= (currPage.value - 1) * pageSize) {
+          currPage.value -= 1;
+        }
         message.success("删除成功");
         listBranch();
       });
@@ -150,10 +153,14 @@ const deleteBranch = branch => {
   });
 };
 const goToHistoryCommits = branch => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/commit/list/${branch}`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/commit/list/${branch}`
+  );
 };
 const gotoIndex = () => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/index`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/index`
+  );
 };
 listBranch();
 </script>

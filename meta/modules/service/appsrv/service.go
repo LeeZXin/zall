@@ -3,8 +3,12 @@ package appsrv
 import "context"
 
 var (
-	Outer OuterService = new(outerImpl)
+	Outer OuterService
 )
+
+func Init() {
+	Outer = new(outerImpl)
+}
 
 type OuterService interface {
 	// CreateApp 创建应用服务

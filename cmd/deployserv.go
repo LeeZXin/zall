@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/LeeZXin/zall/services/modules/api/deployapi"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
@@ -15,7 +14,7 @@ var DeployServer = &cli.Command{
 }
 
 func runDeployServer(*cli.Context) error {
-	deployapi.InitDeploy()
+	//deployapi.InitDeploy()
 	zsf.Run(
 		zsf.WithLifeCycles(
 			httpserver.NewServer(),

@@ -21,9 +21,9 @@
             <branches-outlined />
             <span>监控告警</span>
           </a-menu-item>
-          <a-menu-item key="/team/gitRepo/tags">
+          <a-menu-item key="/probe/list">
             <tag-outlined />
-            <span>服务状态</span>
+            <span>服务探针</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -73,7 +73,8 @@ const changeSelectedKey = path => {
 // 为了子页面能体现在导航栏
 const pagesMap = {
   "/property": "/property/list",
-  "/deployConfig": "/deployConfig/list"
+  "/deployConfig": "/deployConfig/list",
+  "/probe": "/probe/list"
 };
 watch(
   () => router.currentRoute.value.path,

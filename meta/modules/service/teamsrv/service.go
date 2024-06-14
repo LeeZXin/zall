@@ -8,11 +8,16 @@ import (
 )
 
 var (
-	Outer OuterService = new(outerImpl)
-	Inner InnerService = &innerImpl{
+	Outer OuterService
+	Inner InnerService
+)
+
+func Init() {
+	Outer = new(outerImpl)
+	Inner = &innerImpl{
 		permCache: util.NewGoCache(),
 	}
-)
+}
 
 type InnerService interface {
 	GetUserPermDetail(context.Context, int64, string) (teammd.UserPermDetailDTO, bool)

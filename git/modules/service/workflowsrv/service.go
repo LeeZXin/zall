@@ -8,10 +8,16 @@ import (
 )
 
 var (
-	Outer = newOuterService()
-
-	Inner InnerService = new(innerImpl)
+	Outer OuterService
+	Inner InnerService
 )
+
+func Init() {
+	if Outer == nil {
+		Outer = newOuterService()
+		Inner = new(innerImpl)
+	}
+}
 
 type InnerService interface {
 	// CheckWorkflowToken 检查工作流的token

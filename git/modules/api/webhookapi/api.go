@@ -16,6 +16,7 @@ import (
 )
 
 func InitApi() {
+	webhooksrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/webhook", apisession.CheckLogin)
 		{

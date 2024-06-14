@@ -1,11 +1,11 @@
 package deploysrv
 
 import (
+	"github.com/LeeZXin/zall/deploy/modules/model/deploymd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/deploy"
-	"github.com/LeeZXin/zall/services/modules/model/deploymd"
 	"github.com/LeeZXin/zall/util"
 	"gopkg.in/yaml.v3"
 	"time"
@@ -55,13 +55,27 @@ func (r *UpdateConfigReqDTO) IsValid() error {
 	return nil
 }
 
+type DeleteConfigReqDTO struct {
+	ConfigId int64               `json:"configId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *DeleteConfigReqDTO) IsValid() error {
+	if r.ConfigId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type ConfigDTO struct {
-	Id        int64  `json:"id"`
-	AppId     string `json:"appId"`
-	Name      string `json:"name"`
-	Content   string `json:"content"`
-	Env       string `json:"env"`
-	IsEnabled bool   `json:"isEnabled"`
+	Id      int64  `json:"id"`
+	AppId   string `json:"appId"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
+	Env     string `json:"env"`
 }
 
 type CreateConfigReqDTO struct {
@@ -93,65 +107,19 @@ func (r *CreateConfigReqDTO) IsValid() error {
 	return nil
 }
 
-type EnableConfigReqDTO struct {
-	ConfigId int64               `json:"configId"`
-	Operator apisession.UserInfo `json:"operator"`
+type CreatePlanReqDTO struct {
+	Name        string              `json:"name"`
+	TeamId      int64               `json:"teamId"`
+	Env         string              `json:"env"`
+	ExpireHours int                 `json:"expireHours"`
+	Operator    apisession.UserInfo `json:"operator"`
 }
 
-func (r *EnableConfigReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	if r.ConfigId <= 0 {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type DisableConfigReqDTO struct {
-	ConfigId int64               `json:"configId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *DisableConfigReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	if r.ConfigId <= 0 {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type InsertPlanReqDTO struct {
-	Name        string                `json:"name"`
-	TeamId      int64                 `json:"teamId"`
-	Env         string                `json:"env"`
-	PlanType    deploymd.PlanType     `json:"planType"`
-	DeployItems []deploymd.DeployItem `json:"deployItems"`
-	ExpireHours int                   `json:"expireHours"`
-	Operator    apisession.UserInfo   `json:"operator"`
-}
-
-func (r *InsertPlanReqDTO) IsValid() error {
+func (r *CreatePlanReqDTO) IsValid() error {
 	if r.TeamId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !deploymd.IsPlanNameValid(r.Name) {
-		return util.InvalidArgsError()
-	}
-	switch r.PlanType {
-	case deploymd.AddServiceBeforePlanCreatingType:
-		if len(r.DeployItems) == 0 || len(r.DeployItems) > 1000 {
-			return util.InvalidArgsError()
-		}
-		for _, item := range r.DeployItems {
-			if !item.IsValid() {
-				return util.InvalidArgsError()
-			}
-		}
-	case deploymd.AddServiceAfterPlanCreatingType:
-	default:
 		return util.InvalidArgsError()
 	}
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
@@ -168,7 +136,6 @@ func (r *InsertPlanReqDTO) IsValid() error {
 
 type ClosePlanReqDTO struct {
 	PlanId   int64               `json:"planId"`
-	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -176,84 +143,71 @@ func (r *ClosePlanReqDTO) IsValid() error {
 	if r.PlanId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type InsertPlanItemReqDTO struct {
-	PlanId      int64                 `json:"planId"`
-	DeployItems []deploymd.DeployItem `json:"deployItems"`
-	Env         string                `json:"env"`
-	Operator    apisession.UserInfo   `json:"operator"`
+type AddPlanServiceReqDTO struct {
+	PlanId             int64               `json:"planId"`
+	ConfigId           int64               `json:"configId"`
+	LastProductVersion string              `json:"lastProductVersion"`
+	CurrProductVersion string              `json:"currProductVersion"`
+	Operator           apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertPlanItemReqDTO) IsValid() error {
+func (r *AddPlanServiceReqDTO) IsValid() error {
 	if r.PlanId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if len(r.DeployItems) == 0 || len(r.DeployItems) > 1000 {
+	if r.ConfigId <= 0 || r.CurrProductVersion == "" {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
 	return nil
 }
 
-type ClosePlanItemReqDTO struct {
-	ItemId   int64               `json:"itemId"`
-	Env      string              `json:"env"`
-	Operator apisession.UserInfo `json:"operator"`
+type DeletePendingPlanServiceReqDTO struct {
+	ServiceId int64               `json:"serviceId"`
+	Operator  apisession.UserInfo `json:"operator"`
 }
 
-func (r *ClosePlanItemReqDTO) IsValid() error {
-	if r.ItemId <= 0 {
+func (r *DeletePendingPlanServiceReqDTO) IsValid() error {
+	if r.ServiceId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
 	return nil
 }
 
-type ListPlanItemReqDTO struct {
+type ListPlanServiceReqDTO struct {
 	PlanId   int64               `json:"planId"`
-	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListPlanItemReqDTO) IsValid() error {
+func (r *ListPlanServiceReqDTO) IsValid() error {
 	if r.PlanId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
 	return nil
 }
 
-type PlanItemDTO struct {
+type PlanServiceDTO struct {
 	Id                 int64
 	AppId              string
 	ConfigId           int64
 	ConfigName         string
-	ProductVersion     string
+	CurrProductVersion string
 	LastProductVersion string
-	ItemStatus         deploymd.PlanItemStatus
+	ServiceStatus      deploymd.ServiceStatus
 	Created            time.Time
 }
 
@@ -360,15 +314,6 @@ func (r *ListServiceReqDTO) IsValid() error {
 	return nil
 }
 
-type ServiceDTO struct {
-	CurrProductVersion string
-	LastProductVersion string
-	ActiveStatus       deploymd.ActiveStatus
-	StartTime          int64
-	ProbeTime          int64
-	Created            time.Time
-}
-
 type ListDeployLogReqDTO struct {
 	ConfigId int64               `json:"configId"`
 	Env      string              `json:"env"`
@@ -391,15 +336,6 @@ func (r *ListDeployLogReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	return nil
-}
-
-type DeployLogDTO struct {
-	ServiceConfig  string
-	ProductVersion string
-	Operator       string
-	DeployOutput   string
-	PlanId         int64
-	Created        time.Time
 }
 
 type ListOpLogReqDTO struct {
@@ -475,8 +411,7 @@ func (r *RollbackServiceWithPlanReqDTO) IsValid() error {
 type ListPlanReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Env      string              `json:"env"`
-	Cursor   int64               `json:"cursor"`
-	Limit    int                 `json:"limit"`
+	PageNum  int                 `json:"pageNum"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -484,7 +419,7 @@ func (r *ListPlanReqDTO) IsValid() error {
 	if r.TeamId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+	if r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
@@ -497,12 +432,76 @@ func (r *ListPlanReqDTO) IsValid() error {
 }
 
 type PlanDTO struct {
-	Id         int64
-	Name       string
-	PlanType   deploymd.PlanType
-	PlanStatus deploymd.PlanStatus
-	TeamId     int64
-	Creator    string
-	Expired    time.Time
-	Created    time.Time
+	Id       int64
+	Name     string
+	TeamId   int64
+	Creator  string
+	IsClosed bool
+	Expired  time.Time
+	Created  time.Time
+}
+
+type StartPlanServiceReqDTO struct {
+	ServiceId int64               `json:"serviceId"`
+	Operator  apisession.UserInfo `json:"operator"`
+}
+
+func (r *StartPlanServiceReqDTO) IsValid() error {
+	if r.ServiceId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type FinishPlanServiceReqDTO struct {
+	ServiceId int64               `json:"serviceId"`
+	Operator  apisession.UserInfo `json:"operator"`
+}
+
+func (r *FinishPlanServiceReqDTO) IsValid() error {
+	if r.ServiceId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ConfirmPlanServiceStepReqDTO struct {
+	ServiceId int64               `json:"serviceId"`
+	Index     int                 `json:"index"`
+	Input     map[string]string   `json:"input"`
+	Operator  apisession.UserInfo `json:"operator"`
+}
+
+func (r *ConfirmPlanServiceStepReqDTO) IsValid() error {
+	if r.ServiceId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.Index < 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type RollbackPlanServiceStepReqDTO struct {
+	StepId   int64               `json:"stepId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *RollbackPlanServiceStepReqDTO) IsValid() error {
+	if r.StepId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
 }

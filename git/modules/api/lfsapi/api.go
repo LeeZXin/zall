@@ -28,6 +28,10 @@ const (
 )
 
 func InitApi() {
+	lfssrv.Init()
+	reposrv.Init()
+	cfgsrv.Init()
+	usersrv.Init()
 	// 注册lfs api
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		infoLfs := e.Group("/:corpId/:repoName/info/lfs", packRepoPath)

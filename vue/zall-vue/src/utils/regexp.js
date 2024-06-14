@@ -37,6 +37,10 @@ const appNameRegexp = /^.{1,32}$/;
 const propertyFileNameRegexp = /^[\w-]{1,32}$/;
 // 部署配置
 const deployConfigNameRegexp = /^.{1,32}$/;
+// 探针配置
+const probeNameRegexp = /^.{1,32}$/;
+const probeHttpUrlRegexp = /^https?:\/\/.+$/;
+const probeTcpAddrRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -64,5 +68,8 @@ export {
     appIdRegexp,
     appNameRegexp,
     propertyFileNameRegexp,
-    deployConfigNameRegexp
+    deployConfigNameRegexp,
+    probeNameRegexp,
+    probeHttpUrlRegexp,
+    probeTcpAddrRegexp
 }

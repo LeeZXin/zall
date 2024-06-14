@@ -15,15 +15,14 @@
     <div class="body">
       <ZTable :columns="columns" :dataSource="dataSource">
         <template #bodyCell="{dataIndex, dataItem}">
-          <span v-if="dataIndex === 'isEnabled'">{{dataItem[dataIndex]?'已启用':'已关闭'}}</span>
-          <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
+          <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
           <div v-else>
-            <div class="op-icon" @click="deleteApp">
+            <div class="op-icon" @click="deleteConfig(dataItem)">
               <a-tooltip placement="top">
                 <template #title>
                   <span>Delete File</span>
                 </template>
-                <delete-outlined />
+                <delete-outlined/>
               </a-tooltip>
             </div>
             <a-popover placement="bottomRight" trigger="hover">
@@ -32,24 +31,6 @@
                   <li @click="gotoUpdatePage(dataItem)">
                     <edit-outlined />
                     <span style="margin-left:4px">编辑配置</span>
-                  </li>
-                  <li>
-                    <eye-outlined />
-                    <span style="margin-left:4px">发布历史</span>
-                  </li>
-                  <li
-                    v-if="dataItem['isEnabled'] === false"
-                    @click="enableOrDisableConfig(dataItem, true)"
-                  >
-                    <check-outlined />
-                    <span style="margin-left:4px">启用配置</span>
-                  </li>
-                  <li
-                    v-else-if="dataItem['isEnabled'] === true"
-                    @click="enableOrDisableConfig(dataItem, false)"
-                  >
-                    <close-outlined />
-                    <span style="margin-left:4px">关闭配置</span>
                   </li>
                 </ul>
               </template>
@@ -67,23 +48,17 @@
 import {
   DeleteOutlined,
   EditOutlined,
-  EyeOutlined,
   PlusOutlined,
   EllipsisOutlined,
-  CheckOutlined,
-  CloseOutlined
+  ExclamationCircleOutlined
 } from "@ant-design/icons-vue";
 import ZTable from "@/components/common/ZTable";
-import { ref, h, watch } from "vue";
+import { ref, h, watch, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
-import {
-  listDeployConfigRequest,
-  enableDeployConfigRequest,
-  disableDeployConfigRequest
-} from "@/api/app/deployApi";
+import { listDeployConfigRequest, deleteDeployConfigRequest} from "@/api/app/deployApi";
 import { useDeloyConfigStore } from "@/pinia/deployConfigStore";
-import { message } from "ant-design-vue";
+import { Modal, message } from "ant-design-vue";
 const deployConfigStore = useDeloyConfigStore();
 const selectedEnv = ref("");
 const envList = ref([]);
@@ -96,11 +71,6 @@ const columns = ref([
     title: "名称",
     dataIndex: "name",
     key: "name"
-  },
-  {
-    title: "是否启用",
-    dataIndex: "isEnabled",
-    key: "isEnabled"
   },
   {
     title: "操作",
@@ -135,12 +105,28 @@ const listDeployConfig = () => {
   ).then(res => {
     dataSource.value = res.data.map(item => {
       return {
-        key: item.name,
+        key: item.id,
         ...item
       };
     });
   });
 };
+
+const deleteConfig = item => {
+  Modal.confirm({
+    title: `你确定要删除${item.name}吗?`,
+    icon: createVNode(ExclamationCircleOutlined),
+    okText: "ok",
+    cancelText: "cancel",
+    onOk() {
+      deleteDeployConfigRequest(item.id, item.env).then(() => {
+        message.success("删除成功");
+        listDeployConfig();
+      });
+    },
+    onCancel() {}
+  });
+}
 
 const gotoCreatePage = () => {
   router.push(
@@ -156,14 +142,6 @@ const gotoUpdatePage = item => {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/deployConfig/${item.id}/update`
   );
-};
-
-const enableOrDisableConfig = (item, result) => {
-  let request = result ? enableDeployConfigRequest : disableDeployConfigRequest;
-  request(item.id, item.env).then(() => {
-    message.success("操作成功");
-    listDeployConfig();
-  });
 };
 
 getEnvList();
