@@ -5,7 +5,6 @@ import (
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
 	"github.com/LeeZXin/zall/deploy/modules/api/deployapi"
-	"github.com/LeeZXin/zall/deploy/modules/api/serviceapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
@@ -26,7 +25,6 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/git"
-	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zall/promagent/agent"
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
@@ -125,7 +123,7 @@ func runZall(*cli.Context) error {
 	{
 		if static.GetBool("ssh.agent.enabled") {
 			logger.Logger.Info("ssh agent enabled")
-			lifeCycles = append(lifeCycles, sshagent.NewAgentServer())
+			//lifeCycles = append(lifeCycles, sshagent.NewAgentServer())
 		}
 	}
 	// prom
@@ -145,10 +143,6 @@ func runZall(*cli.Context) error {
 		if static.GetBool("alert.enabled") {
 			//alertsrv.InitTask()
 		}
-	}
-	// for service
-	{
-		serviceapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer(), prom.NewServer())
 	zsf.Run(

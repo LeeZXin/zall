@@ -13,17 +13,13 @@
             <pull-request-outlined />
             <span>配置中心</span>
           </a-menu-item>
-          <a-menu-item key="/deployConfig/list">
-            <file-outlined />
-            <span>服务部署</span>
-          </a-menu-item>
-          <a-menu-item key="/team/gitRepo/branches">
-            <branches-outlined />
-            <span>监控告警</span>
-          </a-menu-item>
-          <a-menu-item key="/probe/list">
+          <a-menu-item key="/service/list">
             <tag-outlined />
-            <span>服务探针</span>
+            <span>服务列表</span>
+          </a-menu-item>
+          <a-menu-item key="/deployPlan/list">
+            <file-outlined />
+            <span>发布计划</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -40,7 +36,6 @@ import { useI18n } from "vue-i18n";
 import { ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
-  BranchesOutlined,
   FileOutlined,
   PullRequestOutlined,
   TagOutlined
@@ -74,7 +69,8 @@ const changeSelectedKey = path => {
 const pagesMap = {
   "/property": "/property/list",
   "/deployConfig": "/deployConfig/list",
-  "/probe": "/probe/list"
+  "/service": "/service/list",
+  "/deployPlan": "/deployPlan/list"
 };
 watch(
   () => router.currentRoute.value.path,

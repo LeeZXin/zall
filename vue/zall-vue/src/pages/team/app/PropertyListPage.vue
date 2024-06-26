@@ -2,15 +2,7 @@
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
       <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建配置文件</a-button>
-      <div>
-        <span style="margin-right:6px">环境:</span>
-        <a-select
-          style="width: 200px"
-          placeholder="选择环境"
-          v-model:value="selectedEnv"
-          :options="envList"
-        />
-      </div>
+      <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <div class="body">
       <ZTable :columns="columns" :dataSource="dataSource">
@@ -39,7 +31,7 @@
                 </ul>
               </template>
               <div class="op-icon">
-                <EllipsisOutlined/>
+                <EllipsisOutlined />
               </div>
             </a-popover>
           </div>
@@ -57,14 +49,13 @@ import {
   EllipsisOutlined
 } from "@ant-design/icons-vue";
 import ZTable from "@/components/common/ZTable";
-import { ref, h, watch } from "vue";
+import { ref, h } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
 import { listPropertyFileRequest } from "@/api/app/propertyApi";
 import { usePropertyFileStore } from "@/pinia/propertyFileStore";
+import EnvSelector from "@/components/app/EnvSelector";
 const propertyFileStore = usePropertyFileStore();
 const selectedEnv = ref("");
-const envList = ref([]);
 const route = useRoute();
 const router = useRouter();
 const dataSource = ref([]);
@@ -81,22 +72,6 @@ const columns = ref([
     key: "operation"
   }
 ]);
-
-const getEnvList = () => {
-  getEnvCfgRequest().then(res => {
-    envList.value = res.data.map(item => {
-      return {
-        value: item,
-        label: item
-      };
-    });
-    if (route.params.env && res.data?.includes(route.params.env)) {
-      selectedEnv.value = route.params.env;
-    } else if (res.data.length > 0) {
-      selectedEnv.value = res.data[0];
-    }
-  });
-};
 
 const listPropertyFile = () => {
   listPropertyFileRequest(
@@ -129,17 +104,14 @@ const gotoHistoryListPage = item => {
     `/team/${route.params.teamId}/app/${route.params.appId}/property/${item.id}/history/list`
   );
 };
-getEnvList();
 
-watch(
-  () => selectedEnv.value,
-  newVal => {
-    router.replace(
-      `/team/${route.params.teamId}/app/${route.params.appId}/property/list/${newVal}`
-    );
-    listPropertyFile();
-  }
-);
+const onEnvChange = e => {
+  selectedEnv.value = e.newVal;
+  router.replace(
+    `/team/${route.params.teamId}/app/${route.params.appId}/property/list/${e.newVal}`
+  );
+  listPropertyFile();
+};
 </script>
 <style scoped>
 .body {

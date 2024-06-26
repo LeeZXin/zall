@@ -159,7 +159,7 @@ func internalTaskCallback(c *gin.Context) {
 		return
 	}
 	var req sshagent.TaskStatusCallbackReq
-	if ginutil.ShouldBind(&req, c) {
+	if util.ShouldBindJSON(&req, c) {
 		workflowsrv.Inner.TaskCallback(c.Query("taskId"), req)
 		c.String(http.StatusOK, "")
 	}

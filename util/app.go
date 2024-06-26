@@ -28,7 +28,7 @@ func getAppPath() string {
 			logger.Logger.Fatalf("getAppPath failed: %v", err)
 		}
 	}()
-	if IsWindows() && filepath.IsAbs(os.Args[0]) {
+	if runtime.GOOS == "windows" && filepath.IsAbs(os.Args[0]) {
 		path = filepath.Clean(os.Args[0])
 	} else {
 		path, err = exec.LookPath(os.Args[0])
@@ -47,10 +47,6 @@ func getAppPath() string {
 		return ""
 	}
 	return strings.ReplaceAll(path, "\\", "/")
-}
-
-func IsWindows() bool {
-	return isWindows
 }
 
 func GetAppPath() string {

@@ -112,5 +112,14 @@ export default {
     timerTask: {
         autoTriggerType: "Automatically",
         manualTriggerType: "Manually"
+    },
+    service: {
+        process: "Process Service",
+        k8s: "K8s Service"
+    },
+    deployPlan: {
+        pendingStatus: "Pending",
+        runningStatus: "Running",
+        closedStatus: "Closed"
     }
 }

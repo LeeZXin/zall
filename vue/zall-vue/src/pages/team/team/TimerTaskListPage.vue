@@ -10,16 +10,7 @@
         />
         <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建定时任务</a-button>
       </div>
-
-      <div>
-        <span style="margin-right:6px">环境:</span>
-        <a-select
-          style="width: 200px"
-          placeholder="选择环境"
-          v-model:value="selectedEnv"
-          :options="envList"
-        />
-      </div>
+      <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -76,7 +67,7 @@
 </template>
 <script setup>
 import ZTable from "@/components/common/ZTable";
-import { ref, createVNode, h, watch } from "vue";
+import { ref, createVNode, h } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   DeleteOutlined,
@@ -94,9 +85,9 @@ import {
   deleteTimerTaskRequest,
   triggerTimerTaskRequest
 } from "@/api/team/timerApi";
-import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
 import { Modal, message } from "ant-design-vue";
 import { useTimerTaskStore } from "@/pinia/timerTaskStore";
+import EnvSelector from "@/components/app/EnvSelector";
 const timerTaskStore = useTimerTaskStore();
 const router = useRouter();
 const route = useRoute();
@@ -105,7 +96,6 @@ const currPage = ref(1);
 const pageSize = 10;
 const totalCount = ref(0);
 const selectedEnv = ref();
-const envList = ref([]);
 const searchName = ref("");
 const columns = ref([
   {
@@ -146,21 +136,6 @@ const listTimerTask = () => {
         ...item
       };
     });
-  });
-};
-const getEnvList = () => {
-  getEnvCfgRequest().then(res => {
-    envList.value = res.data.map(item => {
-      return {
-        value: item,
-        label: item
-      };
-    });
-    if (route.params.env && res.data?.includes(route.params.env)) {
-      selectedEnv.value = route.params.env;
-    } else if (res.data.length > 0) {
-      selectedEnv.value = res.data[0];
-    }
   });
 };
 const deleteTimerTask = item => {
@@ -229,15 +204,12 @@ const viewLogs = item => {
   timerTaskStore.isEnabled = item.isEnabled;
   timerTaskStore.env = item.env;
   router.push(`/team/${route.params.teamId}/timerTask/${item.id}/logs`);
-}
-watch(
-  () => selectedEnv.value,
-  newVal => {
-    router.replace(`/team/${route.params.teamId}/timerTask/list/${newVal}`);
-    listTimerTask();
-  }
-);
-getEnvList();
+};
+const onEnvChange = e => {
+  selectedEnv.value = e.newVal;
+  router.replace(`/team/${route.params.teamId}/timerTask/list/${e.newVal}`);
+  listTimerTask();
+};
 </script>
 <style scoped>
 </style>

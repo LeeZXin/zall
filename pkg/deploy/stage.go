@@ -28,11 +28,15 @@ type Confirm struct {
 	// 是否需要交互
 	NeedInteract bool       `json:"needInteract" yaml:"needInteract"`
 	Message      string     `json:"message" yaml:"message"`
-	Script       string     `json:"script" yaml:"script"`
+	Action       string     `json:"action" yaml:"action"`
 	Form         []FormItem `json:"form,omitempty" yaml:"form,omitempty"`
 }
 
-func (c *Confirm) isValid() bool {
+func (c *Confirm) isValid(actions map[string]Action) bool {
+	_, b := actions[c.Action]
+	if !b {
+		return false
+	}
 	if c.NeedInteract {
 		for _, item := range c.Form {
 			if !NoSpacePattern.MatchString(item.Key) {
@@ -50,32 +54,46 @@ func (c *Confirm) isValid() bool {
 	return true
 }
 
-type Stage struct {
-	Name    string   `json:"name" yaml:"name"`
-	Agents  []string `json:"agents,omitempty" yaml:"agents,omitempty"`
-	Confirm Confirm  `json:"confirm" yaml:"confirm"`
-	// 回滚脚本
-	Rollback string `json:"rollback" yaml:"rollback"`
+type Rollback struct {
+	Action string `json:"action" yaml:"action"`
 }
 
-func (s *Stage) isValid(agentIdSet hashset.Set[string]) bool {
+func (r *Rollback) isValid(actions map[string]Action) bool {
+	_, b := actions[r.Action]
+	return b
+}
+
+type Stage struct {
+	Name     string    `json:"name" yaml:"name"`
+	Agents   []string  `json:"agents,omitempty" yaml:"agents,omitempty"`
+	Confirm  Confirm   `json:"confirm" yaml:"confirm"`
+	Rollback *Rollback `json:"rollback,omitempty" yaml:"rollback,omitempty"`
+}
+
+func (s *Stage) isValid(agents map[string]Agent, actions map[string]Action) bool {
+	if len(s.Agents) != hashset.NewHashSet(s.Agents...).Size() {
+		return false
+	}
 	for _, agent := range s.Agents {
-		if !agentIdSet.Contains(agent) {
+		_, b := agents[agent]
+		if !b {
 			return false
 		}
 	}
-	return s.Confirm.isValid()
+	if s.Rollback != nil && !s.Rollback.isValid(actions) {
+		return false
+	}
+	return s.Confirm.isValid(actions)
 }
 
 type Agent struct {
-	Id    string            `json:"id" yaml:"id"`
 	Host  string            `json:"host" yaml:"host"`
 	Token string            `json:"token" yaml:"token"`
 	With  map[string]string `json:"with,omitempty" yaml:"with,omitempty"`
 }
 
 func (a *Agent) isValid() bool {
-	return a.Id != "" && IpPortPattern.MatchString(a.Host)
+	return IpPortPattern.MatchString(a.Host)
 }
 
 func (a *Agent) RunScript(script, service string, env map[string]string) (string, error) {

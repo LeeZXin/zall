@@ -41,7 +41,7 @@ var (
 type Factory func() (Resource, error)
 
 // Resource defines the interface that every resource must provide.
-// Thread synchronization between Close() and IsClosed()
+// Thread synchronization between Close() and IsDone()
 // is the responsibility of the caller.
 type Resource interface {
 	Close()

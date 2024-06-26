@@ -22,8 +22,12 @@ func (r *CreateTaskReqDTO) IsValid() error {
 	if !taskmd.IsTaskNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	_, err := ParseCron(r.CronExp)
+	cron, err := ParseCron(r.CronExp)
 	if err != nil {
+		return util.InvalidArgsError()
+	}
+	now := time.Now()
+	if cron.Next(now).Before(now) {
 		return util.InvalidArgsError()
 	}
 	if !r.Task.IsValid() {

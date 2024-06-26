@@ -213,34 +213,34 @@ const router = createRouter({
                     import ("../pages/team/app/PropertyHistoryPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/deployConfig/list/:env?",
+                path: "/team/:teamId(\\d+)/app/:appId/service/list/:env?",
                 component: () =>
-                    import ("../pages/team/app/DeployConfigListPage")
+                    import ("../pages/team/app/ServiceListPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/deployConfig/create",
+                path: "/team/:teamId(\\d+)/app/:appId/service/create",
                 component: () =>
-                    import ("../pages/team/app/DeployConfigHandlePage")
+                    import ("../pages/team/app/ServiceHandlePage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/deployConfig/:configId(\\d+)/update",
+                path: "/team/:teamId(\\d+)/app/:appId/service/:serviceId(\\d+)/update",
                 component: () =>
-                    import ("../pages/team/app/DeployConfigHandlePage")
+                    import ("../pages/team/app/ServiceHandlePage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/probe/list/:env?",
+                path: "/team/:teamId(\\d+)/app/:appId/deployPlan/list/:env?",
                 component: () =>
-                    import ("../pages/team/app/ProbeListPage")
+                    import ("../pages/team/app/DeployPlanListPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/probe/create",
+                path: "/team/:teamId(\\d+)/app/:appId/deployPlan/create",
                 component: () =>
-                    import ("../pages/team/app/ProbeHandlePage")
+                    import ("../pages/team/app/DeployPlanCreatePage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/probe/:probeId(\\d+)/update",
+                path: "/team/:teamId(\\d+)/app/:appId/deployPlan/:planId(\\d+)/view",
                 component: () =>
-                    import ("../pages/team/app/ProbeHandlePage")
+                    import ("../pages/team/app/DeployPlanViewPage")
 
             }]
         },

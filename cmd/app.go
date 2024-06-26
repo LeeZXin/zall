@@ -26,7 +26,7 @@ func NewCliApp() *cli.App {
 	app.EnableBashCompletion = true
 	app.HideHelp = true
 	app.DefaultCommand = Run.Name
-	app.Commands = append(app.Commands, cmdList...)
+	app.Commands = cmdList
 	app.Name = "zall"
 	app.Usage = "A zall server with zsf"
 	app.Description = "by default, it will start the zall server"

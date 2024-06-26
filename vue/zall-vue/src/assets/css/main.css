@@ -54,6 +54,10 @@ ul {
     align-items: center;
 }
 
+.flex {
+    display: flex;
+}
+
 .op-icon {
     display: inline-block;
     width: 24px;
@@ -197,4 +201,31 @@ ul {
 
 .input-ul>li+li {
     margin-top: 10px;
+}
+
+.info-list {
+    width: 100%;
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.info-list>li {
+    width: 20%;
+}
+
+.info-name {
+    line-height: 32px;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    word-break: break-all;
+    font-weight: bold;
+    padding-left: 8px;
+}
+
+.info-value {
+    font-size: 14px;
+    padding: 8px;
+    line-height: 16px;
+    word-break: break-all;
 }

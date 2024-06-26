@@ -1,7 +1,6 @@
 <template>
   <div style="padding:10px;height:100%">
-    <div style="margin-bottom:10px" class="flex-between">
-      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建部署配置</a-button>
+    <div style="margin-bottom:10px;text-align:right">
       <div>
         <span style="margin-right:6px">环境:</span>
         <a-select
@@ -15,14 +14,15 @@
     <div class="body">
       <ZTable :columns="columns" :dataSource="dataSource">
         <template #bodyCell="{dataIndex, dataItem}">
-          <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
+          <span v-if="dataIndex === 'serviceType'">{{t(`service.${dataItem[dataIndex]}`)}}</span>
+          <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
           <div v-else>
-            <div class="op-icon" @click="deleteConfig(dataItem)">
+            <div class="op-icon" @click="deleteService(dataItem)">
               <a-tooltip placement="top">
                 <template #title>
-                  <span>Delete File</span>
+                  <span>Delete Service</span>
                 </template>
-                <delete-outlined/>
+                <delete-outlined />
               </a-tooltip>
             </div>
             <a-popover placement="bottomRight" trigger="hover">
@@ -30,7 +30,7 @@
                 <ul class="op-list">
                   <li @click="gotoUpdatePage(dataItem)">
                     <edit-outlined />
-                    <span style="margin-left:4px">编辑配置</span>
+                    <span style="margin-left:4px">编辑服务</span>
                   </li>
                 </ul>
               </template>
@@ -56,21 +56,37 @@ import ZTable from "@/components/common/ZTable";
 import { ref, h, watch, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
-import { listDeployConfigRequest, deleteDeployConfigRequest} from "@/api/app/deployApi";
-import { useDeloyConfigStore } from "@/pinia/deployConfigStore";
+import {
+  listServiceRequest,
+  deleteServiceRequest,
+  enableServiceRequest,
+  disableServiceRequest
+} from "@/api/app/serviceApi";
+import { useServiceStore } from "@/pinia/serviceStore";
 import { Modal, message } from "ant-design-vue";
-const deployConfigStore = useDeloyConfigStore();
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+const serviceStore = useServiceStore();
 const selectedEnv = ref("");
 const envList = ref([]);
 const route = useRoute();
 const router = useRouter();
 const dataSource = ref([]);
-
 const columns = ref([
   {
     title: "名称",
     dataIndex: "name",
     key: "name"
+  },
+  {
+    title: "服务类型",
+    dataIndex: "serviceType",
+    key: "serviceType"
+  },
+  {
+    title: "是否启用",
+    dataIndex: "isEnabled",
+    key: "isEnabled"
   },
   {
     title: "操作",
@@ -95,8 +111,24 @@ const getEnvList = () => {
   });
 };
 
-const listDeployConfig = () => {
-  listDeployConfigRequest(
+const deleteService = item => {
+  Modal.confirm({
+    title: `你确定要删除${item.name}吗?`,
+    icon: createVNode(ExclamationCircleOutlined),
+    okText: "ok",
+    cancelText: "cancel",
+    onOk() {
+      deleteServiceRequest(item.id, item.env).then(() => {
+        message.success("删除成功");
+        listService();
+      });
+    },
+    onCancel() {}
+  });
+};
+
+const listService = () => {
+  listServiceRequest(
     {
       appId: route.params.appId,
       env: selectedEnv.value
@@ -112,35 +144,13 @@ const listDeployConfig = () => {
   });
 };
 
-const deleteConfig = item => {
-  Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
-    icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
-    onOk() {
-      deleteDeployConfigRequest(item.id, item.env).then(() => {
-        message.success("删除成功");
-        listDeployConfig();
-      });
-    },
-    onCancel() {}
-  });
-}
-
-const gotoCreatePage = () => {
-  router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/deployConfig/create?env=${selectedEnv.value}`
-  );
-};
-
 const gotoUpdatePage = item => {
-  deployConfigStore.id = item.id;
-  deployConfigStore.name = item.name;
-  deployConfigStore.env = item.env;
-  deployConfigStore.content = item.content;
+  serviceStore.id = item.id;
+  serviceStore.name = item.name;
+  serviceStore.env = item.env;
+  serviceStore.config = item.config;
   router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/deployConfig/${item.id}/update`
+    `/team/${route.params.teamId}/app/${route.params.appId}/service/${item.id}/update`
   );
 };
 
@@ -150,9 +160,9 @@ watch(
   () => selectedEnv.value,
   newVal => {
     router.replace(
-      `/team/${route.params.teamId}/app/${route.params.appId}/deployConfig/list/${newVal}`
+      `/team/${route.params.teamId}/app/${route.params.appId}/service/list/${newVal}`
     );
-    listDeployConfig();
+    listService();
   }
 );
 </script>

@@ -1,49 +1,16 @@
 package deploymd
 
-import (
-	"time"
-)
-
-type InsertConfigReqDTO struct {
-	AppId   string
-	Name    string
-	Content string
-	Env     string
-}
-
-type UpdateConfigReqDTO struct {
-	ConfigId int64
-	Name     string
-	Content  string
-}
-
-type InsertPlanServiceReqDTO struct {
-	ConfigId           int64
-	CurrProductVersion string
-	LastProductVersion string
-	DeployConfig       string
-	Status             ServiceStatus
-	PlanId             int64
-}
-
-type UpdateServiceReqDTO struct {
-	ConfigId           int64
-	CurrProductVersion string
-	LastProductVersion string
-	ServiceConfig      string
-	Env                string
-	ActiveStatus       ServiceStatus
-	StartTime          int64
-	ProbeTime          int64
-}
+import "github.com/LeeZXin/zall/pkg/deploy"
 
 type InsertPlanReqDTO struct {
-	Name     string
-	IsClosed bool
-	TeamId   int64
-	Creator  string
-	Env      string
-	Expired  time.Time
+	Name           string
+	PlanStatus     PlanStatus
+	AppId          string
+	ServiceId      int64
+	ProductVersion string
+	Creator        string
+	Env            string
+	ServiceConfig  deploy.Service
 }
 
 type InsertDeployLogReqDTO struct {
@@ -81,15 +48,43 @@ type ListOpLogReqDTO struct {
 }
 
 type ListPlanReqDTO struct {
-	TeamId   int64
+	AppId    string
 	PageNum  int
 	PageSize int
 	Env      string
 }
 
-type InsertDeployStepReqDTO struct {
-	ServiceId  int64
-	StepIndex  int
-	Agent      string
-	StepStatus StepStatus
+type InsertDeployStageReqDTO struct {
+	PlanId      int64
+	StageIndex  int
+	Agent       string
+	StageStatus StageStatus
+}
+
+type InsertDeployServiceReqDTO struct {
+	PlanId    int64
+	ServiceId int64
+	Config    DeployServiceConfig
+	Probed    int64
+}
+
+type InsertServiceReqDTO struct {
+	AppId       string
+	Name        string
+	Config      string
+	Env         string
+	ServiceType deploy.ServiceType
+}
+
+type UpdateServiceReqDTO struct {
+	ServiceId   int64
+	Name        string
+	Config      string
+	ServiceType deploy.ServiceType
+}
+
+type ListServiceReqDTO struct {
+	AppId string
+	Env   string
+	Cols  []string
 }

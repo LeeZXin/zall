@@ -503,52 +503,46 @@ func NewAgentServer() zsf.LifeCycle {
 			session.Exit(0)
 		},
 		"execute": func(session ssh.Session, args map[string]string, workdir, tempDir string) {
-			rErr := agent.serviceExecutor.Execute(func() {
-				id := idutil.RandomUuid()
-				cmdPath := filepath.Join(tempDir, id)
-				file, err := os.OpenFile(cmdPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				defer util.RemoveAll(cmdPath)
-				_, err = io.Copy(file, session)
-				file.Close()
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				err = executeCommand("chmod +x "+cmdPath, session, workdir)
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				cmd, err := newCommand(session.Context(), "bash -c "+cmdPath, session, session, workdir)
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				if !agent.cmdMap.PutIfAbsent(id, cmd) {
-					util.ExitWithErrMsg(session, "duplicated id")
-					return
-				}
-				defer agent.cmdMap.Remove(id)
-				err = cmd.Start()
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-				err = cmd.Wait()
-				if err != nil {
-					util.ExitWithErrMsg(session, err.Error())
-					return
-				}
-			})
-			if rErr == nil {
-				session.Exit(0)
-			} else {
-				util.ExitWithErrMsg(session, "out of capacity")
+			id := idutil.RandomUuid()
+			cmdPath := filepath.Join(tempDir, id)
+			file, err := os.OpenFile(cmdPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
 			}
+			defer util.RemoveAll(cmdPath)
+			_, err = io.Copy(file, session)
+			file.Close()
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
+			}
+			err = executeCommand("chmod +x "+cmdPath, session, workdir)
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
+			}
+			cmd, err := newCommand(session.Context(), "bash -c "+cmdPath, session, session, workdir, session.Environ())
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
+			}
+			if !agent.cmdMap.PutIfAbsent(id, cmd) {
+				util.ExitWithErrMsg(session, "duplicated id")
+				return
+			}
+			defer agent.cmdMap.Remove(id)
+			err = cmd.Start()
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
+			}
+			err = cmd.Wait()
+			if err != nil {
+				util.ExitWithErrMsg(session, err.Error())
+				return
+			}
+			session.Exit(0)
 		},
 	}
 	agentPort := static.GetInt("ssh.agent.port")

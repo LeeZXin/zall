@@ -2,8 +2,8 @@
   <div style="padding:14px">
     <div class="container">
       <div class="title">
-        <span v-if="mode === 'create'">创建部署配置</span>
-        <span v-else-if="mode === 'update'">编辑部署配置</span>
+        <span v-if="mode === 'create'">创建服务</span>
+        <span v-else-if="mode === 'update'">编辑服务</span>
       </div>
       <div class="section" v-if="mode==='create'">
         <div class="section-title">选择环境</div>
@@ -40,7 +40,7 @@
         />
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateConfig">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateService">立即保存</a-button>
       </div>
     </div>
   </div>
@@ -50,17 +50,17 @@ import { reactive, ref } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { deployConfigNameRegexp } from "@/utils/regexp";
+import { serviceNameRegexp } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
 import {
-  createDeployConfigRequest,
-  updateDeployConfigRequest
-} from "@/api/app/deployApi";
+  createServiceRequest,
+  updateServiceRequest
+} from "@/api/app/serviceApi";
 import { useRoute, useRouter } from "vue-router";
-import { useDeloyConfigStore } from "@/pinia/deployConfigStore";
+import { useServiceStore } from "@/pinia/serviceStore";
 import jsyaml from "js-yaml";
-const deployConfigStore = useDeloyConfigStore();
+const serviceStore = useServiceStore();
 const route = useRoute();
 const router = useRouter();
 const getMode = () => {
@@ -100,38 +100,38 @@ const formatYaml = () => {
     }
   }
 };
-const saveOrUpdateConfig = () => {
-  if (!deployConfigNameRegexp.test(formState.name)) {
+const saveOrUpdateService = () => {
+  if (!serviceNameRegexp.test(formState.name)) {
     message.warn("名称格式错误");
     return;
   }
   if (mode === "create") {
-    createDeployConfigRequest(
+    createServiceRequest(
       {
         env: formState.selectedEnv,
         appId: route.params.appId,
-        content: formState.content,
+        config: formState.content,
         name: formState.name
       },
       formState.selectedEnv
     ).then(() => {
       message.success("创建成功");
       router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/deployConfig/list/${formState.selectedEnv}`
+        `/team/${route.params.teamId}/app/${route.params.appId}/service/list/${formState.selectedEnv}`
       );
     });
   } else if (mode === "update") {
-    updateDeployConfigRequest(
+    updateServiceRequest(
       {
-        configId: deployConfigStore.id,
-        content: formState.content,
+        serviceId: serviceStore.id,
+        config: formState.content,
         name: formState.name
       },
       formState.selectedEnv
     ).then(() => {
       message.success("保存成功");
       router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/deployConfig/list/${formState.selectedEnv}`
+        `/team/${route.params.teamId}/app/${route.params.appId}/service/list/${formState.selectedEnv}`
       );
     });
   }
@@ -140,14 +140,14 @@ const saveOrUpdateConfig = () => {
 if (mode === "create") {
   getEnvCfg();
 } else if (mode === "update") {
-  if (deployConfigStore.id === 0) {
+  if (serviceStore.id === 0) {
     router.push(
-      `/team/${route.params.teamId}/app/${route.params.appId}/deployConfig/list`
+      `/team/${route.params.teamId}/app/${route.params.appId}/service/list`
     );
   } else {
-    formState.name = deployConfigStore.name;
-    formState.selectedEnv = deployConfigStore.env;
-    formState.content = deployConfigStore.content;
+    formState.name = serviceStore.name;
+    formState.selectedEnv = serviceStore.env;
+    formState.content = serviceStore.config;
   }
 }
 </script>

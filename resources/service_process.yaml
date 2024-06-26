@@ -1,0 +1,90 @@
+type: process
+agents:
+  agent1:
+    host: 127.0.0.1:6666
+    token: nihao
+    with:
+      ZALL_NODE_FLAG: node1
+  agent2:
+    host: 127.0.0.1:7777
+    token: nihao
+  agent3:
+    host: 127.0.0.1:7777
+    token: nihao
+actions:
+  restart:
+    alias: 重启
+    script: |
+      echo restart
+  shutdown:
+    alias: 关闭
+    script: |
+      echo shutdown
+  gray1:
+    alias: 灰度第一批
+    script: |
+      echo gray1
+      echo $DEPLOY_OPERATOR
+  gray2:
+    alias: 灰度第二批
+    script: |
+      echo gray2
+      echo $DEPLOY_OPERATOR
+  gray3:
+    alias: 灰度第三批
+    script: |
+      env
+  rollback2:
+    alias: 回滚
+    script: |
+      echo rollback2
+process:
+  - host: 127.0.0.1:80
+    agent: agent1
+    probe:
+      type: tcp
+      tcp:
+        host: 127.0.0.1:80
+      onFail:
+        times: 3
+        action: restart
+  - host: 127.0.0.1:90
+    agent: agent2
+    probe:
+      type: tcp
+      tcp:
+        host: 127.0.0.1:90
+      onFail:
+        times: 3
+        action: restart
+deploy:
+  - name: 灰度第一批
+    agents:
+      - agent1
+    confirm:
+      message: 是否灰度第一批
+      action: gray1
+    rollback:
+      action: rollback2
+  - name: 灰度第二批
+    agents:
+      - agent1
+    confirm:
+      message: 是否灰度第二批
+      action: gray2
+    rollback:
+      action: rollback2
+  - name: 回滚
+    agents:
+      - agent1
+      - agent2
+      - agent3
+    confirm:
+      message: 是否回滚
+      form:
+        - key: ALL_CONFIRM
+          label: 是或否？
+          regexp: ^(false|true)$
+      action: gray3
+    rollback:
+      action: rollback2

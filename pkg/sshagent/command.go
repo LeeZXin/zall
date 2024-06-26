@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/LeeZXin/zall/pkg/process"
 	"github.com/gliderlabs/ssh"
 	"github.com/kballard/go-shellquote"
 	gossh "golang.org/x/crypto/ssh"
@@ -84,14 +83,14 @@ func (c *AgentCommand) KillWorkflow(taskId string) error {
 }
 
 func executeCommand(line string, session ssh.Session, workdir string) error {
-	cmd, err := newCommand(session.Context(), line, session, session, workdir)
+	cmd, err := newCommand(session.Context(), line, session, session, workdir, session.Environ())
 	if err != nil {
 		return err
 	}
 	return cmd.Run()
 }
 
-func newCommand(ctx context.Context, line string, stdout, stderr io.Writer, workdir string) (*exec.Cmd, error) {
+func newCommand(ctx context.Context, line string, stdout, stderr io.Writer, workdir string, envs []string) (*exec.Cmd, error) {
 	fields, err := shellquote.Split(line)
 	if err != nil {
 		return nil, err
@@ -104,8 +103,7 @@ func newCommand(ctx context.Context, line string, stdout, stderr io.Writer, work
 	} else {
 		return nil, fmt.Errorf("empty command")
 	}
-	process.SetSysProcAttribute(cmd)
-	cmd.Env = os.Environ()
+	cmd.Env = append(os.Environ(), envs...)
 	cmd.Dir = workdir
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

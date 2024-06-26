@@ -16,19 +16,7 @@ import (
 func InitApi() {
 	deploysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/api/deployConfig", apisession.CheckLogin)
-		{
-			// 部署配置列表
-			group.GET("/list", listConfig)
-			// 编辑部署配置
-			group.POST("/update", updateConfig)
-			// 新增部署配置
-			group.POST("/create", createConfig)
-			// 删除配置
-			group.DELETE("/delete/:configId", deleteConfig)
-		}
-
-		group = e.Group("/api/deployPlan", apisession.CheckLogin)
+		group := e.Group("/api/deployPlan", apisession.CheckLogin)
 		{
 			// 创建发布计划
 			group.POST("/create", createPlan)
@@ -36,103 +24,33 @@ func InitApi() {
 			group.PUT("/close/:planId", closePlan)
 			// 展示发布计划列表
 			group.GET("/list", listPlan)
+			// 开始发布计划
+			group.PUT("/start/:planId", startPlan)
+			// 服务列表
+			group.GET("/listService", listServiceWhenCreatePlan)
 		}
-
-		group = e.Group("/api/deployPlanService", apisession.CheckLogin)
+		group = e.Group("/api/service", apisession.CheckLogin)
 		{
-			// 添加发布的服务
-			group.POST("/add", addPlanService)
-			// 删除未执行服务
-			group.DELETE("/deletePending/:serviceId", deletePendingService)
-			// 发布计划服务列表
-			group.GET("/list/:planId", listPlanService)
-			// 启动部署服务
-			group.PUT("/start/:serviceId", startPlanService)
+			// 创建服务
+			group.POST("/create", createService)
+			// 编辑服务
+			group.POST("/update", updateService)
+			// 删除服务
+			group.DELETE("/delete/:serviceId", deleteService)
+			// 服务列表
+			group.GET("/list", listService)
 		}
 	})
-}
-
-func listConfig(c *gin.Context) {
-	configs, err := deploysrv.Outer.ListConfig(c, deploysrv.ListConfigReqDTO{
-		AppId:    c.Query("appId"),
-		Env:      c.Query("env"),
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	data, _ := listutil.Map(configs, func(t deploysrv.ConfigDTO) (ConfigVO, error) {
-		return ConfigVO{
-			Id:      t.Id,
-			AppId:   t.AppId,
-			Name:    t.Name,
-			Content: t.Content,
-			Env:     t.Env,
-		}, nil
-	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]ConfigVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
-	})
-}
-
-func updateConfig(c *gin.Context) {
-	var req UpdateConfigReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.UpdateConfig(c, deploysrv.UpdateConfigReqDTO{
-			ConfigId: req.ConfigId,
-			Content:  req.Content,
-			Name:     req.Name,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func createConfig(c *gin.Context) {
-	var req CreateConfigReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.CreateConfig(c, deploysrv.CreateConfigReqDTO{
-			AppId:    req.AppId,
-			Name:     req.Name,
-			Content:  req.Content,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func deleteConfig(c *gin.Context) {
-	err := deploysrv.Outer.DeleteConfig(c, deploysrv.DeleteConfigReqDTO{
-		ConfigId: cast.ToInt64(c.Param("configId")),
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	util.DefaultOkResponse(c)
 }
 
 func createPlan(c *gin.Context) {
 	var req CreatePlanReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.Outer.CreatePlan(c, deploysrv.CreatePlanReqDTO{
-			Name:        req.Name,
-			TeamId:      req.TeamId,
-			Env:         req.Env,
-			ExpireHours: req.ExpireHours,
-			Operator:    apisession.MustGetLoginUser(c),
+			Name:           req.Name,
+			ServiceId:      req.ServiceId,
+			ProductVersion: req.ProductVersion,
+			Operator:       apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -154,50 +72,8 @@ func closePlan(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func addPlanService(c *gin.Context) {
-	var req AddDeployPlanServiceReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.AddPlanService(c, deploysrv.AddPlanServiceReqDTO{
-			PlanId:             req.PlanId,
-			ConfigId:           req.ConfigId,
-			LastProductVersion: req.LastProductVersion,
-			CurrProductVersion: req.CurrProductVersion,
-			Operator:           apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func deletePendingService(c *gin.Context) {
-	err := deploysrv.Outer.DeletePendingPlanService(c, deploysrv.DeletePendingPlanServiceReqDTO{
-		ServiceId: cast.ToInt64(c.Param("serviceId")),
-		Operator:  apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	util.DefaultOkResponse(c)
-}
-
-func startPlanService(c *gin.Context) {
-	err := deploysrv.Outer.StartPlanService(c, deploysrv.StartPlanServiceReqDTO{
-		ServiceId: cast.ToInt64(c.Param("serviceId")),
-		Operator:  apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	util.DefaultOkResponse(c)
-}
-
-func listPlanService(c *gin.Context) {
-	items, err := deploysrv.Outer.ListPlanService(c, deploysrv.ListPlanServiceReqDTO{
+func startPlan(c *gin.Context) {
+	err := deploysrv.Outer.StartPlan(c, deploysrv.StartPlanReqDTO{
 		PlanId:   cast.ToInt64(c.Param("planId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -205,29 +81,14 @@ func listPlanService(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(items, func(t deploysrv.PlanServiceDTO) (PlanServiceVO, error) {
-		return PlanServiceVO{
-			Id:                 t.Id,
-			AppId:              t.AppId,
-			ConfigId:           t.ConfigId,
-			ConfigName:         t.ConfigName,
-			CurrProductVersion: t.CurrProductVersion,
-			LastProductVersion: t.LastProductVersion,
-			ServiceStatus:      t.ServiceStatus,
-			Created:            t.Created.Format(time.DateTime),
-		}, nil
-	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]PlanServiceVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
-	})
+	util.DefaultOkResponse(c)
 }
 
 func listPlan(c *gin.Context) {
 	var req ListPlanReqVO
 	if util.ShouldBindQuery(&req, c) {
-		plans, next, err := deploysrv.Outer.ListPlan(c, deploysrv.ListPlanReqDTO{
-			TeamId:   req.TeamId,
+		plans, total, err := deploysrv.Outer.ListPlan(c, deploysrv.ListPlanReqDTO{
+			AppId:    req.AppId,
 			Env:      req.Env,
 			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),
@@ -238,21 +99,121 @@ func listPlan(c *gin.Context) {
 		}
 		data, _ := listutil.Map(plans, func(t deploysrv.PlanDTO) (PlanVO, error) {
 			return PlanVO{
-				Id:       t.Id,
-				Name:     t.Name,
-				IsClosed: t.IsClosed,
-				TeamId:   t.TeamId,
-				Creator:  t.Creator,
-				Expired:  t.Expired.Format(time.DateTime),
-				Created:  t.Created.Format(time.DateTime),
+				Id:             t.Id,
+				ServiceId:      t.ServiceId,
+				ServiceName:    t.ServiceName,
+				Name:           t.Name,
+				ProductVersion: t.ProductVersion,
+				PlanStatus:     t.PlanStatus,
+				Env:            t.Env,
+				Creator:        t.Creator,
+				Created:        t.Created.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[PlanVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[PlanVO]{
 			DataResp: ginutil.DataResp[[]PlanVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},
-			Next: next,
+			PageNum:    req.PageNum,
+			TotalCount: total,
 		})
 	}
+}
+
+func createService(c *gin.Context) {
+	var req CreateServiceReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.CreateService(c, deploysrv.CreateServiceReqDTO{
+			AppId:    req.AppId,
+			Name:     req.Name,
+			Config:   req.Config,
+			Env:      req.Env,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func updateService(c *gin.Context) {
+	var req UpdateServiceReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.UpdateService(c, deploysrv.UpdateServiceReqDTO{
+			ServiceId: req.ServiceId,
+			Name:      req.Name,
+			Config:    req.Config,
+			Operator:  apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func deleteService(c *gin.Context) {
+	err := deploysrv.Outer.DeleteService(c, deploysrv.DeleteServiceReqDTO{
+		ServiceId: cast.ToInt64(c.Param("serviceId")),
+		Operator:  apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
+}
+
+func listService(c *gin.Context) {
+	services, err := deploysrv.Outer.ListService(c, deploysrv.ListServiceReqDTO{
+		AppId:    c.Query("appId"),
+		Env:      c.Query("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(services, func(t deploysrv.ServiceDTO) (ServiceVO, error) {
+		return ServiceVO{
+			Id:          t.Id,
+			AppId:       t.AppId,
+			Config:      t.Config,
+			Env:         t.Env,
+			Name:        t.Name,
+			ServiceType: t.ServiceType,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]ServiceVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func listServiceWhenCreatePlan(c *gin.Context) {
+	services, err := deploysrv.Outer.ListServiceWhenCreatePlan(c, deploysrv.ListServiceWhenCreatePlanReqDTO{
+		AppId:    c.Query("appId"),
+		Env:      c.Query("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(services, func(t deploysrv.SimpleServiceDTO) (SimpleServiceVO, error) {
+		return SimpleServiceVO{
+			Id:          t.Id,
+			Env:         t.Env,
+			Name:        t.Name,
+			ServiceType: t.ServiceType,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleServiceVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }

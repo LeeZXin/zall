@@ -548,7 +548,7 @@ func (n *DefaultExpr) Restore(ctx *format.RestoreCtx) error {
 	if n.Name != nil {
 		ctx.WritePlain("(")
 		if err := n.Name.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore DefaultExpr.Name")
+			return errors.Annotate(err, "An error occurred while restore DefaultExpr.Alias")
 		}
 		ctx.WritePlain(")")
 	}

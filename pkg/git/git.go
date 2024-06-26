@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/localcache"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
@@ -12,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -108,7 +108,7 @@ func Init() {
 	mustSetGlobalConfigIfAbsent("user.name", SignUsername())
 	mustSetGlobalConfigIfAbsent("user.email", SignEmail())
 	mustAddGlobalConfigIfAbsent("safe.directory", "*")
-	if util.IsWindows() {
+	if runtime.GOOS == "windows" {
 		mustSetGlobalConfig("core.longpaths", "true")
 		mustUnsetAllGlobalConfig("core.protectNTFS", "false")
 	}

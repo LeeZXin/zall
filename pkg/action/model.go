@@ -50,7 +50,7 @@ func (c *GraphCfg) IsValid() error {
 		}
 		// 有重复的名字
 		if allJobNames.Contains(jobName) {
-			return fmt.Errorf("job has duplicated Name: %v", jobName)
+			return fmt.Errorf("job has duplicated Alias: %v", jobName)
 		}
 		allJobNames.Add(jobName)
 	}
@@ -165,7 +165,7 @@ func (c *StepCfg) convertToStep() *step {
 
 func (c *StepCfg) IsValid() error {
 	if c.Script == "" {
-		return errors.New("empty Script")
+		return errors.New("empty Action")
 	}
 	return nil
 }

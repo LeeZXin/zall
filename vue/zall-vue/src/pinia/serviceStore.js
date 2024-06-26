@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 
-export const useProbeStore = defineStore('probe', {
+export const useServiceStore = defineStore('service', {
     state: () => ({
         id: 0,
         name: "",
         env: "",
-        config: {}
+        config: ""
     })
 })

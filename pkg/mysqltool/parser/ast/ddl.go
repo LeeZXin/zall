@@ -628,7 +628,7 @@ type ColumnDef struct {
 // Restore implements Node interface.
 func (n *ColumnDef) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Name.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while splicing ColumnDef Name")
+		return errors.Annotate(err, "An error occurred while splicing ColumnDef Alias")
 	}
 	if n.Tp != nil {
 		ctx.WritePlain(" ")

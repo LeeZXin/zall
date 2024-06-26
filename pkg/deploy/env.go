@@ -2,6 +2,6 @@ package deploy
 
 const (
 	CurrentProductVersionKey = "DEPLOY_CURRENT_PRODUCT_VERSION"
-	LastProductVersionKey    = "DEPLOY_LAST_PRODUCT_VERSION"
-	OperatorKey              = "DEPLOY_OPERATOR_KEY"
+	OperatorAccountKey       = "DEPLOY_OPERATOR_ACCOUNT"
+	AppKey                   = "DEPLOY_APP"
 )

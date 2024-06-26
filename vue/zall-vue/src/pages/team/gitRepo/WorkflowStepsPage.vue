@@ -469,28 +469,6 @@ onUnmounted(() => {
   padding: 0 10px;
   cursor: pointer;
 }
-.info-list {
-  width: 100%;
-  display: flex;
-  margin-bottom: 10px;
-}
-.info-list > li {
-  width: 20%;
-}
-.info-name {
-  line-height: 32px;
-  font-size: 16px;
-  white-space: nowrap;
-  overflow: hidden;
-  word-break: break-all;
-  font-weight: bold;
-  padding-left: 8px;
-}
-.info-value {
-  font-size: 14px;
-  padding: 8px;
-  line-height: 16px;
-}
 .check-yaml-btn:hover {
   cursor: pointer;
   color: #1677ff;

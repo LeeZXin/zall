@@ -112,7 +112,7 @@ func (p FieldData) Parse() (f *Field, err error) {
 	//name
 	f.Name, pos, _, ok = ReadLenEncStringAsBytes(p, pos)
 	if !ok {
-		return f, errors.New("read Name failed")
+		return f, errors.New("read Alias failed")
 	}
 
 	//org_name

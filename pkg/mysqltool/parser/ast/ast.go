@@ -58,7 +58,7 @@ const (
 )
 
 // ExprNode is a node that can be evaluated.
-// Name of implementations should have 'Expr' suffix.
+// Alias of implementations should have 'Expr' suffix.
 type ExprNode interface {
 	// Node is embedded in ExprNode.
 	Node
@@ -90,7 +90,7 @@ type FuncNode interface {
 }
 
 // StmtNode represents statement node.
-// Name of implementations should have 'Stmt' suffix.
+// Alias of implementations should have 'Stmt' suffix.
 type StmtNode interface {
 	Node
 	statement()
