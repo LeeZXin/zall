@@ -63,7 +63,7 @@ func (s *innerImpl) CheckWorkflowToken(ctx context.Context, repoId int64, token 
 }
 
 // TaskCallback 工作流回调
-func (s *innerImpl) TaskCallback(taskId string, task sshagent.TaskStatusCallbackReq) {
+func (s *innerImpl) TaskCallback(taskId string, req sshagent.TaskStatusCallbackReq) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	taskmd, b, err := workflowmd.GetTaskByBizId(ctx, taskId)
@@ -75,36 +75,44 @@ func (s *innerImpl) TaskCallback(taskId string, task sshagent.TaskStatusCallback
 		return
 	}
 	var (
-		oldStatus, finalStatus workflowmd.TaskStatus
+		oldStatus sshagent.Status
 	)
-	switch task.Status {
+	switch req.Status {
 	case sshagent.SuccessStatus:
-		oldStatus = workflowmd.TaskRunningStatus
-		finalStatus = workflowmd.TaskSuccessStatus
+		oldStatus = sshagent.RunningStatus
 	case sshagent.FailStatus:
-		oldStatus = workflowmd.TaskRunningStatus
-		finalStatus = workflowmd.TaskFailStatus
+		oldStatus = sshagent.RunningStatus
 	case sshagent.TimeoutStatus:
-		oldStatus = workflowmd.TaskRunningStatus
-		finalStatus = workflowmd.TaskTimeoutStatus
+		oldStatus = sshagent.RunningStatus
 	case sshagent.RunningStatus:
-		oldStatus = workflowmd.TaskQueueStatus
-		finalStatus = workflowmd.TaskRunningStatus
+		oldStatus = sshagent.QueueStatus
+	case sshagent.CancelStatus:
+		oldStatus = sshagent.RunningStatus
 	default:
 		return
 	}
-	duration, _ := time.ParseDuration(strconv.FormatInt(task.Duration, 10) + "ms")
-	_, err = workflowmd.UpdateTaskStatusAndDuration(ctx,
-		taskmd.Id,
-		oldStatus,
-		finalStatus,
-		duration,
-	)
+	duration, _ := time.ParseDuration(strconv.FormatInt(req.Duration, 10) + "ms")
+	if req.Task != nil {
+		_, err = workflowmd.UpdateTaskStatusAndDurationAndStatusLog(ctx,
+			taskmd.Id,
+			oldStatus,
+			req.Status,
+			duration,
+			*req.Task,
+		)
+	} else {
+		_, err = workflowmd.UpdateTaskStatusAndDuration(ctx,
+			taskmd.Id,
+			oldStatus,
+			req.Status,
+			duration,
+		)
+	}
 	if err != nil {
 		logger.Logger.Error(err)
 	}
 	// 如果是终态 删除token
-	if finalStatus.IsEndType() {
+	if req.Status.IsFinalType() {
 		err = workflowmd.DeleteTokenByTaskId(ctx, taskmd.Id)
 		if err != nil {
 			logger.Logger.Error(err)
@@ -150,7 +158,7 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 		var err2 error
 		task, err2 = workflowmd.InsertTask(ctx, workflowmd.InsertTaskReqDTO{
 			WorkflowId:  wf.Id,
-			TaskStatus:  workflowmd.TaskQueueStatus,
+			TaskStatus:  sshagent.QueueStatus,
 			TriggerType: reqDTO.TriggerType,
 			YamlContent: wf.YamlContent,
 			Operator:    reqDTO.Operator,
@@ -619,12 +627,12 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if b && task.TaskStatus == workflowmd.TaskCancelStatus {
+	if b && task.TaskStatus == sshagent.CancelStatus {
 		return nil
 	}
 	if !b ||
-		(task.TaskStatus != workflowmd.TaskRunningStatus &&
-			task.TaskStatus != workflowmd.TaskQueueStatus) {
+		(task.TaskStatus != sshagent.RunningStatus &&
+			task.TaskStatus != sshagent.QueueStatus) {
 		return util.InvalidArgsError()
 	}
 	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
@@ -644,17 +652,6 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
-	_, err = workflowmd.UpdateTaskStatusAndDuration(ctx,
-		reqDTO.TaskId,
-		task.TaskStatus,
-		workflowmd.TaskCancelStatus,
-		time.Since(task.Created),
-	)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	workflowmd.DeleteTokenByTaskId(ctx, task.Id)
 	return nil
 }
 
@@ -686,42 +683,31 @@ func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO)
 	if err != nil {
 		return sshagent.TaskStatus{}, err
 	}
-	ret, err := sshagent.
-		NewAgentCommand(task.AgentHost, task.AgentToken).
-		GetWorkflowTaskStatus(task.BizId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return sshagent.TaskStatus{}, util.NewBizErr(apicode.ProxyAbnormalErrCode, i18n.SystemProxyAbnormal)
-	}
-	// 检查结果和数据库是否一致
-	{
-		remoteStatus := mapTaskStatus(ret.Status)
-		if remoteStatus > -1 && remoteStatus != task.TaskStatus {
+	var ret sshagent.TaskStatus
+	if task.StatusLog != nil && task.StatusLog.Data.Status != "" {
+		ret = task.StatusLog.Data
+	} else {
+		ret, err = sshagent.
+			NewAgentCommand(task.AgentHost, task.AgentToken).
+			GetWorkflowTaskStatus(task.BizId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return sshagent.TaskStatus{}, util.NewBizErr(apicode.ProxyAbnormalErrCode, i18n.SystemProxyAbnormal)
+		}
+		switch ret.Status {
+		case sshagent.CancelStatus, sshagent.SuccessStatus, sshagent.FailStatus:
 			duration, _ := time.ParseDuration(fmt.Sprintf("%dms", ret.Duration))
-			workflowmd.UpdateTaskStatusAndDuration(
-				ctx, task.Id, task.TaskStatus, remoteStatus, duration)
+			workflowmd.UpdateTaskStatusAndDurationAndStatusLog(
+				ctx,
+				task.Id,
+				ret.Status,
+				task.TaskStatus,
+				duration,
+				ret,
+			)
 		}
 	}
 	return ret, nil
-}
-
-func mapTaskStatus(status string) workflowmd.TaskStatus {
-	switch status {
-	case sshagent.SuccessStatus:
-		return workflowmd.TaskSuccessStatus
-	case sshagent.QueueStatus:
-		return workflowmd.TaskQueueStatus
-	case sshagent.CancelStatus:
-		return workflowmd.TaskCancelStatus
-	case sshagent.TimeoutStatus:
-		return workflowmd.TaskTimeoutStatus
-	case sshagent.FailStatus:
-		return workflowmd.TaskFailStatus
-	case sshagent.RunningStatus:
-		return workflowmd.TaskRunningStatus
-	default:
-		return -1
-	}
 }
 
 // GetLogContent 获取日志内容

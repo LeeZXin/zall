@@ -9,12 +9,11 @@ import (
 )
 
 const (
-	StageTableName         = "zservice_deploy_stage"
-	DeployLogTableName     = "zservice_deploy_log"
-	PlanTableName          = "zservice_deploy_plan"
-	OpLogTableName         = "zservice_op_log"
-	ServiceTableName       = "zservice_service"
-	DeployServiceTableName = "zservice_deploy_service"
+	StageTableName     = "zservice_deploy_stage"
+	DeployLogTableName = "zservice_deploy_log"
+	PlanTableName      = "zservice_deploy_plan"
+	OpLogTableName     = "zservice_op_log"
+	ServiceTableName   = "zservice_service"
 )
 
 type PlanStatus int
@@ -22,8 +21,18 @@ type PlanStatus int
 const (
 	PendingPlanStatus PlanStatus = iota + 1
 	RunningPlanStatus
+	SuccessfulPlanStatus
 	ClosedPlanStatus
 )
+
+func (s PlanStatus) IsFinalStatus() bool {
+	switch s {
+	case SuccessfulPlanStatus, ClosedPlanStatus:
+		return true
+	default:
+		return false
+	}
+}
 
 // DeployLog 部署日志
 type DeployLog struct {
@@ -45,16 +54,16 @@ func (*DeployLog) TableName() string {
 
 // Plan 发布计划
 type Plan struct {
-	Id             int64           `json:"id" xorm:"pk autoincr"`
-	AppId          string          `json:"appId"`
-	ServiceId      int64           `json:"serviceId"`
-	Name           string          `json:"name"`
-	ProductVersion string          `json:"productVersion"`
-	PlanStatus     PlanStatus      `json:"planStatus"`
-	Env            string          `json:"env"`
-	Creator        string          `json:"creator"`
-	ServiceConfig  *deploy.Service `json:"serviceConfig"`
-	Created        time.Time       `json:"created" xorm:"created"`
+	Id             int64      `json:"id" xorm:"pk autoincr"`
+	AppId          string     `json:"appId"`
+	ServiceId      int64      `json:"serviceId"`
+	Name           string     `json:"name"`
+	ProductVersion string     `json:"productVersion"`
+	PlanStatus     PlanStatus `json:"planStatus"`
+	Env            string     `json:"env"`
+	Creator        string     `json:"creator"`
+	ServiceConfig  string     `json:"serviceConfig"`
+	Created        time.Time  `json:"created" xorm:"created"`
 }
 
 func (*Plan) TableName() string {
@@ -98,9 +107,8 @@ type StageStatus int
 const (
 	PendingStageStatus StageStatus = iota + 1
 	RunningStageStatus
-	SuccessStageStatus
-	FailStageStatus
-	RollbackStageStatus
+	SuccessfulStageStatus
+	FailedStageStatus
 )
 
 type Stage struct {
@@ -110,8 +118,8 @@ type Stage struct {
 	InputArgs   *xormutil.Conversion[map[string]string] `json:"inputArgs"`
 	StageIndex  int                                     `json:"stageIndex"`
 	ExecuteLog  string                                  `json:"executeLog"`
-	RollbackLog string                                  `json:"rollbackLog"`
 	StageStatus StageStatus                             `json:"stageStatus"`
+	TaskId      string                                  `json:"taskId"`
 	Created     time.Time                               `json:"created" xorm:"created"`
 	Updated     time.Time                               `json:"updated" xorm:"updated"`
 }
@@ -169,19 +177,4 @@ func (c *DeployServiceConfig) FromDB(content []byte) error {
 
 func (c *DeployServiceConfig) ToDB() ([]byte, error) {
 	return json.Marshal(c)
-}
-
-type DeployService struct {
-	Id             int64                `json:"id" xorm:"pk autoincr"`
-	PlanId         int64                `json:"planId"`
-	ServiceId      int64                `json:"serviceId"`
-	Config         *DeployServiceConfig `json:"process"`
-	Probed         int64                `json:"probed"`
-	IsPlanDone     bool                 `json:"isPlanDone"`
-	ProbeFailTimes int                  `json:"probeFailTimes"`
-	Created        time.Time            `json:"created" xorm:"created"`
-}
-
-func (*DeployService) TableName() string {
-	return DeployServiceTableName
 }

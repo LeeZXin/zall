@@ -10,7 +10,7 @@ type InsertPlanReqDTO struct {
 	ProductVersion string
 	Creator        string
 	Env            string
-	ServiceConfig  deploy.Service
+	ServiceConfig  string
 }
 
 type InsertDeployLogReqDTO struct {
@@ -58,14 +58,8 @@ type InsertDeployStageReqDTO struct {
 	PlanId      int64
 	StageIndex  int
 	Agent       string
+	TaskId      string
 	StageStatus StageStatus
-}
-
-type InsertDeployServiceReqDTO struct {
-	PlanId    int64
-	ServiceId int64
-	Config    DeployServiceConfig
-	Probed    int64
 }
 
 type InsertServiceReqDTO struct {

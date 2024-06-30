@@ -120,6 +120,7 @@ export default {
     deployPlan: {
         pendingStatus: "待发布",
         runningStatus: "发布中",
+        successfulStatus: "发布成功",
         closedStatus: "已关闭"
     }
 }

@@ -11,10 +11,6 @@ import (
 )
 
 var (
-	pwdDir string
-)
-
-var (
 	clientCfg  *gossh.ClientConfig
 	clientOnce sync.Once
 )

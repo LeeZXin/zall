@@ -1,10 +1,13 @@
 package workflowmd
 
-import "time"
+import (
+	"github.com/LeeZXin/zall/pkg/sshagent"
+	"time"
+)
 
 type InsertTaskReqDTO struct {
 	WorkflowId  int64
-	TaskStatus  TaskStatus
+	TaskStatus  sshagent.Status
 	TriggerType TriggerType
 	YamlContent string
 	Operator    string

@@ -10,6 +10,7 @@ ssh:
 
 workflow:
   callback:
+    url: http://127.0.0.1:80/api/v1/workflow/internal/taskCallBack
     token: 123
   agent:
     enabled: true

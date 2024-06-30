@@ -3,6 +3,7 @@ package workflowsrv
 import (
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"time"
@@ -168,7 +169,7 @@ func (r *ListTaskByPrIdReqDTO) IsValid() error {
 
 type TaskWithoutYamlContentDTO struct {
 	Id          int64
-	TaskStatus  workflowmd.TaskStatus
+	TaskStatus  sshagent.Status
 	TriggerType workflowmd.TriggerType
 	Branch      string
 	PrId        int64

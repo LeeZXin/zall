@@ -59,7 +59,7 @@ request.interceptors.response.use(
                             redirect_uri: encodeURI(window.location.href)
                         }
                     })
-                }, 3000)
+                }, 1000)
             }
         } else if (status === 403) {
             message.error(t("system.request403"))

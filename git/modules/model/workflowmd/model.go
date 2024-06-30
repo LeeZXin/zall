@@ -2,6 +2,8 @@ package workflowmd
 
 import (
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/sshagent"
+	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
 )
 
@@ -32,26 +34,6 @@ func (t TriggerType) IsValid() bool {
 	}
 }
 
-type TaskStatus int
-
-const (
-	TaskQueueStatus TaskStatus = iota
-	TaskRunningStatus
-	TaskSuccessStatus
-	TaskFailStatus
-	TaskCancelStatus
-	TaskTimeoutStatus
-)
-
-func (s TaskStatus) IsEndType() bool {
-	switch s {
-	case TaskQueueStatus, TaskRunningStatus:
-		return false
-	default:
-		return true
-	}
-}
-
 const (
 	TaskTableName     = "zgit_workflow_task"
 	VarsTableName     = "zgit_workflow_vars"
@@ -60,20 +42,21 @@ const (
 )
 
 type Task struct {
-	Id          int64       `json:"id" xorm:"pk autoincr"`
-	WorkflowId  int64       `json:"workflowId"`
-	TaskStatus  TaskStatus  `json:"taskStatus"`
-	TriggerType TriggerType `json:"triggerType"`
-	YamlContent string      `json:"yamlContent"`
-	AgentHost   string      `json:"agentHost"`
-	AgentToken  string      `json:"agentToken"`
-	Branch      string      `json:"branch"`
-	Operator    string      `json:"operator"`
-	PrId        int64       `json:"prId"`
-	Duration    int64       `json:"duration"`
-	BizId       string      `json:"bizId"`
-	Created     time.Time   `json:"created" xorm:"created"`
-	Updated     time.Time   `json:"updated" xorm:"updated"`
+	Id          int64                                     `json:"id" xorm:"pk autoincr"`
+	WorkflowId  int64                                     `json:"workflowId"`
+	TaskStatus  sshagent.Status                           `json:"taskStatus"`
+	TriggerType TriggerType                               `json:"triggerType"`
+	YamlContent string                                    `json:"yamlContent"`
+	AgentHost   string                                    `json:"agentHost"`
+	AgentToken  string                                    `json:"agentToken"`
+	Branch      string                                    `json:"branch"`
+	Operator    string                                    `json:"operator"`
+	PrId        int64                                     `json:"prId"`
+	Duration    int64                                     `json:"duration"`
+	BizId       string                                    `json:"bizId"`
+	StatusLog   *xormutil.Conversion[sshagent.TaskStatus] `json:"statusLog"`
+	Created     time.Time                                 `json:"created" xorm:"created"`
+	Updated     time.Time                                 `json:"updated" xorm:"updated"`
 }
 
 func (*Task) TableName() string {

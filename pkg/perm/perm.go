@@ -65,9 +65,6 @@ func (d *Detail) IsValid() bool {
 }
 
 func (d *Detail) FromDB(content []byte) error {
-	if d == nil {
-		*d = Detail{}
-	}
 	return json.Unmarshal(content, d)
 }
 

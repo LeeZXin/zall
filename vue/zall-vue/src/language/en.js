@@ -120,6 +120,7 @@ export default {
     deployPlan: {
         pendingStatus: "Pending",
         runningStatus: "Running",
+        successfulStatus: "Successful",
         closedStatus: "Closed"
     }
 }

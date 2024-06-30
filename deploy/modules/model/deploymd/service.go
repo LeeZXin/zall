@@ -2,10 +2,8 @@ package deploymd
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
-	"time"
 )
 
 func IsPlanNameValid(name string) bool {
@@ -25,7 +23,7 @@ func InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (Plan, error) {
 		PlanStatus:     reqDTO.PlanStatus,
 		Env:            reqDTO.Env,
 		Creator:        reqDTO.Creator,
-		ServiceConfig:  &reqDTO.ServiceConfig,
+		ServiceConfig:  reqDTO.ServiceConfig,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&ret)
@@ -37,6 +35,31 @@ func ExistPendingOrRunningPlanByServiceId(ctx context.Context, serviceId int64) 
 		Where("service_id = ?", serviceId).
 		In("plan_status", PendingPlanStatus, RunningPlanStatus).
 		Exist(new(Plan))
+}
+
+func ExistRunningStatusByPlanId(ctx context.Context, planId int64) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("plan_id = ?", planId).
+		And("stage_status = ?", RunningStageStatus).
+		Exist(new(Stage))
+}
+
+func ExistNotSuccessfulStagesByPlanIdAndIndex(ctx context.Context, planId int64, index int) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("plan_id = ?", planId).
+		And("stage_index = ?", index).
+		And("stage_status != ?", SuccessfulStageStatus).
+		Exist(new(Stage))
+}
+
+func ListStagesByPlanIdAndLETIndex(ctx context.Context, planId int64, index int) ([]Stage, error) {
+	ret := make([]Stage, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("plan_id = ?", planId).
+		And("stage_index <= ?", index).
+		OrderBy("id asc").
+		Find(&ret)
+	return ret, err
 }
 
 func InsertDeployLog(ctx context.Context, reqDTO InsertDeployLogReqDTO) error {
@@ -105,43 +128,37 @@ func GetPlanById(ctx context.Context, id int64) (Plan, bool, error) {
 	return ret, b, err
 }
 
-func ClosePlan(ctx context.Context, id int64, oldStatus PlanStatus) (bool, error) {
+func UpdatePlanStatusWithOldStatus(ctx context.Context, id int64, newStatus, oldStatus PlanStatus) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		And("plan_status = ?", oldStatus).
 		Cols("plan_status").
 		Update(&Plan{
-			PlanStatus: ClosedPlanStatus,
+			PlanStatus: newStatus,
 		})
 	return rows == 1, err
 }
 
-func UpdateDeployServiceIsPlanDoneTrue(ctx context.Context, planId int64) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Where("plan_id = ?", planId).
-		And("is_plan_done = 0").
-		Cols("is_plan_done").
-		Update(&DeployService{
-			IsPlanDone: true,
+func ClosePlanAndUpdateConfig(ctx context.Context, id int64, oldStatus PlanStatus, serviceConfig string) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		And("plan_status = ?", oldStatus).
+		Cols("plan_status", "service_config").
+		Update(&Plan{
+			PlanStatus:    ClosedPlanStatus,
+			ServiceConfig: serviceConfig,
 		})
-	return err
+	return rows == 1, err
 }
 
-func ExistUnsuccessfulDeployStage(ctx context.Context, planId int64) (bool, error) {
-	return xormutil.MustGetXormSession(ctx).
-		Where("plan_id = ?", planId).
-		In("stage_status", PendingStageStatus, RunningStageStatus, FailStageStatus, RollbackStageStatus).
-		Exist(new(Stage))
-}
-
-func StartPlan(ctx context.Context, id int64, serviceConfig deploy.Service) (bool, error) {
+func StartPlan(ctx context.Context, id int64, serviceConfig string) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		And("plan_status = ?", PendingPlanStatus).
 		Cols("plan_status", "service_config").
 		Update(&Plan{
 			PlanStatus:    RunningPlanStatus,
-			ServiceConfig: &serviceConfig,
+			ServiceConfig: serviceConfig,
 		})
 	return rows == 1, err
 }
@@ -157,6 +174,55 @@ func ListPlan(ctx context.Context, reqDTO ListPlanReqDTO) ([]Plan, int64, error)
 	return ret, total, err
 }
 
+func ListStageByPlanIdAndStageIndexAndStatus(ctx context.Context, planId int64, stageIndex int, status StageStatus) ([]Stage, error) {
+	ret := make([]Stage, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("plan_id = ?", planId).
+		And("stage_index = ?", stageIndex).
+		And("stage_status = ?", status).
+		Find(&ret)
+	return ret, err
+}
+
+func GetStageTaskIdMap(ctx context.Context, planId int64, stageIndex int) (map[string]string, error) {
+	ret := make([]Stage, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("plan_id = ?", planId).
+		And("stage_index = ?", stageIndex).
+		Cols("agent", "task_id").
+		Find(&ret)
+	if err != nil {
+		return nil, err
+	}
+	taskIdMap := make(map[string]string, len(ret))
+	for _, stage := range ret {
+		taskIdMap[stage.Agent] = stage.TaskId
+	}
+	return taskIdMap, err
+}
+
+func MergeInputArgsByPlanIdAndLTIndex(ctx context.Context, planId int64, stageIndex int) (map[string]string, error) {
+	ret := make([]Stage, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("plan_id = ?", planId).
+		And("stage_index < ?", stageIndex).
+		Cols("input_args").
+		Asc("id").
+		Find(&ret)
+	if err != nil {
+		return nil, err
+	}
+	args := make(map[string]string)
+	for _, stage := range ret {
+		if stage.InputArgs != nil && stage.InputArgs.Data != nil {
+			for k, v := range stage.InputArgs.Data {
+				args[k] = v
+			}
+		}
+	}
+	return args, err
+}
+
 func BatchInsertDeployStage(ctx context.Context, reqDTOList ...InsertDeployStageReqDTO) error {
 	stages, _ := listutil.Map(reqDTOList, func(t InsertDeployStageReqDTO) (Stage, error) {
 		return Stage{
@@ -164,22 +230,10 @@ func BatchInsertDeployStage(ctx context.Context, reqDTOList ...InsertDeployStage
 			StageIndex:  t.StageIndex,
 			Agent:       t.Agent,
 			StageStatus: t.StageStatus,
+			TaskId:      t.TaskId,
 		}, nil
 	})
 	_, err := xormutil.MustGetXormSession(ctx).Insert(stages)
-	return err
-}
-
-func BatchInsertDeployService(ctx context.Context, reqDTOList ...InsertDeployServiceReqDTO) error {
-	processes, _ := listutil.Map(reqDTOList, func(t InsertDeployServiceReqDTO) (DeployService, error) {
-		return DeployService{
-			PlanId:    t.PlanId,
-			ServiceId: t.ServiceId,
-			Config:    &t.Config,
-			Probed:    t.Probed,
-		}, nil
-	})
-	_, err := xormutil.MustGetXormSession(ctx).Insert(processes)
 	return err
 }
 
@@ -199,6 +253,30 @@ func UpdateStageStatusAndInputArgsWithOldStatus(ctx context.Context, planId int6
 	return rows == 1, err
 }
 
+func UpdateStageStatusWithOldStatusById(ctx context.Context, id int64, newStatus, oldStatus StageStatus) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		And("stage_status = ?", oldStatus).
+		Cols("stage_status").
+		Update(&Stage{
+			StageStatus: newStatus,
+		})
+	return rows == 1, err
+}
+
+func KillStages(ctx context.Context, planId int64, index int, errLog string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("plan_id = ?", planId).
+		And("stage_index = ?", index).
+		In("stage_status", RunningStageStatus, PendingStageStatus).
+		Cols("stage_status", "execute_log").
+		Update(&Stage{
+			StageStatus: FailedStageStatus,
+			ExecuteLog:  errLog,
+		})
+	return err
+}
+
 func UpdateStageStatusAndExecuteLogWithOldStatus(ctx context.Context, planId int64, index int, agent, log string, newStatus, oldStatus StageStatus) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("plan_id = ?", planId).
@@ -213,33 +291,16 @@ func UpdateStageStatusAndExecuteLogWithOldStatus(ctx context.Context, planId int
 	return rows == 1, err
 }
 
-func UpdateRollbackLogWithOldStatus(ctx context.Context, planId int64, index int, agent, log string) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("plan_id = ?", planId).
-		And("stage_index = ?", index).
-		And("agent = ?", agent).
-		And("stage_status = ?", RollbackStageStatus).
-		Cols("rollback_log").
-		Update(&Stage{
-			RollbackLog: log,
-		})
-	return rows == 1, err
-}
-
-func ListStageByServiceIdAndLessThanIndex(ctx context.Context, serviceId int64, index int) ([]Stage, error) {
-	ret := make([]Stage, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		Where("service_id = ?", serviceId).
-		And("stage_index < ?", index).
-		Asc("id").
-		Find(&ret)
-	return ret, err
-}
-
 func GetStageByStageId(ctx context.Context, stageId int64) (Stage, bool, error) {
 	var ret Stage
 	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", stageId).Get(&ret)
 	return ret, b, err
+}
+
+func GetStageListByPlanId(ctx context.Context, planId int64) ([]Stage, error) {
+	ret := make([]Stage, 0)
+	err := xormutil.MustGetXormSession(ctx).Where("plan_id = ?", planId).Find(&ret)
+	return ret, err
 }
 
 func IsServiceNameValid(name string) bool {
@@ -305,38 +366,4 @@ func BatchGetServiceById(ctx context.Context, serviceIdList []int64, cols []stri
 	}
 	err := session.Find(&ret)
 	return ret, err
-}
-
-func DeleteDeployServiceByServiceId(ctx context.Context, serviceId int64) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Where("service_id = ?", serviceId).
-		Delete(new(DeployService))
-	return err
-}
-
-func IterateDeployService(ctx context.Context, fn func(*DeployService) error) error {
-	return xormutil.MustGetXormSession(ctx).
-		Iterate(new(DeployService), func(_ int, bean interface{}) error {
-			return fn(bean.(*DeployService))
-		})
-}
-
-func UpdateDeployServiceProbed(ctx context.Context, serviceId int64) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", serviceId).
-		Cols("probed", "fail_times").
-		Update(&DeployService{
-			Probed:         time.Now().UnixMilli(),
-			ProbeFailTimes: 0,
-		})
-	return rows == 1, err
-}
-
-func IncrDeployServiceProbeFailTimes(ctx context.Context, serviceId int64) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", serviceId).
-		Cols("probe_fail_times").
-		Incr("probe_fail_times", 1).
-		Update(new(DeployService))
-	return rows == 1, err
 }

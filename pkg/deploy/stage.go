@@ -24,50 +24,79 @@ type FormItem struct {
 	Options []Option `json:"options,omitempty" yaml:"options,omitempty"`
 }
 
+func (i *FormItem) IsValid() bool {
+	if !NoSpacePattern.MatchString(i.Key) {
+		return false
+	}
+	// 没有下拉框就是手填数据 需要校验正则
+	if len(i.Options) == 0 {
+		_, err := regexp.Compile(i.Regexp)
+		if err != nil {
+			return false
+		}
+	}
+	return true
+}
+
 type Confirm struct {
 	// 是否需要交互
 	NeedInteract bool       `json:"needInteract" yaml:"needInteract"`
 	Message      string     `json:"message" yaml:"message"`
-	Action       string     `json:"action" yaml:"action"`
 	Form         []FormItem `json:"form,omitempty" yaml:"form,omitempty"`
 }
 
-func (c *Confirm) isValid(actions map[string]Action) bool {
-	_, b := actions[c.Action]
-	if !b {
-		return false
+func (c *Confirm) CheckForm(args map[string]string) (bool, map[string]string) {
+	if args == nil {
+		return false, nil
 	}
+	filteredArgs := make(map[string]string)
+	if len(c.Form) == 0 {
+		return true, filteredArgs
+	}
+	for _, item := range c.Form {
+		// 下拉框
+		if len(item.Options) > 0 {
+			find := false
+			for _, option := range item.Options {
+				if args[item.Key] == option.Value {
+					find = true
+					filteredArgs[item.Key] = args[item.Key]
+				}
+			}
+			if !find {
+				return false, filteredArgs
+			}
+		} else {
+			// 匹配输入框正则
+			re, e := regexp.Compile(item.Regexp)
+			if e == nil {
+				if !re.MatchString(args[item.Key]) {
+					return false, filteredArgs
+				}
+			}
+			filteredArgs[item.Key] = args[item.Key]
+		}
+	}
+	return true, filteredArgs
+}
+
+func (c *Confirm) isValid() bool {
 	if c.NeedInteract {
 		for _, item := range c.Form {
-			if !NoSpacePattern.MatchString(item.Key) {
+			if !item.IsValid() {
 				return false
-			}
-			// 没有下拉框就是手填数据 需要校验正则
-			if len(item.Options) == 0 {
-				_, err := regexp.Compile(item.Regexp)
-				if err != nil {
-					return false
-				}
 			}
 		}
 	}
 	return true
 }
 
-type Rollback struct {
-	Action string `json:"action" yaml:"action"`
-}
-
-func (r *Rollback) isValid(actions map[string]Action) bool {
-	_, b := actions[r.Action]
-	return b
-}
-
 type Stage struct {
-	Name     string    `json:"name" yaml:"name"`
-	Agents   []string  `json:"agents,omitempty" yaml:"agents,omitempty"`
-	Confirm  Confirm   `json:"confirm" yaml:"confirm"`
-	Rollback *Rollback `json:"rollback,omitempty" yaml:"rollback,omitempty"`
+	Name     string   `json:"name" yaml:"name"`
+	Agents   []string `json:"agents,omitempty" yaml:"agents,omitempty"`
+	Confirm  *Confirm `json:"confirm" yaml:"confirm"`
+	Action   string   `json:"action" yaml:"action"`
+	Parallel int      `json:"parallel" yaml:"parallel"`
 }
 
 func (s *Stage) isValid(agents map[string]Agent, actions map[string]Action) bool {
@@ -80,10 +109,11 @@ func (s *Stage) isValid(agents map[string]Agent, actions map[string]Action) bool
 			return false
 		}
 	}
-	if s.Rollback != nil && !s.Rollback.isValid(actions) {
+	_, b := actions[s.Action]
+	if !b {
 		return false
 	}
-	return s.Confirm.isValid(actions)
+	return s.Confirm == nil || s.Confirm.isValid()
 }
 
 type Agent struct {
@@ -96,7 +126,7 @@ func (a *Agent) isValid() bool {
 	return IpPortPattern.MatchString(a.Host)
 }
 
-func (a *Agent) RunScript(script, service string, env map[string]string) (string, error) {
+func (a *Agent) RunScript(script, service string, env map[string]string, taskId string) (string, error) {
 	if script == "" {
 		return "", nil
 	}
@@ -108,5 +138,5 @@ func (a *Agent) RunScript(script, service string, env map[string]string) (string
 		args[k] = v
 	}
 	return sshagent.NewServiceCommand(a.Host, a.Token, service).
-		Execute(strings.NewReader(script), args)
+		Execute(strings.NewReader(script), args, taskId)
 }

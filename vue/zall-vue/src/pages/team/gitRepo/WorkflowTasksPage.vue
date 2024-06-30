@@ -2,13 +2,7 @@
   <div style="padding:14px">
     <div class="workflow-name">{{workflowStore.name}}</div>
     <div class="workflow-desc">{{workflowStore.desc}}</div>
-    <ZTable
-      :columns="columns"
-      :dataSource="taskList"
-      label="任务列表"
-      style="margin-top:10px"
-      v-if="taskList.length > 0"
-    >
+    <ZTable :columns="columns" :dataSource="taskList" label="任务列表" style="margin-top:10px">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex === 'created'">{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
         <span v-else-if="dataIndex === 'triggerType'">{{triggerTypeMap[dataItem[dataIndex]]}}</span>
@@ -23,7 +17,7 @@
                   <eye-outlined />
                   <span style="margin-left:4px">查看详情</span>
                 </li>
-                <li v-if="dataItem.taskStatus === 1" @click="killTask(dataItem.id)">
+                <li v-if="dataItem.taskStatus === 'running'" @click="killTask(dataItem.id)">
                   <close-outlined />
                   <span style="margin-left:4px">停止任务</span>
                 </li>
@@ -36,7 +30,6 @@
         </div>
       </template>
     </ZTable>
-    <ZNoData v-else />
     <a-pagination
       v-model:current="currPage"
       :total="totalCount"
@@ -52,7 +45,6 @@
 <script setup>
 import PrIdTag from "@/components/git/PrIdTag";
 import TaskStatusTag from "@/components/git/WorkflowTaskStatusTag";
-import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import {
   listTaskRequest,
@@ -136,7 +128,9 @@ const gotoTaskDetail = item => {
   taskStore.branch = item.branch;
   taskStore.prId = item.prId;
   taskStore.yamlContent = item.yamlContent;
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/${item.id}/steps`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/${item.id}/steps`
+  );
 };
 const listTask = () => {
   listTaskRequest(route.params.workflowId, {
@@ -191,11 +185,12 @@ onUnmounted(() => {
   clearListInterval();
 });
 if (workflowStore.id === 0) {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/list`)
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/list`
+  );
 } else {
   listTask();
 }
-
 </script>
 <style scoped>
 .workflow-name {

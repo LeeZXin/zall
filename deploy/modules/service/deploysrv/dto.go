@@ -231,6 +231,110 @@ func (r *ListPlanReqDTO) IsValid() error {
 	return nil
 }
 
+type GetPlanDetailReqDTO struct {
+	PlanId   int64               `json:"planId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetPlanDetailReqDTO) IsValid() error {
+	if r.PlanId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListStagesReqDTO struct {
+	PlanId   int64               `json:"planId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListStagesReqDTO) IsValid() error {
+	if r.PlanId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type KillStageReqDTO struct {
+	PlanId     int64               `json:"planId"`
+	StageIndex int                 `json:"stageIndex"`
+	Operator   apisession.UserInfo `json:"operator"`
+}
+
+func (r *KillStageReqDTO) IsValid() error {
+	if r.PlanId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.StageIndex < 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ConfirmInteractStageReqDTO struct {
+	PlanId     int64               `json:"planId"`
+	StageIndex int                 `json:"stageIndex"`
+	Args       map[string]string   `json:"args"`
+	Operator   apisession.UserInfo `json:"operator"`
+}
+
+func (r *ConfirmInteractStageReqDTO) IsValid() error {
+	if r.PlanId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.StageIndex < 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type RedoAgentStageReqDTO struct {
+	StageId  int64               `json:"stageId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *RedoAgentStageReqDTO) IsValid() error {
+	if r.StageId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ForceRedoNotSuccessfulAgentStagesReqDTO struct {
+	PlanId     int64               `json:"planId"`
+	StageIndex int                 `json:"stageIndex"`
+	Args       map[string]string   `json:"args"`
+	Operator   apisession.UserInfo `json:"operator"`
+}
+
+func (r *ForceRedoNotSuccessfulAgentStagesReqDTO) IsValid() error {
+	if r.PlanId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.StageIndex < 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type PlanDTO struct {
 	Id             int64
 	ServiceId      int64
@@ -243,39 +347,17 @@ type PlanDTO struct {
 	Created        time.Time
 }
 
-type ConfirmPlanServiceStepReqDTO struct {
-	ServiceId int64               `json:"serviceId"`
-	Index     int                 `json:"index"`
-	Input     map[string]string   `json:"input"`
-	Operator  apisession.UserInfo `json:"operator"`
-}
-
-func (r *ConfirmPlanServiceStepReqDTO) IsValid() error {
-	if r.ServiceId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if r.Index < 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type RollbackPlanServiceStepReqDTO struct {
-	StepId   int64               `json:"stepId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *RollbackPlanServiceStepReqDTO) IsValid() error {
-	if r.StepId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
+type PlanDetailDTO struct {
+	Id             int64
+	ServiceId      int64
+	ServiceName    string
+	ServiceConfig  string
+	Name           string
+	ProductVersion string
+	PlanStatus     deploymd.PlanStatus
+	Env            string
+	Creator        string
+	Created        time.Time
 }
 
 type StartPlanReqDTO struct {
@@ -411,4 +493,28 @@ type SimpleServiceDTO struct {
 	Name        string             `json:"name"`
 	Env         string             `json:"env"`
 	ServiceType deploy.ServiceType `json:"serviceType"`
+}
+
+type SubStageDTO struct {
+	Id          int64
+	Agent       string
+	AgentHost   string
+	StageStatus deploymd.StageStatus
+	ExecuteLog  string
+}
+
+type StageDTO struct {
+	Name                             string
+	Percent                          float64
+	Total                            int
+	Done                             int
+	IsAutomatic                      bool
+	HasError                         bool
+	IsRunning                        bool
+	IsAllDone                        bool
+	WaitInteract                     bool
+	SubStages                        []SubStageDTO
+	Script                           string
+	Confirm                          *deploy.Confirm
+	CanForceRedoUnSuccessAgentStages bool
 }

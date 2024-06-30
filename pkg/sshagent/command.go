@@ -168,11 +168,21 @@ func execute(sshHost, command string, cmd io.Reader, envs map[string]string) (st
 	return output.String(), nil
 }
 
-func (c *ServiceCommand) Execute(cmd io.Reader, envs map[string]string) (string, error) {
+func (c *ServiceCommand) Execute(cmd io.Reader, envs map[string]string, taskId string) (string, error) {
 	return execute(
 		c.agentHost,
-		fmt.Sprintf("execute -t %s -s %s", c.agentToken, c.service),
+		fmt.Sprintf("execute -t %s -s %s -i %s", c.agentToken, c.service, taskId),
 		cmd,
 		envs,
 	)
+}
+
+func (c *ServiceCommand) Kill(taskId string) error {
+	_, err := execute(
+		c.agentHost,
+		fmt.Sprintf("kill -t %s -i %s", c.agentToken, taskId),
+		nil,
+		nil,
+	)
+	return err
 }

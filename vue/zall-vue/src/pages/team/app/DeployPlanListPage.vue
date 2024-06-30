@@ -12,7 +12,7 @@
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
-                <li @click="closePlan(dataItem)">
+                <li @click="closePlan(dataItem)" v-if="dataItem['planStatus'] === 1 || dataItem['planStatus'] === 2">
                   <close-outlined />
                   <span style="margin-left:8px">关闭发布计划</span>
                 </li>
@@ -59,6 +59,8 @@ import {
 } from "@/api/app/deployPlanApi";
 import { Modal, message } from "ant-design-vue";
 import PLanStatusTag from "@/components/app/PlanStatusTag";
+import { useDeloyPlanStore } from "@/pinia/deployPlanStore";
+const planStore = useDeloyPlanStore();
 const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
@@ -155,6 +157,8 @@ const onEnvChange = e => {
 };
 
 const viewPlan = (item) => {
+    planStore.id = item.id;
+    planStore.env = item.env;
     router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/deployPlan/${item.id}/view`
   );

@@ -48,38 +48,7 @@
           </span>
         </div>
         <div class="workflow-status">
-          <div class="no-wrap" v-if="item.lastTask?.taskStatus === 0">
-            <LoadingOutlined />
-            <span style="margin-left: 6px">排队中</span>
-          </div>
-          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 1">
-            <LoadingOutlined />
-            <span style="margin-left: 6px">执行中</span>
-          </div>
-          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 2">
-            <CheckCircleFilled style="color:green" />
-            <span style="margin-left: 6px">执行成功</span>
-          </div>
-          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 3">
-            <CloseCircleFilled style="color:darkred" />
-            <span style="margin-left: 6px">执行失败</span>
-          </div>
-          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 4">
-            <CloseCircleFilled style="color:darkred" />
-            <span style="margin-left: 6px">执行中止</span>
-          </div>
-          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 5">
-            <CloseCircleFilled style="color:darkred" />
-            <span style="margin-left: 6px">执行超时</span>
-          </div>
-          <div class="no-wrap" v-else-if="item.lastTask?.taskStatus === 6">
-            <CloseCircleFilled style="color:darkred" />
-            <span style="margin-left: 6px">超出系统负载</span>
-          </div>
-          <div class="no-wrap" v-else>
-            <ClockCircleOutlined />
-            <span style="margin-left: 6px">无执行任务</span>
-          </div>
+          <WorkflowTaskStatusIconText :status="item.lastTask?.taskStatus"/>
           <div
             class="no-wrap"
             style="margin-top:10px;"
@@ -105,7 +74,7 @@
     >
       <div class="flex-center">
         <div style="line-height:32px;font-size:14px;width:80px">分支:</div>
-        <a-input style="100%" v-model:value="triggerBranch" />
+        <a-input style="width:100%" v-model:value="triggerBranch" />
       </div>
     </a-modal>
   </div>
@@ -118,14 +87,11 @@ import {
   EditOutlined,
   EyeOutlined,
   PlayCircleFilled,
-  CheckCircleFilled,
-  CloseCircleFilled,
-  LoadingOutlined,
-  ClockCircleOutlined,
   PauseOutlined,
   PlusOutlined,
   KeyOutlined
 } from "@ant-design/icons-vue";
+import WorkflowTaskStatusIconText from "@/components/git/WorkflowTaskStatusIconText";
 import ZNoData from "@/components/common/ZNoData";
 import { ref, createVNode, onUnmounted, h } from "vue";
 import { useRouter, useRoute } from "vue-router";

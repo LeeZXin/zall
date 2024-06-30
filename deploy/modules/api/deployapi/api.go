@@ -28,6 +28,21 @@ func InitApi() {
 			group.PUT("/start/:planId", startPlan)
 			// 服务列表
 			group.GET("/listService", listServiceWhenCreatePlan)
+			// 计划详情
+			group.GET("/detail/:planId", getPlanDetail)
+			// 流水线详情
+			group.GET("/listStages/:planId", listStages)
+		}
+		group = e.Group("/api/deployStage", apisession.CheckLogin)
+		{
+			// 确认交互阶段
+			group.POST("/confirm", confirmInteractStage)
+			// 重新执行某个agent
+			group.PUT("/redoAgent/:stageId", redoAgentStage)
+			// 强行重新执行某个stage
+			group.POST("/forceRedoStage", forceRedoStage)
+			// 中止某个阶段
+			group.PUT("/kill/:planId/:index", killStage)
 		}
 		group = e.Group("/api/service", apisession.CheckLogin)
 		{
@@ -41,6 +56,65 @@ func InitApi() {
 			group.GET("/list", listService)
 		}
 	})
+}
+
+func redoAgentStage(c *gin.Context) {
+	err := deploysrv.Outer.RedoAgentStage(c, deploysrv.RedoAgentStageReqDTO{
+		StageId:  cast.ToInt64(c.Param("stageId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
+}
+
+func confirmInteractStage(c *gin.Context) {
+	var req ConfirmInteractStageReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.ConfirmInteractStage(c, deploysrv.ConfirmInteractStageReqDTO{
+			PlanId:     req.PlanId,
+			StageIndex: req.StageIndex,
+			Args:       req.Args,
+			Operator:   apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func forceRedoStage(c *gin.Context) {
+	var req ForceRedoStageReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.ForceRedoNotSuccessfulAgentStages(c, deploysrv.ForceRedoNotSuccessfulAgentStagesReqDTO{
+			PlanId:     req.PlanId,
+			StageIndex: req.StageIndex,
+			Args:       req.Args,
+			Operator:   apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func killStage(c *gin.Context) {
+	err := deploysrv.Outer.KillStage(c, deploysrv.KillStageReqDTO{
+		PlanId:     cast.ToInt64(c.Param("planId")),
+		StageIndex: cast.ToInt(c.Param("index")),
+		Operator:   apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
 }
 
 func createPlan(c *gin.Context) {
@@ -119,6 +193,73 @@ func listPlan(c *gin.Context) {
 			TotalCount: total,
 		})
 	}
+}
+
+func getPlanDetail(c *gin.Context) {
+	plan, err := deploysrv.Outer.GetPlanDetail(c, deploysrv.GetPlanDetailReqDTO{
+		PlanId:   cast.ToInt64(c.Param("planId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[PlanDetailVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: PlanDetailVO{
+			Id:             plan.Id,
+			ServiceId:      plan.ServiceId,
+			ServiceName:    plan.ServiceName,
+			ServiceConfig:  plan.ServiceConfig,
+			Name:           plan.Name,
+			ProductVersion: plan.ProductVersion,
+			PlanStatus:     plan.PlanStatus,
+			Env:            plan.Env,
+			Creator:        plan.Creator,
+			Created:        plan.Created.Format(time.DateTime),
+		},
+	})
+}
+
+func listStages(c *gin.Context) {
+	stages, err := deploysrv.Outer.ListStages(c, deploysrv.ListStagesReqDTO{
+		PlanId:   cast.ToInt64(c.Param("planId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(stages, func(t deploysrv.StageDTO) (StageVO, error) {
+		subStages, _ := listutil.Map(t.SubStages, func(t deploysrv.SubStageDTO) (SubStageVO, error) {
+			return SubStageVO{
+				Id:          t.Id,
+				Agent:       t.Agent,
+				AgentHost:   t.AgentHost,
+				StageStatus: t.StageStatus,
+				ExecuteLog:  t.ExecuteLog,
+			}, nil
+		})
+		return StageVO{
+			Name:                             t.Name,
+			Percent:                          t.Percent,
+			Total:                            t.Total,
+			Done:                             t.Done,
+			IsAutomatic:                      t.IsAutomatic,
+			HasError:                         t.HasError,
+			IsRunning:                        t.IsRunning,
+			IsAllDone:                        t.IsAllDone,
+			WaitInteract:                     t.WaitInteract,
+			SubStages:                        subStages,
+			Script:                           t.Script,
+			Confirm:                          t.Confirm,
+			CanForceRedoUnSuccessAgentStages: t.CanForceRedoUnSuccessAgentStages,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]StageVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }
 
 func createService(c *gin.Context) {

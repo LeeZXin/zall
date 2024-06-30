@@ -2,6 +2,7 @@ package workflowmd
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"regexp"
 	"time"
@@ -44,7 +45,7 @@ func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 	return ret, err
 }
 
-func UpdateTaskStatusAndDuration(ctx context.Context, taskId int64, oldStatus, newStatus TaskStatus, duration time.Duration) (bool, error) {
+func UpdateTaskStatusAndDuration(ctx context.Context, taskId int64, oldStatus, newStatus sshagent.Status, duration time.Duration) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", taskId).
 		And("task_status = ?", oldStatus).
@@ -53,6 +54,22 @@ func UpdateTaskStatusAndDuration(ctx context.Context, taskId int64, oldStatus, n
 		Update(&Task{
 			TaskStatus: newStatus,
 			Duration:   duration.Milliseconds(),
+		})
+	return rows == 1, err
+}
+
+func UpdateTaskStatusAndDurationAndStatusLog(ctx context.Context, taskId int64, oldStatus, newStatus sshagent.Status, duration time.Duration, status sshagent.TaskStatus) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", taskId).
+		And("task_status = ?", oldStatus).
+		Cols("task_status", "duration", "status_log").
+		Limit(1).
+		Update(&Task{
+			TaskStatus: newStatus,
+			Duration:   duration.Milliseconds(),
+			StatusLog: &xormutil.Conversion[sshagent.TaskStatus]{
+				Data: status,
+			},
 		})
 	return rows == 1, err
 }

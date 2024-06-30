@@ -22,6 +22,22 @@ func checkAppDevelopPermByServiceId(ctx context.Context, operator apisession.Use
 	return service, checkAppDevelopPermByAppId(ctx, operator, service.AppId)
 }
 
+func checkAppDevelopPermByStageId(ctx context.Context, operator apisession.UserInfo, stageId int64) (deploymd.Stage, deploymd.Plan, deploymd.Service, error) {
+	stage, b, err := deploymd.GetStageByStageId(ctx, stageId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return deploymd.Stage{}, deploymd.Plan{}, deploymd.Service{}, util.InternalError(err)
+	}
+	if !b {
+		return deploymd.Stage{}, deploymd.Plan{}, deploymd.Service{}, util.InvalidArgsError()
+	}
+	plan, service, err := checkAppDevelopPermByPlanId(ctx, operator, stage.PlanId)
+	if err != nil {
+		return deploymd.Stage{}, deploymd.Plan{}, deploymd.Service{}, err
+	}
+	return stage, plan, service, nil
+}
+
 func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
@@ -65,6 +81,22 @@ func checkDeployPlanPermByServiceId(ctx context.Context, operator apisession.Use
 		return deploymd.Service{}, util.InvalidArgsError()
 	}
 	return service, checkDeployPlanPermByAppId(ctx, operator, service.AppId)
+}
+
+func checkAppDevelopPermByPlanId(ctx context.Context, operator apisession.UserInfo, planId int64) (deploymd.Plan, deploymd.Service, error) {
+	plan, b, err := deploymd.GetPlanById(ctx, planId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return deploymd.Plan{}, deploymd.Service{}, util.InternalError(err)
+	}
+	if !b {
+		return deploymd.Plan{}, deploymd.Service{}, util.InvalidArgsError()
+	}
+	service, err := checkAppDevelopPermByServiceId(ctx, operator, plan.ServiceId)
+	if err != nil {
+		return deploymd.Plan{}, deploymd.Service{}, err
+	}
+	return plan, service, err
 }
 
 func checkDeployPlanPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
