@@ -1,8 +1,6 @@
 package deploymd
 
 import (
-	"encoding/json"
-	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
@@ -13,7 +11,8 @@ const (
 	DeployLogTableName = "zservice_deploy_log"
 	PlanTableName      = "zservice_deploy_plan"
 	OpLogTableName     = "zservice_op_log"
-	ServiceTableName   = "zservice_service"
+	PipelineTableName  = "zservice_pipeline"
+	SourceTableName    = "zservice_source"
 )
 
 type PlanStatus int
@@ -56,13 +55,14 @@ func (*DeployLog) TableName() string {
 type Plan struct {
 	Id             int64      `json:"id" xorm:"pk autoincr"`
 	AppId          string     `json:"appId"`
-	ServiceId      int64      `json:"serviceId"`
+	PipelineId     int64      `json:"pipelineId"`
+	PipelineName   string     `json:"pipelineName"`
 	Name           string     `json:"name"`
 	ProductVersion string     `json:"productVersion"`
 	PlanStatus     PlanStatus `json:"planStatus"`
 	Env            string     `json:"env"`
 	Creator        string     `json:"creator"`
-	ServiceConfig  string     `json:"serviceConfig"`
+	PipelineConfig string     `json:"pipelineConfig"`
 	Created        time.Time  `json:"created" xorm:"created"`
 }
 
@@ -135,46 +135,31 @@ func (s *Stage) GetInputArgs() map[string]string {
 	return s.InputArgs.Data
 }
 
-type Service struct {
-	Id          int64              `json:"id" xorm:"pk autoincr"`
-	ServiceType deploy.ServiceType `json:"serviceType"`
-	AppId       string             `json:"appId"`
-	Name        string             `json:"name"`
-	Config      string             `json:"config"`
-	Env         string             `json:"env"`
-	Created     time.Time          `json:"created" xorm:"created"`
-	Updated     time.Time          `json:"updated" xorm:"updated"`
+type Pipeline struct {
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	AppId   string    `json:"appId"`
+	Name    string    `json:"name"`
+	Config  string    `json:"config"`
+	Env     string    `json:"env"`
+	Created time.Time `json:"created" xorm:"created"`
+	Updated time.Time `json:"updated" xorm:"updated"`
 }
 
-func (*Service) TableName() string {
-	return ServiceTableName
+func (*Pipeline) TableName() string {
+	return PipelineTableName
 }
 
-type K8sConfig struct {
-	AgentHost       string `json:"agentHost"`
-	AgentToken      string `json:"agentToken"`
-	GetStatusScript string `json:"getStatusScript"`
+type ServiceSource struct {
+	Id      int64                          `json:"id" xorm:"pk autoincr"`
+	Name    string                         `json:"name"`
+	AppId   string                         `json:"appId"`
+	Env     string                         `json:"env"`
+	Hosts   *xormutil.Conversion[[]string] `json:"hosts"`
+	ApiKey  string                         `json:"apiKey"`
+	Created time.Time                      `json:"created" xorm:"created"`
+	Updated time.Time                      `json:"updated" xorm:"updated"`
 }
 
-type ProcessConfig struct {
-	Host       string `json:"host"`
-	AgentHost  string `json:"agentHost"`
-	AgentToken string `json:"agentToken"`
-}
-
-type DeployServiceConfig struct {
-	Type    deploy.ServiceType `json:"type"`
-	Process *ProcessConfig     `json:"process,omitempty"`
-	K8s     *K8sConfig         `json:"k8s,omitempty"`
-}
-
-func (c *DeployServiceConfig) FromDB(content []byte) error {
-	if c == nil {
-		*c = DeployServiceConfig{}
-	}
-	return json.Unmarshal(content, c)
-}
-
-func (c *DeployServiceConfig) ToDB() ([]byte, error) {
-	return json.Marshal(c)
+func (*ServiceSource) TableName() string {
+	return SourceTableName
 }

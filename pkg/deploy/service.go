@@ -12,21 +12,13 @@ func (s *Action) isValid() bool {
 	return len(s.Script) > 0
 }
 
-type ServiceType string
-
-const (
-	ProcessServiceType ServiceType = "process"
-	K8sServiceType     ServiceType = "k8s"
-)
-
-type Service struct {
-	Type    ServiceType       `json:"type" json:"type"`
+type Pipeline struct {
 	Actions map[string]Action `json:"actions,omitempty" yaml:"actions,omitempty"`
 	Agents  map[string]Agent  `json:"agents,omitempty" yaml:"agents,omitempty"`
 	Deploy  []Stage           `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 }
 
-func (s *Service) IsValid() bool {
+func (s *Pipeline) IsValid() bool {
 	if len(s.Actions) == 0 || len(s.Agents) == 0 {
 		return false
 	}
@@ -40,14 +32,6 @@ func (s *Service) IsValid() bool {
 			return false
 		}
 	}
-	switch s.Type {
-	case ProcessServiceType:
-
-	case K8sServiceType:
-
-	default:
-		return false
-	}
 	if len(s.Deploy) == 0 {
 		return false
 	}
@@ -59,13 +43,13 @@ func (s *Service) IsValid() bool {
 	return true
 }
 
-func (s *Service) FromDB(content []byte) error {
+func (s *Pipeline) FromDB(content []byte) error {
 	if s == nil {
-		*s = Service{}
+		*s = Pipeline{}
 	}
 	return json.Unmarshal(content, s)
 }
 
-func (s *Service) ToDB() ([]byte, error) {
+func (s *Pipeline) ToDB() ([]byte, error) {
 	return json.Marshal(s)
 }

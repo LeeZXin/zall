@@ -15,8 +15,8 @@ const createDeployPlanRequest = (data, env) => request.post("/api/deployPlan/cre
         [ENV_HEADER]: env
     }
 });
-// 服务配置列表
-const listServiceWhenCreateDeployPlanRequest = (data, env) => request.get("/api/deployPlan/listService", {
+// 流水线配置列表
+const listPipelineWhenCreateDeployPlanRequest = (data, env) => request.get("/api/deployPlan/listPipeline", {
     params: data,
     headers: {
         [ENV_HEADER]: env
@@ -73,7 +73,7 @@ const forceRedoStageRequest = (data, env) => request.post("/api/deployStage/forc
 export {
     listDeployPlanRequest,
     createDeployPlanRequest,
-    listServiceWhenCreateDeployPlanRequest,
+    listPipelineWhenCreateDeployPlanRequest,
     closeDeployPlanRequest,
     getDeployPlanDetailRequest,
     startDeployPlanRequest,

@@ -14,25 +14,30 @@ func IsProductVersionValid(productVersion string) bool {
 	return len(productVersion) > 0 && len(productVersion) <= 128
 }
 
+func IsServiceSourceNameValid(name string) bool {
+	return len(name) > 0 && len(name) <= 32
+}
+
 func InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (Plan, error) {
 	ret := Plan{
 		AppId:          reqDTO.AppId,
-		ServiceId:      reqDTO.ServiceId,
+		PipelineId:     reqDTO.PipelineId,
+		PipelineName:   reqDTO.PipelineName,
 		Name:           reqDTO.Name,
 		ProductVersion: reqDTO.ProductVersion,
 		PlanStatus:     reqDTO.PlanStatus,
 		Env:            reqDTO.Env,
 		Creator:        reqDTO.Creator,
-		ServiceConfig:  reqDTO.ServiceConfig,
+		PipelineConfig: reqDTO.PipelineConfig,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&ret)
 	return ret, err
 }
 
-func ExistPendingOrRunningPlanByServiceId(ctx context.Context, serviceId int64) (bool, error) {
+func ExistPendingOrRunningPlanByPipelineId(ctx context.Context, pipelineId int64) (bool, error) {
 	return xormutil.MustGetXormSession(ctx).
-		Where("service_id = ?", serviceId).
+		Where("pipeline_id = ?", pipelineId).
 		In("plan_status", PendingPlanStatus, RunningPlanStatus).
 		Exist(new(Plan))
 }
@@ -62,64 +67,6 @@ func ListStagesByPlanIdAndLETIndex(ctx context.Context, planId int64, index int)
 	return ret, err
 }
 
-func InsertDeployLog(ctx context.Context, reqDTO InsertDeployLogReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Table("zservice_deploy_log_" + reqDTO.Env).
-		Insert(&DeployLog{
-			ConfigId:       reqDTO.ConfigId,
-			AppId:          reqDTO.AppId,
-			ServiceConfig:  reqDTO.ServiceConfig,
-			ProductVersion: reqDTO.ProductVersion,
-			DeployOutput:   reqDTO.DeployOutput,
-			Operator:       reqDTO.Operator,
-			PlanId:         reqDTO.PlanId,
-		})
-	return err
-}
-
-func InsertOpLog(ctx context.Context, reqDTO InsertOpLogReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Table("zservice_op_log_" + reqDTO.Env).
-		Insert(&OpLog{
-			Op:             reqDTO.Op,
-			ConfigId:       reqDTO.ConfigId,
-			Operator:       reqDTO.Operator,
-			ScriptOutput:   reqDTO.ScriptOutput,
-			ProductVersion: reqDTO.ProductVersion,
-		})
-	return err
-}
-
-func ListDeployLog(ctx context.Context, reqDTO ListDeployLogReqDTO) ([]DeployLog, error) {
-	session := xormutil.MustGetXormSession(ctx).
-		Table("zservice_deploy_log_"+reqDTO.Env).
-		Where("config_id = ?", reqDTO.ConfigId)
-	if reqDTO.Cursor > 0 {
-		session.And("id < ?", reqDTO.Cursor)
-	}
-	if reqDTO.Limit > 0 {
-		session.Limit(reqDTO.Limit)
-	}
-	ret := make([]DeployLog, 0)
-	err := session.OrderBy("id desc").Find(&ret)
-	return ret, err
-}
-
-func ListOpLog(ctx context.Context, reqDTO ListOpLogReqDTO) ([]OpLog, error) {
-	session := xormutil.MustGetXormSession(ctx).
-		Table("zservice_op_log_"+reqDTO.Env).
-		Where("config_id = ?", reqDTO.ConfigId)
-	if reqDTO.Cursor > 0 {
-		session.And("id < ?", reqDTO.Cursor)
-	}
-	if reqDTO.Limit > 0 {
-		session.Limit(reqDTO.Limit)
-	}
-	ret := make([]OpLog, 0)
-	err := session.OrderBy("id desc").Find(&ret)
-	return ret, err
-}
-
 func GetPlanById(ctx context.Context, id int64) (Plan, bool, error) {
 	var ret Plan
 	b, err := xormutil.MustGetXormSession(ctx).
@@ -139,26 +86,26 @@ func UpdatePlanStatusWithOldStatus(ctx context.Context, id int64, newStatus, old
 	return rows == 1, err
 }
 
-func ClosePlanAndUpdateConfig(ctx context.Context, id int64, oldStatus PlanStatus, serviceConfig string) (bool, error) {
+func ClosePlanAndUpdateConfig(ctx context.Context, id int64, oldStatus PlanStatus, pipelineConfig string) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		And("plan_status = ?", oldStatus).
-		Cols("plan_status", "service_config").
+		Cols("plan_status", "pipeline_config").
 		Update(&Plan{
-			PlanStatus:    ClosedPlanStatus,
-			ServiceConfig: serviceConfig,
+			PlanStatus:     ClosedPlanStatus,
+			PipelineConfig: pipelineConfig,
 		})
 	return rows == 1, err
 }
 
-func StartPlan(ctx context.Context, id int64, serviceConfig string) (bool, error) {
+func StartPlan(ctx context.Context, id int64, pipelineConfig string) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		And("plan_status = ?", PendingPlanStatus).
-		Cols("plan_status", "service_config").
+		Cols("plan_status", "pipeline_config").
 		Update(&Plan{
-			PlanStatus:    RunningPlanStatus,
-			ServiceConfig: serviceConfig,
+			PlanStatus:     RunningPlanStatus,
+			PipelineConfig: pipelineConfig,
 		})
 	return rows == 1, err
 }
@@ -303,24 +250,23 @@ func GetStageListByPlanId(ctx context.Context, planId int64) ([]Stage, error) {
 	return ret, err
 }
 
-func IsServiceNameValid(name string) bool {
+func IsPipelineNameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
 }
 
-func InsertService(ctx context.Context, reqDTO InsertServiceReqDTO) error {
+func InsertPipeline(ctx context.Context, reqDTO InsertPipelineReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&Service{
-			AppId:       reqDTO.AppId,
-			Name:        reqDTO.Name,
-			Config:      reqDTO.Config,
-			Env:         reqDTO.Env,
-			ServiceType: reqDTO.ServiceType,
+		Insert(&Pipeline{
+			AppId:  reqDTO.AppId,
+			Name:   reqDTO.Name,
+			Config: reqDTO.Config,
+			Env:    reqDTO.Env,
 		})
 	return err
 }
 
-func ListService(ctx context.Context, reqDTO ListServiceReqDTO) ([]Service, error) {
-	ret := make([]Service, 0)
+func ListPipeline(ctx context.Context, reqDTO ListPipelineReqDTO) ([]Pipeline, error) {
+	ret := make([]Pipeline, 0)
 	session := xormutil.MustGetXormSession(ctx).
 		Where("app_id = ?", reqDTO.AppId).
 		And("env = ?", reqDTO.Env).
@@ -332,38 +278,75 @@ func ListService(ctx context.Context, reqDTO ListServiceReqDTO) ([]Service, erro
 	return ret, err
 }
 
-func DeleteService(ctx context.Context, serviceId int64) (bool, error) {
+func DeletePipeline(ctx context.Context, pipelineId int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", serviceId).
-		Delete(new(Service))
+		Where("id = ?", pipelineId).
+		Delete(new(Pipeline))
 	return rows == 1, err
 }
 
-func UpdateService(ctx context.Context, reqDTO UpdateServiceReqDTO) (bool, error) {
+func UpdatePipeline(ctx context.Context, reqDTO UpdatePipelineReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", reqDTO.ServiceId).
-		Cols("config", "name", "service_type").
-		Update(&Service{
-			ServiceType: reqDTO.ServiceType,
-			Name:        reqDTO.Name,
-			Config:      reqDTO.Config,
+		Where("id = ?", reqDTO.PipelineId).
+		Cols("config", "name").
+		Update(&Pipeline{
+			Name:   reqDTO.Name,
+			Config: reqDTO.Config,
 		})
 	return rows == 1, err
 }
 
-func GetServiceById(ctx context.Context, serviceId int64) (Service, bool, error) {
-	var ret Service
-	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", serviceId).Get(&ret)
+func GetPipelineById(ctx context.Context, pipelineId int64) (Pipeline, bool, error) {
+	var ret Pipeline
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", pipelineId).Get(&ret)
 	return ret, b, err
 }
 
-func BatchGetServiceById(ctx context.Context, serviceIdList []int64, cols []string) ([]Service, error) {
-	ret := make([]Service, 0)
-	session := xormutil.MustGetXormSession(ctx).
-		In("id", serviceIdList)
-	if len(cols) > 0 {
-		session.Cols(cols...)
-	}
-	err := session.Find(&ret)
+func ListServiceSource(ctx context.Context, reqDTO ListServiceSourceReqDTO) ([]ServiceSource, error) {
+	ret := make([]ServiceSource, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", reqDTO.AppId).
+		And("env = ?", reqDTO.Env).
+		Find(&ret)
 	return ret, err
+}
+
+func InsertServiceSource(ctx context.Context, reqDTO InsertServiceSourceReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ServiceSource{
+		Name:  reqDTO.Name,
+		AppId: reqDTO.AppId,
+		Env:   reqDTO.Env,
+		Hosts: &xormutil.Conversion[[]string]{
+			Data: reqDTO.Hosts,
+		},
+		ApiKey: reqDTO.ApiKey,
+	})
+	return err
+}
+
+func UpdateServiceSource(ctx context.Context, reqDTO UpdateServiceSourceReqDTO) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", reqDTO.Id).
+		Cols("name", "hosts", "api_key").
+		Update(&ServiceSource{
+			Name: reqDTO.Name,
+			Hosts: &xormutil.Conversion[[]string]{
+				Data: reqDTO.Hosts,
+			},
+			ApiKey: reqDTO.ApiKey,
+		})
+	return rows == 1, err
+}
+
+func DeleteServiceSourceById(ctx context.Context, id int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Delete(new(ServiceSource))
+	return rows == 1, err
+}
+
+func GetServiceSourceById(ctx context.Context, id int64) (ServiceSource, bool, error) {
+	var ret ServiceSource
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	return ret, b, err
 }

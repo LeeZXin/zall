@@ -7,7 +7,7 @@ import (
 
 type CreatePlanReqVO struct {
 	Name           string `json:"name"`
-	ServiceId      int64  `json:"serviceId"`
+	PipelineId     int64  `json:"pipelineId"`
 	ProductVersion string `json:"productVersion"`
 }
 
@@ -19,8 +19,8 @@ type ListPlanReqVO struct {
 
 type PlanVO struct {
 	Id             int64               `json:"id"`
-	ServiceId      int64               `json:"serviceId"`
-	ServiceName    string              `json:"serviceName"`
+	PipelineId     int64               `json:"pipelineId"`
+	PipelineName   string              `json:"pipelineName"`
 	Name           string              `json:"name"`
 	ProductVersion string              `json:"productVersion"`
 	PlanStatus     deploymd.PlanStatus `json:"planStatus"`
@@ -31,9 +31,9 @@ type PlanVO struct {
 
 type PlanDetailVO struct {
 	Id             int64               `json:"id"`
-	ServiceId      int64               `json:"serviceId"`
-	ServiceName    string              `json:"serviceName"`
-	ServiceConfig  string              `json:"serviceConfig"`
+	PipelineId     int64               `json:"pipelineId"`
+	PipelineName   string              `json:"pipelineName"`
+	PipelineConfig string              `json:"pipelineConfig"`
 	Name           string              `json:"name"`
 	ProductVersion string              `json:"productVersion"`
 	PlanStatus     deploymd.PlanStatus `json:"planStatus"`
@@ -42,33 +42,31 @@ type PlanDetailVO struct {
 	Created        string              `json:"created"`
 }
 
-type CreateServiceReqVO struct {
+type CreatePipelineReqVO struct {
 	AppId  string `json:"appId"`
 	Name   string `json:"name"`
 	Config string `json:"config"`
 	Env    string `json:"env"`
 }
 
-type UpdateServiceReqVO struct {
-	ServiceId int64  `json:"serviceId"`
-	Name      string `json:"name"`
-	Config    string `json:"config"`
+type UpdatePipelineReqVO struct {
+	PipelineId int64  `json:"pipelineId"`
+	Name       string `json:"name"`
+	Config     string `json:"config"`
 }
 
-type ServiceVO struct {
-	Id          int64              `json:"id"`
-	AppId       string             `json:"appId"`
-	Config      string             `json:"config"`
-	Env         string             `json:"env"`
-	Name        string             `json:"name"`
-	ServiceType deploy.ServiceType `json:"serviceType"`
+type PipelineVO struct {
+	Id     int64  `json:"id"`
+	AppId  string `json:"appId"`
+	Config string `json:"config"`
+	Env    string `json:"env"`
+	Name   string `json:"name"`
 }
 
-type SimpleServiceVO struct {
-	Id          int64              `json:"id"`
-	Name        string             `json:"name"`
-	ServiceType deploy.ServiceType `json:"serviceType"`
-	Env         string             `json:"env"`
+type SimplePipelineVO struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
+	Env  string `json:"env"`
 }
 
 type SubStageVO struct {
@@ -105,4 +103,29 @@ type ForceRedoStageReqVO struct {
 	PlanId     int64             `json:"planId"`
 	StageIndex int               `json:"stageIndex"`
 	Args       map[string]string `json:"args"`
+}
+
+type CreateServiceSourceReqVO struct {
+	AppId  string   `json:"appId"`
+	Env    string   `json:"env"`
+	Name   string   `json:"name"`
+	Hosts  []string `json:"hosts"`
+	ApiKey string   `json:"apiKey"`
+}
+
+type UpdateServiceSourceReqVO struct {
+	SourceId int64    `json:"sourceId"`
+	Name     string   `json:"name"`
+	Hosts    []string `json:"hosts"`
+	ApiKey   string   `json:"apiKey"`
+}
+
+type ServiceSourceVO struct {
+	Id      int64    `json:"id"`
+	Name    string   `json:"name"`
+	AppId   string   `json:"appId"`
+	Env     string   `json:"env"`
+	Hosts   []string `json:"hosts"`
+	ApiKey  string   `json:"apiKey"`
+	Created string   `json:"created"`
 }

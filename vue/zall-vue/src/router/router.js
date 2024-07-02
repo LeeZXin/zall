@@ -213,19 +213,19 @@ const router = createRouter({
                     import ("../pages/team/app/PropertyHistoryPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/service/list/:env?",
+                path: "/team/:teamId(\\d+)/app/:appId/pipeline/list/:env?",
                 component: () =>
-                    import ("../pages/team/app/ServiceListPage")
+                    import ("../pages/team/app/PipelineListPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/service/create",
+                path: "/team/:teamId(\\d+)/app/:appId/pipeline/create",
                 component: () =>
-                    import ("../pages/team/app/ServiceHandlePage")
+                    import ("../pages/team/app/PipelineHandlePage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/service/:serviceId(\\d+)/update",
+                path: "/team/:teamId(\\d+)/app/:appId/pipeline/:pipelineId(\\d+)/update",
                 component: () =>
-                    import ("../pages/team/app/ServiceHandlePage")
+                    import ("../pages/team/app/PipelineHandlePage")
 
             }, {
                 path: "/team/:teamId(\\d+)/app/:appId/deployPlan/list/:env?",
@@ -241,6 +241,21 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/app/:appId/deployPlan/:planId(\\d+)/view",
                 component: () =>
                     import ("../pages/team/app/DeployPlanViewPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/serviceSource/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/ServiceSourceListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/serviceSource/create",
+                component: () =>
+                    import ("../pages/team/app/ServiceSourceHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/serviceSource/:sourceId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/app/ServiceSourceHandlePage")
 
             }]
         },

@@ -35,12 +35,15 @@ const appIdRegexp = /^[\w-]{1,32}$/;
 const appNameRegexp = /^.{1,32}$/;
 // 配置中心
 const propertyFileNameRegexp = /^[\w-]{1,32}$/;
-// 探针配置
-const serviceNameRegexp = /^.{1,32}$/;
+// 流水线配置
+const pipelineNameRegexp = /^.{1,32}$/;
 // 发布计划
 const deployPlanNameRegexp = /^.{1,32}$/;
 const deployProductVersionRegexp = /^.{1,128}$/;
-
+// 服务来源
+const serviceSourceNameRegexp = /^.{1,32}$/;
+const serviceSourceHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
+const serviceSourceApiKeyRegexp = /^.{0,128}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -68,7 +71,10 @@ export {
     appIdRegexp,
     appNameRegexp,
     propertyFileNameRegexp,
-    serviceNameRegexp,
+    pipelineNameRegexp,
     deployPlanNameRegexp,
-    deployProductVersionRegexp
+    deployProductVersionRegexp,
+    serviceSourceNameRegexp,
+    serviceSourceHostRegexp,
+    serviceSourceApiKeyRegexp
 }

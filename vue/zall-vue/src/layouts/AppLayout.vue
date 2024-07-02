@@ -13,13 +13,17 @@
             <pull-request-outlined />
             <span>配置中心</span>
           </a-menu-item>
-          <a-menu-item key="/service/list">
+          <a-menu-item key="/pipeline/list">
             <tag-outlined />
-            <span>服务列表</span>
+            <span>部署流水线</span>
           </a-menu-item>
           <a-menu-item key="/deployPlan/list">
             <file-outlined />
             <span>发布计划</span>
+          </a-menu-item>
+          <a-menu-item key="/serviceSource/list">
+            <file-outlined />
+            <span>服务来源</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -69,8 +73,9 @@ const changeSelectedKey = path => {
 const pagesMap = {
   "/property": "/property/list",
   "/deployConfig": "/deployConfig/list",
-  "/service": "/service/list",
-  "/deployPlan": "/deployPlan/list"
+  "/pipeline": "/pipeline/list",
+  "/deployPlan": "/deployPlan/list",
+  "/serviceSource": "/serviceSource/list"
 };
 watch(
   () => router.currentRoute.value.path,

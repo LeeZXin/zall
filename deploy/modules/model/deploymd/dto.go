@@ -1,23 +1,22 @@
 package deploymd
 
-import "github.com/LeeZXin/zall/pkg/deploy"
-
 type InsertPlanReqDTO struct {
 	Name           string
 	PlanStatus     PlanStatus
 	AppId          string
-	ServiceId      int64
+	PipelineId     int64
+	PipelineName   string
 	ProductVersion string
 	Creator        string
 	Env            string
-	ServiceConfig  string
+	PipelineConfig string
 }
 
 type InsertDeployLogReqDTO struct {
 	ConfigId       int64
 	AppId          string
 	PlanId         int64
-	ServiceConfig  string
+	PipelineConfig string
 	ProductVersion string
 	Env            string
 	DeployOutput   string
@@ -62,23 +61,41 @@ type InsertDeployStageReqDTO struct {
 	StageStatus StageStatus
 }
 
-type InsertServiceReqDTO struct {
-	AppId       string
-	Name        string
-	Config      string
-	Env         string
-	ServiceType deploy.ServiceType
+type InsertPipelineReqDTO struct {
+	AppId  string
+	Name   string
+	Config string
+	Env    string
 }
 
-type UpdateServiceReqDTO struct {
-	ServiceId   int64
-	Name        string
-	Config      string
-	ServiceType deploy.ServiceType
+type UpdatePipelineReqDTO struct {
+	PipelineId int64
+	Name       string
+	Config     string
 }
 
-type ListServiceReqDTO struct {
+type ListPipelineReqDTO struct {
 	AppId string
 	Env   string
 	Cols  []string
+}
+
+type InsertServiceSourceReqDTO struct {
+	Name   string
+	AppId  string
+	Env    string
+	Hosts  []string
+	ApiKey string
+}
+
+type UpdateServiceSourceReqDTO struct {
+	Id     int64
+	Name   string
+	Hosts  []string
+	ApiKey string
+}
+
+type ListServiceSourceReqDTO struct {
+	AppId string
+	Env   string
 }

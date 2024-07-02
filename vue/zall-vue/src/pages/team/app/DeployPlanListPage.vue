@@ -80,9 +80,9 @@ const columns = ref([
     key: "productVersion"
   },
   {
-    title: "发布服务",
-    dataIndex: "serviceName",
-    key: "serviceName"
+    title: "部署流水线",
+    dataIndex: "pipelineName",
+    key: "pipelineName"
   },
   {
     title: "状态",

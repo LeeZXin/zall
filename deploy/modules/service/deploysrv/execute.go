@@ -32,7 +32,7 @@ func newInputArgs(base map[string]string) *inputArgs {
 	}
 }
 
-func executeDeployOnStartPlan(planId int64, appId string, dp deploy.Service, env map[string]string, taskIdMapList []map[string]string) error {
+func executeDeployOnStartPlan(planId int64, appId string, dp deploy.Pipeline, env map[string]string, taskIdMapList []map[string]string) error {
 	return runner.Execute(func() {
 		for index, stage := range dp.Deploy {
 			if stage.Confirm != nil && stage.Confirm.NeedInteract ||
@@ -47,7 +47,7 @@ func executeDeployOnStartPlan(planId int64, appId string, dp deploy.Service, env
 	})
 }
 
-func executeDeployOnConfirmStage(planId int64, appId string, dp deploy.Service, env map[string]string, startIndex int) error {
+func executeDeployOnConfirmStage(planId int64, appId string, dp deploy.Pipeline, env map[string]string, startIndex int) error {
 	return runner.Execute(func() {
 		for index := startIndex; index < len(dp.Deploy); index++ {
 			stage := dp.Deploy[index]
@@ -67,7 +67,7 @@ func executeDeployOnConfirmStage(planId int64, appId string, dp deploy.Service, 
 	})
 }
 
-func redoAgentStage(planId int64, appId string, dp deploy.Service, index int, agentId string, env map[string]string, taskId string) bool {
+func redoAgentStage(planId int64, appId string, dp deploy.Pipeline, index int, agentId string, env map[string]string, taskId string) bool {
 	if runAgentScript(agentId, dp.Agents[agentId], dp.Deploy[index], appId, planId, index, env, dp, taskId) {
 		// 判断是否自动执行下一个节点或自动完成
 		if isStageAllDone(planId, index) {
@@ -125,7 +125,7 @@ type idAgent struct {
 	Agent deploy.Agent
 }
 
-func runStage(dp deploy.Service, planId int64, appId string, index int, args map[string]string, taskIdMap map[string]string) bool {
+func runStage(dp deploy.Pipeline, planId int64, appId string, index int, args map[string]string, taskIdMap map[string]string) bool {
 	stage := dp.Deploy[index]
 	finalHasErr := false
 	agentMapList := make([]idAgent, 0)
@@ -177,7 +177,7 @@ func runStage(dp deploy.Service, planId int64, appId string, index int, args map
 	return !finalHasErr
 }
 
-func runAgentScript(id string, agent deploy.Agent, stage deploy.Stage, appId string, planId int64, index int, args map[string]string, dp deploy.Service, taskId string) bool {
+func runAgentScript(id string, agent deploy.Agent, stage deploy.Stage, appId string, planId int64, index int, args map[string]string, dp deploy.Pipeline, taskId string) bool {
 	if !updateStageStatusAndInputArgs(planId, index, id, args, deploymd.RunningStageStatus, deploymd.PendingStageStatus) {
 		return false
 	}

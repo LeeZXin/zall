@@ -113,10 +113,6 @@ export default {
         autoTriggerType: "自动触发",
         manualTriggerType: "手动触发"
     },
-    service: {
-        process: "主机服务",
-        k8s: "K8s服务"
-    },
     deployPlan: {
         pendingStatus: "待发布",
         runningStatus: "发布中",

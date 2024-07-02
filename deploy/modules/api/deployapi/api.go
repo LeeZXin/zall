@@ -27,7 +27,7 @@ func InitApi() {
 			// 开始发布计划
 			group.PUT("/start/:planId", startPlan)
 			// 服务列表
-			group.GET("/listService", listServiceWhenCreatePlan)
+			group.GET("/listPipeline", listPipelineWhenCreatePlan)
 			// 计划详情
 			group.GET("/detail/:planId", getPlanDetail)
 			// 流水线详情
@@ -44,18 +44,105 @@ func InitApi() {
 			// 中止某个阶段
 			group.PUT("/kill/:planId/:index", killStage)
 		}
-		group = e.Group("/api/service", apisession.CheckLogin)
+		group = e.Group("/api/pipeline", apisession.CheckLogin)
 		{
 			// 创建服务
-			group.POST("/create", createService)
+			group.POST("/create", createPipeline)
 			// 编辑服务
-			group.POST("/update", updateService)
+			group.POST("/update", updatePipeline)
 			// 删除服务
-			group.DELETE("/delete/:serviceId", deleteService)
+			group.DELETE("/delete/:pipelineId", deletePipeline)
 			// 服务列表
-			group.GET("/list", listService)
+			group.GET("/list", listPipeline)
+		}
+		group = e.Group("/api/serviceSource", apisession.CheckLogin)
+		{
+			// 创建服务来源
+			group.POST("/create", createServiceSource)
+			// 编辑服务来源
+			group.POST("/update", updateServiceSource)
+			// 删除服务来源
+			group.DELETE("/delete/:sourceId", deleteServiceSource)
+			// 服务来源列表
+			group.GET("/list", listServiceSource)
 		}
 	})
+}
+
+func listServiceSource(c *gin.Context) {
+	sources, err := deploysrv.Outer.ListServiceSource(c, deploysrv.ListServiceSourceReqDTO{
+		AppId:    c.Query("appId"),
+		Env:      c.Query("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(sources, func(t deploysrv.ServiceSourceDTO) (ServiceSourceVO, error) {
+		return ServiceSourceVO{
+			Id:      t.Id,
+			Name:    t.Name,
+			AppId:   t.AppId,
+			Env:     t.Env,
+			Hosts:   t.Hosts,
+			ApiKey:  t.ApiKey,
+			Created: t.Created.Format(time.DateTime),
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]ServiceSourceVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func createServiceSource(c *gin.Context) {
+	var req CreateServiceSourceReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.CreateServiceSource(c, deploysrv.CreateServiceSourceReqDTO{
+			AppId:    req.AppId,
+			Env:      req.Env,
+			Name:     req.Name,
+			Hosts:    req.Hosts,
+			ApiKey:   req.ApiKey,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func updateServiceSource(c *gin.Context) {
+	var req UpdateServiceSourceReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.UpdateServiceSource(c, deploysrv.UpdateServiceSourceReqDTO{
+			SourceId: req.SourceId,
+			Name:     req.Name,
+			Hosts:    req.Hosts,
+			ApiKey:   req.ApiKey,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func deleteServiceSource(c *gin.Context) {
+	err := deploysrv.Outer.DeleteServiceSource(c, deploysrv.DeleteServiceSourceReqDTO{
+		SourceId: cast.ToInt64(c.Param("sourceId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	util.DefaultOkResponse(c)
 }
 
 func redoAgentStage(c *gin.Context) {
@@ -122,7 +209,7 @@ func createPlan(c *gin.Context) {
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.Outer.CreatePlan(c, deploysrv.CreatePlanReqDTO{
 			Name:           req.Name,
-			ServiceId:      req.ServiceId,
+			PipelineId:     req.PipelineId,
 			ProductVersion: req.ProductVersion,
 			Operator:       apisession.MustGetLoginUser(c),
 		})
@@ -174,8 +261,8 @@ func listPlan(c *gin.Context) {
 		data, _ := listutil.Map(plans, func(t deploysrv.PlanDTO) (PlanVO, error) {
 			return PlanVO{
 				Id:             t.Id,
-				ServiceId:      t.ServiceId,
-				ServiceName:    t.ServiceName,
+				PipelineId:     t.PipelineId,
+				PipelineName:   t.PipelineName,
 				Name:           t.Name,
 				ProductVersion: t.ProductVersion,
 				PlanStatus:     t.PlanStatus,
@@ -208,9 +295,9 @@ func getPlanDetail(c *gin.Context) {
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data: PlanDetailVO{
 			Id:             plan.Id,
-			ServiceId:      plan.ServiceId,
-			ServiceName:    plan.ServiceName,
-			ServiceConfig:  plan.ServiceConfig,
+			PipelineId:     plan.PipelineId,
+			PipelineName:   plan.PipelineName,
+			PipelineConfig: plan.PipelineConfig,
 			Name:           plan.Name,
 			ProductVersion: plan.ProductVersion,
 			PlanStatus:     plan.PlanStatus,
@@ -262,10 +349,10 @@ func listStages(c *gin.Context) {
 	})
 }
 
-func createService(c *gin.Context) {
-	var req CreateServiceReqVO
+func createPipeline(c *gin.Context) {
+	var req CreatePipelineReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.CreateService(c, deploysrv.CreateServiceReqDTO{
+		err := deploysrv.Outer.CreatePipeline(c, deploysrv.CreatePipelineReqDTO{
 			AppId:    req.AppId,
 			Name:     req.Name,
 			Config:   req.Config,
@@ -280,14 +367,14 @@ func createService(c *gin.Context) {
 	}
 }
 
-func updateService(c *gin.Context) {
-	var req UpdateServiceReqVO
+func updatePipeline(c *gin.Context) {
+	var req UpdatePipelineReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.UpdateService(c, deploysrv.UpdateServiceReqDTO{
-			ServiceId: req.ServiceId,
-			Name:      req.Name,
-			Config:    req.Config,
-			Operator:  apisession.MustGetLoginUser(c),
+		err := deploysrv.Outer.UpdatePipeline(c, deploysrv.UpdatePipelineReqDTO{
+			PipelineId: req.PipelineId,
+			Name:       req.Name,
+			Config:     req.Config,
+			Operator:   apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -297,10 +384,10 @@ func updateService(c *gin.Context) {
 	}
 }
 
-func deleteService(c *gin.Context) {
-	err := deploysrv.Outer.DeleteService(c, deploysrv.DeleteServiceReqDTO{
-		ServiceId: cast.ToInt64(c.Param("serviceId")),
-		Operator:  apisession.MustGetLoginUser(c),
+func deletePipeline(c *gin.Context) {
+	err := deploysrv.Outer.DeletePipeline(c, deploysrv.DeletePipelineReqDTO{
+		PipelineId: cast.ToInt64(c.Param("pipelineId")),
+		Operator:   apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
@@ -309,8 +396,8 @@ func deleteService(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func listService(c *gin.Context) {
-	services, err := deploysrv.Outer.ListService(c, deploysrv.ListServiceReqDTO{
+func listPipeline(c *gin.Context) {
+	pipelines, err := deploysrv.Outer.ListPipeline(c, deploysrv.ListPipelineReqDTO{
 		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -319,24 +406,23 @@ func listService(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(services, func(t deploysrv.ServiceDTO) (ServiceVO, error) {
-		return ServiceVO{
-			Id:          t.Id,
-			AppId:       t.AppId,
-			Config:      t.Config,
-			Env:         t.Env,
-			Name:        t.Name,
-			ServiceType: t.ServiceType,
+	data, _ := listutil.Map(pipelines, func(t deploysrv.PipelineDTO) (PipelineVO, error) {
+		return PipelineVO{
+			Id:     t.Id,
+			AppId:  t.AppId,
+			Config: t.Config,
+			Env:    t.Env,
+			Name:   t.Name,
 		}, nil
 	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]ServiceVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]PipelineVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     data,
 	})
 }
 
-func listServiceWhenCreatePlan(c *gin.Context) {
-	services, err := deploysrv.Outer.ListServiceWhenCreatePlan(c, deploysrv.ListServiceWhenCreatePlanReqDTO{
+func listPipelineWhenCreatePlan(c *gin.Context) {
+	pipelines, err := deploysrv.Outer.ListPipelineWhenCreatePlan(c, deploysrv.ListPipelineWhenCreatePlanReqDTO{
 		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -345,15 +431,14 @@ func listServiceWhenCreatePlan(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(services, func(t deploysrv.SimpleServiceDTO) (SimpleServiceVO, error) {
-		return SimpleServiceVO{
-			Id:          t.Id,
-			Env:         t.Env,
-			Name:        t.Name,
-			ServiceType: t.ServiceType,
+	data, _ := listutil.Map(pipelines, func(t deploysrv.SimplePipelineDTO) (SimplePipelineVO, error) {
+		return SimplePipelineVO{
+			Id:   t.Id,
+			Env:  t.Env,
+			Name: t.Name,
 		}, nil
 	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleServiceVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimplePipelineVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     data,
 	})

@@ -10,32 +10,32 @@ import (
 	"github.com/LeeZXin/zsf/logger"
 )
 
-func checkAppDevelopPermByServiceId(ctx context.Context, operator apisession.UserInfo, serviceId int64) (deploymd.Service, error) {
-	service, b, err := deploymd.GetServiceById(ctx, serviceId)
+func checkAppDevelopPermByPipelineId(ctx context.Context, operator apisession.UserInfo, pipelineId int64) (deploymd.Pipeline, error) {
+	pipeline, b, err := deploymd.GetPipelineById(ctx, pipelineId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return deploymd.Service{}, util.InternalError(err)
+		return deploymd.Pipeline{}, util.InternalError(err)
 	}
 	if !b {
-		return deploymd.Service{}, util.InvalidArgsError()
+		return deploymd.Pipeline{}, util.InvalidArgsError()
 	}
-	return service, checkAppDevelopPermByAppId(ctx, operator, service.AppId)
+	return pipeline, checkAppDevelopPermByAppId(ctx, operator, pipeline.AppId)
 }
 
-func checkAppDevelopPermByStageId(ctx context.Context, operator apisession.UserInfo, stageId int64) (deploymd.Stage, deploymd.Plan, deploymd.Service, error) {
+func checkAppDevelopPermByStageId(ctx context.Context, operator apisession.UserInfo, stageId int64) (deploymd.Stage, deploymd.Plan, deploymd.Pipeline, error) {
 	stage, b, err := deploymd.GetStageByStageId(ctx, stageId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return deploymd.Stage{}, deploymd.Plan{}, deploymd.Service{}, util.InternalError(err)
+		return deploymd.Stage{}, deploymd.Plan{}, deploymd.Pipeline{}, util.InternalError(err)
 	}
 	if !b {
-		return deploymd.Stage{}, deploymd.Plan{}, deploymd.Service{}, util.InvalidArgsError()
+		return deploymd.Stage{}, deploymd.Plan{}, deploymd.Pipeline{}, util.InvalidArgsError()
 	}
-	plan, service, err := checkAppDevelopPermByPlanId(ctx, operator, stage.PlanId)
+	plan, pipeline, err := checkAppDevelopPermByPlanId(ctx, operator, stage.PlanId)
 	if err != nil {
-		return deploymd.Stage{}, deploymd.Plan{}, deploymd.Service{}, err
+		return deploymd.Stage{}, deploymd.Plan{}, deploymd.Pipeline{}, err
 	}
-	return stage, plan, service, nil
+	return stage, plan, pipeline, nil
 }
 
 func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
@@ -71,32 +71,32 @@ func checkAppDevelopPerm(ctx context.Context, operator apisession.UserInfo, app 
 	return nil
 }
 
-func checkDeployPlanPermByServiceId(ctx context.Context, operator apisession.UserInfo, serviceId int64) (deploymd.Service, error) {
-	service, b, err := deploymd.GetServiceById(ctx, serviceId)
+func checkDeployPlanPermByPipelineId(ctx context.Context, operator apisession.UserInfo, pipelineId int64) (deploymd.Pipeline, error) {
+	pipeline, b, err := deploymd.GetPipelineById(ctx, pipelineId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return deploymd.Service{}, util.InternalError(err)
+		return deploymd.Pipeline{}, util.InternalError(err)
 	}
 	if !b {
-		return deploymd.Service{}, util.InvalidArgsError()
+		return deploymd.Pipeline{}, util.InvalidArgsError()
 	}
-	return service, checkDeployPlanPermByAppId(ctx, operator, service.AppId)
+	return pipeline, checkDeployPlanPermByAppId(ctx, operator, pipeline.AppId)
 }
 
-func checkAppDevelopPermByPlanId(ctx context.Context, operator apisession.UserInfo, planId int64) (deploymd.Plan, deploymd.Service, error) {
+func checkAppDevelopPermByPlanId(ctx context.Context, operator apisession.UserInfo, planId int64) (deploymd.Plan, deploymd.Pipeline, error) {
 	plan, b, err := deploymd.GetPlanById(ctx, planId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return deploymd.Plan{}, deploymd.Service{}, util.InternalError(err)
+		return deploymd.Plan{}, deploymd.Pipeline{}, util.InternalError(err)
 	}
 	if !b {
-		return deploymd.Plan{}, deploymd.Service{}, util.InvalidArgsError()
+		return deploymd.Plan{}, deploymd.Pipeline{}, util.InvalidArgsError()
 	}
-	service, err := checkAppDevelopPermByServiceId(ctx, operator, plan.ServiceId)
+	pipeline, err := checkAppDevelopPermByPipelineId(ctx, operator, plan.PipelineId)
 	if err != nil {
-		return deploymd.Plan{}, deploymd.Service{}, err
+		return deploymd.Plan{}, deploymd.Pipeline{}, err
 	}
-	return plan, service, err
+	return plan, pipeline, err
 }
 
 func checkDeployPlanPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
@@ -108,10 +108,10 @@ func checkDeployPlanPermByAppId(ctx context.Context, operator apisession.UserInf
 	if !b {
 		return util.InvalidArgsError()
 	}
-	return checkDeployPlanPerm(ctx, operator, &app)
+	return checkCreateDeployPlanPerm(ctx, operator, &app)
 }
 
-func checkDeployPlanPerm(ctx context.Context, operator apisession.UserInfo, app *appmd.App) error {
+func checkCreateDeployPlanPerm(ctx context.Context, operator apisession.UserInfo, app *appmd.App) error {
 	if operator.IsAdmin {
 		return nil
 	}
@@ -126,8 +126,90 @@ func checkDeployPlanPerm(ctx context.Context, operator apisession.UserInfo, app 
 	if p.IsAdmin {
 		return nil
 	}
-	if !p.PermDetail.DevelopAppList.Contains(app.AppId) || !p.PermDetail.TeamPerm.CanCreateDeployPlan {
+	if !p.PermDetail.DevelopAppList.Contains(app.AppId) ||
+		!p.PermDetail.TeamPerm.CanCreateDeployPlan {
 		return util.UnauthorizedError()
 	}
 	return nil
+}
+
+func checkPipelinePerm(ctx context.Context, appId string, operator apisession.UserInfo) error {
+	app, b, err := appmd.GetByAppId(ctx, appId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	if operator.IsAdmin {
+		return nil
+	}
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b || (!p.IsAdmin && !p.PermDetail.TeamPerm.CanManagePipeline) {
+		return util.UnauthorizedError()
+	}
+	return nil
+}
+
+func checkPipelinePermByPipelineId(ctx context.Context, pipelineId int64, operator apisession.UserInfo) error {
+	pipeline, b, err := deploymd.GetPipelineById(ctx, pipelineId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	return checkPipelinePerm(ctx, pipeline.AppId, operator)
+}
+
+func checkManageServiceSourcePerm(ctx context.Context, operator apisession.UserInfo, app *appmd.App) error {
+	if operator.IsAdmin {
+		return nil
+	}
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.UnauthorizedError()
+	}
+	if p.IsAdmin {
+		return nil
+	}
+	if !p.PermDetail.DevelopAppList.Contains(app.AppId) ||
+		!p.PermDetail.TeamPerm.CanManageServiceSource {
+		return util.UnauthorizedError()
+	}
+	return nil
+}
+
+func checkManageServiceSourcePermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
+	app, b, err := appmd.GetByAppId(ctx, appId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	return checkManageServiceSourcePerm(ctx, operator, &app)
+}
+
+func checkManageServiceSourcePermBySourceId(ctx context.Context, operator apisession.UserInfo, sourceId int64) (deploymd.ServiceSource, error) {
+	ret, b, err := deploymd.GetServiceSourceById(ctx, sourceId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return deploymd.ServiceSource{}, util.InternalError(err)
+	}
+	if !b {
+		return deploymd.ServiceSource{}, util.InvalidArgsError()
+	}
+	return ret, checkManageServiceSourcePermByAppId(ctx, operator, ret.AppId)
 }

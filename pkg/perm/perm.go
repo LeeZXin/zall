@@ -7,11 +7,12 @@ import (
 
 var (
 	DefaultTeamPerm = TeamPerm{
-		CanCreateRepo:         true,
-		CanManageDeployConfig: true,
-		CanCreateDeployPlan:   true,
-		CanManageTimer:        true,
-		CanManageService:      true,
+		CanCreateRepo:          true,
+		CanManageDeployConfig:  true,
+		CanCreateDeployPlan:    true,
+		CanManageTimer:         true,
+		CanManagePipeline:      true,
+		CanManageServiceSource: true,
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:              true,
@@ -105,6 +106,8 @@ type TeamPerm struct {
 	CanCreateDeployPlan bool `json:"canCreateDeployPlan"`
 	// 是否可管理定时任务
 	CanManageTimer bool `json:"canManageTimer"`
-	// 是否可管理服务
-	CanManageService bool `json:"canManageService"`
+	// 是否可管理流水线
+	CanManagePipeline bool `json:"canManagePipeline"`
+	// 是否可管理服务来源
+	CanManageServiceSource bool `json:"canManageServiceSource"`
 }

@@ -14,7 +14,7 @@
         @change="searchChange"
       />
     </div>
-    <ZTable :columns="columns" :dataSource="repoList" v-if="wholeRepoList.length > 0">
+    <ZTable :columns="columns" :dataSource="repoList">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex === 'operation'">
           <a-popover placement="bottomRight" trigger="hover">
@@ -41,11 +41,9 @@
         <span v-else>{{dataItem[dataIndex]}}</span>
       </template>
     </ZTable>
-    <ZNoData v-else />
   </div>
 </template>
 <script setup>
-import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import {
   DeleteOutlined,

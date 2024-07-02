@@ -22,13 +22,12 @@
         </div>
       </div>
       <div class="section">
-        <div class="section-title">选择服务</div>
+        <div class="section-title">选择流水线</div>
         <div class="section-body">
           <a-select
             style="width: 100%"
-            placeholder="选择环境"
-            v-model:value="formState.serviceId"
-            :options="serviceList"
+            v-model:value="formState.pipelineId"
+            :options="pipelineList"
           />
           <div class="input-desc">选择服务, 使用其发布流水线发布服务</div>
         </div>
@@ -51,7 +50,7 @@ import { reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
 import {
-  listServiceWhenCreateDeployPlanRequest,
+  listPipelineWhenCreateDeployPlanRequest,
   createDeployPlanRequest
 } from "@/api/app/deployPlanApi";
 import { useRoute, useRouter } from "vue-router";
@@ -64,10 +63,10 @@ const router = useRouter();
 const formState = reactive({
   name: "",
   selectedEnv: undefined,
-  serviceId: undefined,
+  pipelineId: undefined,
   productVersion: ""
 });
-const serviceList = ref([]);
+const pipelineList = ref([]);
 const envList = ref([]);
 
 const getEnvCfg = () => {
@@ -95,13 +94,13 @@ const createDeployPlan = () => {
     message.warn("制品号格式不正确");
     return;
   }
-  if (!formState.serviceId) {
-    message.warn("请选择服务");
+  if (!formState.pipelineId) {
+    message.warn("请选择流水线");
     return;
   }
   createDeployPlanRequest(
     {
-      serviceId: formState.serviceId,
+      pipelineId: formState.pipelineId,
       productVersion: formState.productVersion,
       name: formState.name
     },
@@ -115,7 +114,7 @@ const createDeployPlan = () => {
 };
 
 const listService = () => {
-  listServiceWhenCreateDeployPlanRequest(
+  listPipelineWhenCreateDeployPlanRequest(
     {
       appId: route.params.appId,
       env: formState.selectedEnv
@@ -123,16 +122,16 @@ const listService = () => {
     formState.selectedEnv
   ).then(res => {
     if (res.data?.length > 0) {
-      serviceList.value = res.data.map(item => {
+      pipelineList.value = res.data.map(item => {
         return {
           value: item.id,
           label: item.name
         };
       });
-      formState.serviceId = res.data[0].id;
+      formState.pipelineId = res.data[0].id;
     } else {
-      serviceList.value = [];
-      formState.serviceId = undefined;
+      pipelineList.value = [];
+      formState.pipelineId = undefined;
     }
   });
 };
