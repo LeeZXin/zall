@@ -85,3 +85,9 @@ logger:
 
 alert:
   enabled: true
+
+
+zallet:
+  enabled: true
+  cmd: /Users/lizexin/go/src/zallet/zallet
+  sock: /Users/lizexin/go/src/zallet/duck/zallet.sock

@@ -32,10 +32,10 @@
         </div>
       </div>
       <div class="section">
-        <div class="section-title">hosts</div>
+        <div class="section-title">host</div>
         <div class="section-body">
-          <a-input v-model:value="formState.hosts" />
-          <div class="input-desc">ip:port格式, 多个按;隔开</div>
+          <a-input v-model:value="formState.host" />
+          <div class="input-desc">https?://ip:port格式</div>
         </div>
       </div>
       <div class="section">
@@ -55,7 +55,6 @@
 import { reactive, ref } from "vue";
 import {
   serviceSourceNameRegexp,
-  serviceSourceHostRegexp,
   serviceSourceApiKeyRegexp
 } from "@/utils/regexp";
 import { message } from "ant-design-vue";
@@ -76,7 +75,7 @@ const getMode = () => {
 const mode = getMode();
 const formState = reactive({
   name: "",
-  hosts: "",
+  host: "",
   apiKey: "",
   selectedEnv: ""
 });
@@ -96,21 +95,25 @@ const getEnvCfg = () => {
     }
   });
 };
+
+const isValidHttpUrl = url => {
+  let u;
+  try {
+    u = new URL(url);
+    return u.protocol.startsWith("http");
+  } catch (e) {
+    return false;
+  }
+};
+
 const saveOrUpdateServiceSource = () => {
   if (!serviceSourceNameRegexp.test(formState.name)) {
     message.warn("名称格式错误");
     return;
   }
-  if (!formState.hosts) {
-    message.warn("hosts格式错误");
+  if (!isValidHttpUrl(formState.host)) {
+    message.warn("host格式错误");
     return;
-  }
-  let hosts = formState.hosts.split(";").filter(item => item);
-  for (let index in hosts) {
-    if (!serviceSourceHostRegexp.test(hosts[index])) {
-      message.warn("hosts格式错误");
-      return;
-    }
   }
   if (!serviceSourceApiKeyRegexp.test(formState.apiKey)) {
     message.warn("Api Key格式错误");
@@ -123,7 +126,7 @@ const saveOrUpdateServiceSource = () => {
         appId: route.params.appId,
         apiKey: formState.apiKey,
         name: formState.name,
-        hosts: hosts
+        host: formState.host
       },
       formState.selectedEnv
     ).then(() => {
@@ -136,7 +139,7 @@ const saveOrUpdateServiceSource = () => {
     updateServiceSourceRequest(
       {
         sourceId: serviceSourceStore.id,
-        hosts: hosts,
+        host: formState.host,
         name: formState.name,
         apiKey: formState.apiKey
       },
@@ -160,7 +163,7 @@ if (mode === "create") {
   } else {
     formState.name = serviceSourceStore.name;
     formState.selectedEnv = serviceSourceStore.env;
-    formState.hosts = serviceSourceStore.hosts;
+    formState.host = serviceSourceStore.host;
     formState.apiKey = serviceSourceStore.apiKey;
   }
 }

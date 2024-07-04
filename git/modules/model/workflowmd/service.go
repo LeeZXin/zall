@@ -214,9 +214,14 @@ func DeleteTaskByWorkflowIdList(ctx context.Context, wfIdList []int64) error {
 	return err
 }
 
-func ListVarsByRepoId(ctx context.Context, repoId int64) ([]Vars, error) {
+func ListVarsByRepoId(ctx context.Context, repoId int64, cols []string) ([]Vars, error) {
 	ret := make([]Vars, 0)
-	err := xormutil.MustGetXormSession(ctx).Where("repo_id = ?", repoId).Find(&ret)
+	session := xormutil.MustGetXormSession(ctx).
+		Where("repo_id = ?", repoId)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Find(&ret)
 	return ret, err
 }
 

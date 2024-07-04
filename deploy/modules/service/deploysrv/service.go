@@ -2,6 +2,7 @@ package deploysrv
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/pkg/status"
 )
 
 var (
@@ -25,16 +26,26 @@ type OuterService interface {
 	ListPlan(context.Context, ListPlanReqDTO) ([]PlanDTO, int64, error)
 	// GetPlanDetail 获取单个发布计划详情
 	GetPlanDetail(context.Context, GetPlanDetailReqDTO) (PlanDetailDTO, error)
-	// CreatePipeline 创建服务
+	// CreatePipeline 创建流水线
 	CreatePipeline(context.Context, CreatePipelineReqDTO) error
-	// UpdatePipeline 编辑服务
+	// UpdatePipeline 编辑流水线
 	UpdatePipeline(context.Context, UpdatePipelineReqDTO) error
-	// DeletePipeline 删除服务
+	// DeletePipeline 删除流水线
 	DeletePipeline(context.Context, DeletePipelineReqDTO) error
-	// ListPipeline 服务列表
+	// ListPipeline 流水线列表
 	ListPipeline(context.Context, ListPipelineReqDTO) ([]PipelineDTO, error)
-	// ListPipelineWhenCreatePlan 创建发布计划时展示的服务列表
+	// ListPipelineWhenCreatePlan 创建发布计划时展示的流水线列表
 	ListPipelineWhenCreatePlan(context.Context, ListPipelineWhenCreatePlanReqDTO) ([]SimplePipelineDTO, error)
+	// ListPipelineVars 流水线变量
+	ListPipelineVars(context.Context, ListPipelineVarsReqDTO) ([]PipelineVarsWithoutContentDTO, error)
+	// CreatePipelineVars 创建流水线变量
+	CreatePipelineVars(context.Context, CreatePipelineVarsReqDTO) error
+	// UpdatePipelineVars 编辑流水线变量
+	UpdatePipelineVars(context.Context, UpdatePipelineVarsReqDTO) error
+	// DeletePipelineVars 删除流水线变量
+	DeletePipelineVars(context.Context, DeletePipelineVarsReqDTO) error
+	// GetPipelineVarsContent 获取流水线变量内容
+	GetPipelineVarsContent(context.Context, GetPipelineVarsContentReqDTO) (PipelineVarsDTO, error)
 	// ListStages 展示发布计划流水线详情
 	ListStages(context.Context, ListStagesReqDTO) ([]StageDTO, error)
 	// RedoAgentStage 重新执行agent
@@ -45,12 +56,20 @@ type OuterService interface {
 	KillStage(context.Context, KillStageReqDTO) error
 	// ConfirmInteractStage 交互阶段确认
 	ConfirmInteractStage(context.Context, ConfirmInteractStageReqDTO) error
-	// ListServiceSource 查看服务数据来源
+	// ListServiceSource 查看流水线数据来源
 	ListServiceSource(context.Context, ListServiceSourceReqDTO) ([]ServiceSourceDTO, error)
-	// CreateServiceSource 插入服务数据来源
+	// CreateServiceSource 插入流水线数据来源
 	CreateServiceSource(context.Context, CreateServiceSourceReqDTO) error
-	// UpdateServiceSource 更新数据服务来源
+	// UpdateServiceSource 更新数据流水线来源
 	UpdateServiceSource(context.Context, UpdateServiceSourceReqDTO) error
-	// DeleteServiceSource 删除数据服务来源
+	// DeleteServiceSource 删除数据流水线来源
 	DeleteServiceSource(context.Context, DeleteServiceSourceReqDTO) error
+	// ListStatusSource 为了展示服务状态时展示服务来源
+	ListStatusSource(context.Context, ListStatusSourceReqDTO) ([]StatusSourceDTO, error)
+	// ListServiceStatus 展示服务状态列表
+	ListServiceStatus(context.Context, ListServiceStatusReqDTO) ([]status.Service, error)
+	// ListStatusActions 获取服务操作列表
+	ListStatusActions(context.Context, ListStatusActionReqDTO) ([]string, error)
+	// DoStatusAction 操作服务
+	DoStatusAction(context.Context, DoStatusActionReqDTO) error
 }

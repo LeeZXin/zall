@@ -84,18 +84,31 @@ type InsertServiceSourceReqDTO struct {
 	Name   string
 	AppId  string
 	Env    string
-	Hosts  []string
+	Host   string
 	ApiKey string
 }
 
 type UpdateServiceSourceReqDTO struct {
 	Id     int64
 	Name   string
-	Hosts  []string
+	Host   string
 	ApiKey string
 }
 
 type ListServiceSourceReqDTO struct {
 	AppId string
 	Env   string
+	Cols  []string
+}
+
+type InsertPipelineVarsReqDTO struct {
+	AppId   string
+	Env     string
+	Name    string
+	Content string
+}
+
+type UpdatePipelineVarsReqDTO struct {
+	Id      int64
+	Content string
 }

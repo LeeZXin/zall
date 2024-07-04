@@ -61,9 +61,9 @@ const columns = ref([
     key: "name"
   },
   {
-    title: "hosts",
-    dataIndex: "hosts",
-    key: "hosts"
+    title: "host",
+    dataIndex: "host",
+    key: "host"
   },
   {
     title: "操作",
@@ -99,11 +99,7 @@ const listServiceSource = () => {
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
-        name: item.name,
-        hosts: item.hosts.join(";"),
-        env: item.env,
-        id: item.id,
-        apiKey: item.apiKey,
+        ...item,
       };
     });
   });
@@ -119,7 +115,7 @@ const gotoUpdatePage = item => {
   serviceSourceStore.id = item.id;
   serviceSourceStore.name = item.name;
   serviceSourceStore.env = item.env;
-  serviceSourceStore.hosts = item.hosts;
+  serviceSourceStore.host = item.host;
   serviceSourceStore.apiKey = item.apiKey;
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/${item.id}/update`

@@ -257,6 +257,26 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/app/ServiceSourceHandlePage")
 
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/pipeline/vars/:env?",
+                component: () =>
+                    import ("../pages/team/app/PipelineVarsPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/pipeline/vars/create",
+                component: () =>
+                    import ("../pages/team/app/PipelineVarsHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/pipeline/vars/:varsId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/app/PipelineVarsHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/serviceStatus/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/ServiceStatusListPage")
+
             }]
         },
         {

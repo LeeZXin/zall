@@ -5,7 +5,7 @@
         <div class="info-name">名称</div>
         <div class="info-value">
           <span>{{planDetail.name}}</span>
-          <a-tag color="orange" style="font-weight:bold">{{planDetail.env}}</a-tag>
+          <a-tag color="orange" style="font-weight:bold;margin-left: 8px">{{planDetail.env}}</a-tag>
         </div>
       </li>
       <li>
@@ -43,7 +43,7 @@
         @click="startPlan"
       >执行发布计划</a-button>
     </div>
-    <div class="service-name no-wrap">{{planDetail?planDetail.serviceName:''}}</div>
+    <div class="service-name no-wrap">{{planDetail?planDetail.pipelineName:''}}</div>
     <div class="flex" style="padding-left:calc(50% - 420px)">
       <ul class="stages">
         <li v-for="(item, index) in stageList" v-bind:key="index">
@@ -301,7 +301,7 @@ const forceRedoUnSuccessAgentStages = () => {
 const getDetail = () => {
   getDeployPlanDetailRequest(planStore.id, planStore.env).then(res => {
     planDetail.value = res.data;
-    yamlConfig.value = res.data.serviceConfig;
+    yamlConfig.value = res.data.pipelineConfig;
     listStages();
     if (res.data?.planStatus === 3 || res.data?.planStatus === 4) {
       clearRefreshInterval();

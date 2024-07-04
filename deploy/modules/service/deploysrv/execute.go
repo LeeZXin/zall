@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/deploy/modules/model/deploymd"
 	"github.com/LeeZXin/zall/pkg/deploy"
+	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
@@ -20,23 +21,11 @@ func initRunner() {
 	runner, _ = executor.NewExecutor(10, 1024, time.Minute, executor.AbortStrategy)
 }
 
-type inputArgs struct {
-	base  map[string]string
-	input map[string]string
-}
-
-func newInputArgs(base map[string]string) *inputArgs {
-	return &inputArgs{
-		base:  base,
-		input: make(map[string]string, 8),
-	}
-}
-
-func executeDeployOnStartPlan(planId int64, appId string, dp deploy.Pipeline, env map[string]string, taskIdMapList []map[string]string) error {
+func executeDeployOnStartPlan(planId int64, appId string, dp deploy.Pipeline, env map[string]string, taskIdMapList []map[string]string, varsMap map[string]string) error {
 	return runner.Execute(func() {
 		for index, stage := range dp.Deploy {
 			if stage.Confirm != nil && stage.Confirm.NeedInteract ||
-				!runStage(dp, planId, appId, index, env, taskIdMapList[index]) {
+				!runStage(dp, planId, appId, index, env, taskIdMapList[index], varsMap) {
 				break
 			}
 			// 自动完成发布计划
@@ -47,7 +36,7 @@ func executeDeployOnStartPlan(planId int64, appId string, dp deploy.Pipeline, en
 	})
 }
 
-func executeDeployOnConfirmStage(planId int64, appId string, dp deploy.Pipeline, env map[string]string, startIndex int) error {
+func executeDeployOnConfirmStage(planId int64, appId string, dp deploy.Pipeline, env, varsMap map[string]string, startIndex int) error {
 	return runner.Execute(func() {
 		for index := startIndex; index < len(dp.Deploy); index++ {
 			stage := dp.Deploy[index]
@@ -56,7 +45,7 @@ func executeDeployOnConfirmStage(planId int64, appId string, dp deploy.Pipeline,
 			}
 			taskIdMap := getTaskIdMap(planId, index)
 			if taskIdMap == nil ||
-				!runStage(dp, planId, appId, index, env, taskIdMap) {
+				!runStage(dp, planId, appId, index, env, taskIdMap, varsMap) {
 				break
 			}
 			// 自动完成发布计划
@@ -67,8 +56,8 @@ func executeDeployOnConfirmStage(planId int64, appId string, dp deploy.Pipeline,
 	})
 }
 
-func redoAgentStage(planId int64, appId string, dp deploy.Pipeline, index int, agentId string, env map[string]string, taskId string) bool {
-	if runAgentScript(agentId, dp.Agents[agentId], dp.Deploy[index], appId, planId, index, env, dp, taskId) {
+func redoAgentStage(planId int64, appId string, dp deploy.Pipeline, index int, agentId string, env, varsMap map[string]string, taskId string) bool {
+	if runAgentScript(agentId, dp.Agents[agentId], dp.Deploy[index], appId, planId, index, env, varsMap, dp, taskId) {
 		// 判断是否自动执行下一个节点或自动完成
 		if isStageAllDone(planId, index) {
 			// 自动完成发布计划
@@ -83,7 +72,7 @@ func redoAgentStage(planId int64, appId string, dp deploy.Pipeline, index int, a
 					}
 					taskIdMap := getTaskIdMap(planId, i)
 					if taskIdMap == nil ||
-						!runStage(dp, planId, appId, i, env, taskIdMap) {
+						!runStage(dp, planId, appId, i, env, taskIdMap, varsMap) {
 						break
 					}
 					// 自动完成发布计划
@@ -125,7 +114,7 @@ type idAgent struct {
 	Agent deploy.Agent
 }
 
-func runStage(dp deploy.Pipeline, planId int64, appId string, index int, args map[string]string, taskIdMap map[string]string) bool {
+func runStage(dp deploy.Pipeline, planId int64, appId string, index int, args, taskIdMap, varsMap map[string]string) bool {
 	stage := dp.Deploy[index]
 	finalHasErr := false
 	agentMapList := make([]idAgent, 0)
@@ -147,7 +136,7 @@ func runStage(dp deploy.Pipeline, planId int64, appId string, index int, args ma
 	if stage.Parallel <= 1 {
 		var hasErr bool
 		for _, ia := range agentMapList {
-			if !runAgentScript(ia.Id, ia.Agent, stage, appId, planId, index, args, dp, taskIdMap[ia.Id]) {
+			if !runAgentScript(ia.Id, ia.Agent, stage, appId, planId, index, args, varsMap, dp, taskIdMap[ia.Id]) {
 				hasErr = true
 			}
 		}
@@ -165,7 +154,7 @@ func runStage(dp deploy.Pipeline, planId int64, appId string, index int, args ma
 			fagent := ia.Agent
 			parallel.Execute(func() {
 				defer wg.Done()
-				if !runAgentScript(fid, fagent, stage, appId, planId, index, args, dp, taskIdMap[fid]) {
+				if !runAgentScript(fid, fagent, stage, appId, planId, index, args, varsMap, dp, taskIdMap[fid]) {
 					hasErr.Store(true)
 				}
 			})
@@ -177,11 +166,11 @@ func runStage(dp deploy.Pipeline, planId int64, appId string, index int, args ma
 	return !finalHasErr
 }
 
-func runAgentScript(id string, agent deploy.Agent, stage deploy.Stage, appId string, planId int64, index int, args map[string]string, dp deploy.Pipeline, taskId string) bool {
+func runAgentScript(id string, agent deploy.Agent, stage deploy.Stage, appId string, planId int64, index int, args, varsMap map[string]string, dp deploy.Pipeline, taskId string) bool {
 	if !updateStageStatusAndInputArgs(planId, index, id, args, deploymd.RunningStageStatus, deploymd.PendingStageStatus) {
 		return false
 	}
-	log, err := agent.RunScript(dp.Actions[stage.Action].Script, appId, args, taskId)
+	log, err := agent.RunScript(dp.Actions[stage.Action].Script, appId, util.MergeMap(args, varsMap), taskId)
 	if err != nil {
 		updateStageStatusAndLog(planId, index, id, err.Error(), deploymd.FailedStageStatus, deploymd.RunningStageStatus)
 		return false

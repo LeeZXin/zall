@@ -1,7 +1,8 @@
 <template>
-  <div style="padding:14px">
-    <div class="header">
+  <div style="padding:10px">
+    <div class="header flex-between">
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加变量</a-button>
+      <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ul class="vars-list" v-if="varsList.length > 0">
       <li v-for="item in varsList" v-bind:key="item.id">
@@ -14,26 +15,35 @@
     </ul>
     <ZNoData v-else>
       <template #desc>
-        <div
-          class="no-data-text"
-        >Variables are encrypted and are used for sensitive or long data</div>
+        <div class="no-data-text">Variables are used for sensitive or long data</div>
       </template>
     </ZNoData>
   </div>
 </template>
 <script setup>
+import EnvSelector from "@/components/app/EnvSelector";
 import { ref, createVNode, h } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import ZNoData from "@/components/common/ZNoData";
 import { ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
-import { listVarsRequest, deleteVarsRequest } from "@/api/git/workflowApi";
+import {
+  listPipelineVarsRequest,
+  deletePipelineVarsRequest
+} from "@/api/app/pipelineApi";
+import { usePipelineVarsStore } from "@/pinia/pipelineVarsStore";
+const varsStore = usePipelineVarsStore();
 const router = useRouter();
 const route = useRoute();
 const varsList = ref([]);
+const selectedEnv = ref("");
+
 const gotoCreatePage = () => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars/create`);
+  router.push(
+    `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/create?env=${selectedEnv.value}`
+  );
 };
+
 const deleteVars = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
@@ -41,7 +51,7 @@ const deleteVars = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteVarsRequest(item.id).then(() => {
+      deletePipelineVarsRequest(item.id, selectedEnv.value).then(() => {
         message.success("删除成功");
         listVars();
       });
@@ -49,17 +59,35 @@ const deleteVars = item => {
     onCancel() {}
   });
 };
+
 const listVars = () => {
-  listVarsRequest(route.params.repoId).then(res => {
+  listPipelineVarsRequest(
+    {
+      appId: route.params.appId,
+      env: selectedEnv.value
+    },
+    selectedEnv.value
+  ).then(res => {
     varsList.value = res.data;
   });
 };
+
 const handleVars = item => {
+  varsStore.id = item.id;
+  varsStore.name = item.name;
+  varsStore.env = item.env;
   router.push(
-    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars/${item.id}/update`
+    `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${item.id}/update`
   );
 };
-listVars();
+
+const onEnvChange = e => {
+  router.replace(
+    `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${e.newVal}`
+  );
+  selectedEnv.value = e.newVal;
+  listVars();
+};
 </script>
 <style scoped>
 .vars-list {

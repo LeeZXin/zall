@@ -360,7 +360,7 @@ func GetFingerprint(q string) string {
 			//   7 '\n'
 			//   8 '-'
 			// After copying 'select ', we are here @ 7 and intend to skip the
-			// newline.  Next, the '-' @ 8 triggers a copy of any preceding
+			// newline.  Cursor, the '-' @ 8 triggers a copy of any preceding
 			// chars.  So here if we set cpFromOffset = 7 then 7:8 is copied,
 			// the newline, but setting cpFromOffset = 7 + 1 is 8:8 and so
 			// nothing is copied as we want.  Actually, cpToOffset is still 6

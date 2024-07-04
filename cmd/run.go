@@ -5,6 +5,7 @@ import (
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
 	"github.com/LeeZXin/zall/deploy/modules/api/deployapi"
+	"github.com/LeeZXin/zall/deploy/modules/api/statusapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
@@ -143,6 +144,14 @@ func runZall(*cli.Context) error {
 		if static.GetBool("alert.enabled") {
 			//alertsrv.InitTask()
 		}
+	}
+	// for zallet
+	{
+		if static.GetBool("zallet.enabled") {
+			logger.Logger.Info("zallet status server enabled")
+			statusapi.InitApi()
+		}
+
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer(), prom.NewServer())
 	zsf.Run(

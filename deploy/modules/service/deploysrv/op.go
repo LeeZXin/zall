@@ -50,6 +50,18 @@ func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInf
 	return checkAppDevelopPerm(ctx, operator, &app)
 }
 
+func checkAppDevelopPermBySourceId(ctx context.Context, operator apisession.UserInfo, sourceId int64) (deploymd.ServiceSource, error) {
+	source, b, err := deploymd.GetServiceSourceById(ctx, sourceId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return deploymd.ServiceSource{}, util.InternalError(err)
+	}
+	if !b {
+		return deploymd.ServiceSource{}, util.InvalidArgsError()
+	}
+	return source, checkAppDevelopPermByAppId(ctx, operator, source.AppId)
+}
+
 func checkAppDevelopPerm(ctx context.Context, operator apisession.UserInfo, app *appmd.App) error {
 	if operator.IsAdmin {
 		return nil
@@ -133,7 +145,7 @@ func checkCreateDeployPlanPerm(ctx context.Context, operator apisession.UserInfo
 	return nil
 }
 
-func checkPipelinePerm(ctx context.Context, appId string, operator apisession.UserInfo) error {
+func checkManagePipelinePermByAppId(ctx context.Context, appId string, operator apisession.UserInfo) error {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -156,6 +168,18 @@ func checkPipelinePerm(ctx context.Context, appId string, operator apisession.Us
 	return nil
 }
 
+func checkManagePipelinePermByVarsId(ctx context.Context, varsId int64, operator apisession.UserInfo) (deploymd.PipelineVars, error) {
+	vars, b, err := deploymd.GetPipelineVarsById(ctx, varsId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return deploymd.PipelineVars{}, util.InternalError(err)
+	}
+	if !b {
+		return deploymd.PipelineVars{}, util.InvalidArgsError()
+	}
+	return vars, checkManagePipelinePermByAppId(ctx, vars.AppId, operator)
+}
+
 func checkPipelinePermByPipelineId(ctx context.Context, pipelineId int64, operator apisession.UserInfo) error {
 	pipeline, b, err := deploymd.GetPipelineById(ctx, pipelineId)
 	if err != nil {
@@ -165,7 +189,7 @@ func checkPipelinePermByPipelineId(ctx context.Context, pipelineId int64, operat
 	if !b {
 		return util.InvalidArgsError()
 	}
-	return checkPipelinePerm(ctx, pipeline.AppId, operator)
+	return checkManagePipelinePermByAppId(ctx, pipeline.AppId, operator)
 }
 
 func checkManageServiceSourcePerm(ctx context.Context, operator apisession.UserInfo, app *appmd.App) error {

@@ -22,8 +22,12 @@
             <span>发布计划</span>
           </a-menu-item>
           <a-menu-item key="/serviceSource/list">
-            <file-outlined />
+            <flag-outlined />
             <span>服务来源</span>
+          </a-menu-item>
+          <a-menu-item key="/serviceStatus/list">
+            <read-outlined />
+            <span>服务状态</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -42,7 +46,9 @@ import { useRouter, useRoute } from "vue-router";
 import {
   FileOutlined,
   PullRequestOutlined,
-  TagOutlined
+  TagOutlined,
+  FlagOutlined,
+  ReadOutlined
 } from "@ant-design/icons-vue";
 const { t } = useI18n();
 const route = useRoute();
@@ -75,7 +81,8 @@ const pagesMap = {
   "/deployConfig": "/deployConfig/list",
   "/pipeline": "/pipeline/list",
   "/deployPlan": "/deployPlan/list",
-  "/serviceSource": "/serviceSource/list"
+  "/serviceSource": "/serviceSource/list",
+  "/serviceStatus": "/serviceStatus/list"
 };
 watch(
   () => router.currentRoute.value.path,

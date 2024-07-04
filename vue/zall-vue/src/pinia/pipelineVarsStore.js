@@ -1,11 +1,9 @@
 import { defineStore } from 'pinia'
 
-export const useServiceSourceStore = defineStore('serviceSource', {
+export const usePipelineVarsStore = defineStore('pipelineVars', {
     state: () => ({
         id: 0,
         name: "",
         env: "",
-        host: "",
-        apiKey: ""
     })
 })

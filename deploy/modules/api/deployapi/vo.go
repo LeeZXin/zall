@@ -106,26 +106,65 @@ type ForceRedoStageReqVO struct {
 }
 
 type CreateServiceSourceReqVO struct {
-	AppId  string   `json:"appId"`
-	Env    string   `json:"env"`
-	Name   string   `json:"name"`
-	Hosts  []string `json:"hosts"`
-	ApiKey string   `json:"apiKey"`
+	AppId  string `json:"appId"`
+	Env    string `json:"env"`
+	Name   string `json:"name"`
+	Host   string `json:"host"`
+	ApiKey string `json:"apiKey"`
 }
 
 type UpdateServiceSourceReqVO struct {
-	SourceId int64    `json:"sourceId"`
-	Name     string   `json:"name"`
-	Hosts    []string `json:"hosts"`
-	ApiKey   string   `json:"apiKey"`
+	SourceId int64  `json:"sourceId"`
+	Name     string `json:"name"`
+	Host     string `json:"host"`
+	ApiKey   string `json:"apiKey"`
 }
 
 type ServiceSourceVO struct {
-	Id      int64    `json:"id"`
-	Name    string   `json:"name"`
-	AppId   string   `json:"appId"`
-	Env     string   `json:"env"`
-	Hosts   []string `json:"hosts"`
-	ApiKey  string   `json:"apiKey"`
-	Created string   `json:"created"`
+	Id      int64  `json:"id"`
+	Name    string `json:"name"`
+	AppId   string `json:"appId"`
+	Env     string `json:"env"`
+	Host    string `json:"host"`
+	ApiKey  string `json:"apiKey"`
+	Created string `json:"created"`
+}
+
+type PipelineVarsWithoutContentVO struct {
+	Id    int64  `json:"id"`
+	Name  string `json:"name"`
+	AppId string `json:"appId"`
+	Env   string `json:"env"`
+}
+
+type PipelineVarsVO struct {
+	Id      int64  `json:"id"`
+	Name    string `json:"name"`
+	AppId   string `json:"appId"`
+	Env     string `json:"env"`
+	Content string `json:"content"`
+}
+
+type CreatePipelineVarsReqVO struct {
+	AppId   string `json:"appId"`
+	Env     string `json:"env"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+type UpdatePipelineVarsReqVO struct {
+	Id      int64  `json:"id"`
+	Content string `json:"content"`
+}
+
+type StatusSourceVO struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
+	Env  string `json:"env"`
+}
+
+type DoServiceStatusActionReqVO struct {
+	SourceId  int64  `json:"sourceId"`
+	ServiceId string `json:"serviceId"`
+	Action    string `json:"action"`
 }

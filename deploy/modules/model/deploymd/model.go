@@ -7,12 +7,13 @@ import (
 )
 
 const (
-	StageTableName     = "zservice_deploy_stage"
-	DeployLogTableName = "zservice_deploy_log"
-	PlanTableName      = "zservice_deploy_plan"
-	OpLogTableName     = "zservice_op_log"
-	PipelineTableName  = "zservice_pipeline"
-	SourceTableName    = "zservice_source"
+	StageTableName        = "zservice_deploy_stage"
+	DeployLogTableName    = "zservice_deploy_log"
+	PlanTableName         = "zservice_deploy_plan"
+	OpLogTableName        = "zservice_op_log"
+	PipelineTableName     = "zservice_pipeline"
+	PipelineVarsTableName = "zservice_pipeline_vars"
+	SourceTableName       = "zservice_source"
 )
 
 type PlanStatus int
@@ -150,16 +151,30 @@ func (*Pipeline) TableName() string {
 }
 
 type ServiceSource struct {
-	Id      int64                          `json:"id" xorm:"pk autoincr"`
-	Name    string                         `json:"name"`
-	AppId   string                         `json:"appId"`
-	Env     string                         `json:"env"`
-	Hosts   *xormutil.Conversion[[]string] `json:"hosts"`
-	ApiKey  string                         `json:"apiKey"`
-	Created time.Time                      `json:"created" xorm:"created"`
-	Updated time.Time                      `json:"updated" xorm:"updated"`
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	Name    string    `json:"name"`
+	AppId   string    `json:"appId"`
+	Env     string    `json:"env"`
+	Host    string    `json:"host"`
+	ApiKey  string    `json:"apiKey"`
+	Created time.Time `json:"created" xorm:"created"`
+	Updated time.Time `json:"updated" xorm:"updated"`
 }
 
 func (*ServiceSource) TableName() string {
 	return SourceTableName
+}
+
+type PipelineVars struct {
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	AppId   string    `json:"appId"`
+	Env     string    `json:"env"`
+	Name    string    `json:"name"`
+	Content string    `json:"content"`
+	Created time.Time `json:"created" xorm:"created"`
+	Updated time.Time `json:"updated" xorm:"updated"`
+}
+
+func (*PipelineVars) TableName() string {
+	return PipelineVarsTableName
 }

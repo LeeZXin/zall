@@ -6,13 +6,18 @@ import (
 	"github.com/LeeZXin/zall/deploy/modules/model/deploymd"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/sshagent"
+	"github.com/LeeZXin/zall/pkg/status"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"gopkg.in/yaml.v3"
+	"io"
 	"math"
+	"net/http"
+	"strings"
 )
 
 type outerImpl struct{}
@@ -85,6 +90,11 @@ func (*outerImpl) StartPlan(ctx context.Context, reqDTO StartPlanReqDTO) error {
 		return util.ThereHasBugErr()
 	}
 	insertStageList, taskIdMapList := pipelineConfig2DeployStageReq(reqDTO.PlanId, &pipelineConfig)
+	varsMap, err := deploymd.ListPipelineVarsMap(ctx, pipeline.AppId, pipeline.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		b2, err2 := deploymd.StartPlan(ctx, reqDTO.PlanId, pipeline.Config)
 		if err2 != nil {
@@ -108,6 +118,7 @@ func (*outerImpl) StartPlan(ctx context.Context, reqDTO StartPlanReqDTO) error {
 				deploy.AppKey:                   plan.AppId,
 			},
 			taskIdMapList,
+			varsMap,
 		)
 	})
 	if err != nil {
@@ -124,7 +135,7 @@ func (*outerImpl) RedoAgentStage(ctx context.Context, reqDTO RedoAgentStageReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	stage, plan, _, err := checkAppDevelopPermByStageId(ctx, reqDTO.Operator, reqDTO.StageId)
+	stage, plan, pipeline, err := checkAppDevelopPermByStageId(ctx, reqDTO.Operator, reqDTO.StageId)
 	if err != nil {
 		return err
 	}
@@ -136,6 +147,11 @@ func (*outerImpl) RedoAgentStage(ctx context.Context, reqDTO RedoAgentStageReqDT
 	err = yaml.Unmarshal([]byte(plan.PipelineConfig), &dp)
 	if err != nil {
 		return nil
+	}
+	varsMap, err := deploymd.ListPipelineVarsMap(ctx, pipeline.AppId, pipeline.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
 	}
 	b, err := deploymd.UpdateStageStatusWithOldStatusById(ctx, stage.Id, deploymd.PendingStageStatus, stage.StageStatus)
 	if err != nil {
@@ -153,7 +169,7 @@ func (*outerImpl) RedoAgentStage(ctx context.Context, reqDTO RedoAgentStageReqDT
 		args[deploy.OperatorAccountKey] = reqDTO.Operator.Account
 		args[deploy.AppKey] = plan.AppId
 		err = runner.Execute(func() {
-			redoAgentStage(stage.PlanId, plan.AppId, dp, stage.StageIndex, stage.Agent, args, stage.TaskId)
+			redoAgentStage(stage.PlanId, plan.AppId, dp, stage.StageIndex, stage.Agent, args, varsMap, stage.TaskId)
 		})
 		if err != nil {
 			return util.OperationFailedError()
@@ -169,7 +185,7 @@ func (*outerImpl) ForceRedoNotSuccessfulAgentStages(ctx context.Context, reqDTO 
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	plan, _, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
+	plan, pipeline, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
 	if err != nil {
 		return err
 	}
@@ -185,6 +201,11 @@ func (*outerImpl) ForceRedoNotSuccessfulAgentStages(ctx context.Context, reqDTO 
 		return util.InvalidArgsError()
 	}
 	stages, err := deploymd.ListStagesByPlanIdAndLETIndex(ctx, reqDTO.PlanId, reqDTO.StageIndex)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	varsMap, err := deploymd.ListPipelineVarsMap(ctx, pipeline.AppId, pipeline.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -236,7 +257,7 @@ func (*outerImpl) ForceRedoNotSuccessfulAgentStages(ctx context.Context, reqDTO 
 			if !b {
 				break
 			}
-			redoAgentStage(reqDTO.PlanId, plan.AppId, dp, reqDTO.StageIndex, ns.Agent, args, ns.TaskId)
+			redoAgentStage(reqDTO.PlanId, plan.AppId, dp, reqDTO.StageIndex, ns.Agent, args, varsMap, ns.TaskId)
 		}
 	})
 	if err != nil {
@@ -399,7 +420,7 @@ func (*outerImpl) CreatePipeline(ctx context.Context, reqDTO CreatePipelineReqDT
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err := checkPipelinePerm(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+	if err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
 		return err
 	}
 	err := deploymd.InsertPipeline(ctx, deploymd.InsertPipelineReqDTO{
@@ -474,7 +495,7 @@ func (*outerImpl) ListPipeline(ctx context.Context, reqDTO ListPipelineReqDTO) (
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err := checkPipelinePerm(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+	if err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
 		return nil, err
 	}
 	pipelines, err := deploymd.ListPipeline(ctx, deploymd.ListPipelineReqDTO{
@@ -721,7 +742,7 @@ func (*outerImpl) ConfirmInteractStage(ctx context.Context, reqDTO ConfirmIntera
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	plan, _, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
+	plan, pipeline, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
 	if err != nil {
 		return err
 	}
@@ -782,7 +803,12 @@ func (*outerImpl) ConfirmInteractStage(ctx context.Context, reqDTO ConfirmIntera
 			return util.InvalidArgsError()
 		}
 	}
-	err = executeDeployOnConfirmStage(reqDTO.PlanId, plan.AppId, dp, filteredArgs, reqDTO.StageIndex)
+	varsMap, err := deploymd.ListPipelineVarsMap(ctx, pipeline.AppId, pipeline.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	err = executeDeployOnConfirmStage(reqDTO.PlanId, plan.AppId, dp, filteredArgs, varsMap, reqDTO.StageIndex)
 	if err != nil {
 		return util.OperationFailedError()
 	}
@@ -809,19 +835,15 @@ func (*outerImpl) ListServiceSource(ctx context.Context, reqDTO ListServiceSourc
 		return nil, util.InternalError(err)
 	}
 	data, _ := listutil.Map(sources, func(t deploymd.ServiceSource) (ServiceSourceDTO, error) {
-		ret := ServiceSourceDTO{
+		return ServiceSourceDTO{
 			Id:      t.Id,
 			Name:    t.Name,
 			AppId:   t.AppId,
 			Env:     t.Env,
-			Hosts:   t.Hosts.Data,
+			Host:    t.Host,
 			ApiKey:  t.ApiKey,
 			Created: t.Created,
-		}
-		if t.Hosts != nil {
-			ret.Hosts = t.Hosts.Data
-		}
-		return ret, nil
+		}, nil
 	})
 	return data, nil
 }
@@ -841,7 +863,7 @@ func (*outerImpl) CreateServiceSource(ctx context.Context, reqDTO CreateServiceS
 		Name:   reqDTO.Name,
 		AppId:  reqDTO.AppId,
 		Env:    reqDTO.Env,
-		Hosts:  reqDTO.Hosts,
+		Host:   reqDTO.Host,
 		ApiKey: reqDTO.ApiKey,
 	})
 	if err != nil {
@@ -865,7 +887,7 @@ func (*outerImpl) UpdateServiceSource(ctx context.Context, reqDTO UpdateServiceS
 	_, err = deploymd.UpdateServiceSource(ctx, deploymd.UpdateServiceSourceReqDTO{
 		Id:     reqDTO.SourceId,
 		Name:   reqDTO.Name,
-		Hosts:  reqDTO.Hosts,
+		Host:   reqDTO.Host,
 		ApiKey: reqDTO.ApiKey,
 	})
 	if err != nil {
@@ -892,4 +914,266 @@ func (*outerImpl) DeleteServiceSource(ctx context.Context, reqDTO DeleteServiceS
 		return util.InternalError(err)
 	}
 	return nil
+}
+
+// ListPipelineVars 流水线变量
+func (*outerImpl) ListPipelineVars(ctx context.Context, reqDTO ListPipelineVarsReqDTO) ([]PipelineVarsWithoutContentDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 检查权限
+	if err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+		return nil, err
+	}
+	vars, err := deploymd.ListPipelineVars(ctx, reqDTO.AppId, reqDTO.Env, []string{"id", "app_id", "env", "name"})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(vars, func(t deploymd.PipelineVars) (PipelineVarsWithoutContentDTO, error) {
+		return PipelineVarsWithoutContentDTO{
+			Id:    t.Id,
+			Name:  t.Name,
+			AppId: t.AppId,
+			Env:   t.Env,
+		}, nil
+	})
+}
+
+// CreatePipelineVars 创建流水线变量
+func (*outerImpl) CreatePipelineVars(ctx context.Context, reqDTO CreatePipelineVarsReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 检查权限
+	if err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+		return err
+	}
+	b, err := deploymd.ExistPipelineVarsByAppIdAndEnvAndName(ctx, reqDTO.AppId, reqDTO.Env, reqDTO.Name)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if b {
+		return util.AlreadyExistsError()
+	}
+	err = deploymd.InsertPipelineVars(ctx, deploymd.InsertPipelineVarsReqDTO{
+		AppId:   reqDTO.AppId,
+		Env:     reqDTO.Env,
+		Name:    reqDTO.Name,
+		Content: reqDTO.Content,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// UpdatePipelineVars 编辑流水线变量
+func (*outerImpl) UpdatePipelineVars(ctx context.Context, reqDTO UpdatePipelineVarsReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 检查权限
+	if _, err := checkManagePipelinePermByVarsId(ctx, reqDTO.Id, reqDTO.Operator); err != nil {
+		return err
+	}
+	_, err := deploymd.UpdatePipelineVars(ctx, deploymd.UpdatePipelineVarsReqDTO{
+		Id:      reqDTO.Id,
+		Content: reqDTO.Content,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// DeletePipelineVars 删除流水线变量
+func (*outerImpl) DeletePipelineVars(ctx context.Context, reqDTO DeletePipelineVarsReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 检查权限
+	if _, err := checkManagePipelinePermByVarsId(ctx, reqDTO.Id, reqDTO.Operator); err != nil {
+		return err
+	}
+	_, err := deploymd.DeletePipelineVarsById(ctx, reqDTO.Id)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// GetPipelineVarsContent 获取流水线变量内容
+func (*outerImpl) GetPipelineVarsContent(ctx context.Context, reqDTO GetPipelineVarsContentReqDTO) (PipelineVarsDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return PipelineVarsDTO{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 检查权限
+	vars, err := checkManagePipelinePermByVarsId(ctx, reqDTO.Id, reqDTO.Operator)
+	if err != nil {
+		return PipelineVarsDTO{}, err
+	}
+	return PipelineVarsDTO{
+		Id:      vars.Id,
+		Name:    vars.Name,
+		AppId:   vars.AppId,
+		Env:     vars.Env,
+		Content: vars.Content,
+	}, nil
+}
+
+// ListStatusSource 为了展示服务状态时展示服务来源
+func (*outerImpl) ListStatusSource(ctx context.Context, reqDTO ListStatusSourceReqDTO) ([]StatusSourceDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
+		return nil, err
+	}
+	sources, err := deploymd.ListServiceSource(ctx, deploymd.ListServiceSourceReqDTO{
+		AppId: reqDTO.AppId,
+		Env:   reqDTO.Env,
+		Cols:  []string{"id", "name", "env"},
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(sources, func(t deploymd.ServiceSource) (StatusSourceDTO, error) {
+		return StatusSourceDTO{
+			Id:   t.Id,
+			Name: t.Name,
+			Env:  t.Env,
+		}, nil
+	})
+}
+
+// ListServiceStatus 展示服务状态列表
+func (*outerImpl) ListServiceStatus(ctx context.Context, reqDTO ListServiceStatusReqDTO) ([]status.Service, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	source, err := checkAppDevelopPermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId)
+	if err != nil {
+		return nil, err
+	}
+	url := strings.TrimSuffix(source.Host, "/") +
+		fmt.Sprintf("/api/service/v1/status/list?app=%s&env=%s", source.AppId, source.Env)
+	resp := make([]status.Service, 0)
+	err = httputil.Get(
+		ctx,
+		http.DefaultClient,
+		url,
+		map[string]string{
+			"Authorization": source.ApiKey,
+		},
+		&resp,
+	)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.OperationFailedError()
+	}
+	return resp, nil
+}
+
+// DoStatusAction 操作服务
+func (*outerImpl) DoStatusAction(ctx context.Context, reqDTO DoStatusActionReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	source, err := checkAppDevelopPermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId)
+	if err != nil {
+		return err
+	}
+	actions, err := listActions(ctx, source)
+	if err != nil {
+		return util.OperationFailedError()
+	}
+	for _, action := range actions {
+		if action.Label == reqDTO.Action {
+			url := strings.TrimSuffix(source.Host, "/") +
+				fmt.Sprintf("/%s?serviceId=%s", strings.TrimPrefix(action.Api.Url, "/"), reqDTO.ServiceId)
+			request, err := http.NewRequestWithContext(ctx, action.Api.Method, url, nil)
+			if err != nil {
+				logger.Logger.WithContext(ctx).Error(err)
+				return util.OperationFailedError()
+			}
+			for k, v := range action.Api.Headers {
+				request.Header.Set(k, v)
+			}
+			resp, err := http.DefaultClient.Do(request)
+			if err != nil {
+				logger.Logger.WithContext(ctx).Error(err)
+				return util.OperationFailedError()
+			}
+			all, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				logger.Logger.WithContext(ctx).Infof("url: %s message: %s", url, string(all))
+				return util.OperationFailedError()
+			}
+			return nil
+		}
+	}
+	return util.OperationFailedError()
+}
+
+// ListStatusActions 获取服务操作列表
+func (*outerImpl) ListStatusActions(ctx context.Context, reqDTO ListStatusActionReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	source, err := checkAppDevelopPermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId)
+	if err != nil {
+		return nil, err
+	}
+	actions, err := listActions(ctx, source)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.OperationFailedError()
+	}
+	return listutil.Map(actions, func(t status.Action) (string, error) {
+		return t.Label, nil
+	})
+}
+
+func listActions(ctx context.Context, source deploymd.ServiceSource) ([]status.Action, error) {
+	url := strings.TrimSuffix(source.Host, "/") + "/api/service/v1/status/actions"
+	resp := make([]status.Action, 0)
+	err := httputil.Get(
+		ctx,
+		http.DefaultClient,
+		url,
+		map[string]string{
+			"Authorization": source.ApiKey,
+		},
+		&resp,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

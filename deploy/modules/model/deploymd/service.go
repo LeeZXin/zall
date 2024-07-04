@@ -18,6 +18,10 @@ func IsServiceSourceNameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
 }
 
+func IsPipelineVarsNameValid(name string) bool {
+	return len(name) > 0 && len(name) <= 32
+}
+
 func InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (Plan, error) {
 	ret := Plan{
 		AppId:          reqDTO.AppId,
@@ -304,21 +308,22 @@ func GetPipelineById(ctx context.Context, pipelineId int64) (Pipeline, bool, err
 
 func ListServiceSource(ctx context.Context, reqDTO ListServiceSourceReqDTO) ([]ServiceSource, error) {
 	ret := make([]ServiceSource, 0)
-	err := xormutil.MustGetXormSession(ctx).
+	session := xormutil.MustGetXormSession(ctx).
 		Where("app_id = ?", reqDTO.AppId).
-		And("env = ?", reqDTO.Env).
-		Find(&ret)
+		And("env = ?", reqDTO.Env)
+	if len(reqDTO.Cols) > 0 {
+		session.Cols(reqDTO.Cols...)
+	}
+	err := session.Find(&ret)
 	return ret, err
 }
 
 func InsertServiceSource(ctx context.Context, reqDTO InsertServiceSourceReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ServiceSource{
-		Name:  reqDTO.Name,
-		AppId: reqDTO.AppId,
-		Env:   reqDTO.Env,
-		Hosts: &xormutil.Conversion[[]string]{
-			Data: reqDTO.Hosts,
-		},
+		Name:   reqDTO.Name,
+		AppId:  reqDTO.AppId,
+		Env:    reqDTO.Env,
+		Host:   reqDTO.Host,
 		ApiKey: reqDTO.ApiKey,
 	})
 	return err
@@ -327,12 +332,10 @@ func InsertServiceSource(ctx context.Context, reqDTO InsertServiceSourceReqDTO) 
 func UpdateServiceSource(ctx context.Context, reqDTO UpdateServiceSourceReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("name", "hosts", "api_key").
+		Cols("name", "host", "api_key").
 		Update(&ServiceSource{
-			Name: reqDTO.Name,
-			Hosts: &xormutil.Conversion[[]string]{
-				Data: reqDTO.Hosts,
-			},
+			Name:   reqDTO.Name,
+			Host:   reqDTO.Host,
 			ApiKey: reqDTO.ApiKey,
 		})
 	return rows == 1, err
@@ -349,4 +352,71 @@ func GetServiceSourceById(ctx context.Context, id int64) (ServiceSource, bool, e
 	var ret ServiceSource
 	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
 	return ret, b, err
+}
+
+func ListPipelineVars(ctx context.Context, appId, env string, cols []string) ([]PipelineVars, error) {
+	ret := make([]PipelineVars, 0)
+	session := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Find(&ret)
+	return ret, err
+}
+
+func ListPipelineVarsMap(ctx context.Context, appId, env string) (map[string]string, error) {
+	ret, err := ListPipelineVars(ctx, appId, env, []string{"name", "content"})
+	if err != nil {
+		return nil, err
+	}
+	varsMap := make(map[string]string, len(ret))
+	for _, vars := range ret {
+		varsMap[vars.Name] = vars.Content
+	}
+	return varsMap, nil
+}
+
+func InsertPipelineVars(ctx context.Context, reqDTO InsertPipelineVarsReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&PipelineVars{
+		AppId:   reqDTO.AppId,
+		Env:     reqDTO.Env,
+		Name:    reqDTO.Name,
+		Content: reqDTO.Content,
+	})
+	return err
+}
+
+func UpdatePipelineVars(ctx context.Context, reqDTO UpdatePipelineVarsReqDTO) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", reqDTO.Id).
+		Cols("content").
+		Update(&PipelineVars{
+			Content: reqDTO.Content,
+		})
+	return rows == 1, err
+}
+
+func DeletePipelineVarsById(ctx context.Context, id int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Delete(new(PipelineVars))
+	return rows == 1, err
+}
+
+func GetPipelineVarsById(ctx context.Context, id int64) (PipelineVars, bool, error) {
+	var ret PipelineVars
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Get(&ret)
+	return ret, b, err
+}
+
+func ExistPipelineVarsByAppIdAndEnvAndName(ctx context.Context, appId, env, name string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env).
+		And("name = ?", name).
+		Exist(new(PipelineVars))
 }

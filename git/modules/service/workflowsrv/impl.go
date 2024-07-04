@@ -145,7 +145,7 @@ func (s *innerImpl) FindAndExecute(reqDTO FindAndExecuteWorkflowReqDTO) {
 func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO) error {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	varsList, err := workflowmd.ListVarsByRepoId(ctx, wf.RepoId)
+	varsList, err := workflowmd.ListVarsByRepoId(ctx, wf.RepoId, nil)
 	if err != nil {
 		logger.Logger.Error(err)
 		return err
@@ -791,7 +791,7 @@ func (*outerImpl) ListVars(ctx context.Context, reqDTO ListVarsReqDTO) ([]VarsWi
 	if err != nil {
 		return nil, err
 	}
-	varsList, err := workflowmd.ListVarsByRepoId(ctx, reqDTO.RepoId)
+	varsList, err := workflowmd.ListVarsByRepoId(ctx, reqDTO.RepoId, []string{"id", "name"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)

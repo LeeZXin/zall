@@ -8,6 +8,8 @@ import (
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/util"
 	"gopkg.in/yaml.v3"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -438,7 +440,7 @@ type ServiceSourceDTO struct {
 	Name    string
 	AppId   string
 	Env     string
-	Hosts   []string
+	Host    string
 	ApiKey  string
 	Created time.Time
 }
@@ -447,7 +449,7 @@ type CreateServiceSourceReqDTO struct {
 	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
 	Name     string              `json:"name"`
-	Hosts    []string            `json:"hosts"`
+	Host     string              `json:"host"`
 	ApiKey   string              `json:"apiKey"`
 	Operator apisession.UserInfo `json:"operator"`
 }
@@ -465,13 +467,9 @@ func (r *CreateServiceSourceReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if len(r.Hosts) == 0 {
+	parsed, err := url.Parse(r.Host)
+	if err != nil || !strings.HasPrefix(parsed.Scheme, "http") {
 		return util.InvalidArgsError()
-	}
-	for _, host := range r.Hosts {
-		if !util.IpPortPattern.MatchString(host) {
-			return util.InvalidArgsError()
-		}
 	}
 	return nil
 }
@@ -479,7 +477,7 @@ func (r *CreateServiceSourceReqDTO) IsValid() error {
 type UpdateServiceSourceReqDTO struct {
 	SourceId int64               `json:"sourceId"`
 	Name     string              `json:"name"`
-	Hosts    []string            `json:"hosts"`
+	Host     string              `json:"host"`
 	ApiKey   string              `json:"apiKey"`
 	Operator apisession.UserInfo `json:"operator"`
 }
@@ -494,13 +492,9 @@ func (r *UpdateServiceSourceReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if len(r.Hosts) == 0 {
+	parsed, err := url.Parse(r.Host)
+	if err != nil || !strings.HasPrefix(parsed.Scheme, "http") {
 		return util.InvalidArgsError()
-	}
-	for _, host := range r.Hosts {
-		if !util.IpPortPattern.MatchString(host) {
-			return util.InvalidArgsError()
-		}
 	}
 	return nil
 }
@@ -511,6 +505,182 @@ type DeleteServiceSourceReqDTO struct {
 }
 
 func (r *DeleteServiceSourceReqDTO) IsValid() error {
+	if r.SourceId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListPipelineVarsReqDTO struct {
+	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListPipelineVarsReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type PipelineVarsWithoutContentDTO struct {
+	Id    int64
+	Name  string
+	AppId string
+	Env   string
+}
+
+type PipelineVarsDTO struct {
+	Id      int64
+	Name    string
+	AppId   string
+	Env     string
+	Content string
+}
+
+type UpdatePipelineVarsReqDTO struct {
+	Id       int64               `json:"id"`
+	Content  string              `json:"content"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *UpdatePipelineVarsReqDTO) IsValid() error {
+	if r.Id <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DeletePipelineVarsReqDTO struct {
+	Id       int64               `json:"varsId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *DeletePipelineVarsReqDTO) IsValid() error {
+	if r.Id <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type CreatePipelineVarsReqDTO struct {
+	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
+	Name     string              `json:"name"`
+	Content  string              `json:"content"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *CreatePipelineVarsReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !deploymd.IsPipelineVarsNameValid(r.Name) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type GetPipelineVarsContentReqDTO struct {
+	Id       int64               `json:"varsId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetPipelineVarsContentReqDTO) IsValid() error {
+	if r.Id <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListStatusSourceReqDTO struct {
+	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListStatusSourceReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type StatusSourceDTO struct {
+	Id   int64
+	Name string
+	Env  string
+}
+
+type ListServiceStatusReqDTO struct {
+	SourceId int64               `json:"sourceId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListServiceStatusReqDTO) IsValid() error {
+	if r.SourceId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DoStatusActionReqDTO struct {
+	SourceId  int64               `json:"sourceId"`
+	ServiceId string              `json:"serviceId"`
+	Action    string              `json:"action"`
+	Operator  apisession.UserInfo `json:"operator"`
+}
+
+func (r *DoStatusActionReqDTO) IsValid() error {
+	if r.SourceId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListStatusActionReqDTO struct {
+	SourceId int64               `json:"sourceId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListStatusActionReqDTO) IsValid() error {
 	if r.SourceId <= 0 {
 		return util.InvalidArgsError()
 	}

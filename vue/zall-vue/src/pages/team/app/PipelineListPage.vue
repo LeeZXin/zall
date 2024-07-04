@@ -1,8 +1,17 @@
 <template>
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
-      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建流水线</a-button>
-      <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env"/>
+      <div>
+        <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建流水线</a-button>
+        <a-button
+          type="primary"
+          @click="gotoVarsPage"
+          :icon="h(KeyOutlined)"
+          style="margin-left:8px"
+        >管理变量</a-button>
+      </div>
+
+      <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -40,13 +49,17 @@ import {
   EditOutlined,
   PlusOutlined,
   EllipsisOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  KeyOutlined
 } from "@ant-design/icons-vue";
 import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
 import { ref, h, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { listPipelineRequest, deletePipelineRequest } from "@/api/app/pipelineApi";
+import {
+  listPipelineRequest,
+  deletePipelineRequest
+} from "@/api/app/pipelineApi";
 import { usePipelineStore } from "@/pinia/pipelineStore";
 import { Modal, message } from "ant-design-vue";
 const pipelineStore = usePipelineStore();
@@ -103,6 +116,12 @@ const listPipeline = () => {
 const gotoCreatePage = () => {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/create?env=${selectedEnv.value}`
+  );
+};
+
+const gotoVarsPage = () => {
+  router.push(
+    `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${selectedEnv.value}`
   );
 };
 
