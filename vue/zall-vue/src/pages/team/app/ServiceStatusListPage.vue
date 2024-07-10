@@ -29,9 +29,10 @@
   </div>
 </template>
 <script setup>
+import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
 import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
-import { ref, onUnmounted } from "vue";
+import { ref, onUnmounted, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   listServiceSourceRequest,
@@ -39,7 +40,7 @@ import {
   listStatusActionsRequest,
   doStatusActionRequest
 } from "@/api/app/serviceStatusApi";
-import { message } from "ant-design-vue";
+import { message, Modal } from "ant-design-vue";
 const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
@@ -72,6 +73,16 @@ const statusColumns = ref([
     title: "状态",
     dataIndex: "status",
     key: "status"
+  },
+  {
+    title: "CPU百分比",
+    dataIndex: "cpuPercent",
+    key: "cpuPercent"
+  },
+  {
+    title: "内存百分比",
+    dataIndex: "memPercent",
+    key: "memPercent"
   },
   {
     title: "操作",
@@ -130,7 +141,9 @@ const getStatusList = data => {
     statusDataSource.value = res.data.map(item => {
       return {
         key: item.id,
-        ...item
+        ...item,
+        cpuPercent: item.cpuPercent + "%",
+        memPercent: item.memPercent + "%"
       };
     });
     refreshStatus();
@@ -145,7 +158,9 @@ const listStatus = () => {
     statusDataSource.value = res.data.map(item => {
       return {
         key: item.id,
-        ...item
+        ...item,
+        cpuPercent: item.cpuPercent + "%",
+        memPercent: item.memPercent + "%"
       };
     });
   });
@@ -157,16 +172,25 @@ const refreshStatus = () => {
 };
 
 const doAction = (item, action) => {
-  doStatusActionRequest(
-    {
-      serviceId: item.id,
-      sourceId: selectedSource.value.id,
-      action: action
+  Modal.confirm({
+    title: `你确定要${action}${item.id}吗?`,
+    icon: createVNode(ExclamationCircleOutlined),
+    okText: "ok",
+    cancelText: "cancel",
+    onOk() {
+      doStatusActionRequest(
+        {
+          serviceId: item.id,
+          sourceId: selectedSource.value.id,
+          action: action
+        },
+        selectedSource.value.env
+      ).then(() => {
+        message.success("操作成功");
+        listStatus();
+      });
     },
-    selectedSource.value.env
-  ).then(() => {
-    message.success("操作成功");
-    listStatus();
+    onCancel() {}
   });
 };
 

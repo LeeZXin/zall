@@ -7,12 +7,14 @@ type Api struct {
 }
 
 type Service struct {
-	Id      string `json:"id"`
-	App     string `json:"app"`
-	Status  string `json:"status"`
-	Host    string `json:"host"`
-	Env     string `json:"env"`
-	Created string `json:"created"`
+	Id         string `json:"id"`
+	App        string `json:"app"`
+	Status     string `json:"status"`
+	Host       string `json:"host"`
+	Env        string `json:"env"`
+	CpuPercent int    `json:"cpuPercent"`
+	MemPercent int    `json:"memPercent"`
+	Created    string `json:"created"`
 }
 
 type Action struct {

@@ -70,12 +70,14 @@ func (*impl) ListService(ctx context.Context, reqDTO status.ListServiceReq) ([]s
 	data, _ := listutil.Map(services, func(t statusmd.Service) (status.Service, error) {
 		addr, _ := netip.ParseAddrPort(t.AgentHost)
 		return status.Service{
-			Id:      t.ServiceId,
-			App:     t.App,
-			Status:  t.ServiceStatus,
-			Host:    addr.Addr().String(),
-			Env:     t.Env,
-			Created: t.Created.Format(time.DateTime),
+			Id:         t.ServiceId,
+			App:        t.App,
+			Status:     t.ServiceStatus,
+			Host:       addr.Addr().String(),
+			Env:        t.Env,
+			CpuPercent: t.CpuPercent,
+			MemPercent: t.MemPercent,
+			Created:    t.Created.Format(time.DateTime),
 		}, nil
 	})
 	return data, nil

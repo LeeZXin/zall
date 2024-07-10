@@ -24,6 +24,8 @@ type Service struct {
 	AgentHost      string       `json:"agentHost"`
 	AgentToken     string       `json:"agentToken"`
 	Env            string       `json:"env"`
+	CpuPercent     int          `json:"cpuPercent"`
+	MemPercent     int          `json:"memPercent"`
 	Created        time.Time    `json:"created" xorm:"created"`
 }
 
