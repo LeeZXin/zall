@@ -2,12 +2,9 @@
   <div style="padding:14px">
     <div class="container">
       <div class="title">
-        <span v-if="mode === 'create'">创建服务来源</span>
-        <span v-else-if="mode === 'update'">编辑服务来源</span>
+        <span v-if="mode === 'create'">创建配置来源</span>
+        <span v-else-if="mode === 'update'">编辑配置来源</span>
       </div>
-      <div
-        style="margin-bottom:10px;font-size:14px;line-height: 20px;color:gray"
-      >服务来源将作为服务状态数据源获取, 为了扩展性, 设计成以接口的形式获取服务状态</div>
       <div class="section" v-if="mode==='create'">
         <div class="section-title">选择环境</div>
         <div class="section-body">
@@ -28,21 +25,28 @@
         <div class="section-title">名称</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
-          <div class="input-desc">标识服务来源</div>
+          <div class="input-desc">标识配置来源</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">host</div>
+        <div class="section-title">endpoints</div>
         <div class="section-body">
-          <a-input v-model:value="formState.host" />
-          <div class="input-desc">https?://ip:port格式</div>
+          <a-input v-model:value="formState.endpoints" />
+          <div class="input-desc">etcd endpoints ip:port格式, 以;隔开</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">Api Key</div>
+        <div class="section-title">账号</div>
         <div class="section-body">
-          <a-input v-model:value="formState.apiKey" />
-          <div class="input-desc">接口鉴权使用</div>
+          <a-input v-model:value="formState.username" />
+          <div class="input-desc">etcd账号</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">密码</div>
+        <div class="section-body">
+          <a-input v-model:value="formState.password" type="password" />
+          <div class="input-desc">etcd密码</div>
         </div>
       </div>
       <div class="save-btn-line">
@@ -53,19 +57,16 @@
 </template>
 <script setup>
 import { reactive, ref } from "vue";
-import {
-  serviceSourceNameRegexp,
-  serviceSourceApiKeyRegexp
-} from "@/utils/regexp";
+import { propertySourceNameRegexp } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
 import {
-  createServiceSourceRequest,
-  updateServiceSourceRequest
-} from "@/api/app/serviceApi";
+  createPropertySourceRequest,
+  updatePropertySourceRequest
+} from "@/api/app/propertyApi";
 import { useRoute, useRouter } from "vue-router";
-import { useServiceSourceStore } from "@/pinia/serviceSourceStore";
-const serviceSourceStore = useServiceSourceStore();
+import { usePropertySourceStore } from "@/pinia/propertySourceStore";
+const propertySourceStore = usePropertySourceStore();
 const route = useRoute();
 const router = useRouter();
 const getMode = () => {
@@ -75,8 +76,9 @@ const getMode = () => {
 const mode = getMode();
 const formState = reactive({
   name: "",
-  host: "",
-  apiKey: "",
+  endpoints: "",
+  username: "",
+  password: "",
   selectedEnv: ""
 });
 const envList = ref([]);
@@ -96,58 +98,47 @@ const getEnvCfg = () => {
   });
 };
 
-const isValidHttpUrl = url => {
-  let u;
-  try {
-    u = new URL(url);
-    return u.protocol.startsWith("http");
-  } catch (e) {
-    return false;
-  }
-};
-
 const saveOrUpdateServiceSource = () => {
-  if (!serviceSourceNameRegexp.test(formState.name)) {
+  if (!propertySourceNameRegexp.test(formState.name)) {
     message.warn("名称格式错误");
     return;
   }
-  if (!isValidHttpUrl(formState.host)) {
-    message.warn("host格式错误");
+  if (!formState.endpoints) {
+    message.warn("endpoints格式错误");
     return;
   }
-  if (!serviceSourceApiKeyRegexp.test(formState.apiKey)) {
-    message.warn("Api Key格式错误");
-    return;
-  }
+  let endpoints = formState.endpoints.split(";").filter(item=>item);
   if (mode === "create") {
-    createServiceSourceRequest(
+    createPropertySourceRequest(
       {
         env: formState.selectedEnv,
         appId: route.params.appId,
-        apiKey: formState.apiKey,
-        name: formState.name,
-        host: formState.host
+        endpoints: endpoints,
+        username: formState.username,
+        password: formState.password,
+        name: formState.name
       },
       formState.selectedEnv
     ).then(() => {
       message.success("创建成功");
       router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/list/${formState.selectedEnv}`
+        `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/list/${formState.selectedEnv}`
       );
     });
   } else if (mode === "update") {
-    updateServiceSourceRequest(
+    updatePropertySourceRequest(
       {
-        sourceId: serviceSourceStore.id,
-        host: formState.host,
-        name: formState.name,
-        apiKey: formState.apiKey
+        sourceId: propertySourceStore.id,
+        endpoints: endpoints,
+        username: formState.username,
+        password: formState.password,
+        name: formState.name
       },
       formState.selectedEnv
     ).then(() => {
       message.success("保存成功");
       router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/list/${formState.selectedEnv}`
+        `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/list/${formState.selectedEnv}`
       );
     });
   }
@@ -156,15 +147,16 @@ const saveOrUpdateServiceSource = () => {
 if (mode === "create") {
   getEnvCfg();
 } else if (mode === "update") {
-  if (serviceSourceStore.id === 0) {
+  if (propertySourceStore.id === 0) {
     router.push(
-      `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/list`
+      `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/list`
     );
   } else {
-    formState.name = serviceSourceStore.name;
-    formState.selectedEnv = serviceSourceStore.env;
-    formState.host = serviceSourceStore.host;
-    formState.apiKey = serviceSourceStore.apiKey;
+    formState.name = propertySourceStore.name;
+    formState.selectedEnv = propertySourceStore.env;
+    formState.username = propertySourceStore.username;
+    formState.password = propertySourceStore.password;
+    formState.endpoints = propertySourceStore.endpoints;
   }
 }
 </script>

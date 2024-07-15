@@ -45,7 +45,7 @@ type MysqlConfig struct {
 }
 
 func (c *MysqlConfig) IsValid() bool {
-	return util.IpPortPattern.MatchString(c.Host) &&
+	return util.GenIpPortPattern().MatchString(c.Host) &&
 		c.Username != "" && c.Password != "" &&
 		validateMysqlSelectSql(c.SelectSql) && c.Database != "" &&
 		c.Condition != ""

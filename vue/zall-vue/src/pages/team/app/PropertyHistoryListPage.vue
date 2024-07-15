@@ -26,6 +26,14 @@
                     <code-outlined />
                     <span style="margin-left:4px">对比跟随版本</span>
                   </li>
+                  <li @click="gotoPubPage(dataItem)">
+                    <cloud-upload-outlined />
+                    <span style="margin-left:4px">发布此版本</span>
+                  </li>
+                  <li @click="showDeployModal(dataItem)">
+                    <eye-outlined />
+                    <span style="margin-left:4px">发布记录</span>
+                  </li>
                 </ul>
               </template>
               <div class="op-icon">
@@ -57,6 +65,11 @@
           style="max-height:400px;overflow:scroll"
         />
       </a-modal>
+      <a-modal :title="deployModalTitle" :footer="null" v-model:open="deployModalOpen" :width="800">
+        <div style="max-height:600px;overflow:scroll">
+          <ZTable :columns="deployColumns" :dataSource="deployDataSource" />
+        </div>
+      </a-modal>
     </div>
   </div>
 </template>
@@ -64,22 +77,52 @@
 import {
   CodeOutlined,
   EllipsisOutlined,
-  PlusOutlined
+  PlusOutlined,
+  CloudUploadOutlined,
+  EyeOutlined
 } from "@ant-design/icons-vue";
 import ZTable from "@/components/common/ZTable";
 import { ref, reactive } from "vue";
 import { usePropertyFileStore } from "@/pinia/propertyFileStore";
+import { usePropertyHistoryStore } from "@/pinia/propertyHistoryStore";
 import { useRouter, useRoute } from "vue-router";
 import {
   listHistoryRequest,
-  getHistoryByVersionRequest
+  getHistoryByVersionRequest,
+  listDeployRequest
 } from "@/api/app/propertyApi";
 import { message } from "ant-design-vue";
 import { CodeDiff } from "v-code-diff";
+const deployModalOpen = ref(false);
+const deployModalTitle = ref("");
+const deployColumns = ref([
+  {
+    title: "发布节点",
+    dataIndex: "nodeName",
+    key: "nodeName"
+  },
+  {
+    title: "endpoints",
+    dataIndex: "endpoints",
+    key: "endpoints"
+  },
+  {
+    title: "发布时间",
+    dataIndex: "created",
+    key: "created"
+  },
+  {
+    title: "发布人",
+    dataIndex: "creator",
+    key: "creator"
+  }
+]);
+const deployDataSource = ref([]);
 const diffModalOpen = ref(false);
 const route = useRoute();
 const router = useRouter();
 const propertyFileStore = usePropertyFileStore();
+const propertyHistoryStore = usePropertyHistoryStore();
 const dataSource = ref([]);
 const currPage = ref(1);
 const pageSize = 10;
@@ -166,7 +209,7 @@ const showDiffModal = item => {
 
 if (propertyFileStore.id === 0) {
   router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/property/list`
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/list`
   );
 } else {
   listHistory();
@@ -174,8 +217,36 @@ if (propertyFileStore.id === 0) {
 
 const gotoNewPage = item => {
   router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/property/${propertyFileStore.id}/new?from=${item.version}`
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${propertyFileStore.id}/new?from=${item.version}`
   );
+};
+
+const gotoPubPage = item => {
+  propertyHistoryStore.id = item.id;
+  propertyHistoryStore.fileName = item.fileName;
+  propertyHistoryStore.fileId = item.fileId;
+  propertyHistoryStore.content = item.content;
+  propertyHistoryStore.version = item.version;
+  propertyHistoryStore.created = item.created;
+  propertyHistoryStore.creator = item.creator;
+  propertyHistoryStore.lastVersion = item.lastVersion;
+  propertyHistoryStore.env = item.env;
+  router.push(
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${propertyFileStore.id}/publish/${item.version}`
+  );
+};
+
+const showDeployModal = item => {
+  deployModalTitle.value = `${item.fileName}_${item.version}`;
+  listDeployRequest(item.id, propertyFileStore.env).then(res => {
+    deployDataSource.value = res.data.map((item, index) => {
+      return {
+        key: index,
+        ...item
+      };
+    });
+    deployModalOpen.value = true;
+  });
 };
 </script>
 <style scoped>

@@ -1,8 +1,8 @@
 <template>
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
-      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建服务来源</a-button>
-      <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env"/>
+      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建配置来源</a-button>
+      <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -21,7 +21,7 @@
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
                   <edit-outlined />
-                  <span style="margin-left:4px">编辑服务来源</span>
+                  <span style="margin-left:4px">编辑配置来源</span>
                 </li>
               </ul>
             </template>
@@ -46,10 +46,13 @@ import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
 import { ref, h, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { listServiceSourceRequest, deleteServiceSourceRequest } from "@/api/app/serviceApi";
-import { useServiceSourceStore } from "@/pinia/serviceSourceStore";
+import {
+  listPropertySourceRequest,
+  deletePropertySourceRequest
+} from "@/api/app/propertyApi";
+import { usePropertySourceStore } from "@/pinia/propertySourceStore";
 import { Modal, message } from "ant-design-vue";
-const serviceSourceStore = useServiceSourceStore();
+const propertySourceStore = usePropertySourceStore();
 const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
@@ -61,9 +64,9 @@ const columns = ref([
     key: "name"
   },
   {
-    title: "host",
-    dataIndex: "host",
-    key: "host"
+    title: "endpoints",
+    dataIndex: "endpoints",
+    key: "endpoints"
   },
   {
     title: "操作",
@@ -79,17 +82,17 @@ const deleteServiceSource = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteServiceSourceRequest(item.id, item.env).then(() => {
+      deletePropertySourceRequest(item.id, item.env).then(() => {
         message.success("删除成功");
-        listServiceSource();
+        listPropertySource();
       });
     },
     onCancel() {}
   });
 };
 
-const listServiceSource = () => {
-  listServiceSourceRequest(
+const listPropertySource = () => {
+  listPropertySourceRequest(
     {
       appId: route.params.appId,
       env: selectedEnv.value
@@ -100,6 +103,7 @@ const listServiceSource = () => {
       return {
         key: item.id,
         ...item,
+        endpoints: item.endpoints ? item.endpoints.join(";") : ""
       };
     });
   });
@@ -107,27 +111,28 @@ const listServiceSource = () => {
 
 const gotoCreatePage = () => {
   router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/create?env=${selectedEnv.value}`
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/create?env=${selectedEnv.value}`
   );
 };
 
 const gotoUpdatePage = item => {
-  serviceSourceStore.id = item.id;
-  serviceSourceStore.name = item.name;
-  serviceSourceStore.env = item.env;
-  serviceSourceStore.host = item.host;
-  serviceSourceStore.apiKey = item.apiKey;
+  propertySourceStore.id = item.id;
+  propertySourceStore.name = item.name;
+  propertySourceStore.env = item.env;
+  propertySourceStore.endpoints = item.endpoints;
+  propertySourceStore.username = item.username;
+  propertySourceStore.password = item.password;
   router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/${item.id}/update`
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/${item.id}/update`
   );
 };
 
 const onEnvChange = e => {
   router.replace(
-    `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/list/${e.newVal}`
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/list/${e.newVal}`
   );
   selectedEnv.value = e.newVal;
-  listServiceSource();
+  listPropertySource();
 };
 </script>
 <style scoped>

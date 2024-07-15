@@ -9,7 +9,7 @@
         <template #bodyCell="{dataIndex, dataItem}">
           <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
           <div v-else>
-            <div class="op-icon" @click="deleteApp">
+            <div class="op-icon" @click="deleteFile(dataItem)">
               <a-tooltip placement="top">
                 <template #title>
                   <span>Delete File</span>
@@ -23,10 +23,6 @@
                   <li @click="gotoHistoryListPage(dataItem)">
                     <file-text-outlined />
                     <span style="margin-left:4px">版本列表</span>
-                  </li>
-                  <li>
-                    <eye-outlined />
-                    <span style="margin-left:4px">发布历史</span>
                   </li>
                 </ul>
               </template>
@@ -44,16 +40,17 @@
 import {
   DeleteOutlined,
   FileTextOutlined,
-  EyeOutlined,
   PlusOutlined,
-  EllipsisOutlined
+  EllipsisOutlined,
+  ExclamationCircleOutlined
 } from "@ant-design/icons-vue";
 import ZTable from "@/components/common/ZTable";
-import { ref, h } from "vue";
+import { ref, h, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { listPropertyFileRequest } from "@/api/app/propertyApi";
+import { listPropertyFileRequest, deletePropertyFileRequest } from "@/api/app/propertyApi";
 import { usePropertyFileStore } from "@/pinia/propertyFileStore";
 import EnvSelector from "@/components/app/EnvSelector";
+import { Modal, message } from "ant-design-vue";
 const propertyFileStore = usePropertyFileStore();
 const selectedEnv = ref("");
 const route = useRoute();
@@ -92,7 +89,7 @@ const listPropertyFile = () => {
 
 const gotoCreatePage = () => {
   router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/property/create?env=${selectedEnv.value}`
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/create?env=${selectedEnv.value}`
   );
 };
 
@@ -101,14 +98,30 @@ const gotoHistoryListPage = item => {
   propertyFileStore.name = item.name;
   propertyFileStore.env = item.env;
   router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/property/${item.id}/history/list`
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${item.id}/history/list`
   );
+};
+
+const deleteFile = item => {
+  Modal.confirm({
+    title: `你确定要删除${item.name}吗?`,
+    icon: createVNode(ExclamationCircleOutlined),
+    okText: "ok",
+    cancelText: "cancel",
+    onOk() {
+      deletePropertyFileRequest(item.id, item.env).then(() => {
+        message.success("删除成功");
+        listPropertyFile();
+      });
+    },
+    onCancel() {}
+  });
 };
 
 const onEnvChange = e => {
   selectedEnv.value = e.newVal;
   router.replace(
-    `/team/${route.params.teamId}/app/${route.params.appId}/property/list/${e.newVal}`
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/list/${e.newVal}`
   );
   listPropertyFile();
 };

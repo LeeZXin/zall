@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div style="margin-bottom:10px">
       <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建角色</a-button>
       <a-button

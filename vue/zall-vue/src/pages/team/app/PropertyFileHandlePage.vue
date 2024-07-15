@@ -173,7 +173,7 @@ const saveOrUpdateFile = () => {
     ).then(() => {
       message.success("创建成功");
       router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/property/list/${formState.selectedEnv}`
+        `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/list/${formState.selectedEnv}`
       );
     });
   } else if (mode === "new") {
@@ -187,7 +187,7 @@ const saveOrUpdateFile = () => {
     ).then(() => {
       message.success("保存成功");
       router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/property/${route.params.fileId}/history/list`
+        `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
       );
     });
   }
@@ -198,17 +198,20 @@ if (mode === "create") {
 } else if (mode === "new") {
   if (propertyFileStore.id === 0) {
     router.push(
-      `/team/${route.params.teamId}/app/${route.params.appId}/property/list`
+      `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/list`
     );
   } else if (!route.query.from) {
     router.push(
-      `/team/${route.params.teamId}/app/${route.params.appId}/property/${route.params.fileId}/history/list`
+      `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
     );
   } else {
-    getHistoryByVersionRequest({
-      fileId: propertyFileStore.id,
-      version: route.query.from
-    }).then(res => {
+    getHistoryByVersionRequest(
+      {
+        fileId: propertyFileStore.id,
+        version: route.query.from
+      },
+      propertyFileStore.env
+    ).then(res => {
       if (res.data.exist) {
         formState.name = propertyFileStore.name;
         formState.selectedEnv = propertyFileStore.env;
@@ -217,7 +220,7 @@ if (mode === "create") {
       } else {
         message.warn("跟随版本数据不存在");
         router.push(
-          `/team/${route.params.teamId}/app/${route.params.appId}/property/${route.params.fileId}/history/list`
+          `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
         );
       }
     });

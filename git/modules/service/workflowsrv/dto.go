@@ -33,7 +33,7 @@ func (r *CreateWorkflowReqDTO) IsValid() error {
 	if r.YamlContent == "" {
 		return util.InvalidArgsError()
 	}
-	if !util.IpPortPattern.MatchString(r.AgentHost) {
+	if !util.GenIpPortPattern().MatchString(r.AgentHost) {
 		return util.InvalidArgsError()
 	}
 	if len(r.AgentToken) > 1024 {
@@ -102,7 +102,7 @@ func (r *UpdateWorkflowReqDTO) IsValid() error {
 	if r.YamlContent == "" {
 		return util.InvalidArgsError()
 	}
-	if !util.IpPortPattern.MatchString(r.AgentHost) {
+	if !util.GenIpPortPattern().MatchString(r.AgentHost) {
 		return util.InvalidArgsError()
 	}
 	if len(r.AgentToken) > 1024 {

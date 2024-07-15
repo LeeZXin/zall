@@ -45,6 +45,8 @@ const deployProductVersionRegexp = /^.{1,128}$/;
 // 服务来源
 const serviceSourceNameRegexp = /^.{1,32}$/;
 const serviceSourceApiKeyRegexp = /^.{0,128}$/;
+// 配置来源
+const propertySourceNameRegexp = /^.{1,32}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -78,5 +80,6 @@ export {
     deployPlanNameRegexp,
     deployProductVersionRegexp,
     serviceSourceNameRegexp,
-    serviceSourceApiKeyRegexp
+    serviceSourceApiKeyRegexp,
+    propertySourceNameRegexp,
 }

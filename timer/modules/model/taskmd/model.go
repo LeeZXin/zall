@@ -37,6 +37,7 @@ type Task struct {
 	TeamId    int64       `json:"teamId"`
 	Env       string      `json:"env"`
 	IsEnabled bool        `json:"isEnabled"`
+	Creator   string      `json:"creator"`
 	Created   time.Time   `json:"created" xorm:"created"`
 }
 

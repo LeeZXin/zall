@@ -100,20 +100,6 @@
               <div class="input-name">Content-Type</div>
               <a-input v-model:value="formState.contentType" />
             </li>
-            <li>
-              <div class="input-name">多单元调用</div>
-              <a-switch v-model:checked="formState.zonesEnabled" />
-            </li>
-            <li v-if="formState.zonesEnabled">
-              <div class="input-name">多选单元</div>
-              <a-select
-                v-model:value="formState.zones"
-                style="width:100%"
-                :options="zonesList"
-                mode="multiple"
-              />
-              <div class="input-desc">仅在需要服务发现时有效,多选单元,将会依次调用每个单元请求</div>
-            </li>
           </ul>
         </div>
       </div>
@@ -130,7 +116,7 @@
 import ZCron from "@/components/common/ZCron";
 import { useRoute, useRouter } from "vue-router";
 import { ref, reactive, h } from "vue";
-import { getZonesCfgRequest, getEnvCfgRequest } from "@/api/cfg/cfgApi";
+import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
 import {
   createTimerTaskRequest,
   updateTimerTaskRequest
@@ -147,8 +133,6 @@ const formState = reactive({
   name: "",
   cronExp: "",
   taskType: "http",
-  zonesEnabled: false,
-  zones: [],
   url: "http://",
   method: "POST",
   contentType: "application/json;charset=utf-8",
@@ -162,7 +146,6 @@ const formState = reactive({
 });
 const cronInput = ref();
 const cronModalOpen = ref(false);
-const zonesList = ref([]);
 const envList = ref([]);
 const route = useRoute();
 const getMode = () => {
@@ -170,16 +153,6 @@ const getMode = () => {
   return s[s.length - 1];
 };
 const mode = getMode();
-const getZonesCfg = () => {
-  getZonesCfgRequest().then(res => {
-    zonesList.value = res.data.map(item => {
-      return {
-        value: item,
-        label: item
-      };
-    });
-  });
-};
 const cronInputFocus = () => {
   cronModalOpen.value = true;
   cronInput.value.blur();
@@ -253,21 +226,16 @@ const saveOrUpdateTimerTask = () => {
     });
     let contentType = "";
     let body = "";
-    let zones = [];
     if (formState.method === "POST") {
       contentType = formState.contentType;
       body = formState.body;
-    }
-    if (formState.zonesEnabled) {
-      zones = formState.zones;
     }
     task.httpTask = {
       url: formState.url,
       method: formState.method,
       headers: headers,
       bodyStr: body,
-      contentType: contentType,
-      zones: zones
+      contentType: contentType
     };
   }
   if (mode === "create") {
@@ -282,7 +250,9 @@ const saveOrUpdateTimerTask = () => {
       formState.selectedEnv
     ).then(() => {
       message.success("创建成功");
-      router.push(`/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`);
+      router.push(
+        `/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`
+      );
     });
   } else if (mode === "update") {
     updateTimerTaskRequest(
@@ -295,11 +265,12 @@ const saveOrUpdateTimerTask = () => {
       formState.selectedEnv
     ).then(() => {
       message.success("编辑成功");
-      router.push(`/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`);
+      router.push(
+        `/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`
+      );
     });
   }
 };
-getZonesCfg();
 if (mode === "create") {
   getEnvCfg();
 } else if (mode === "update") {
@@ -316,10 +287,6 @@ if (mode === "create") {
       formState.method = timerTaskStore.task.httpTask.method;
       formState.body = timerTaskStore.task.httpTask.bodyStr;
       formState.contentType = timerTaskStore.task.httpTask.contentType;
-      formState.zones = timerTaskStore.task.httpTask.zones;
-      if (formState?.zones?.length > 0) {
-        formState.zonesEnabled = true;
-      }
       let headers = timerTaskStore.task.httpTask.headers;
       let retHeaders = [];
       if (headers) {

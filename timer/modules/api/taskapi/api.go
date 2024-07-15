@@ -117,6 +117,7 @@ func listTask(c *gin.Context) {
 				TeamId:    t.TeamId,
 				IsEnabled: t.IsEnabled,
 				Env:       t.Env,
+				Creator:   t.Creator,
 			}, nil
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[TaskVO]{

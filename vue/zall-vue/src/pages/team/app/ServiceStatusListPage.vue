@@ -11,7 +11,7 @@
     </ZTable>
   </div>
   <div style="padding:10px;height:100%" v-show="showStatusList">
-    <div style="margin-bottom:20px;">
+    <div style="margin-bottom:10px;">
       <span class="check-btn" @click="backToSource">返回集群选择</span>
     </div>
     <ZTable :columns="statusColumns" :dataSource="statusDataSource">
@@ -35,11 +35,11 @@ import ZTable from "@/components/common/ZTable";
 import { ref, onUnmounted, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
-  listServiceSourceRequest,
+  listSimpleServiceSourceRequest,
   listServiceStatusRequest,
   listStatusActionsRequest,
   doStatusActionRequest
-} from "@/api/app/serviceStatusApi";
+} from "@/api/app/serviceApi";
 import { message, Modal } from "ant-design-vue";
 const route = useRoute();
 const selectedEnv = ref("");
@@ -94,7 +94,7 @@ const statusDataSource = ref([]);
 const statusInterval = ref(null);
 const selectedSource = ref(null);
 const listServiceSource = () => {
-  listServiceSourceRequest(
+  listSimpleServiceSourceRequest(
     {
       appId: route.params.appId,
       env: selectedEnv.value

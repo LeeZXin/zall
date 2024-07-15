@@ -88,10 +88,10 @@ type UpdateGitRepoServerCfgReqDTO struct {
 }
 
 func (r *UpdateGitRepoServerCfgReqDTO) IsValid() error {
-	if !util.IpPortPattern.MatchString(r.HttpHost) {
+	if !util.GenIpPortPattern().MatchString(r.HttpHost) {
 		return util.InvalidArgsError()
 	}
-	if !util.IpPortPattern.MatchString(r.SshHost) {
+	if !util.GenIpPortPattern().MatchString(r.SshHost) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

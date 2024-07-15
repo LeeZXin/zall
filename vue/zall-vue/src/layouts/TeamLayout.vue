@@ -17,10 +17,6 @@
             <appstore-outlined />
             <span>{{t("teamMenu.app")}}</span>
           </a-menu-item>
-          <a-menu-item key="/team/action/list">
-            <desktop-outlined />
-            <span>{{t("teamMenu.action")}}</span>
-          </a-menu-item>
           <a-menu-item key="/timerTask/list">
             <clock-circle-outlined />
             <span>{{t("teamMenu.timerTask")}}</span>
@@ -61,7 +57,6 @@ import { useI18n } from "vue-i18n";
 import { ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
-  DesktopOutlined,
   BranchesOutlined,
   AppstoreOutlined,
   ClockCircleOutlined,

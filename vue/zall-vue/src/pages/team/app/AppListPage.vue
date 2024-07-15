@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div style="margin-bottom:10px">
       <a-input
         v-model:value="searchApp"
@@ -37,7 +37,7 @@ const columns = ref([
     key: "appId"
   },
   {
-    title: "名称",
+    title: "应用名称",
     dataIndex: "name",
     key: "name"
   },
@@ -78,7 +78,7 @@ const searchChange = () => {
 };
 
 const gotoAppPage = item => {
-  router.push(`/team/${route.params.teamId}/app/${item.appId}/property/list`);
+  router.push(`/team/${route.params.teamId}/app/${item.appId}/propertyFile/list`);
 }
 listApp();
 </script>

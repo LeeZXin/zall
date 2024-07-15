@@ -1,35 +1,34 @@
 package propertyapi
 
-import (
-	"github.com/LeeZXin/zsf-utils/ginutil"
-)
+type CreatePropertySourceReqVO struct {
+	AppId     string   `json:"appId"`
+	Endpoints []string `json:"endpoints"`
+	Username  string   `json:"username"`
+	Password  string   `json:"password"`
+	Env       string   `json:"env"`
+	Name      string   `json:"name"`
+}
 
-type InsertEtcdNodeReqVO struct {
-	NodeId    string   `json:"nodeId"`
+type UpdatePropertySourceReqVO struct {
+	SourceId  int64    `json:"sourceId"`
+	Name      string   `json:"name"`
+	Endpoints []string `json:"endpoints"`
+	Username  string   `json:"username"`
+	Password  string   `json:"password"`
+}
+
+type PropertySourceVO struct {
+	Id        int64    `json:"id"`
+	Name      string   `json:"name"`
 	Endpoints []string `json:"endpoints"`
 	Username  string   `json:"username"`
 	Password  string   `json:"password"`
 	Env       string   `json:"env"`
 }
 
-type DeleteEtcdNodeReqVO struct {
-	NodeId string `json:"nodeId"`
-	Env    string `json:"env"`
-}
-
-type UpdateEtcdNodeReqVO struct {
-	NodeId    string   `json:"nodeId"`
-	Endpoints []string `json:"endpoints"`
-	Username  string   `json:"username"`
-	Password  string   `json:"password"`
-	Env       string   `json:"env"`
-}
-
-type EtcdNodeVO struct {
-	NodeId    string   `json:"nodeId"`
-	Endpoints []string `json:"endpoints"`
-	Username  string   `json:"username"`
-	Password  string   `json:"password"`
+type SimplePropertySourceVO struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type CreateFileReqVO struct {
@@ -45,30 +44,14 @@ type NewVersionReqVO struct {
 	LastVersion string `json:"lastVersion"`
 }
 
-type DeleteContentReqVO struct {
-	Id  int64  `json:"id"`
-	Env string `json:"env"`
-}
-
-type DeployContentReqVO struct {
-	Id           int64    `json:"id"`
-	Version      string   `json:"version"`
-	EtcdNodeList []string `json:"etcdNodeList"`
-	Env          string   `json:"env"`
+type DeployHistoryReqVO struct {
+	HistoryId    int64   `json:"historyId"`
+	SourceIdList []int64 `json:"sourceIdList"`
 }
 
 type PageHistoryReqVO struct {
 	FileId  int64 `json:"fileId"`
 	PageNum int   `json:"pageNum"`
-}
-
-type ListDeployReqVO struct {
-	ContentId int64  `json:"contentId"`
-	NodeId    string `json:"nodeId"`
-	Version   string `json:"version"`
-	Cursor    int64  `json:"cursor"`
-	Limit     int    `json:"limit"`
-	Env       string `json:"env"`
 }
 
 type FileVO struct {
@@ -80,43 +63,24 @@ type FileVO struct {
 
 type HistoryVO struct {
 	Id          int64  `json:"id"`
+	FileName    string `json:"fileName"`
 	FileId      int64  `json:"fileId"`
 	Content     string `json:"content"`
 	Version     string `json:"version"`
 	Created     string `json:"created"`
 	Creator     string `json:"creator"`
 	LastVersion string `json:"lastVersion"`
+	Env         string `json:"env"`
 }
 
 type DeployVO struct {
-	ContentId int64  `json:"contentId"`
-	Content   string `json:"content"`
-	Version   string `json:"version"`
-	NodeId    string `json:"nodeId"`
+	NodeName  string `json:"nodeName"`
+	Endpoints string `json:"endpoints"`
 	Created   string `json:"created"`
 	Creator   string `json:"creator"`
 }
 
-type GrantAuthReqVO struct {
+type ListPropertySourceReqVO struct {
 	AppId string `json:"appId"`
 	Env   string `json:"env"`
-}
-
-type GetAuthReqVO struct {
-	AppId string `json:"appId"`
-	Env   string `json:"env"`
-}
-
-type GetAuthRespVO struct {
-	ginutil.BaseResp
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type ListSimpleEtcdNodeReqVO struct {
-	Env string `json:"env"`
-}
-
-type ListEtcdNodeReqVO struct {
-	Env string `json:"env"`
 }

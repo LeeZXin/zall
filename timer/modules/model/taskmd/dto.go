@@ -12,6 +12,7 @@ type InsertTaskReqDTO struct {
 	TeamId    int64
 	Env       string
 	IsEnabled bool
+	Creator   string
 }
 
 type UpdateTaskReqDTO struct {
@@ -21,7 +22,7 @@ type UpdateTaskReqDTO struct {
 	Content timer.Task
 }
 
-type ListTaskReqDTO struct {
+type PageTaskReqDTO struct {
 	TeamId   int64
 	Name     string
 	PageNum  int

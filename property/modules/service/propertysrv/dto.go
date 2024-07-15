@@ -9,19 +9,30 @@ import (
 	"time"
 )
 
-type EtcdNodeDTO struct {
-	NodeId    string   `json:"nodeId"`
+type PropertySourceDTO struct {
+	Id        int64    `json:"id"`
+	Name      string   `json:"name"`
 	Endpoints []string `json:"endpoints"`
 	Username  string   `json:"username"`
 	Password  string   `json:"password"`
+	Env       string   `json:"env"`
 }
 
-type ListEtcdNodeReqDTO struct {
+type SimplePropertySourceDTO struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+type ListPropertySourceReqDTO struct {
+	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListEtcdNodeReqDTO) IsValid() error {
+func (r *ListPropertySourceReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
@@ -31,8 +42,24 @@ func (r *ListEtcdNodeReqDTO) IsValid() error {
 	return nil
 }
 
-type InsertEtcdNodeReqDTO struct {
-	NodeId    string              `json:"nodeId"`
+type ListPropertySourceByFileIdReqDTO struct {
+	FileId   int64               `json:"fileId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListPropertySourceByFileIdReqDTO) IsValid() error {
+	if r.FileId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type CreatePropertySourceReqDTO struct {
+	AppId     string              `json:"appId"`
+	Name      string              `json:"name"`
 	Endpoints []string            `json:"endpoints"`
 	Username  string              `json:"username"`
 	Password  string              `json:"password"`
@@ -40,33 +67,37 @@ type InsertEtcdNodeReqDTO struct {
 	Operator  apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertEtcdNodeReqDTO) IsValid() error {
+func (r *CreatePropertySourceReqDTO) IsValid() error {
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
-	if !propertymd.IsNodeIdValid(r.NodeId) {
+	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Endpoints) == 0 {
 		return util.InvalidArgsError()
 	}
+	for _, endpoint := range r.Endpoints {
+		if !util.GenIpPortPattern().MatchString(endpoint) {
+			return util.InvalidArgsError()
+		}
+	}
+	if !propertymd.IsPropertySourceNameValid(r.Name) {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type DeleteEtcdNodeReqDTO struct {
-	NodeId   string              `json:"nodeId"`
-	Env      string              `json:"env"`
+type DeletePropertySourceReqDTO struct {
+	SourceId int64               `json:"sourceId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeleteEtcdNodeReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if !propertymd.IsNodeIdValid(r.NodeId) {
+func (r *DeletePropertySourceReqDTO) IsValid() error {
+	if r.SourceId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -75,62 +106,29 @@ func (r *DeleteEtcdNodeReqDTO) IsValid() error {
 	return nil
 }
 
-type UpdateEtcdNodeReqDTO struct {
-	NodeId    string              `json:"nodeId"`
+type UpdatePropertySourceReqDTO struct {
+	SourceId  int64               `json:"sourceId"`
+	Name      string              `json:"name"`
 	Endpoints []string            `json:"endpoints"`
 	Username  string              `json:"username"`
 	Password  string              `json:"password"`
-	Env       string              `json:"env"`
 	Operator  apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpdateEtcdNodeReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+func (r *UpdatePropertySourceReqDTO) IsValid() error {
+	if r.SourceId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !propertymd.IsNodeIdValid(r.NodeId) {
+	if !propertymd.IsPropertySourceNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Endpoints) == 0 {
 		return util.InvalidArgsError()
 	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type GrantAuthReqDTO struct {
-	AppId    string              `json:"appId"`
-	Env      string              `json:"env"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *GrantAuthReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if !appmd.IsAppIdValid(r.AppId) {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type GetAuthReqDTO struct {
-	AppId    string              `json:"appId"`
-	Env      string              `json:"env"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *GetAuthReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if !appmd.IsAppIdValid(r.AppId) {
-		return util.InvalidArgsError()
+	for _, endpoint := range r.Endpoints {
+		if !util.GenIpPortPattern().MatchString(endpoint) {
+			return util.InvalidArgsError()
+		}
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
@@ -182,17 +180,13 @@ func (r *NewVersionReqDTO) IsValid() error {
 	return nil
 }
 
-type DeletePropContentReqDTO struct {
-	Id       int64               `json:"id"`
-	Env      string              `json:"env"`
+type DeleteFileReqDTO struct {
+	FileId   int64               `json:"fileId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeletePropContentReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if r.Id <= 0 {
+func (r *DeleteFileReqDTO) IsValid() error {
+	if r.FileId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -227,25 +221,17 @@ type FileDTO struct {
 	Env   string `json:"env"`
 }
 
-type DeployPropContentReqDTO struct {
-	Id           int64               `json:"id"`
-	Version      string              `json:"version"`
-	EtcdNodeList []string            `json:"etcdNodeList"`
-	Env          string              `json:"env"`
+type DeployHistoryReqDTO struct {
+	HistoryId    int64               `json:"historyId"`
+	SourceIdList []int64             `json:"sourceIdList"`
 	Operator     apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeployPropContentReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+func (r *DeployHistoryReqDTO) IsValid() error {
+	if r.HistoryId <= 0 {
 		return util.InvalidArgsError()
 	}
-	if r.Id <= 0 {
-		return util.InvalidArgsError()
-	}
-	if len(r.Version) == 0 || len(r.Version) > 32 {
-		return util.InvalidArgsError()
-	}
-	if len(r.EtcdNodeList) == 0 {
+	if len(r.SourceIdList) == 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -274,29 +260,12 @@ func (r *PageHistoryReqDTO) IsValid() error {
 }
 
 type ListDeployReqDTO struct {
-	ContentId int64               `json:"contentId"`
-	NodeId    string              `json:"nodeId"`
-	Version   string              `json:"version"`
-	Cursor    int64               `json:"cursor"`
-	Limit     int                 `json:"limit"`
-	Env       string              `json:"env"`
+	HistoryId int64               `json:"historyId"`
 	Operator  apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListDeployReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if len(r.Version) > 32 {
-		return util.InvalidArgsError()
-	}
-	if len(r.NodeId) > 0 && !propertymd.IsNodeIdValid(r.NodeId) {
-		return util.InvalidArgsError()
-	}
-	if r.ContentId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if r.Cursor < 0 || r.Limit < 0 {
+	if r.HistoryId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -307,19 +276,19 @@ func (r *ListDeployReqDTO) IsValid() error {
 
 type HistoryDTO struct {
 	Id          int64     `json:"id"`
+	FileName    string    `json:"fileName"`
 	FileId      int64     `json:"fileId"`
 	Content     string    `json:"content"`
 	Version     string    `json:"version"`
 	LastVersion string    `json:"lastVersion"`
 	Created     time.Time `json:"created"`
 	Creator     string    `json:"creator"`
+	Env         string    `json:"env"`
 }
 
 type DeployDTO struct {
-	ContentId int64     `json:"contentId"`
-	Content   string    `json:"content"`
-	Version   string    `json:"version"`
-	NodeId    string    `json:"nodeId"`
+	NodeName  string    `json:"nodeName"`
+	Endpoints string    `json:"endpoints"`
 	Created   time.Time `json:"created"`
 	Creator   string    `json:"creator"`
 }

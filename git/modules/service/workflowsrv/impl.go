@@ -157,16 +157,17 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		var err2 error
 		task, err2 = workflowmd.InsertTask(ctx, workflowmd.InsertTaskReqDTO{
-			WorkflowId:  wf.Id,
-			TaskStatus:  sshagent.QueueStatus,
-			TriggerType: reqDTO.TriggerType,
-			YamlContent: wf.YamlContent,
-			Operator:    reqDTO.Operator,
-			Branch:      reqDTO.Branch,
-			PrId:        reqDTO.PrId,
-			AgentHost:   wf.AgentHost,
-			AgentToken:  wf.AgentToken,
-			BizId:       bizId,
+			WorkflowId:   wf.Id,
+			WorkflowName: wf.Name,
+			TaskStatus:   sshagent.QueueStatus,
+			TriggerType:  reqDTO.TriggerType,
+			YamlContent:  wf.YamlContent,
+			Operator:     reqDTO.Operator,
+			Branch:       reqDTO.Branch,
+			PrId:         reqDTO.PrId,
+			AgentHost:    wf.AgentHost,
+			AgentToken:   wf.AgentToken,
+			BizId:        bizId,
 		})
 		if err2 != nil {
 			return err2
@@ -555,17 +556,9 @@ func (*outerImpl) ListTaskByPrId(ctx context.Context, reqDTO ListTaskByPrIdReqDT
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	wfIdList, _ := listutil.Map(tasks, func(t workflowmd.Task) (int64, error) {
-		return t.WorkflowId, nil
-	})
-	nameMap, err := workflowmd.BatchGetWorkflowNameById(ctx, wfIdList)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
 	return listutil.Map(tasks, func(t workflowmd.Task) (WorkflowTaskDTO, error) {
 		return WorkflowTaskDTO{
-			Name:                      nameMap[t.WorkflowId],
+			Name:                      t.WorkflowName,
 			TaskWithoutYamlContentDTO: task2WithoutYamlContentDto(t),
 		}, nil
 	})

@@ -84,10 +84,6 @@
             <div class="item-name">Content-Type</div>
             <div class="item-value">{{task.httpTask.contentType}}</div>
           </li>
-          <li>
-            <div class="item-name">Zones</div>
-            <div class="item-value">{{task.httpTask.zones}}</div>
-          </li>
         </template>
       </ul>
     </a-modal>

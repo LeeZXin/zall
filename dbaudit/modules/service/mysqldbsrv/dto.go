@@ -20,7 +20,7 @@ func (r *InsertDbReqDTO) IsValid() error {
 	if !mysqldbmd.IsDbNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if !util.IpPortPattern.MatchString(r.DbHost) {
+	if !util.GenIpPortPattern().MatchString(r.DbHost) {
 		return util.InvalidArgsError()
 	}
 	if !mysqldbmd.IsUsernameValid(r.Username) {
@@ -51,7 +51,7 @@ func (r *UpdateDbReqDTO) IsValid() error {
 	if !mysqldbmd.IsDbNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if !util.IpPortPattern.MatchString(r.DbHost) {
+	if !util.GenIpPortPattern().MatchString(r.DbHost) {
 		return util.InvalidArgsError()
 	}
 	if !mysqldbmd.IsUsernameValid(r.Username) {

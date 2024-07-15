@@ -30,16 +30,17 @@ func IsVarsContentValid(content string) bool {
 
 func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 	ret := Task{
-		WorkflowId:  reqDTO.WorkflowId,
-		TaskStatus:  reqDTO.TaskStatus,
-		TriggerType: reqDTO.TriggerType,
-		YamlContent: reqDTO.YamlContent,
-		AgentHost:   reqDTO.AgentHost,
-		AgentToken:  reqDTO.AgentToken,
-		Branch:      reqDTO.Branch,
-		Operator:    reqDTO.Operator,
-		PrId:        reqDTO.PrId,
-		BizId:       reqDTO.BizId,
+		WorkflowId:   reqDTO.WorkflowId,
+		WorkflowName: reqDTO.WorkflowName,
+		TaskStatus:   reqDTO.TaskStatus,
+		TriggerType:  reqDTO.TriggerType,
+		YamlContent:  reqDTO.YamlContent,
+		AgentHost:    reqDTO.AgentHost,
+		AgentToken:   reqDTO.AgentToken,
+		Branch:       reqDTO.Branch,
+		Operator:     reqDTO.Operator,
+		PrId:         reqDTO.PrId,
+		BizId:        reqDTO.BizId,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
@@ -131,22 +132,6 @@ func GetWorkflowById(ctx context.Context, id int64) (Workflow, bool, error) {
 		Where("id = ?", id).
 		Get(&ret)
 	return ret, b, err
-}
-
-func BatchGetWorkflowNameById(ctx context.Context, idList []int64) (map[int64]string, error) {
-	wfList := make([]Workflow, 0, len(idList))
-	err := xormutil.MustGetXormSession(ctx).
-		In("id", idList).
-		Cols("name", "id").
-		Find(&wfList)
-	if err != nil {
-		return nil, err
-	}
-	ret := make(map[int64]string, len(wfList))
-	for _, wf := range wfList {
-		ret[wf.Id] = wf.Name
-	}
-	return ret, nil
 }
 
 func ListTaskByWorkflowId(ctx context.Context, reqDTO ListTaskByWorkflowIdReqDTO) ([]Task, int64, error) {

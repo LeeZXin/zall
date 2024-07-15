@@ -1,7 +1,6 @@
 package propertyapi
 
 import (
-	"context"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/property/modules/service/propertysrv"
@@ -9,11 +8,9 @@ import (
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
-	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
 	"net/http"
-	"net/url"
 	"time"
 )
 
@@ -21,15 +18,16 @@ func InitApi() {
 	cfgsrv.Init()
 	propertysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/api/prop/etcdNode", apisession.CheckLogin)
+		group := e.Group("/api/propertySource", apisession.CheckLogin)
 		{
-			group.POST("/insert", insertEtcdNode)
-			group.GET("/list", listEtcdNode)
-			group.GET("/listSimple", listSimpleEtcdNode)
-			group.POST("/update", updateEtcdNode)
-			group.POST("/delete", deleteEtcdNode)
-			group.POST("/getAuth", getAuth)
-			group.POST("/grantAuth", grantAuth)
+			// 新增配置来源
+			group.POST("/create", createPropertySource)
+			// 配置来源列表
+			group.GET("/list", listPropertySource)
+			// 编辑配置列表
+			group.POST("/update", updatePropertySource)
+			// 删除配置来源
+			group.DELETE("/delete/:sourceId", deletePropertySource)
 		}
 		group = e.Group("/api/propertyFile", apisession.CheckLogin)
 		{
@@ -37,9 +35,10 @@ func InitApi() {
 			group.POST("/create", createFile)
 			// 配置文件列表
 			group.GET("/list", listFile)
-			group.POST("/delete", deleteContent)
-			group.POST("/deploy", deployContent)
-			group.POST("/listDeploy", listDeploy)
+			// 展示来源列表
+			group.GET("/listSource/:fileId", listPropertySourceByFileId)
+			// 删除文件
+			group.DELETE("/delete/:fileId", deleteFile)
 		}
 		group = e.Group("/api/propertyHistory", apisession.CheckLogin)
 		{
@@ -49,14 +48,10 @@ func InitApi() {
 			group.GET("/list", pageHistory)
 			// 新增版本
 			group.POST("/newVersion", newVersion)
-		}
-	})
-	httptask.AppendHttpTask("checkPropDbEtcdConsistent", func(_ []byte, _ url.Values) {
-		envs, b := cfgsrv.Inner.GetEnvCfg(context.Background())
-		if b {
-			for _, env := range envs {
-				propertysrv.Inner.CheckConsistent(env)
-			}
+			// 发布配置
+			group.POST("/deploy", deployHistory)
+			// 查看发布记录
+			group.GET("/listDeploy/:historyId", listDeploy)
 		}
 	})
 }
@@ -80,15 +75,16 @@ func getHistoryByVersion(c *gin.Context) {
 	})
 }
 
-func insertEtcdNode(c *gin.Context) {
-	var req InsertEtcdNodeReqVO
+func createPropertySource(c *gin.Context) {
+	var req CreatePropertySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.InsertEtcdNode(c, propertysrv.InsertEtcdNodeReqDTO{
-			NodeId:    req.NodeId,
+		err := propertysrv.Outer.CreatePropertySource(c, propertysrv.CreatePropertySourceReqDTO{
+			AppId:     req.AppId,
 			Endpoints: req.Endpoints,
 			Username:  req.Username,
 			Password:  req.Password,
 			Env:       req.Env,
+			Name:      req.Name,
 			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -99,15 +95,15 @@ func insertEtcdNode(c *gin.Context) {
 	}
 }
 
-func updateEtcdNode(c *gin.Context) {
-	var req UpdateEtcdNodeReqVO
+func updatePropertySource(c *gin.Context) {
+	var req UpdatePropertySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.UpdateEtcdNode(c, propertysrv.UpdateEtcdNodeReqDTO{
-			NodeId:    req.NodeId,
+		err := propertysrv.Outer.UpdatePropertySource(c, propertysrv.UpdatePropertySourceReqDTO{
+			SourceId:  req.SourceId,
+			Name:      req.Name,
 			Endpoints: req.Endpoints,
 			Username:  req.Username,
 			Password:  req.Password,
-			Env:       req.Env,
 			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -118,26 +114,23 @@ func updateEtcdNode(c *gin.Context) {
 	}
 }
 
-func deleteEtcdNode(c *gin.Context) {
-	var req DeleteEtcdNodeReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.DeleteEtcdNode(c, propertysrv.DeleteEtcdNodeReqDTO{
-			NodeId:   req.NodeId,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+func deletePropertySource(c *gin.Context) {
+	err := propertysrv.Outer.DeletePropertySource(c, propertysrv.DeletePropertySourceReqDTO{
+		SourceId: cast.ToInt64(c.Param("sourceId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
-func listEtcdNode(c *gin.Context) {
-	var req ListEtcdNodeReqVO
-	if util.ShouldBindJSON(&req, c) {
-		nodes, err := propertysrv.Outer.ListEtcdNode(c, propertysrv.ListEtcdNodeReqDTO{
+func listPropertySource(c *gin.Context) {
+	var req ListPropertySourceReqVO
+	if util.ShouldBindQuery(&req, c) {
+		nodes, err := propertysrv.Outer.ListPropertySource(c, propertysrv.ListPropertySourceReqDTO{
+			AppId:    req.AppId,
 			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -145,34 +138,42 @@ func listEtcdNode(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(nodes, func(t propertysrv.EtcdNodeDTO) (EtcdNodeVO, error) {
-			return EtcdNodeVO{
-				NodeId:    t.NodeId,
+		data, _ := listutil.Map(nodes, func(t propertysrv.PropertySourceDTO) (PropertySourceVO, error) {
+			return PropertySourceVO{
+				Id:        t.Id,
+				Name:      t.Name,
 				Endpoints: t.Endpoints,
 				Username:  t.Username,
 				Password:  t.Password,
+				Env:       t.Env,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]EtcdNodeVO]{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]PropertySourceVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     data,
 		})
 	}
 }
 
-func listSimpleEtcdNode(c *gin.Context) {
-	var req ListSimpleEtcdNodeReqVO
-	if util.ShouldBindJSON(&req, c) {
-		nodes, err := propertysrv.Outer.ListSimpleEtcdNode(c, req.Env)
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     nodes,
-		})
+func listPropertySourceByFileId(c *gin.Context) {
+	nodes, err := propertysrv.Outer.ListPropertySourceByFileId(c, propertysrv.ListPropertySourceByFileIdReqDTO{
+		FileId:   cast.ToInt64(c.Param("fileId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	data, _ := listutil.Map(nodes, func(t propertysrv.SimplePropertySourceDTO) (SimplePropertySourceVO, error) {
+		return SimplePropertySourceVO{
+			Id:   t.Id,
+			Name: t.Name,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimplePropertySourceVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }
 
 func createFile(c *gin.Context) {
@@ -210,30 +211,24 @@ func newVersion(c *gin.Context) {
 	}
 }
 
-func deleteContent(c *gin.Context) {
-	var req DeleteContentReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.DeletePropContent(c, propertysrv.DeletePropContentReqDTO{
-			Id:       req.Id,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+func deleteFile(c *gin.Context) {
+	err := propertysrv.Outer.DeleteFile(c, propertysrv.DeleteFileReqDTO{
+		FileId:   cast.ToInt64(c.Param("fileId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
-func deployContent(c *gin.Context) {
-	var req DeployContentReqVO
+func deployHistory(c *gin.Context) {
+	var req DeployHistoryReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.DeployPropContent(c, propertysrv.DeployPropContentReqDTO{
-			Id:           req.Id,
-			Version:      req.Version,
-			EtcdNodeList: req.EtcdNodeList,
-			Env:          req.Env,
+		err := propertysrv.Outer.DeployHistory(c, propertysrv.DeployHistoryReqDTO{
+			HistoryId:    req.HistoryId,
+			SourceIdList: req.SourceIdList,
 			Operator:     apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -297,82 +292,36 @@ func pageHistory(c *gin.Context) {
 func history2VO(t propertysrv.HistoryDTO) HistoryVO {
 	return HistoryVO{
 		Id:          t.Id,
+		FileName:    t.FileName,
 		FileId:      t.FileId,
 		Content:     t.Content,
 		Version:     t.Version,
 		Created:     t.Created.Format(time.DateTime),
 		Creator:     t.Creator,
 		LastVersion: t.LastVersion,
-	}
-}
-
-func grantAuth(c *gin.Context) {
-	var req GrantAuthReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.GrantAuth(c, propertysrv.GrantAuthReqDTO{
-			AppId:    req.AppId,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func getAuth(c *gin.Context) {
-	var req GetAuthReqVO
-	if util.ShouldBindJSON(&req, c) {
-		username, password, err := propertysrv.Outer.GetAuth(c, propertysrv.GetAuthReqDTO{
-			AppId:    req.AppId,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		c.JSON(http.StatusOK, GetAuthRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Username: username,
-			Password: password,
-		})
+		Env:         t.Env,
 	}
 }
 
 func listDeploy(c *gin.Context) {
-	var req ListDeployReqVO
-	if util.ShouldBindJSON(&req, c) {
-		deploys, cursor, err := propertysrv.Outer.ListDeploy(c, propertysrv.ListDeployReqDTO{
-			ContentId: req.ContentId,
-			Version:   req.Version,
-			Cursor:    req.Cursor,
-			Limit:     req.Limit,
-			NodeId:    req.NodeId,
-			Env:       req.Env,
-			Operator:  apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		data, _ := listutil.Map(deploys, func(t propertysrv.DeployDTO) (DeployVO, error) {
-			return DeployVO{
-				ContentId: t.ContentId,
-				Content:   t.Content,
-				Version:   t.Version,
-				NodeId:    t.NodeId,
-				Created:   t.Created.Format(time.DateTime),
-			}, nil
-		})
-		c.JSON(http.StatusOK, ginutil.PageResp[DeployVO]{
-			DataResp: ginutil.DataResp[[]DeployVO]{
-				BaseResp: ginutil.DefaultSuccessResp,
-				Data:     data,
-			},
-			Next: cursor,
-		})
+	deploys, err := propertysrv.Outer.ListDeploy(c, propertysrv.ListDeployReqDTO{
+		HistoryId: cast.ToInt64(c.Param("historyId")),
+		Operator:  apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	data, _ := listutil.Map(deploys, func(t propertysrv.DeployDTO) (DeployVO, error) {
+		return DeployVO{
+			NodeName:  t.NodeName,
+			Endpoints: t.Endpoints,
+			Created:   t.Created.Format(time.DateTime),
+			Creator:   t.Creator,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]DeployVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }

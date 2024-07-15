@@ -6,16 +6,17 @@ import (
 )
 
 type InsertTaskReqDTO struct {
-	WorkflowId  int64
-	TaskStatus  sshagent.Status
-	TriggerType TriggerType
-	YamlContent string
-	Operator    string
-	Branch      string
-	PrId        int64
-	AgentHost   string
-	AgentToken  string
-	BizId       string
+	WorkflowId   int64
+	WorkflowName string
+	TaskStatus   sshagent.Status
+	TriggerType  TriggerType
+	YamlContent  string
+	Operator     string
+	Branch       string
+	PrId         int64
+	AgentHost    string
+	AgentToken   string
+	BizId        string
 }
 
 type InsertWorkflowReqDTO struct {

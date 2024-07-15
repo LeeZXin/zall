@@ -206,9 +206,19 @@ const teamPermList = [
     desc: "拥有该权限,则可以创建发布计划来部署服务"
   },
   {
-    checkbox: "管理服务部署配置",
-    key: "canManageDeployConfig",
-    desc: "拥有该权限,则可以对服务部署新增、查看、编辑、触发、删除"
+    checkbox: "管理部署流水线",
+    key: "canManagePipeline",
+    desc: "拥有该权限,则可以管理应用部署流水线"
+  },
+  {
+    checkbox: "管理配置中心来源",
+    key: "canManagePropertySource",
+    desc: "拥有该权限,则可以管理配置中心的来源"
+  },
+  {
+    checkbox: "管理服务状态来源",
+    key: "canManageServiceSource",
+    desc: "拥有该权限,则可以管理服务状态的来源"
   }
 ];
 const p = [

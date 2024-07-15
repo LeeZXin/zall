@@ -1,7 +1,8 @@
 package propertymd
 
 type InsertEtcdNodeReqDTO struct {
-	NodeId    string
+	AppId     string
+	Name      string
 	Endpoints string
 	Username  string
 	Password  string
@@ -9,11 +10,11 @@ type InsertEtcdNodeReqDTO struct {
 }
 
 type UpdateEtcdNodeReqDTO struct {
-	NodeId    string
+	Id        int64
+	Name      string
 	Endpoints string
 	Username  string
 	Password  string
-	Env       string
 }
 
 type InsertFileReqDTO struct {
@@ -27,22 +28,17 @@ type InsertHistoryReqDTO struct {
 	Content     string
 	Version     string
 	LastVersion string
-	Env         string
 	Creator     string
 }
 
 type InsertDeployReqDTO struct {
-	ContentId    int64
-	Content      string
-	Version      string
-	NodeId       string
-	ContentAppId string
-	ContentName  string
-	Endpoints    string
-	Username     string
-	Password     string
-	Creator      string
-	Env          string
+	NodeName  string
+	HistoryId int64
+	FileId    int64
+	Endpoints string
+	Username  string
+	Password  string
+	Creator   string
 }
 
 type PageHistoryReqDTO struct {
@@ -51,18 +47,8 @@ type PageHistoryReqDTO struct {
 	PageSize int
 }
 
-type ListDeployReqDTO struct {
-	ContentId int64
-	Version   string
-	NodeId    string
-	Cursor    int64
-	Limit     int
-	Env       string
-}
-
-type InsertAuthReqDTO struct {
-	AppId    string
-	Username string
-	Password string
-	Env      string
+type ListEtcdNodeReqDTO struct {
+	AppId string   `json:"appId"`
+	Env   string   `json:"env"`
+	Cols  []string `json:"cols"`
 }

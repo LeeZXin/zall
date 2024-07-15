@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div style="margin-bottom:10px;font-size:14px" class="flex-between">
       <div class="flex-center">
         <a-input
@@ -107,6 +107,11 @@ const columns = ref([
     title: "cron表达式",
     dataIndex: "cronExp",
     key: "cronExp"
+  },
+  {
+    title: "创建人",
+    dataIndex: "creator",
+    key: "creator"
   },
   {
     title: "是否启动",

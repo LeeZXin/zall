@@ -9,7 +9,11 @@
     <a-layout>
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
         <a-menu theme="dark" mode="inline" @click="onselect" v-model:selectedKeys="selectedKeys">
-          <a-menu-item key="/property/list">
+          <a-menu-item key="/propertySource/list">
+            <book-outlined />
+            <span>配置中心来源</span>
+          </a-menu-item>
+          <a-menu-item key="/propertyFile/list">
             <pull-request-outlined />
             <span>配置中心</span>
           </a-menu-item>
@@ -23,7 +27,7 @@
           </a-menu-item>
           <a-menu-item key="/serviceSource/list">
             <flag-outlined />
-            <span>服务来源</span>
+            <span>服务状态来源</span>
           </a-menu-item>
           <a-menu-item key="/serviceStatus/list">
             <read-outlined />
@@ -44,6 +48,7 @@ import { useI18n } from "vue-i18n";
 import { ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
+  BookOutlined,
   FileOutlined,
   PullRequestOutlined,
   TagOutlined,
@@ -77,7 +82,8 @@ const changeSelectedKey = path => {
 };
 // 为了子页面能体现在导航栏
 const pagesMap = {
-  "/property": "/property/list",
+  "/propertySource": "/propertySource/list",
+  "/propertyFile": "/propertyFile/list",
   "/deployConfig": "/deployConfig/list",
   "/pipeline": "/pipeline/list",
   "/deployPlan": "/deployPlan/list",

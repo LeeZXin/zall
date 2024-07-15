@@ -34,6 +34,7 @@ func (o *outerImpl) CreateTask(ctx context.Context, reqDTO CreateTaskReqDTO) err
 			TeamId:    reqDTO.TeamId,
 			Env:       reqDTO.Env,
 			IsEnabled: false,
+			Creator:   reqDTO.Operator.Account,
 		})
 		if err2 != nil {
 			return err2
@@ -62,7 +63,7 @@ func (o *outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]Task
 		return nil, 0, err
 	}
 	const pageSize = 10
-	tasks, total, err := taskmd.PageTask(ctx, taskmd.ListTaskReqDTO{
+	tasks, total, err := taskmd.PageTask(ctx, taskmd.PageTaskReqDTO{
 		TeamId:   reqDTO.TeamId,
 		Name:     reqDTO.Name,
 		PageNum:  reqDTO.PageNum,
@@ -82,6 +83,7 @@ func (o *outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]Task
 			TeamId:    t.TeamId,
 			IsEnabled: t.IsEnabled,
 			Env:       t.Env,
+			Creator:   t.Creator,
 		}, nil
 	})
 	return ret, total, nil

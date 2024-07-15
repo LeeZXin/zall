@@ -7,6 +7,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/timer"
 	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
 	"github.com/LeeZXin/zsf-utils/executor"
+	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/lease"
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
@@ -14,15 +15,18 @@ import (
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"net/http"
 	"time"
 )
 
 var (
 	taskExecutor *executor.Executor
 	taskEnv      string
+	httpClient   *http.Client
 )
 
 func initTask() {
+	httpClient = httputil.NewRetryableHttpClient()
 	taskEnv = static.GetString("timer.env")
 	if taskEnv == "" {
 		logger.Logger.Fatal("timer task started with empty env")

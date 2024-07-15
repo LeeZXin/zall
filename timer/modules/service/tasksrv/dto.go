@@ -119,6 +119,7 @@ type TaskDTO struct {
 	TeamId    int64      `json:"teamId"`
 	IsEnabled bool       `json:"isEnabled"`
 	Env       string     `json:"env"`
+	Creator   string     `json:"creator"`
 }
 
 type PageTaskLogReqDTO struct {

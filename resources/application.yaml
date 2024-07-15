@@ -1,5 +1,5 @@
 application:
-  name: zgit
+  name: zall
 
 ssh:
   agent:

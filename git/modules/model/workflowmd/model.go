@@ -42,21 +42,22 @@ const (
 )
 
 type Task struct {
-	Id          int64                                     `json:"id" xorm:"pk autoincr"`
-	WorkflowId  int64                                     `json:"workflowId"`
-	TaskStatus  sshagent.Status                           `json:"taskStatus"`
-	TriggerType TriggerType                               `json:"triggerType"`
-	YamlContent string                                    `json:"yamlContent"`
-	AgentHost   string                                    `json:"agentHost"`
-	AgentToken  string                                    `json:"agentToken"`
-	Branch      string                                    `json:"branch"`
-	Operator    string                                    `json:"operator"`
-	PrId        int64                                     `json:"prId"`
-	Duration    int64                                     `json:"duration"`
-	BizId       string                                    `json:"bizId"`
-	StatusLog   *xormutil.Conversion[sshagent.TaskStatus] `json:"statusLog"`
-	Created     time.Time                                 `json:"created" xorm:"created"`
-	Updated     time.Time                                 `json:"updated" xorm:"updated"`
+	Id           int64                                     `json:"id" xorm:"pk autoincr"`
+	WorkflowId   int64                                     `json:"workflowId"`
+	WorkflowName string                                    `json:"workflowName"`
+	TaskStatus   sshagent.Status                           `json:"taskStatus"`
+	TriggerType  TriggerType                               `json:"triggerType"`
+	YamlContent  string                                    `json:"yamlContent"`
+	AgentHost    string                                    `json:"agentHost"`
+	AgentToken   string                                    `json:"agentToken"`
+	Branch       string                                    `json:"branch"`
+	Operator     string                                    `json:"operator"`
+	PrId         int64                                     `json:"prId"`
+	Duration     int64                                     `json:"duration"`
+	BizId        string                                    `json:"bizId"`
+	StatusLog    *xormutil.Conversion[sshagent.TaskStatus] `json:"statusLog"`
+	Created      time.Time                                 `json:"created" xorm:"created"`
+	Updated      time.Time                                 `json:"updated" xorm:"updated"`
 }
 
 func (*Task) TableName() string {

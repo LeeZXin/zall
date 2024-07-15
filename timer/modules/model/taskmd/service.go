@@ -18,6 +18,7 @@ func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 		TeamId:    reqDTO.TeamId,
 		Env:       reqDTO.Env,
 		IsEnabled: reqDTO.IsEnabled,
+		Creator:   reqDTO.Creator,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
@@ -106,7 +107,7 @@ func IterateExecute(ctx context.Context, nextTime int64, env string, fn func(*Ex
 		})
 }
 
-func PageTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]Task, int64, error) {
+func PageTask(ctx context.Context, reqDTO PageTaskReqDTO) ([]Task, int64, error) {
 	session := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", reqDTO.TeamId).
 		And("env = ?", reqDTO.Env)

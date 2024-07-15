@@ -193,24 +193,34 @@ const router = createRouter({
             component: () =>
                 import ("../layouts/AppLayout"),
             children: [{
-                path: "/team/:teamId(\\d+)/app/:appId/property/list/:env?",
+                path: "/team/:teamId(\\d+)/app/:appId/propertySource/list/:env?",
                 component: () =>
-                    import ("../pages/team/app/PropertyListPage")
+                    import ("../pages/team/app/PropertySourceListPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/property/create",
+                path: "/team/:teamId(\\d+)/app/:appId/propertyFile/list/:env?",
                 component: () =>
-                    import ("../pages/team/app/PropertyHandlePage")
+                    import ("../pages/team/app/PropertyFileListPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/property/:fileId(\\d+)/new",
+                path: "/team/:teamId(\\d+)/app/:appId/propertyFile/create",
                 component: () =>
-                    import ("../pages/team/app/PropertyHandlePage")
+                    import ("../pages/team/app/PropertyFileHandlePage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/property/:fileId(\\d+)/history/list",
+                path: "/team/:teamId(\\d+)/app/:appId/propertyFile/:fileId(\\d+)/new",
                 component: () =>
-                    import ("../pages/team/app/PropertyHistoryPage")
+                    import ("../pages/team/app/PropertyFileHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/propertyFile/:fileId(\\d+)/publish/:version",
+                component: () =>
+                    import ("../pages/team/app/PropertyHistoryPublishPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/propertyFile/:fileId(\\d+)/history/list",
+                component: () =>
+                    import ("../pages/team/app/PropertyHistoryListPage")
 
             }, {
                 path: "/team/:teamId(\\d+)/app/:appId/pipeline/list/:env?",
@@ -276,6 +286,16 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/app/:appId/serviceStatus/list/:env?",
                 component: () =>
                     import ("../pages/team/app/ServiceStatusListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/propertySource/create",
+                component: () =>
+                    import ("../pages/team/app/PropertySourceHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/propertySource/:sourceId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/app/PropertySourceHandlePage")
 
             }]
         },

@@ -278,15 +278,15 @@ var (
 			DefaultRet: "编辑app etcd权限",
 		},
 		InsertEtcdNode: KeyItem{
-			Id:         "propSrv.InsertEtcdNode",
+			Id:         "propSrv.CreatePropertySource",
 			DefaultRet: "新增prop etcd节点",
 		},
 		DeleteEtcdNode: KeyItem{
-			Id:         "propSrv.DeleteEtcdNode",
+			Id:         "propSrv.DeletePropertySource",
 			DefaultRet: "删除prop etcd节点",
 		},
 		UpdateEtcdNode: KeyItem{
-			Id:         "propSrv.UpdateEtcdNode",
+			Id:         "propSrv.UpdatePropertySource",
 			DefaultRet: "编辑prop etcd节点",
 		},
 		InsertPropContent: KeyItem{
@@ -298,11 +298,11 @@ var (
 			DefaultRet: "编辑配置",
 		},
 		DeletePropContent: KeyItem{
-			Id:         "propSrv.DeletePropContent",
+			Id:         "propSrv.DeleteFile",
 			DefaultRet: "删除配置",
 		},
 		DeployPropContent: KeyItem{
-			Id:         "propSrv.DeployPropContent",
+			Id:         "propSrv.DeployHistory",
 			DefaultRet: "发布配置",
 		},
 	}
