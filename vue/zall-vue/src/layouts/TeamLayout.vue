@@ -2,7 +2,7 @@
   <a-layout>
     <a-layout-header style="font-size:22px;color:white">
       <span>{{team.name}}</span>
-      <span class="switch-team-text" @click="switchTeam">{{t("switchTeam")}}</span>
+      <span class="switch-text" @click="switchTeam">{{t("switchTeam")}}</span>
       <AvatarName style="float:right;" />
       <I18nSelect style="float:right;margin-right: 20px" />
     </a-layout-header>
@@ -20,18 +20,6 @@
           <a-menu-item key="/timerTask/list">
             <clock-circle-outlined />
             <span>{{t("teamMenu.timerTask")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/team/applyApproval">
-            <form-outlined />
-            <span>{{t("teamMenu.applyApproval")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/team/dbAudit">
-            <database-outlined />
-            <span>{{t("teamMenu.dbAudit")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/team/monitorAlert">
-            <alert-outlined />
-            <span>{{t("teamMenu.monitorAlert")}}</span>
           </a-menu-item>
           <a-menu-item key="/role/list" v-if="isAdmin">
             <user-outlined />
@@ -60,9 +48,6 @@ import {
   BranchesOutlined,
   AppstoreOutlined,
   ClockCircleOutlined,
-  FormOutlined,
-  DatabaseOutlined,
-  AlertOutlined,
   SettingOutlined,
   UserOutlined
 } from "@ant-design/icons-vue";
@@ -117,13 +102,4 @@ watch(
 );
 </script>
 <style scoped>
-.switch-team-text {
-  color: white;
-  margin-left: 12px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.switch-team-text:hover {
-  color: #1677ff;
-}
 </style>

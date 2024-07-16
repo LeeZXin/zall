@@ -1,57 +1,21 @@
 import request from '@/utils/request.js';
 
-const ENV_HEADER = "ZALL-ENV";
-
 // 定时任务列表
-const listTimerTaskRequest = (data, env) => request.get("/api/timerTask/list", {
-    params: data,
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const listTimerTaskRequest = (data) => request.get("/api/timerTask/list", { params: data });
 // 创建定时任务
-const createTimerTaskRequest = (data, env) => request.post("/api/timerTask/create", data, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const createTimerTaskRequest = (data) => request.post("/api/timerTask/create", data);
 // 启动定时任务
-const enableTimerTaskRequest = (taskId, env) => request.put("/api/timerTask/enable/" + taskId, {}, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const enableTimerTaskRequest = (taskId) => request.put("/api/timerTask/enable/" + taskId);
 // 停止定时任务
-const disableTimerTaskRequest = (taskId, env) => request.put("/api/timerTask/disable/" + taskId, {}, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const disableTimerTaskRequest = (taskId) => request.put("/api/timerTask/disable/" + taskId);
 // 删除定时任务
-const deleteTimerTaskRequest = (taskId, env) => request.delete("/api/timerTask/delete/" + taskId, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const deleteTimerTaskRequest = (taskId) => request.delete("/api/timerTask/delete/" + taskId);
 // 触发定时任务
-const triggerTimerTaskRequest = (taskId, env) => request.put("/api/timerTask/trigger/" + taskId, {}, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const triggerTimerTaskRequest = (taskId) => request.put("/api/timerTask/trigger/" + taskId);
 // 编辑定时任务
-const updateTimerTaskRequest = (data, env) => request.post("/api/timerTask/update", data, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const updateTimerTaskRequest = (data) => request.post("/api/timerTask/update", data);
 // 查看定时任务日志
-const pageTimerTaskLogRequest = (data, env) => request.get("/api/timerLog/list", {
-    params: data,
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const pageTimerTaskLogRequest = (data) => request.get("/api/timerLog/list", { params: data });
 export {
     listTimerTaskRequest,
     createTimerTaskRequest,

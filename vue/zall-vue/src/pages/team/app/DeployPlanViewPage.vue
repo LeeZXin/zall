@@ -280,13 +280,10 @@ const forceRedoUnSuccessAgentStages = () => {
       title: `你确定要强制重新执行吗?`,
       icon: createVNode(ExclamationCircleOutlined),
       onOk() {
-        forceRedoStageRequest(
-          {
-            planId: planStore.id,
-            stageIndex: selectedIndex.value,
-          },
-          planStore.env
-        ).then(() => {
+        forceRedoStageRequest({
+          planId: planStore.id,
+          stageIndex: selectedIndex.value
+        }).then(() => {
           message.success("开始执行");
           getDetail();
         });
@@ -299,7 +296,7 @@ const forceRedoUnSuccessAgentStages = () => {
 };
 
 const getDetail = () => {
-  getDeployPlanDetailRequest(planStore.id, planStore.env).then(res => {
+  getDeployPlanDetailRequest(planStore.id).then(res => {
     planDetail.value = res.data;
     yamlConfig.value = res.data.pipelineConfig;
     listStages();
@@ -314,7 +311,7 @@ const startPlan = () => {
     title: `你确定要执行发布计划吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      startDeployPlanRequest(planStore.id, planStore.env).then(() => {
+      startDeployPlanRequest(planStore.id).then(() => {
         message.success("开始执行");
         getDetail();
       });
@@ -324,7 +321,7 @@ const startPlan = () => {
 };
 
 const listStages = () => {
-  listDeployPlanStagesRequest(planStore.id, planStore.env).then(res => {
+  listDeployPlanStagesRequest(planStore.id).then(res => {
     stageList.value = res.data.map((item, index) => {
       return {
         id: index + 1,
@@ -364,10 +361,7 @@ const redoAgentStage = () => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      redoDeployAgentStageRequest(
-        selectedSubStage.value.id,
-        planStore.env
-      ).then(() => {
+      redoDeployAgentStageRequest(selectedSubStage.value.id).then(() => {
         message.success("重新执行成功");
         getDetail();
       });
@@ -383,7 +377,7 @@ const killStage = index => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      killDeployStageRequest(planStore.id, index, planStore.env).then(() => {
+      killDeployStageRequest(planStore.id, index).then(() => {
         message.success("中止成功");
         getDetail();
       });
@@ -448,14 +442,11 @@ const confirmOk = () => {
       break;
   }
 
-  request(
-    {
-      planId: planStore.id,
-      stageIndex: confirmModal.stageIndex,
-      args
-    },
-    planStore.env
-  ).then(() => {
+  request({
+    planId: planStore.id,
+    stageIndex: confirmModal.stageIndex,
+    args
+  }).then(() => {
     message.success("操作成功");
     confirmModal.open = false;
     getDetail();

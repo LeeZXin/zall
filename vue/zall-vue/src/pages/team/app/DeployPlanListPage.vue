@@ -12,7 +12,10 @@
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
-                <li @click="closePlan(dataItem)" v-if="dataItem['planStatus'] === 1 || dataItem['planStatus'] === 2">
+                <li
+                  @click="closePlan(dataItem)"
+                  v-if="dataItem['planStatus'] === 1 || dataItem['planStatus'] === 2"
+                >
                   <close-outlined />
                   <span style="margin-left:8px">关闭发布计划</span>
                 </li>
@@ -113,7 +116,7 @@ const closePlan = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      closeDeployPlanRequest(item.id, item.env).then(() => {
+      closeDeployPlanRequest(item.id).then(() => {
         message.success("关闭成功");
         listDeployPlan();
       });
@@ -123,14 +126,11 @@ const closePlan = item => {
 };
 
 const listDeployPlan = () => {
-  listDeployPlanRequest(
-    {
-      appId: route.params.appId,
-      pageNum: currPage.value,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listDeployPlanRequest({
+    appId: route.params.appId,
+    pageNum: currPage.value,
+    env: selectedEnv.value
+  }).then(res => {
     totalCount.value = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
@@ -156,13 +156,13 @@ const onEnvChange = e => {
   listDeployPlan();
 };
 
-const viewPlan = (item) => {
-    planStore.id = item.id;
-    planStore.env = item.env;
-    router.push(
+const viewPlan = item => {
+  planStore.id = item.id;
+  planStore.env = item.env;
+  router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/deployPlan/${item.id}/view`
   );
-}
+};
 </script>
 <style scoped>
 </style>

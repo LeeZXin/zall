@@ -1,7 +1,6 @@
 package mysqldbapi
 
 import (
-	"encoding/csv"
 	"github.com/LeeZXin/zall/dbaudit/modules/service/mysqldbsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
@@ -9,48 +8,71 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
 	"net/http"
-	"strconv"
 	"time"
 )
 
 func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
+		mysqldbsrv.Init()
 		group := e.Group("/api/mysqldb", apisession.CheckLogin)
 		{
-			group.POST("/insert", insertDb)
+			// 创建数据库
+			group.POST("/create", createDb)
+			// 编辑数据库
 			group.POST("/update", updateDb)
-			group.POST("/delete", deleteDb)
+			// 删除数据库
+			group.DELETE("/delete/:dbId", deleteDb)
+			// 数据库列表
 			group.GET("/list", listDb)
+			// 数据库列表
 			group.GET("/all", allDb)
 		}
-		group = e.Group("/api/mysqldbPermOrder", apisession.CheckLogin)
+		group = e.Group("/api/mysqlReadPermApply", apisession.CheckLogin)
 		{
-			group.POST("/list", listPermOrder)
-			group.POST("/listApplied", listAppliedPermOrder)
-			group.POST("/apply", applyDbPerm)
-			group.POST("/agree", agreeDbPerm)
-			group.POST("/disagree", disagreeDbPerm)
-			group.POST("/cancel", cancelDbPerm)
+			// dba查看申请单
+			group.GET("/list", listReadPermApplyByDba)
+			// 同意申请
+			group.PUT("/agree/:applyId", agreeReadPerm)
+			// 不同意申请
+			group.PUT("/disagree", disagreeReadPerm)
 		}
-		group = e.Group("/api/mysqldbPerm", apisession.CheckLogin)
+		group = e.Group("/api/mysqlReadPerm", apisession.CheckLogin)
 		{
-			group.POST("/list", listDbPerm)
+			// 申请列表
+			group.GET("/listApply", listReadPermApplyByOperator)
+			// 用户读权限列表
+			group.GET("/list", listReadPermByOperator)
+			// 申请读权限
+			group.POST("/apply", applyReadPerm)
+			// 撤销申请
+			group.PUT("/cancel/:applyId", cancelReadPerm)
+			// 查看审批单
+			group.GET("/getApply/:applyId", getReadPermApply)
 			group.POST("/delete", deleteDbPerm)
-			group.POST("/listByAccount", listDbPermByAccount)
+			group.POST("/listByAccount", listReadPermByAccount)
 		}
-		group = e.Group("/api/mysqldbSearch", apisession.CheckLogin)
+		group = e.Group("/api/mysqlSearch", apisession.CheckLogin)
 		{
-			group.POST("/allBases", allBases)
-			group.POST("/allTables", allTables)
-			group.POST("/search", searchDb)
-			group.POST("/export", exportDb)
+			// 展示授权的数据库
+			group.GET("/listAuthorizedDb", listAuthorizedDb)
+			// 展示授权库
+			group.GET("/listAuthorizedBase/:dbId", listAuthorizedBase)
+			// 展示授权表
+			group.GET("/listAuthorizedTable", listAuthorizedTable)
+			// 展示建表语句
+			group.GET("/getCreateTableSql", getCreateTableSql)
+			// 展示建表语句
+			group.GET("/showTableIndex", showTableIndex)
+			// 执行查询sql
+			group.POST("/executeSelectSql", executeSelectSql)
 		}
-		group = e.Group("/api/mysqldbUpdateOrder", apisession.CheckLogin)
+		group = e.Group("/api/mysqlDataUpdateApply", apisession.CheckLogin)
 		{
 			group.POST("/apply", applyDbUpdate)
-			group.POST("/list", listUpdateOrder)
-			group.POST("/listApplied", listAppliedUpdateOrder)
+			group.POST("/list", listDataUpdateApplyByDba)
+			group.POST("/listApplied", listDataUpdateApplyByOperator)
 			group.POST("/agree", agreeDbUpdate)
 			group.POST("/disagree", disagreeDbUpdate)
 			group.POST("/cancel", cancelDbUpdate)
@@ -60,14 +82,12 @@ func InitApi() {
 	})
 }
 
-func insertDb(c *gin.Context) {
-	var req InsertDbReqVO
+func createDb(c *gin.Context) {
+	var req CreateDbReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.InsertDb(c, mysqldbsrv.InsertDbReqDTO{
+		err := mysqldbsrv.Outer.CreateDb(c, mysqldbsrv.CreateDbReqDTO{
 			Name:     req.Name,
-			DbHost:   req.DbHost,
-			Username: req.Username,
-			Password: req.Password,
+			Config:   req.Config,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -82,11 +102,9 @@ func updateDb(c *gin.Context) {
 	var req UpdateDbReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := mysqldbsrv.Outer.UpdateDb(c, mysqldbsrv.UpdateDbReqDTO{
-			Id:       req.Id,
+			DbId:     req.DbId,
 			Name:     req.Name,
-			DbHost:   req.DbHost,
-			Username: req.Username,
-			Password: req.Password,
+			Config:   req.Config,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -98,42 +116,46 @@ func updateDb(c *gin.Context) {
 }
 
 func deleteDb(c *gin.Context) {
-	var req DeleteDbReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.DeleteDb(c, mysqldbsrv.DeleteDbReqDTO{
-			Id:       req.Id,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func listDb(c *gin.Context) {
-	dbs, err := mysqldbsrv.Outer.ListDb(c, mysqldbsrv.ListDbReqDTO{
+	err := mysqldbsrv.Outer.DeleteDb(c, mysqldbsrv.DeleteDbReqDTO{
+		DbId:     cast.ToInt64(c.Param("dbId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(dbs, func(t mysqldbsrv.DbDTO) (DbVO, error) {
-		return DbVO{
-			Id:       t.Id,
-			Name:     t.Name,
-			DbHost:   t.DbHost,
-			Username: t.Username,
-			Password: t.Password,
-			Created:  t.Created.Format(time.DateTime),
-		}, nil
-	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]DbVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
-	})
+	util.DefaultOkResponse(c)
+}
+
+func listDb(c *gin.Context) {
+	var req ListDbReqVO
+	if util.ShouldBindQuery(&req, c) {
+		dbs, total, err := mysqldbsrv.Outer.ListDb(c, mysqldbsrv.ListDbReqDTO{
+			PageNum:  req.PageNum,
+			Name:     req.Name,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(dbs, func(t mysqldbsrv.DbDTO) (DbVO, error) {
+			return DbVO{
+				Id:      t.Id,
+				Name:    t.Name,
+				Config:  t.Config,
+				Created: t.Created.Format(time.DateTime),
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.Page2Resp[DbVO]{
+			DataResp: ginutil.DataResp[[]DbVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			PageNum:    req.PageNum,
+			TotalCount: total,
+		})
+	}
 }
 
 func allDb(c *gin.Context) {
@@ -146,9 +168,8 @@ func allDb(c *gin.Context) {
 	}
 	data, _ := listutil.Map(dbs, func(t mysqldbsrv.SimpleDbDTO) (SimpleDbVO, error) {
 		return SimpleDbVO{
-			Id:     t.Id,
-			Name:   t.Name,
-			DbHost: t.DbHost,
+			Id:   t.Id,
+			Name: t.Name,
 		}, nil
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleDbVO]{
@@ -157,16 +178,15 @@ func allDb(c *gin.Context) {
 	})
 }
 
-func applyDbPerm(c *gin.Context) {
+func applyReadPerm(c *gin.Context) {
 	var req ApplyDbPermReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.ApplyDbPerm(c, mysqldbsrv.ApplyDbPermReqDTO{
+		err := mysqldbsrv.Outer.ApplyReadPerm(c, mysqldbsrv.ApplyReadPermReqDTO{
 			DbId:         req.DbId,
 			AccessBase:   req.AccessBase,
 			AccessTables: req.AccessTables,
-			Reason:       req.Reason,
+			ApplyReason:  req.ApplyReason,
 			ExpireDay:    req.ExpireDay,
-			PermType:     req.PermType,
 			Operator:     apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -177,26 +197,23 @@ func applyDbPerm(c *gin.Context) {
 	}
 }
 
-func agreeDbPerm(c *gin.Context) {
-	var req AgreeDbPermReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.AgreeDbPerm(c, mysqldbsrv.AgreeDbPermReqDTO{
-			OrderId:  req.OrderId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+func agreeReadPerm(c *gin.Context) {
+	err := mysqldbsrv.Outer.AgreeReadPermApply(c, mysqldbsrv.AgreeReadPermApplyReqDTO{
+		ApplyId:  cast.ToInt64(c.Param("applyId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
-func disagreeDbPerm(c *gin.Context) {
-	var req DisagreeDbPermReqVO
+func disagreeReadPerm(c *gin.Context) {
+	var req DisagreeReadPermReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.DisagreeDbPerm(c, mysqldbsrv.DisagreeDbPermReqDTO{
-			OrderId:        req.OrderId,
+		err := mysqldbsrv.Outer.DisagreeReadPermApply(c, mysqldbsrv.DisagreeReadPermApplyReqDTO{
+			ApplyId:        req.ApplyId,
 			DisagreeReason: req.DisagreeReason,
 			Operator:       apisession.MustGetLoginUser(c),
 		})
@@ -208,114 +225,129 @@ func disagreeDbPerm(c *gin.Context) {
 	}
 }
 
-func cancelDbPerm(c *gin.Context) {
-	var req CancelDbPermReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.CancelDbPerm(c, mysqldbsrv.CancelDbPermReqDTO{
-			OrderId:  req.OrderId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+func cancelReadPerm(c *gin.Context) {
+	err := mysqldbsrv.Outer.CancelReadPermApply(c, mysqldbsrv.CancelReadPermApplyReqDTO{
+		ApplyId:  cast.ToInt64(c.Param("applyId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
-func listPermOrder(c *gin.Context) {
-	var req ListPermApprovalOrderReqVO
-	if util.ShouldBindJSON(&req, c) {
-		orders, next, err := mysqldbsrv.Outer.ListPermApprovalOrder(c, mysqldbsrv.ListPermApprovalOrderReqDTO{
-			Cursor:      req.Cursor,
-			Limit:       req.Limit,
-			OrderStatus: req.OrderStatus,
+func getReadPermApply(c *gin.Context) {
+	apply, err := mysqldbsrv.Outer.GetReadPermApplyByOperator(c, mysqldbsrv.GetReadPermApplyByOperatorReqDTO{
+		ApplyId:  cast.ToInt64(c.Param("applyId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := readPermApply2Vo(apply)
+	c.JSON(http.StatusOK, ginutil.DataResp[ReadPermApplyVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func listReadPermApplyByDba(c *gin.Context) {
+	var req ListReadPermApplyByDbaReqVO
+	if util.ShouldBindQuery(&req, c) {
+		applies, total, err := mysqldbsrv.Outer.ListReadPermApplyByDba(c, mysqldbsrv.ListReadPermApplyByDbaReqDTO{
+			DbId:        req.DbId,
+			PageNum:     req.PageNum,
+			ApplyStatus: req.ApplyStatus,
 			Operator:    apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.PageResp[PermApprovalOrderVO]{
-			DataResp: ginutil.DataResp[[]PermApprovalOrderVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[ReadPermApplyVO]{
+			DataResp: ginutil.DataResp[[]ReadPermApplyVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
-				Data:     permOrdersDto2Vo(orders),
+				Data:     readPermApplies2Vo(applies),
 			},
-			Next: next,
+			PageNum:    req.PageNum,
+			TotalCount: total,
 		})
 	}
 }
 
-func permOrdersDto2Vo(orders []mysqldbsrv.PermApprovalOrderDTO) []PermApprovalOrderVO {
-	data, _ := listutil.Map(orders, func(t mysqldbsrv.PermApprovalOrderDTO) (PermApprovalOrderVO, error) {
-		return PermApprovalOrderVO{
-			Id:           t.Id,
-			Account:      t.Account,
-			DbId:         t.DbId,
-			DbHost:       t.DbHost,
-			DbName:       t.DbName,
-			AccessBase:   t.AccessBase,
-			AccessTables: t.AccessTables,
-			PermType:     t.PermType.Readable(),
-			OrderStatus:  t.OrderStatus.Readable(),
-			Auditor:      t.Auditor,
-			ExpireDay:    t.ExpireDay,
-			Reason:       t.Reason,
-			Created:      t.Created.Format(time.DateTime),
-		}, nil
-	})
+func readPermApplies2Vo(applies []mysqldbsrv.ReadPermApplyDTO) []ReadPermApplyVO {
+	data, _ := listutil.Map(applies, readPermApply2Vo)
 	return data
 }
 
-func listAppliedPermOrder(c *gin.Context) {
-	var req ListAppliedPermApprovalOrderReqVO
-	if util.ShouldBindJSON(&req, c) {
-		orders, next, err := mysqldbsrv.Outer.ListAppliedPermApprovalOrder(c, mysqldbsrv.ListAppliedPermApprovalOrderReqDTO{
-			Cursor:      req.Cursor,
-			Limit:       req.Limit,
-			OrderStatus: req.OrderStatus,
+func readPermApply2Vo(t mysqldbsrv.ReadPermApplyDTO) (ReadPermApplyVO, error) {
+	return ReadPermApplyVO{
+		Id:             t.Id,
+		Account:        t.Account,
+		DbId:           t.DbId,
+		DbName:         t.DbName,
+		AccessBase:     t.AccessBase,
+		AccessTables:   t.AccessTables,
+		ApplyStatus:    t.ApplyStatus,
+		Auditor:        t.Auditor,
+		ExpireDay:      t.ExpireDay,
+		ApplyReason:    t.ApplyReason,
+		DisagreeReason: t.DisagreeReason,
+		Created:        t.Created.Format(time.DateTime),
+		Updated:        t.Updated.Format(time.DateTime),
+	}, nil
+}
+
+func listReadPermApplyByOperator(c *gin.Context) {
+	var req listReadPermApplyByOperatorReqVO
+	if util.ShouldBindQuery(&req, c) {
+		applies, next, err := mysqldbsrv.Outer.ListReadPermApplyByOperator(c, mysqldbsrv.ListReadPermApplyByOperatorReqDTO{
+			PageNum:     req.PageNum,
+			ApplyStatus: req.ApplyStatus,
 			Operator:    apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.PageResp[PermApprovalOrderVO]{
-			DataResp: ginutil.DataResp[[]PermApprovalOrderVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[ReadPermApplyVO]{
+			DataResp: ginutil.DataResp[[]ReadPermApplyVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
-				Data:     permOrdersDto2Vo(orders),
+				Data:     readPermApplies2Vo(applies),
 			},
 			Next: next,
 		})
 	}
 }
 
-func listUpdateOrder(c *gin.Context) {
-	var req ListUpdateApprovalOrderReqVO
-	if util.ShouldBindJSON(&req, c) {
-		orders, next, err := mysqldbsrv.Outer.ListUpdateApprovalOrder(c, mysqldbsrv.ListUpdateApprovalOrderReqDTO{
-			Cursor:      req.Cursor,
-			Limit:       req.Limit,
-			OrderStatus: req.OrderStatus,
+func listDataUpdateApplyByDba(c *gin.Context) {
+	var req ListDataUpdateApplyByDbaReqVO
+	if util.ShouldBindQuery(&req, c) {
+		orders, total, err := mysqldbsrv.Outer.ListDataUpdateApplyByDba(c, mysqldbsrv.ListDataUpdateApplyByDbaReqDTO{
+			PageNum:     req.PageNum,
+			ApplyStatus: req.ApplyStatus,
 			Operator:    apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.PageResp[UpdateApprovalOrderVO]{
-			DataResp: ginutil.DataResp[[]UpdateApprovalOrderVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[DataUpdateApplyVO]{
+			DataResp: ginutil.DataResp[[]DataUpdateApplyVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     updateOrdersDto2Vo(orders),
 			},
-			Next: next,
+			PageNum:    req.PageNum,
+			TotalCount: total,
 		})
 	}
 }
 
-func updateOrdersDto2Vo(orders []mysqldbsrv.UpdateApprovalOrderDTO) []UpdateApprovalOrderVO {
-	data, _ := listutil.Map(orders, func(t mysqldbsrv.UpdateApprovalOrderDTO) (UpdateApprovalOrderVO, error) {
-		return UpdateApprovalOrderVO{
+func updateOrdersDto2Vo(orders []mysqldbsrv.DataUpdateApplyDTO) []DataUpdateApplyVO {
+	data, _ := listutil.Map(orders, func(t mysqldbsrv.DataUpdateApplyDTO) (DataUpdateApplyVO, error) {
+		return DataUpdateApplyVO{
 			Id:          t.Id,
 			Name:        t.Name,
 			Account:     t.Account,
@@ -324,7 +356,7 @@ func updateOrdersDto2Vo(orders []mysqldbsrv.UpdateApprovalOrderDTO) []UpdateAppr
 			DbName:      t.DbName,
 			AccessBase:  t.AccessBase,
 			UpdateCmd:   t.UpdateCmd,
-			OrderStatus: t.OrderStatus.Readable(),
+			ApplyStatus: t.ApplyStatus,
 			Auditor:     t.Auditor,
 			ExecuteLog:  t.ExecuteLog,
 			Created:     t.Created.Format(time.DateTime),
@@ -333,84 +365,73 @@ func updateOrdersDto2Vo(orders []mysqldbsrv.UpdateApprovalOrderDTO) []UpdateAppr
 	return data
 }
 
-func listAppliedUpdateOrder(c *gin.Context) {
-	var req ListAppliedUpdateApprovalOrderReqVO
-	if util.ShouldBindJSON(&req, c) {
-		orders, next, err := mysqldbsrv.Outer.ListAppliedUpdateApprovalOrder(c, mysqldbsrv.ListAppliedUpdateApprovalOrderReqDTO{
-			Cursor:      req.Cursor,
-			Limit:       req.Limit,
-			OrderStatus: req.OrderStatus,
+func listDataUpdateApplyByOperator(c *gin.Context) {
+	var req ListDataUpdateApplyByOperatorReqVO
+	if util.ShouldBindQuery(&req, c) {
+		orders, total, err := mysqldbsrv.Outer.ListDataUpdateApplyByOperator(c, mysqldbsrv.ListDataUpdateApplyByOperatorReqDTO{
+			PageNum:     req.PageNum,
+			ApplyStatus: req.ApplyStatus,
 			Operator:    apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.PageResp[UpdateApprovalOrderVO]{
-			DataResp: ginutil.DataResp[[]UpdateApprovalOrderVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[DataUpdateApplyVO]{
+			DataResp: ginutil.DataResp[[]DataUpdateApplyVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     updateOrdersDto2Vo(orders),
 			},
-			Next: next,
+			PageNum:    req.PageNum,
+			TotalCount: total,
 		})
 	}
 }
 
-func listDbPerm(c *gin.Context) {
-	var req ListDbPermReqVO
-	if util.ShouldBindJSON(&req, c) {
-		perms, next, err := mysqldbsrv.Outer.ListDbPerm(c, mysqldbsrv.ListDbPermReqDTO{
-			Cursor:   req.Cursor,
-			Limit:    req.Limit,
+func listReadPermByOperator(c *gin.Context) {
+	var req ListReadPermByOperatorReqVO
+	if util.ShouldBindQuery(&req, c) {
+		perms, total, err := mysqldbsrv.Outer.ListReadPermByOperator(c, mysqldbsrv.ListReadPermByOperatorReqDTO{
+			PageNum:  req.PageNum,
+			DbId:     req.DbId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(perms, func(t mysqldbsrv.PermDTO) (PermVO, error) {
-			return PermVO{
+		data, _ := listutil.Map(perms, func(t mysqldbsrv.ReadPermDTO) (ReadPermVO, error) {
+			return ReadPermVO{
 				Id:          t.Id,
 				Account:     t.Account,
 				DbId:        t.DbId,
-				DbHost:      t.DbHost,
 				DbName:      t.DbName,
 				AccessBase:  t.AccessBase,
 				AccessTable: t.AccessTable,
-				PermType:    t.PermType.Readable(),
 				Created:     t.Created.Format(time.DateTime),
 				Expired:     t.Expired.Format(time.DateTime),
+				ApplyId:     t.ApplyId,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[PermVO]{
-			DataResp: ginutil.DataResp[[]PermVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[ReadPermVO]{
+			DataResp: ginutil.DataResp[[]ReadPermVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},
-			Next: next,
+			PageNum:    req.PageNum,
+			TotalCount: total,
 		})
 	}
 }
 
 func deleteDbPerm(c *gin.Context) {
-	var req CancelDbPermReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.CancelDbPerm(c, mysqldbsrv.CancelDbPermReqDTO{
-			OrderId:  req.OrderId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
+
 }
 
-func listDbPermByAccount(c *gin.Context) {
+func listReadPermByAccount(c *gin.Context) {
 	var req ListDbPermByAccountReqVO
 	if util.ShouldBindJSON(&req, c) {
-		perms, next, err := mysqldbsrv.Outer.ListDbPermByAccount(c, mysqldbsrv.ListDbPermByAccountReqDTO{
+		perms, next, err := mysqldbsrv.Outer.ListReadPermByAccount(c, mysqldbsrv.ListReadPermByAccountReqDTO{
 			Cursor:   req.Cursor,
 			Limit:    req.Limit,
 			Account:  req.Account,
@@ -420,21 +441,19 @@ func listDbPermByAccount(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(perms, func(t mysqldbsrv.PermDTO) (PermVO, error) {
-			return PermVO{
+		data, _ := listutil.Map(perms, func(t mysqldbsrv.ReadPermDTO) (ReadPermVO, error) {
+			return ReadPermVO{
 				Id:          t.Id,
 				Account:     t.Account,
 				DbId:        t.DbId,
-				DbHost:      t.DbHost,
 				DbName:      t.DbName,
 				AccessTable: t.AccessTable,
-				PermType:    t.PermType.Readable(),
 				Created:     t.Created.Format(time.DateTime),
 				Expired:     t.Expired.Format(time.DateTime),
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[PermVO]{
-			DataResp: ginutil.DataResp[[]PermVO]{
+		c.JSON(http.StatusOK, ginutil.PageResp[ReadPermVO]{
+			DataResp: ginutil.DataResp[[]ReadPermVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},
@@ -443,71 +462,115 @@ func listDbPermByAccount(c *gin.Context) {
 	}
 }
 
-func allTables(c *gin.Context) {
-	var req AllTablesReqVO
-	if util.ShouldBindJSON(&req, c) {
-		tables, err := mysqldbsrv.Outer.AllTables(c, mysqldbsrv.AllTablesReqDTO{
-			DbId:       req.DbId,
-			AccessBase: req.AccessBase,
-			Operator:   apisession.MustGetLoginUser(c),
+func listAuthorizedDb(c *gin.Context) {
+	dbs, err := mysqldbsrv.Outer.ListAuthorizedDb(c, mysqldbsrv.ListAuthorizedDbReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(dbs, func(t mysqldbsrv.SimpleDbDTO) (SimpleDbVO, error) {
+		return SimpleDbVO{
+			Id:   t.Id,
+			Name: t.Name,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleDbVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func listAuthorizedBase(c *gin.Context) {
+	bases, err := mysqldbsrv.Outer.ListAuthorizedBase(c, mysqldbsrv.ListAuthorizedBaseReqDTO{
+		DbId:     cast.ToInt64(c.Param("dbId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     bases,
+	})
+}
+
+func listAuthorizedTable(c *gin.Context) {
+	tables, err := mysqldbsrv.Outer.ListAuthorizedTable(c, mysqldbsrv.ListAuthorizedTableReqDTO{
+		DbId:       cast.ToInt64(c.Query("dbId")),
+		AccessBase: c.Query("accessBase"),
+		Operator:   apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     tables,
+	})
+}
+
+func getCreateTableSql(c *gin.Context) {
+	var req GetCreateTableSqlReqVO
+	if util.ShouldBindQuery(&req, c) {
+		sql, err := mysqldbsrv.Outer.GetCreateTableSql(c, mysqldbsrv.GetCreateSqlReqDTO{
+			DbId:        req.DbId,
+			AccessBase:  req.AccessBase,
+			AccessTable: req.AccessTable,
+			Operator:    apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+		c.JSON(http.StatusOK, ginutil.DataResp[string]{
 			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     tables,
+			Data:     sql,
 		})
 	}
 }
 
-func allBases(c *gin.Context) {
-	var req AllBasesReqVO
-	if util.ShouldBindJSON(&req, c) {
-		tables, err := mysqldbsrv.Outer.AllBases(c, mysqldbsrv.AllBasesReqDTO{
-			DbId:     req.DbId,
-			Operator: apisession.MustGetLoginUser(c),
+func showTableIndex(c *gin.Context) {
+	var req ShowTableIndexReqVO
+	if util.ShouldBindQuery(&req, c) {
+		columns, data, err := mysqldbsrv.Outer.ShowTableIndex(c, mysqldbsrv.ShowTableIndexReqDTO{
+			DbId:        req.DbId,
+			AccessBase:  req.AccessBase,
+			AccessTable: req.AccessTable,
+			Operator:    apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     tables,
-		})
-	}
-}
-
-func searchDb(c *gin.Context) {
-	var req SearchDbReqVO
-	if util.ShouldBindJSON(&req, c) {
-		columns, result, err := mysqldbsrv.Outer.SearchDb(c, mysqldbsrv.SearchDbReqDTO{
-			DbId:       req.DbId,
-			AccessBase: req.AccessBase,
-			Cmd:        req.Cmd,
-			Limit:      req.Limit,
-			Operator:   apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
+		ret := make([]map[string]string, 0)
+		for _, datum := range data {
+			if len(datum) != len(columns) {
+				continue
+			}
+			item := make(map[string]string)
+			for i := range columns {
+				item[columns[i]] = datum[i]
+			}
+			ret = append(ret, item)
 		}
-		c.JSON(http.StatusOK, ginutil.DataResp[SearchDbResultVO]{
+		c.JSON(http.StatusOK, ginutil.DataResp[ShowTableIndexRespVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
-			Data: SearchDbResultVO{
+			Data: ShowTableIndexRespVO{
 				Columns: columns,
-				Result:  result,
+				Data:    ret,
 			},
 		})
 	}
 }
 
-func exportDb(c *gin.Context) {
-	var req SearchDbReqVO
+func executeSelectSql(c *gin.Context) {
+	var req ExecuteSelectSqlReqVO
 	if util.ShouldBindJSON(&req, c) {
-		columns, result, err := mysqldbsrv.Outer.SearchDb(c, mysqldbsrv.SearchDbReqDTO{
+		columns, data, err := mysqldbsrv.Outer.ExecuteSelectSql(c, mysqldbsrv.ExecuteSelectSqlReqDTO{
 			DbId:       req.DbId,
 			AccessBase: req.AccessBase,
 			Cmd:        req.Cmd,
@@ -518,26 +581,31 @@ func exportDb(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		c.Header("Content-Type", "application/octet-stream")
-		c.Header("Content-Disposition", "attachment; filename=\"data-"+strconv.FormatInt(time.Now().Unix(), 10)+".csv\"")
-		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
-		c.Writer.WriteHeader(http.StatusOK)
-		c.Writer.WriteHeaderNow()
-		writer := csv.NewWriter(c.Writer)
-		defer writer.Flush()
-		writer.Write(columns)
-		if len(result) > 0 {
-			for _, item := range result {
-				writer.Write(item)
+		ret := make([]map[string]string, 0)
+		for _, datum := range data {
+			if len(datum) != len(columns) {
+				continue
 			}
+			item := make(map[string]string)
+			for i := range columns {
+				item[columns[i]] = datum[i]
+			}
+			ret = append(ret, item)
 		}
+		c.JSON(http.StatusOK, ginutil.DataResp[ExecuteSelectSqlResultVO]{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Data: ExecuteSelectSqlResultVO{
+				Columns: columns,
+				Data:    ret,
+			},
+		})
 	}
 }
 
 func applyDbUpdate(c *gin.Context) {
 	var req ApplyDbUpdateReqVO
 	if util.ShouldBindJSON(&req, c) {
-		results, allPass, err := mysqldbsrv.Outer.ApplyDbUpdate(c, mysqldbsrv.ApplyDbUpdateReqDTO{
+		results, allPass, err := mysqldbsrv.Outer.ApplyDataUpdate(c, mysqldbsrv.ApplyDataUpdateReqDTO{
 			Name:       req.Name,
 			DbId:       req.DbId,
 			AccessBase: req.AccessBase,
@@ -561,8 +629,8 @@ func applyDbUpdate(c *gin.Context) {
 func agreeDbUpdate(c *gin.Context) {
 	var req AgreeDbUpdateReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.AgreeDbUpdate(c, mysqldbsrv.AgreeDbUpdateReqDTO{
-			OrderId:  req.OrderId,
+		err := mysqldbsrv.Outer.AgreeDataUpdateApply(c, mysqldbsrv.AgreeDbUpdateReqDTO{
+			ApplyId:  req.OrderId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -576,8 +644,8 @@ func agreeDbUpdate(c *gin.Context) {
 func disagreeDbUpdate(c *gin.Context) {
 	var req DisagreeDbUpdateReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.DisagreeDbUpdate(c, mysqldbsrv.DisagreeDbUpdateReqDTO{
-			OrderId:        req.OrderId,
+		err := mysqldbsrv.Outer.DisagreeDataUpdateApply(c, mysqldbsrv.DisagreeDataUpdateApplyReqDTO{
+			ApplyId:        req.OrderId,
 			DisagreeReason: req.DisagreeReason,
 			Operator:       apisession.MustGetLoginUser(c),
 		})
@@ -592,8 +660,8 @@ func disagreeDbUpdate(c *gin.Context) {
 func cancelDbUpdate(c *gin.Context) {
 	var req CancelDbUpdateReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.CancelDbUpdate(c, mysqldbsrv.CancelDbUpdateReqDTO{
-			OrderId:  req.OrderId,
+		err := mysqldbsrv.Outer.CancelDataUpdateApply(c, mysqldbsrv.CancelDataUpdateApplyReqDTO{
+			ApplyId:  req.OrderId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -607,8 +675,8 @@ func cancelDbUpdate(c *gin.Context) {
 func askToExecuteDbUpdate(c *gin.Context) {
 	var req AskToExecuteDbUpdateReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.AskToExecuteDbUpdate(c, mysqldbsrv.AskToExecuteDbUpdateReqDTO{
-			OrderId:  req.OrderId,
+		err := mysqldbsrv.Outer.AskToExecuteDataUpdateApply(c, mysqldbsrv.AskToExecuteDataUpdateApplyReqDTO{
+			ApplyId:  req.OrderId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -622,8 +690,8 @@ func askToExecuteDbUpdate(c *gin.Context) {
 func executeDbUpdate(c *gin.Context) {
 	var req ExecuteDbUpdateReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := mysqldbsrv.Outer.ExecuteDbUpdate(c, mysqldbsrv.ExecuteDbUpdateReqDTO{
-			OrderId:  req.OrderId,
+		err := mysqldbsrv.Outer.ExecuteDataUpdateApply(c, mysqldbsrv.ExecuteDataUpdateApplyReqDTO{
+			ApplyId:  req.OrderId,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {

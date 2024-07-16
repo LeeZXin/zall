@@ -156,13 +156,10 @@ const serviceColumns = [
 const selectedSourceName = ref("");
 const showServices = ref(false);
 const listDiscoverySource = () => {
-  listSimpleDiscoverySourceRequest(
-    {
-      appId: route.params.appId,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listSimpleDiscoverySourceRequest({
+    appId: route.params.appId,
+    env: selectedEnv.value
+  }).then(res => {
     sourceDataSource.value = res.data.map(item => {
       return {
         key: item.name,
@@ -173,16 +170,14 @@ const listDiscoverySource = () => {
 };
 
 const listService = () => {
-  listDiscoveryServiceRequest(selectedSourceId.value, selectedEnv.value).then(
-    res => {
-      serviceDataSource.value = res.data.map((item, index) => {
-        return {
-          key: index,
-          ...item
-        };
-      });
-    }
-  );
+  listDiscoveryServiceRequest(selectedSourceId.value).then(res => {
+    serviceDataSource.value = res.data.map((item, index) => {
+      return {
+        key: index,
+        ...item
+      };
+    });
+  });
 };
 
 const getServices = item => {
@@ -205,13 +200,10 @@ const deregisterService = item => {
     title: `你确定要下线${item.host}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      deregisterServiceRequest(
-        {
-          sourceId: selectedSourceId.value,
-          instanceId: item.instanceId
-        },
-        selectedEnv.value
-      ).then(() => {
+      deregisterServiceRequest({
+        sourceId: selectedSourceId.value,
+        instanceId: item.instanceId
+      }).then(() => {
         message.success("下线成功");
         listService();
       });
@@ -225,13 +217,10 @@ const reRegisterService = item => {
     title: `你确定要上线${item.host}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      reRegisterServiceRequest(
-        {
-          sourceId: selectedSourceId.value,
-          instanceId: item.instanceId
-        },
-        selectedEnv.value
-      ).then(() => {
+      reRegisterServiceRequest({
+        sourceId: selectedSourceId.value,
+        instanceId: item.instanceId
+      }).then(() => {
         message.success("上线成功");
         listService();
       });
@@ -245,13 +234,10 @@ const deleteDownService = item => {
     title: `你确定要删除${item.host}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      deleteDownServiceRequest(
-        {
-          sourceId: selectedSourceId.value,
-          instanceId: item.instanceId
-        },
-        selectedEnv.value
-      ).then(() => {
+      deleteDownServiceRequest({
+        sourceId: selectedSourceId.value,
+        instanceId: item.instanceId
+      }).then(() => {
         message.success("删除成功");
         listService();
       });

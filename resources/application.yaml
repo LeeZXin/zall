@@ -44,23 +44,15 @@ timer:
 idserver:
   enabled: true
 
-propserver:
-  enabled: true
-
 httptask:
   token: 123
-
-tcpDetect:
-  enabled: true
 
 discovery:
   type: static
 
 files:
   enabled: true
-  normal:
-    token: 123
-  domain: http://localhost
+  domain: http://127.0.0.1:80
 
 action:
   agent:
@@ -75,7 +67,7 @@ prom:
     enabled: true
     env: sit
     filePath: /Users/lizexin/Desktop/prometheus/prometheus-2.51.1.darwin-amd64/target.json
-    serverUrl: http://127.0.0.1:9090
+    endpoint: prom-001
 
 logger:
   loki:

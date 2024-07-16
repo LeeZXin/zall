@@ -107,35 +107,29 @@ const saveOrUpdateServiceSource = () => {
     message.warn("endpoints格式错误");
     return;
   }
-  let endpoints = formState.endpoints.split(";").filter(item=>item);
+  let endpoints = formState.endpoints.split(";").filter(item => item);
   if (mode === "create") {
-    createPropertySourceRequest(
-      {
-        env: formState.selectedEnv,
-        appId: route.params.appId,
-        endpoints: endpoints,
-        username: formState.username,
-        password: formState.password,
-        name: formState.name
-      },
-      formState.selectedEnv
-    ).then(() => {
+    createPropertySourceRequest({
+      env: formState.selectedEnv,
+      appId: route.params.appId,
+      endpoints: endpoints,
+      username: formState.username,
+      password: formState.password,
+      name: formState.name
+    }).then(() => {
       message.success("创建成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/list/${formState.selectedEnv}`
       );
     });
   } else if (mode === "update") {
-    updatePropertySourceRequest(
-      {
-        sourceId: propertySourceStore.id,
-        endpoints: endpoints,
-        username: formState.username,
-        password: formState.password,
-        name: formState.name
-      },
-      formState.selectedEnv
-    ).then(() => {
+    updatePropertySourceRequest({
+      sourceId: propertySourceStore.id,
+      endpoints: endpoints,
+      username: formState.username,
+      password: formState.password,
+      name: formState.name
+    }).then(() => {
       message.success("保存成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/list/${formState.selectedEnv}`

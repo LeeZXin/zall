@@ -67,7 +67,7 @@ func (*outerImpl) CreateTeam(ctx context.Context, reqDTO CreateTeamReqDTO) (err 
 	defer closer.Close()
 	if !reqDTO.Operator.IsAdmin {
 		// 判断是否允许用户自行创建团队
-		sysCfg, b := cfgsrv.Inner.GetSysCfg(ctx)
+		sysCfg, b := cfgsrv.Inner.GetSysCfg()
 		if !b || !sysCfg.AllowUserCreateTeam {
 			err = util.UnauthorizedError()
 			return
@@ -448,7 +448,7 @@ func (*outerImpl) UpdateRole(ctx context.Context, reqDTO UpdateRoleReqDTO) error
 	if err = checkReqPerm(ctx, reqDTO.Perm, role.TeamId); err != nil {
 		return err
 	}
-	if _, err = teammd.UpdateRole(ctx, teammd.UpdateRoleReqDTO{
+	if _, err = teammd.UpdateRoleById(ctx, teammd.UpdateRoleReqDTO{
 		RoleId: reqDTO.RoleId,
 		Name:   reqDTO.Name,
 		Perm:   reqDTO.Perm,
@@ -510,7 +510,7 @@ func (*outerImpl) DeleteRole(ctx context.Context, reqDTO DeleteRoleReqDTO) error
 		return err
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		_, err2 := teammd.DeleteRole(ctx, reqDTO.RoleId)
+		_, err2 := teammd.DeleteRoleById(ctx, reqDTO.RoleId)
 		if err2 != nil {
 			return err2
 		}
@@ -565,7 +565,7 @@ func (*outerImpl) ListTeam(ctx context.Context, reqDTO ListTeamReqDTO) ([]teammd
 	teamIdList, _ := listutil.Map(puList, func(t teammd.User) (int64, error) {
 		return t.TeamId, nil
 	})
-	teamList, err := teammd.GetByTeamIdList(ctx, teamIdList)
+	teamList, err := teammd.GetTeamsByTeamIdList(ctx, teamIdList)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)

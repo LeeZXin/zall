@@ -162,14 +162,11 @@ const showTask = item => {
   task.value = item.task;
 };
 const pageLog = () => {
-  pageTimerTaskLogRequest(
-    {
-      taskId: route.params.taskId,
-      pageNum: currPage.value,
-      dateStr: dateVal.value.format("YYYY-MM-DD")
-    },
-    timerTaskStore.env
-  ).then(res => {
+  pageTimerTaskLogRequest({
+    taskId: route.params.taskId,
+    pageNum: currPage.value,
+    dateStr: dateVal.value.format("YYYY-MM-DD")
+  }).then(res => {
     totalCount.value = res.totalCount;
     dataSource.value = res.data.map((item, index) => {
       return {

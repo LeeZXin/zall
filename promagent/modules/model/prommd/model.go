@@ -1,7 +1,6 @@
 package prommd
 
 import (
-	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
 )
 
@@ -25,23 +24,13 @@ func (t TargetType) IsValid() bool {
 	}
 }
 
-func (t TargetType) Readable() string {
-	switch t {
-	case DiscoveryTargetType:
-		return i18n.GetByKey(i18n.PromScrapeDiscoveryTargetType)
-	case HostTargetType:
-		return i18n.GetByKey(i18n.PromScrapeHostTargetType)
-	default:
-		return i18n.GetByKey(i18n.PromScrapeUnknownTargetType)
-	}
-}
-
 type Scrape struct {
 	Id         int64      `json:"id" xorm:"pk autoincr"`
-	ServerUrl  string     `json:"serverUrl"`
+	Endpoint   string     `json:"endpoint"`
 	AppId      string     `json:"appId"`
 	Target     string     `json:"target"`
 	TargetType TargetType `json:"targetType"`
+	Env        string     `json:"env"`
 	Created    time.Time  `json:"created" xorm:"created"`
 	Updated    time.Time  `json:"updated" xorm:"updated"`
 }

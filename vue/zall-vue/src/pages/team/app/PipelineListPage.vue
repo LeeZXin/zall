@@ -87,7 +87,7 @@ const deletePipeline = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deletePipelineRequest(item.id, item.env).then(() => {
+      deletePipelineRequest(item.id).then(() => {
         message.success("删除成功");
         listPipeline();
       });
@@ -97,13 +97,10 @@ const deletePipeline = item => {
 };
 
 const listPipeline = () => {
-  listPipelineRequest(
-    {
-      appId: route.params.appId,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listPipelineRequest({
+    appId: route.params.appId,
+    env: selectedEnv.value
+  }).then(res => {
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,

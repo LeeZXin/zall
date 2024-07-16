@@ -21,14 +21,14 @@ import (
 
 var (
 	taskExecutor *executor.Executor
-	taskEnv      string
+	env          string
 	httpClient   *http.Client
 )
 
 func initTask() {
 	httpClient = httputil.NewRetryableHttpClient()
-	taskEnv = static.GetString("timer.env")
-	if taskEnv == "" {
+	env = static.GetString("timer.env")
+	if env == "" {
 		logger.Logger.Fatal("timer task started with empty env")
 	}
 	poolSize := static.GetInt("timer.poolSize")
@@ -39,10 +39,10 @@ func initTask() {
 	if queueSize <= 0 {
 		queueSize = 1024
 	}
-	logger.Logger.Infof("start timer task service with env: %s poolSize: %v queueSize: %v", taskEnv, poolSize, queueSize)
+	logger.Logger.Infof("start timer task service with env: %s poolSize: %v queueSize: %v", env, poolSize, queueSize)
 	taskExecutor, _ = executor.NewExecutor(poolSize, queueSize, time.Minute, executor.AbortStrategy)
 	leaser, _ := lease.NewDbLease(
-		"timer-lock-"+taskEnv,
+		"timer-lock-"+env,
 		common.GetInstanceId(),
 		"zall_lock",
 		xormstore.GetEngine(),
@@ -78,7 +78,7 @@ func initTask() {
 func doExecuteTask(runCtx context.Context) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	err := taskmd.IterateExecute(ctx, time.Now().UnixMilli(), taskEnv, func(execute *taskmd.Execute) error {
+	err := taskmd.IterateExecute(ctx, time.Now().UnixMilli(), env, func(execute *taskmd.Execute) error {
 		rerr := runCtx.Err()
 		if rerr == nil {
 			return handleExecute(execute)

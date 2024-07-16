@@ -36,7 +36,7 @@ func (s *outerImpl) UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) (er
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
-	cfg, b := cfgsrv.Inner.GetGitCfg(ctx)
+	cfg, b := cfgsrv.Inner.GetGitCfg()
 	if !b {
 		return util.InternalError(errors.New("can not get git config"))
 	}
@@ -70,7 +70,7 @@ func (s *outerImpl) ReceivePack(ctx context.Context, reqDTO ReceivePackReqDTO) (
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
-	cfg, b := cfgsrv.Inner.GetGitCfg(ctx)
+	cfg, b := cfgsrv.Inner.GetGitCfg()
 	if !b {
 		return util.InternalError(errors.New("can not get git config"))
 	}

@@ -98,13 +98,10 @@ const statusDataSource = ref([]);
 const statusInterval = ref(null);
 const selectedSource = ref(null);
 const listServiceSource = () => {
-  listSimpleServiceSourceRequest(
-    {
-      appId: route.params.appId,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listSimpleServiceSourceRequest({
+    appId: route.params.appId,
+    env: selectedEnv.value
+  }).then(res => {
     sourceDataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -136,11 +133,11 @@ const backToSource = () => {
 const getStatusList = data => {
   selectedSource.value = data;
   if (actionList.value.length === 0) {
-    listStatusActionsRequest(data.id, data.env).then(res => {
+    listStatusActionsRequest(data.id).then(res => {
       actionList.value = res.data;
     });
   }
-  listServiceStatusRequest(data.id, data.env).then(res => {
+  listServiceStatusRequest(data.id).then(res => {
     showStatusList.value = true;
     statusDataSource.value = res.data.map(item => {
       return {
@@ -182,14 +179,11 @@ const doAction = (item, action) => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      doStatusActionRequest(
-        {
-          serviceId: item.id,
-          sourceId: selectedSource.value.id,
-          action: action
-        },
-        selectedSource.value.env
-      ).then(() => {
+      doStatusActionRequest({
+        serviceId: item.id,
+        sourceId: selectedSource.value.id,
+        action: action
+      }).then(() => {
         message.success("操作成功");
         listStatus();
       });

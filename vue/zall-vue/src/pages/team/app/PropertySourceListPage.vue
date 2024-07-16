@@ -82,7 +82,7 @@ const deletePropertySource = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deletePropertySourceRequest(item.id, item.env).then(() => {
+      deletePropertySourceRequest(item.id).then(() => {
         message.success("删除成功");
         listPropertySource();
       });
@@ -92,13 +92,10 @@ const deletePropertySource = item => {
 };
 
 const listPropertySource = () => {
-  listPropertySourceRequest(
-    {
-      appId: route.params.appId,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listPropertySourceRequest({
+    appId: route.params.appId,
+    env: selectedEnv.value
+  }).then(res => {
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,

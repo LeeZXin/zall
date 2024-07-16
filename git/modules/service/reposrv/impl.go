@@ -333,7 +333,7 @@ func (s *outerImpl) SimpleInfo(ctx context.Context, reqDTO SimpleInfoReqDTO) (Si
 	ret.Tags, _ = listutil.Map(tags, func(t reqvo.RefVO) (string, error) {
 		return t.Name, nil
 	})
-	cfg, b := cfgsrv.Inner.GetGitCfg(ctx)
+	cfg, b := cfgsrv.Inner.GetGitCfg()
 	if b {
 		if cfg.HttpUrl != "" {
 			ret.CloneHttpUrl = strings.TrimSuffix(cfg.HttpUrl, "/") + "/" + repo.Path

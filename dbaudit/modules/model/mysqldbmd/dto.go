@@ -3,77 +3,68 @@ package mysqldbmd
 import "time"
 
 type InsertDbReqDTO struct {
-	Name     string
-	DbHost   string
-	Username string
-	Password string
+	Name   string
+	Config Config
 }
 
 type UpdateDbReqDTO struct {
-	Id       int64
-	Name     string
-	DbHost   string
-	Username string
-	Password string
+	Id     int64
+	Name   string
+	Config Config
 }
 
-type InsertPermApprovalOrderReqDTO struct {
+type InsertReadPermApplyReqDTO struct {
 	Account      string
 	DbId         int64
+	DbName       string
 	AccessBase   string
-	AccessTables AccessTables
-	PermType     PermType
-	OrderStatus  PermOrderStatus
+	AccessTables string
+	OrderStatus  ReadPermApplyStatus
 	ExpireDay    int
-	Reason       string
+	ApplyReason  string
 }
 
-type ListPermApprovalOrderReqDTO struct {
-	Cursor      int64
-	Limit       int
+type ListReadPermApplyReqDTO struct {
+	PageNum     int
+	PageSize    int
 	Account     string
-	OrderStatus int
+	DbId        int64
+	ApplyStatus ReadPermApplyStatus
 }
 
-type ListUpdateApprovalOrderReqDTO struct {
-	Cursor      int64
-	Limit       int
+type ListDataUpdateApplyReqDTO struct {
+	PageNum     int
+	PageSize    int
 	Account     string
-	OrderStatus int
+	OrderStatus DataUpdateApplyStatus
 }
 
-type InsertPermReqDTO struct {
+type InsertReadPermReqDTO struct {
 	Account     string
 	DbId        int64
 	AccessBase  string
 	AccessTable string
-	PermType    PermType
+	ApplyId     int64
 	Expired     time.Time
 }
 
-type UpdatePermApprovalOrderStatusReqDTO struct {
+type UpdateReadPermApplyStatusReqDTO struct {
 	Id             int64
-	NewStatus      PermOrderStatus
-	OldStatus      PermOrderStatus
+	NewStatus      ReadPermApplyStatus
+	OldStatus      ReadPermApplyStatus
 	Auditor        string
 	DisagreeReason string
 }
 
-type UpdateUpdateApprovalOrderStatusReqDTO struct {
+type UpdateDataUpdateApplyStatusReqDTO struct {
 	Id             int64
-	NewStatus      UpdateOrderStatus
-	OldStatus      UpdateOrderStatus
+	NewStatus      DataUpdateApplyStatus
+	OldStatus      DataUpdateApplyStatus
 	Auditor        string
 	DisagreeReason string
 }
 
-type ListPermReqDTO struct {
-	Cursor  int64
-	Limit   int
-	Account string
-}
-
-type SearchPermReqDTO struct {
+type ExistReadPermReqDTO struct {
 	Account      string
 	DbId         int64
 	AccessBase   string
@@ -86,5 +77,25 @@ type InsertUpdateApprovalOrderReqDTO struct {
 	DbId        int64
 	AccessBase  string
 	UpdateCmd   string
-	OrderStatus UpdateOrderStatus
+	OrderStatus DataUpdateApplyStatus
+}
+
+type PageDbReqDTO struct {
+	PageNum  int
+	PageSize int
+	Name     string
+}
+
+type PageReadPermReqDTO struct {
+	Account  string
+	PageNum  int
+	PageSize int
+	DbId     int64
+}
+
+type ListReadPermByAccountReqDTO struct {
+	DbId       int64
+	AccessBase string
+	Account    string
+	Cols       []string
 }

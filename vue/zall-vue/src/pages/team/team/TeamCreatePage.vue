@@ -1,7 +1,6 @@
 <template>
   <div style="padding: 10px">
     <div class="container">
-      <ZNaviBack url="/teamList" name="选择团队" />
       <div class="title">创建团队</div>
       <div class="form-item">
         <div class="label">
@@ -18,7 +17,6 @@
   </div>
 </template>
 <script setup>
-import ZNaviBack from "@/components/common/ZNaviBack";
 import { useI18n } from "vue-i18n";
 import { ref } from "vue";
 import { teamNameRegexp } from "@/utils/regexp";
@@ -38,7 +36,7 @@ const createTeam = () => {
   }).then(() => {
     message.success("创建成功");
     setTimeout(() => {
-      router.push("/teamList");
+      router.push("/index/team/list");
     }, 1000);
   });
 };

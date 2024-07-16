@@ -256,7 +256,7 @@ func (*outerImpl) RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 获取系统配置检查是否禁用注册功能
-	sysCfg, b := cfgsrv.Inner.GetSysCfg(ctx)
+	sysCfg, b := cfgsrv.Inner.GetSysCfg()
 	if !b || sysCfg.DisableSelfRegisterUser {
 		err = util.UnauthorizedError()
 		return

@@ -52,7 +52,7 @@ export default {
         timerTask: "定时任务",
         applyApproval: "审批申请",
         dbAudit: "数据库审计",
-        monitorAlert: "监控告警",
+        promScrape: "Prometheus监控",
         roleAndMembers: "角色&成员"
     },
     roleListPage: {
@@ -117,6 +117,14 @@ export default {
         pendingStatus: "待发布",
         runningStatus: "发布中",
         successfulStatus: "发布成功",
-        closedStatus: "已关闭"
+        closedStatus: "已关闭",
+        unknownStatus: "未知"
+    },
+    mysqlReadPermApply: {
+        pendingStatus: "等待审核",
+        agreeStatus: "同意",
+        disagreeStatus: "不同意",
+        canceledStatus: "已取消",
+        unknownStatus: "未知"
     }
 }

@@ -239,31 +239,25 @@ const saveOrUpdateTimerTask = () => {
     };
   }
   if (mode === "create") {
-    createTimerTaskRequest(
-      {
-        env: formState.selectedEnv,
-        cronExp: formState.cronExp,
-        teamId: parseInt(route.params.teamId),
-        name: formState.name,
-        task
-      },
-      formState.selectedEnv
-    ).then(() => {
+    createTimerTaskRequest({
+      env: formState.selectedEnv,
+      cronExp: formState.cronExp,
+      teamId: parseInt(route.params.teamId),
+      name: formState.name,
+      task
+    }).then(() => {
       message.success("创建成功");
       router.push(
         `/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`
       );
     });
   } else if (mode === "update") {
-    updateTimerTaskRequest(
-      {
-        cronExp: formState.cronExp,
-        task,
-        name: formState.name,
-        taskId: timerTaskStore.id
-      },
-      formState.selectedEnv
-    ).then(() => {
+    updateTimerTaskRequest({
+      cronExp: formState.cronExp,
+      task,
+      name: formState.name,
+      taskId: timerTaskStore.id
+    }).then(() => {
       message.success("编辑成功");
       router.push(
         `/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`

@@ -82,7 +82,7 @@ const deleteDiscoverySource = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteDiscoverySourceRequest(item.id, item.env).then(() => {
+      deleteDiscoverySourceRequest(item.id).then(() => {
         message.success("删除成功");
         listDiscoverySource();
       });
@@ -92,13 +92,10 @@ const deleteDiscoverySource = item => {
 };
 
 const listDiscoverySource = () => {
-  listDiscoverySourceRequest(
-    {
-      appId: route.params.appId,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listDiscoverySourceRequest({
+    appId: route.params.appId,
+    env: selectedEnv.value
+  }).then(res => {
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,

@@ -14,6 +14,7 @@ var (
 		CanManageServiceSource:   true,
 		CanManagePropertySource:  true,
 		CanManageDiscoverySource: true,
+		CanManagePromAgent:       true,
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:              true,
@@ -113,4 +114,6 @@ type TeamPerm struct {
 	CanManagePropertySource bool `json:"canManagePropertySource"`
 	// 是否可管理注册中心来源
 	CanManageDiscoverySource bool `json:"canManageDiscoverySource"`
+	// 是否可管理监控告警
+	CanManagePromAgent bool `json:"canManagePromAgent"`
 }

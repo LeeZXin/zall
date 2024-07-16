@@ -1,64 +1,23 @@
 import request from '@/utils/request.js'
 
-const ENV_HEADER = "ZALL-ENV";
-
 // 注册中心来源列表
-const listDiscoverySourceRequest = (data, env) => request.get("/api/discoverySource/list", {
-    params: data,
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const listDiscoverySourceRequest = (data) => request.get("/api/discoverySource/list", { params: data });
 // 新增注册中心来源
-const createDiscoverySourceRequest = (data, env) => request.post("/api/discoverySource/create", data, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const createDiscoverySourceRequest = (data) => request.post("/api/discoverySource/create", data);
 // 编辑注册中心来源
-const updateDiscoverySourceRequest = (data, env) => request.post("/api/discoverySource/update", data, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const updateDiscoverySourceRequest = (data) => request.post("/api/discoverySource/update", data);
 // 删除注册中心来源
-const deleteDiscoverySourceRequest = (sourceId, env) => request.delete("/api/discoverySource/delete/" + sourceId, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const deleteDiscoverySourceRequest = (sourceId) => request.delete("/api/discoverySource/delete/" + sourceId);
 // 注册中心来源列表
-const listSimpleDiscoverySourceRequest = (data, env) => request.get("/api/discoveryService/listSource", {
-    params: data,
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const listSimpleDiscoverySourceRequest = (data) => request.get("/api/discoveryService/listSource", { params: data });
 // 服务列表
-const listDiscoveryServiceRequest = (sourceId, env) => request.get("/api/discoveryService/listService/" + sourceId, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const listDiscoveryServiceRequest = (sourceId) => request.get("/api/discoveryService/listService/" + sourceId);
 // 下线服务
-const deregisterServiceRequest = (data, env) => request.post("/api/discoveryService/deregister", data, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const deregisterServiceRequest = (data) => request.post("/api/discoveryService/deregister", data);
 // 上线服务
-const reRegisterServiceRequest = (data, env) => request.post("/api/discoveryService/reRegister", data, {
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const reRegisterServiceRequest = (data) => request.post("/api/discoveryService/reRegister", data);
 // 删除下线服务
-const deleteDownServiceRequest = (data, env) => request.delete("/api/discoveryService/deleteDownService", {
-    params: data,
-    headers: {
-        [ENV_HEADER]: env
-    }
-});
+const deleteDownServiceRequest = (data) => request.delete("/api/discoveryService/deleteDownService", { params: data });
 export {
     listDiscoverySourceRequest,
     createDiscoverySourceRequest,

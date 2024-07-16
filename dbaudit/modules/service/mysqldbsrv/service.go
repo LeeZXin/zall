@@ -3,56 +3,78 @@ package mysqldbsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/dbaudit/modules/service/mysqldbsrv/command"
+	"github.com/LeeZXin/zsf-utils/collections/hashset"
 )
 
 var (
-	Outer OuterService = new(outerImpl)
+	Outer        OuterService
+	defaultBases *hashset.HashSet[string]
 )
 
+func Init() {
+	if Outer == nil {
+		Outer = new(outerImpl)
+		defaultBases = hashset.NewHashSet("information_schema", "mysql", "sys", "performance_schema")
+	}
+}
+
 type OuterService interface {
-	InsertDb(context.Context, InsertDbReqDTO) error
+	// CreateDb 创建数据库
+	CreateDb(context.Context, CreateDbReqDTO) error
+	// UpdateDb 编辑数据库
 	UpdateDb(context.Context, UpdateDbReqDTO) error
+	// DeleteDb 删除数据库
 	DeleteDb(context.Context, DeleteDbReqDTO) error
-	ListDb(context.Context, ListDbReqDTO) ([]DbDTO, error)
+	// ListDb 数据库详细列表
+	ListDb(context.Context, ListDbReqDTO) ([]DbDTO, int64, error)
+	// ListSimpleDb 数据库简单列表
 	ListSimpleDb(context.Context, ListSimpleDbReqDTO) ([]SimpleDbDTO, error)
-	// ApplyDbPerm 申请库表权限
-	ApplyDbPerm(context.Context, ApplyDbPermReqDTO) error
-	// ListPermApprovalOrder 展示审批列表
-	ListPermApprovalOrder(context.Context, ListPermApprovalOrderReqDTO) ([]PermApprovalOrderDTO, int64, error)
-	// ListAppliedPermApprovalOrder 展示申请的审批列表
-	ListAppliedPermApprovalOrder(context.Context, ListAppliedPermApprovalOrderReqDTO) ([]PermApprovalOrderDTO, int64, error)
-	// AgreeDbPerm 同意审批
-	AgreeDbPerm(context.Context, AgreeDbPermReqDTO) error
-	// DisagreeDbPerm 不同意审批
-	DisagreeDbPerm(context.Context, DisagreeDbPermReqDTO) error
-	// CancelDbPerm 取消申请
-	CancelDbPerm(context.Context, CancelDbPermReqDTO) error
-	// ListDbPerm 权限列表
-	ListDbPerm(context.Context, ListDbPermReqDTO) ([]PermDTO, int64, error)
-	// DeleteDbPerm 删除权限
-	DeleteDbPerm(context.Context, DeleteDbPermReqDTO) error
-	// ListDbPermByAccount 权限列表
-	ListDbPermByAccount(context.Context, ListDbPermByAccountReqDTO) ([]PermDTO, int64, error)
-	// AllBases 所有库
-	AllBases(context.Context, AllBasesReqDTO) ([]string, error)
-	// AllTables 展示单个数据库所有表
-	AllTables(context.Context, AllTablesReqDTO) ([]string, error)
-	// SearchDb 搜索
-	SearchDb(context.Context, SearchDbReqDTO) ([]string, [][]string, error)
-	// ApplyDbUpdate 提数据库修改单
-	ApplyDbUpdate(context.Context, ApplyDbUpdateReqDTO) ([]command.ValidateUpdateResult, bool, error)
-	// ListUpdateApprovalOrder 数据库修改审批单
-	ListUpdateApprovalOrder(context.Context, ListUpdateApprovalOrderReqDTO) ([]UpdateApprovalOrderDTO, int64, error)
-	// ListAppliedUpdateApprovalOrder 申请的数据库修改审批单
-	ListAppliedUpdateApprovalOrder(context.Context, ListAppliedUpdateApprovalOrderReqDTO) ([]UpdateApprovalOrderDTO, int64, error)
-	// AgreeDbUpdate 同意修改单
-	AgreeDbUpdate(context.Context, AgreeDbUpdateReqDTO) error
-	// DisagreeDbUpdate 不同意修改单
-	DisagreeDbUpdate(context.Context, DisagreeDbUpdateReqDTO) error
-	// CancelDbUpdate 取消修改单
-	CancelDbUpdate(context.Context, CancelDbUpdateReqDTO) error
-	// ExecuteDbUpdate 执行修改单
-	ExecuteDbUpdate(context.Context, ExecuteDbUpdateReqDTO) error
-	// AskToExecuteDbUpdate 请求执行修改单
-	AskToExecuteDbUpdate(context.Context, AskToExecuteDbUpdateReqDTO) error
+	// ApplyReadPerm 申请库表读权限
+	ApplyReadPerm(context.Context, ApplyReadPermReqDTO) error
+	// ListReadPermApplyByDba 展示审批列表
+	ListReadPermApplyByDba(context.Context, ListReadPermApplyByDbaReqDTO) ([]ReadPermApplyDTO, int64, error)
+	// ListReadPermApplyByOperator 展示申请的审批列表
+	ListReadPermApplyByOperator(context.Context, ListReadPermApplyByOperatorReqDTO) ([]ReadPermApplyDTO, int64, error)
+	// AgreeReadPermApply 同意审批
+	AgreeReadPermApply(context.Context, AgreeReadPermApplyReqDTO) error
+	// DisagreeReadPermApply 不同意审批
+	DisagreeReadPermApply(context.Context, DisagreeReadPermApplyReqDTO) error
+	// CancelReadPermApply 取消申请
+	CancelReadPermApply(context.Context, CancelReadPermApplyReqDTO) error
+	// GetReadPermApplyByOperator 操作人查看自己的审批单
+	GetReadPermApplyByOperator(context.Context, GetReadPermApplyByOperatorReqDTO) (ReadPermApplyDTO, error)
+	// ListReadPermByOperator 权限列表
+	ListReadPermByOperator(context.Context, ListReadPermByOperatorReqDTO) ([]ReadPermDTO, int64, error)
+	// DeleteReadPermByDba 删除权限
+	DeleteReadPermByDba(context.Context, DeleteReadPermByDbaReqDTO) error
+	// ListReadPermByAccount 权限列表
+	ListReadPermByAccount(context.Context, ListReadPermByAccountReqDTO) ([]ReadPermDTO, int64, error)
+	// ListAuthorizedDb 展示授权的数据库
+	ListAuthorizedDb(context.Context, ListAuthorizedDbReqDTO) ([]SimpleDbDTO, error)
+	// ListAuthorizedBase 展示授权的库
+	ListAuthorizedBase(context.Context, ListAuthorizedBaseReqDTO) ([]string, error)
+	// ListAuthorizedTable 展示授权的表
+	ListAuthorizedTable(context.Context, ListAuthorizedTableReqDTO) ([]string, error)
+	// GetCreateTableSql 展示建表语句
+	GetCreateTableSql(context.Context, GetCreateSqlReqDTO) (string, error)
+	// ShowTableIndex 展示索引语句
+	ShowTableIndex(context.Context, ShowTableIndexReqDTO) ([]string, [][]string, error)
+	// ExecuteSelectSql 搜索
+	ExecuteSelectSql(context.Context, ExecuteSelectSqlReqDTO) ([]string, [][]string, error)
+	// ApplyDataUpdate 提数据库修改单
+	ApplyDataUpdate(context.Context, ApplyDataUpdateReqDTO) ([]command.ValidateUpdateResult, bool, error)
+	// ListDataUpdateApplyByDba 数据库修改审批单
+	ListDataUpdateApplyByDba(context.Context, ListDataUpdateApplyByDbaReqDTO) ([]DataUpdateApplyDTO, int64, error)
+	// ListDataUpdateApplyByOperator 申请的数据库修改审批单
+	ListDataUpdateApplyByOperator(context.Context, ListDataUpdateApplyByOperatorReqDTO) ([]DataUpdateApplyDTO, int64, error)
+	// AgreeDataUpdateApply 同意修改单
+	AgreeDataUpdateApply(context.Context, AgreeDbUpdateReqDTO) error
+	// DisagreeDataUpdateApply 不同意修改单
+	DisagreeDataUpdateApply(context.Context, DisagreeDataUpdateApplyReqDTO) error
+	// CancelDataUpdateApply 取消修改单
+	CancelDataUpdateApply(context.Context, CancelDataUpdateApplyReqDTO) error
+	// ExecuteDataUpdateApply 执行修改单
+	ExecuteDataUpdateApply(context.Context, ExecuteDataUpdateApplyReqDTO) error
+	// AskToExecuteDataUpdateApply 请求执行修改单
+	AskToExecuteDataUpdateApply(context.Context, AskToExecuteDataUpdateApplyReqDTO) error
 }

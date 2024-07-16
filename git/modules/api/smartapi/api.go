@@ -47,7 +47,7 @@ func handleGoGet(c *gin.Context) {
 			c.Next()
 			return
 		}
-		cfg, b := cfgsrv.Inner.GetGitCfg(c)
+		cfg, b := cfgsrv.Inner.GetGitCfg()
 		if !b {
 			c.String(http.StatusInternalServerError, "")
 			return

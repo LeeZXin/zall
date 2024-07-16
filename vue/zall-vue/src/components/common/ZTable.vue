@@ -88,17 +88,19 @@ const NoDataRender = () => {
 
 .z-table > table > tr > td {
   text-align: center;
-  padding: 0 8px;
+  padding: 6px;
+  word-break: break-all;
 }
+
 .z-table > table > tr {
-  line-height: 32px;
+  line-height: 20px;
   font-size: 14px;
 }
 .z-table > table > tr + tr {
   border-top: 1px solid #d9d9d9;
 }
 .z-table > table > tr:first-child {
-  line-height: 32px;
+  line-height: 20px;
   font-size: 14px;
   font-weight: bold;
 }

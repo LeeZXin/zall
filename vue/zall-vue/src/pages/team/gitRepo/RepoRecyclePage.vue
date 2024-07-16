@@ -2,9 +2,6 @@
   <div style="padding:14px">
     <div style="margin-bottom:16px">
       <div style="font-size:16px;font-weight:bold;margin-bottom:8px">仓库回收站</div>
-      <div
-        style="font-size:14px;color:gray"
-      >所有在回收站的仓库有效期为30天, 若超过30天无恢复操作, 将自动永久删除代码文件、lfs文件、合并请求、工作流等记录</div>
     </div>
     <div style="margin-bottom:10px">
       <a-input

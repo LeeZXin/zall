@@ -3,12 +3,22 @@ package promsrv
 import "context"
 
 var (
-	Outer OuterService = new(outerImpl)
+	Outer OuterService
 )
 
+func Init() {
+	if Outer == nil {
+		Outer = new(outerImpl)
+	}
+}
+
 type OuterService interface {
-	InsertScrape(context.Context, InsertScrapeReqDTO) error
+	// CreateScrape 创建抓取配置
+	CreateScrape(context.Context, CreateScrapeReqDTO) error
+	// UpdateScrape 编辑抓取配置
 	UpdateScrape(context.Context, UpdateScrapeReqDTO) error
+	// ListScrape 展示抓取列表
 	ListScrape(context.Context, ListScrapeReqDTO) ([]ScrapeDTO, error)
+	// DeleteScrape 删除抓取配置
 	DeleteScrape(context.Context, DeleteScrapeReqDTO) error
 }

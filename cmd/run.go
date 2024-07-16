@@ -8,7 +8,6 @@ import (
 	"github.com/LeeZXin/zall/deploy/modules/api/statusapi"
 	"github.com/LeeZXin/zall/discovery/modules/api/discoveryapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
-	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
 	"github.com/LeeZXin/zall/git/modules/api/lfsapi"
@@ -95,10 +94,6 @@ func runZall(*cli.Context) error {
 	{
 		approvalapi.InitApi()
 	}
-	// for product
-	{
-		productapi.InitApi()
-	}
 	// for files server
 	{
 		if static.GetBool("files.enabled") {
@@ -110,17 +105,11 @@ func runZall(*cli.Context) error {
 	{
 		deployapi.InitApi()
 	}
-	// for ssh agent
-	{
-		if static.GetBool("ssh.agent.enabled") {
-			logger.Logger.Info("ssh agent enabled")
-			//lifeCycles = append(lifeCycles, sshagent.NewAgentServer())
-		}
-	}
 	// prom
 	{
 		promapi.InitApi()
 		if static.GetBool("prom.agent.enabled") {
+			logger.Logger.Info("prom agent enabled")
 			agent.StartAgent()
 		}
 	}

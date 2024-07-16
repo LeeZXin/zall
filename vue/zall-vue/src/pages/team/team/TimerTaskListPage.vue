@@ -125,15 +125,12 @@ const columns = [
   }
 ];
 const listTimerTask = () => {
-  listTimerTaskRequest(
-    {
-      teamId: parseInt(route.params.teamId),
-      pageNum: currPage.value,
-      name: searchName.value,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listTimerTaskRequest({
+    teamId: parseInt(route.params.teamId),
+    pageNum: currPage.value,
+    name: searchName.value,
+    env: selectedEnv.value
+  }).then(res => {
     totalCount.value = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
@@ -150,7 +147,7 @@ const deleteTimerTask = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteTimerTaskRequest(item.id, item.env).then(() => {
+      deleteTimerTaskRequest(item.id).then(() => {
         message.success("删除成功");
         listTimerTask();
       });
@@ -170,7 +167,7 @@ const triggerTimerTask = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      triggerTimerTaskRequest(item.id, item.env).then(() => {
+      triggerTimerTaskRequest(item.id).then(() => {
         message.success("触发成功");
       });
     },
@@ -189,12 +186,12 @@ const gotoUpdatePage = item => {
 };
 const enableOrDisableTask = item => {
   if (item.isEnabled) {
-    disableTimerTaskRequest(item.id, item.env).then(() => {
+    disableTimerTaskRequest(item.id).then(() => {
       message.success("关闭成功");
       item.isEnabled = false;
     });
   } else {
-    enableTimerTaskRequest(item.id, item.env).then(() => {
+    enableTimerTaskRequest(item.id).then(() => {
       message.success("启动成功");
       item.isEnabled = true;
     });

@@ -106,29 +106,23 @@ const saveOrUpdatePipeline = () => {
     return;
   }
   if (mode === "create") {
-    createPipelineRequest(
-      {
-        env: formState.selectedEnv,
-        appId: route.params.appId,
-        config: formState.content,
-        name: formState.name
-      },
-      formState.selectedEnv
-    ).then(() => {
+    createPipelineRequest({
+      env: formState.selectedEnv,
+      appId: route.params.appId,
+      config: formState.content,
+      name: formState.name
+    }).then(() => {
       message.success("创建成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/list/${formState.selectedEnv}`
       );
     });
   } else if (mode === "update") {
-    updatePipelineRequest(
-      {
-        pipelineId: pipelineStore.id,
-        config: formState.content,
-        name: formState.name
-      },
-      formState.selectedEnv
-    ).then(() => {
+    updatePipelineRequest({
+      pipelineId: pipelineStore.id,
+      config: formState.content,
+      name: formState.name
+    }).then(() => {
       message.success("保存成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/list/${formState.selectedEnv}`

@@ -1,212 +1,146 @@
 package mysqldbmd
 
 import (
-	"encoding/json"
-	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
 )
 
 const (
-	MysqlDbTableName                  = "zdb_mysql_node"
-	MysqlPermTableName                = "zdb_mysql_perm"
-	MysqlPermApprovalOrderTableName   = "zdb_mysql_perm_approval_order"
-	MysqlUpdateApprovalOrderTableName = "zdb_mysql_update_approval_order"
+	DbTableName              = "zdb_mysql_db"
+	ReadPermTableName        = "zdb_mysql_read_perm"
+	ReadPermApplyTableName   = "zdb_mysql_read_perm_apply"
+	DataUpdateApplyTableName = "zdb_mysql_data_update_apply"
 )
 
+type Config struct {
+	WriteNode Node `json:"writeNode"`
+	ReadNode  Node `json:"readNode"`
+}
+
+type Node struct {
+	Host     string `json:"host"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (c *Node) IsValid() bool {
+	return len(c.Host) > 0 && util.GenIpPortPattern().MatchString(c.Host) && len(c.Username) > 0
+}
+
+func (c *Config) IsValid() bool {
+	return c.WriteNode.IsValid() && c.ReadNode.IsValid()
+}
+
 type Db struct {
-	Id       int64     `json:"id" xorm:"pk autoincr"`
-	Name     string    `json:"name"`
-	DbHost   string    `json:"dbHost"`
-	Username string    `json:"username"`
-	Password string    `json:"password"`
-	Created  time.Time `json:"created" xorm:"created"`
-	Updated  time.Time `json:"updated" xorm:"updated"`
+	Id      int64                        `json:"id" xorm:"pk autoincr"`
+	Name    string                       `json:"name"`
+	Config  *xormutil.Conversion[Config] `json:"config"`
+	Created time.Time                    `json:"created" xorm:"created"`
+	Updated time.Time                    `json:"updated" xorm:"updated"`
 }
 
 func (*Db) TableName() string {
-	return MysqlDbTableName
+	return DbTableName
 }
 
-type PermType int
-
-const (
-	ReadPermType  PermType = 1
-	WritePermType PermType = 1 << 1
-
-	ReadWritePermType = ReadPermType | WritePermType
-)
-
-func (t PermType) HasReadPermType() bool {
-	return t&ReadPermType == ReadPermType
-}
-
-func (t PermType) HasWritePermType() bool {
-	return t&WritePermType == WritePermType
-}
-
-func (t PermType) Readable() string {
-	switch t {
-	case ReadPermType:
-		return i18n.GetByKey(i18n.DbReadPermType)
-	case ReadWritePermType:
-		return i18n.GetByKey(i18n.DbReadWritePermType)
-	default:
-		return i18n.GetByKey(i18n.DbUnknownPermType)
-	}
-}
-
-func (t PermType) IsValid() bool {
-	switch t {
-	case ReadPermType, ReadWritePermType:
-		return true
-	default:
-		return false
-	}
-}
-
-type Perm struct {
+type ReadPerm struct {
 	Id          int64     `json:"id" xorm:"pk autoincr"`
 	Account     string    `json:"account"`
 	DbId        int64     `json:"dbId"`
 	AccessBase  string    `json:"accessBase"`
 	AccessTable string    `json:"accessTable"`
-	PermType    PermType  `json:"permType"`
+	ApplyId     int64     `json:"applyId"`
 	Expired     time.Time `json:"expired"`
 	Created     time.Time `json:"created" xorm:"created"`
 }
 
-func (*Perm) TableName() string {
-	return MysqlPermTableName
+func (*ReadPerm) TableName() string {
+	return ReadPermTableName
 }
 
-func (p *Perm) IsExpired() bool {
+func (p *ReadPerm) IsExpired() bool {
 	return p.Expired.Before(time.Now())
 }
 
-type PermOrderStatus int
+type ReadPermApplyStatus int
 
 const (
-	PendingPermOrderStatus PermOrderStatus = iota + 1
-	AgreePermOrderStatus
-	DisagreePermOrderStatus
-	CanceledPermOrderStatus
+	AllReadPermApplyStatus ReadPermApplyStatus = iota
+	PendingReadPermApplyStatus
+	AgreeReadPermApplyStatus
+	DisagreeReadPermApplyStatus
+	CanceledReadPermApplyStatus
 )
 
-func (s PermOrderStatus) Readable() string {
+func (s ReadPermApplyStatus) IsValid() bool {
 	switch s {
-	case PendingPermOrderStatus:
-		return i18n.GetByKey(i18n.DbPendingPermOrderStatus)
-	case AgreePermOrderStatus:
-		return i18n.GetByKey(i18n.DbAgreePermOrderStatus)
-	case DisagreePermOrderStatus:
-		return i18n.GetByKey(i18n.DbDisagreePermOrderStatus)
-	case CanceledPermOrderStatus:
-		return i18n.GetByKey(i18n.DbCanceledPermOrderStatus)
-	default:
-		return i18n.GetByKey(i18n.DbUnknownPermOrderStatus)
-	}
-}
-
-func (s PermOrderStatus) IsValid() bool {
-	switch s {
-	case PendingPermOrderStatus, AgreePermOrderStatus,
-		DisagreePermOrderStatus, CanceledPermOrderStatus:
+	case AllReadPermApplyStatus, PendingReadPermApplyStatus, AgreeReadPermApplyStatus,
+		DisagreeReadPermApplyStatus, CanceledReadPermApplyStatus:
 		return true
 	default:
 		return false
 	}
 }
 
-type AccessTables []string
-
-func (k *AccessTables) FromDB(content []byte) error {
-	ret := make(AccessTables, 0)
-	err := json.Unmarshal(content, &ret)
-	if err != nil {
-		return err
-	}
-	*k = ret
-	return nil
+type ReadPermApply struct {
+	Id             int64               `json:"id" xorm:"pk autoincr"`
+	Account        string              `json:"account"`
+	DbId           int64               `json:"dbId"`
+	DbName         string              `json:"dbName"`
+	AccessBase     string              `json:"accessBase"`
+	AccessTables   string              `json:"accessTables"`
+	ApplyStatus    ReadPermApplyStatus `json:"applyStatus"`
+	Auditor        string              `json:"auditor"`
+	ExpireDay      int                 `json:"expireDay"`
+	ApplyReason    string              `json:"applyReason"`
+	DisagreeReason string              `json:"disagreeReason"`
+	Created        time.Time           `json:"created" xorm:"created"`
+	Updated        time.Time           `json:"updated" xorm:"updated"`
 }
 
-func (k *AccessTables) ToDB() ([]byte, error) {
-	return json.Marshal(k)
+func (*ReadPermApply) TableName() string {
+	return ReadPermApplyTableName
 }
 
-type PermApprovalOrder struct {
-	Id             int64           `json:"id" xorm:"pk autoincr"`
-	Account        string          `json:"account"`
-	DbId           int64           `json:"dbId"`
-	AccessBase     string          `json:"accessBase"`
-	AccessTables   AccessTables    `json:"accessTables"`
-	PermType       PermType        `json:"permType"`
-	OrderStatus    PermOrderStatus `json:"orderStatus"`
-	Auditor        string          `json:"auditor"`
-	ExpireDay      int             `json:"expireDay"`
-	Reason         string          `json:"reason"`
-	DisagreeReason string          `json:"disagreeReason"`
-	Created        time.Time       `json:"created" xorm:"created"`
-	Updated        time.Time       `json:"updated" xorm:"updated"`
-}
-
-func (*PermApprovalOrder) TableName() string {
-	return MysqlPermApprovalOrderTableName
-}
-
-type UpdateOrderStatus int
+type DataUpdateApplyStatus int
 
 const (
-	PendingUpdateOrderStatus UpdateOrderStatus = iota + 1
-	AgreeUpdateOrderStatus
-	DisagreeUpdateOrderStatus
-	CanceledUpdateOrderStatus
-	AskToExecuteUpdateOrderStatus
-	ExecutedUpdateOrderStatus
+	AllDataUpdateApplyStatus DataUpdateApplyStatus = iota
+	PendingDataUpdateApplyStatus
+	AgreeDataUpdateApplyStatus
+	DisagreeDataUpdateApplyStatus
+	CanceledDataUpdateApplyStatus
+	AskToExecuteDataUpdateApplyStatus
+	ExecutedDataUpdateApplyStatus
 )
 
-func (s UpdateOrderStatus) IsValid() bool {
+func (s DataUpdateApplyStatus) IsValid() bool {
 	switch s {
-	case PendingUpdateOrderStatus, AgreeUpdateOrderStatus,
-		DisagreeUpdateOrderStatus, CanceledUpdateOrderStatus,
-		ExecutedUpdateOrderStatus, AskToExecuteUpdateOrderStatus:
+	case PendingDataUpdateApplyStatus, AgreeDataUpdateApplyStatus,
+		DisagreeDataUpdateApplyStatus, CanceledDataUpdateApplyStatus,
+		ExecutedDataUpdateApplyStatus, AskToExecuteDataUpdateApplyStatus, AllDataUpdateApplyStatus:
 		return true
 	default:
 		return false
 	}
 }
 
-func (s UpdateOrderStatus) Readable() string {
-	switch s {
-	case PendingUpdateOrderStatus:
-		return i18n.GetByKey(i18n.DbPendingUpdateOrderStatus)
-	case AgreeUpdateOrderStatus:
-		return i18n.GetByKey(i18n.DbAgreeUpdateOrderStatus)
-	case DisagreeUpdateOrderStatus:
-		return i18n.GetByKey(i18n.DbDisagreeUpdateOrderStatus)
-	case CanceledUpdateOrderStatus:
-		return i18n.GetByKey(i18n.DbCanceledUpdateOrderStatus)
-	case ExecutedUpdateOrderStatus:
-		return i18n.GetByKey(i18n.DbExecutedUpdateOrderStatus)
-	default:
-		return i18n.GetByKey(i18n.DbUnknownPermOrderStatus)
-	}
+type DataUpdateApply struct {
+	Id             int64                 `json:"id" xorm:"pk autoincr"`
+	Name           string                `json:"name"`
+	Account        string                `json:"account"`
+	DbId           int64                 `json:"dbId"`
+	AccessBase     string                `json:"accessBase"`
+	UpdateCmd      string                `json:"updateCmd"`
+	ApplyStatus    DataUpdateApplyStatus `json:"applyStatus"`
+	Auditor        string                `json:"auditor"`
+	DisagreeReason string                `json:"disagreeReason"`
+	ExecuteLog     string                `json:"executeLog"`
+	Created        time.Time             `json:"created" xorm:"created"`
+	Updated        time.Time             `json:"updated" xorm:"updated"`
 }
 
-type UpdateApprovalOrder struct {
-	Id             int64             `json:"id" xorm:"pk autoincr"`
-	Name           string            `json:"name"`
-	Account        string            `json:"account"`
-	DbId           int64             `json:"dbId"`
-	AccessBase     string            `json:"accessBase"`
-	UpdateCmd      string            `json:"updateCmd"`
-	OrderStatus    UpdateOrderStatus `json:"orderStatus"`
-	Auditor        string            `json:"auditor"`
-	DisagreeReason string            `json:"disagreeReason"`
-	ExecuteLog     string            `json:"executeLog"`
-	Created        time.Time         `json:"created" xorm:"created"`
-	Updated        time.Time         `json:"updated" xorm:"updated"`
-}
-
-func (*UpdateApprovalOrder) TableName() string {
-	return MysqlUpdateApprovalOrderTableName
+func (*DataUpdateApply) TableName() string {
+	return DataUpdateApplyTableName
 }

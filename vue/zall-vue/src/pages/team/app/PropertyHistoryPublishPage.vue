@@ -102,17 +102,14 @@ const publishFile = () => {
     message.warn("请选择节点");
     return;
   }
-  deployHistoryRequest(
-    {
-      historyId: propertyHistoryStore.id,
-      sourceIdList: formState.nodeList
-    },
-    propertyHistoryStore.env
-  ).then(() => {
+  deployHistoryRequest({
+    historyId: propertyHistoryStore.id,
+    sourceIdList: formState.nodeList
+  }).then(() => {
     message.success("发布成功");
     router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
-  );
+      `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
+    );
   });
 };
 
@@ -127,20 +124,14 @@ if (propertyHistoryStore.id === 0) {
   formState.lastVersion = propertyHistoryStore.lastVersion;
   formState.version = propertyHistoryStore.version;
   if (formState.lastVersion) {
-    getHistoryByVersionRequest(
-      {
-        fileId: propertyHistoryStore.fileId,
-        version: formState.lastVersion
-      },
-      propertyHistoryStore.env
-    ).then(res => {
+    getHistoryByVersionRequest({
+      fileId: propertyHistoryStore.fileId,
+      version: formState.lastVersion
+    }).then(res => {
       formState.oldContent = res.data.value.content;
     });
   }
-  listPropertySourceByFileIdRequest(
-    propertyHistoryStore.fileId,
-    propertyHistoryStore.env
-  ).then(res => {
+  listPropertySourceByFileIdRequest(propertyHistoryStore.fileId).then(res => {
     nodeList.value = res.data;
   });
 }

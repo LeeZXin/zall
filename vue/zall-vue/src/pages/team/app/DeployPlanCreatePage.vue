@@ -98,14 +98,11 @@ const createDeployPlan = () => {
     message.warn("请选择流水线");
     return;
   }
-  createDeployPlanRequest(
-    {
-      pipelineId: formState.pipelineId,
-      productVersion: formState.productVersion,
-      name: formState.name
-    },
-    formState.selectedEnv
-  ).then(() => {
+  createDeployPlanRequest({
+    pipelineId: formState.pipelineId,
+    productVersion: formState.productVersion,
+    name: formState.name
+  }).then(() => {
     message.success("创建成功");
     router.push(
       `/team/${route.params.teamId}/app/${route.params.appId}/deployPlan/list/${formState.selectedEnv}`
@@ -114,13 +111,10 @@ const createDeployPlan = () => {
 };
 
 const listService = () => {
-  listPipelineWhenCreateDeployPlanRequest(
-    {
-      appId: route.params.appId,
-      env: formState.selectedEnv
-    },
-    formState.selectedEnv
-  ).then(res => {
+  listPipelineWhenCreateDeployPlanRequest({
+    appId: route.params.appId,
+    env: formState.selectedEnv
+  }).then(res => {
     if (res.data?.length > 0) {
       pipelineList.value = res.data.map(item => {
         return {

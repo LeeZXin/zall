@@ -9,13 +9,9 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"github.com/patrickmn/go-cache"
-	"time"
 )
 
-type innerImpl struct {
-	cfgCache *cache.Cache
-}
+type innerImpl struct{}
 
 func (s *innerImpl) InitSysCfg() {
 	ctx := context.Background()
@@ -34,16 +30,9 @@ func (s *innerImpl) InitSysCfg() {
 	}
 }
 
-func (s *innerImpl) GetSysCfg(ctx context.Context) (SysCfg, bool) {
+func (s *innerImpl) GetSysCfg() (SysCfg, bool) {
 	cfg := new(SysCfg)
-	v, b := s.cfgCache.Get(cfg.Key())
-	if b {
-		return v.(SysCfg), true
-	}
-	b = getFromDB(ctx, cfg)
-	if b {
-		s.cfgCache.Set(cfg.Key(), *cfg, time.Minute)
-	}
+	b := getFromDB(cfg)
 	return *cfg, b
 }
 
@@ -64,29 +53,15 @@ func (s *innerImpl) InitGitCfg() {
 	}
 }
 
-func (s *innerImpl) GetGitCfg(ctx context.Context) (GitCfg, bool) {
+func (s *innerImpl) GetGitCfg() (GitCfg, bool) {
 	cfg := new(GitCfg)
-	v, b := s.cfgCache.Get(cfg.Key())
-	if b {
-		return v.(GitCfg), true
-	}
-	b = getFromDB(ctx, cfg)
-	if b {
-		s.cfgCache.Set(cfg.Key(), *cfg, time.Minute)
-	}
+	b := getFromDB(cfg)
 	return *cfg, b
 }
 
-func (s *innerImpl) GetEnvCfg(ctx context.Context) ([]string, bool) {
+func (s *innerImpl) GetEnvCfg() ([]string, bool) {
 	cfg := new(EnvCfg)
-	v, b := s.cfgCache.Get(cfg.Key())
-	if b {
-		return v.(EnvCfg).Envs, true
-	}
-	b = getFromDB(ctx, cfg)
-	if b {
-		s.cfgCache.Set(cfg.Key(), *cfg, time.Minute)
-	}
+	b := getFromDB(cfg)
 	return cfg.Envs, b
 }
 
@@ -108,7 +83,7 @@ func (s *innerImpl) InitEnvCfg() {
 }
 
 func (s *innerImpl) ContainsEnv(env string) bool {
-	envs, _ := s.GetEnvCfg(context.Background())
+	envs, _ := s.GetEnvCfg()
 	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
 		return t == env, nil
 	})
@@ -116,21 +91,14 @@ func (s *innerImpl) ContainsEnv(env string) bool {
 }
 
 // GetGitRepoServerCfg 获取git服务器地址 从缓存中获取
-func (s *innerImpl) GetGitRepoServerCfg(ctx context.Context) (GitRepoServerCfg, bool) {
-	var cfg GitRepoServerCfg
-	v, b := s.cfgCache.Get(cfg.Key())
-	if b {
-		return v.(GitRepoServerCfg), true
-	}
-	b = getFromDB(ctx, &cfg)
-	if b {
-		s.cfgCache.Set(cfg.Key(), cfg, time.Minute)
-	}
-	return cfg, b
+func (s *innerImpl) GetGitRepoServerCfg() (GitRepoServerCfg, bool) {
+	cfg := new(GitRepoServerCfg)
+	b := getFromDB(cfg)
+	return *cfg, b
 }
 
-func getFromDB(ctx context.Context, cfg util.KeyVal) bool {
-	ctx, closer := xormstore.Context(ctx)
+func getFromDB(cfg util.KeyVal) bool {
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	b, err := cfgmd.GetByKey(ctx, cfg)
 	if err != nil {

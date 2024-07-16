@@ -162,13 +162,10 @@ const columns = [
 ];
 
 const listHistory = () => {
-  listHistoryRequest(
-    {
-      fileId: propertyFileStore.id,
-      pageNum: currPage.value
-    },
-    propertyFileStore.env
-  ).then(res => {
+  listHistoryRequest({
+    fileId: propertyFileStore.id,
+    pageNum: currPage.value
+  }).then(res => {
     totalCount.value = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
@@ -181,13 +178,10 @@ const listHistory = () => {
 
 const showDiffModal = item => {
   if (item.lastVersion) {
-    getHistoryByVersionRequest(
-      {
-        fileId: item.fileId,
-        version: item.lastVersion
-      },
-      propertyFileStore.env
-    ).then(res => {
+    getHistoryByVersionRequest({
+      fileId: item.fileId,
+      version: item.lastVersion
+    }).then(res => {
       if (res.data.exist) {
         diffModalOpen.value = true;
         diffState.oldContent = res.data.value.content;
@@ -238,7 +232,7 @@ const gotoPubPage = item => {
 
 const showDeployModal = item => {
   deployModalTitle.value = `${item.fileName}_${item.version}`;
-  listDeployRequest(item.id, propertyFileStore.env).then(res => {
+  listDeployRequest(item.id).then(res => {
     deployDataSource.value = res.data.map((item, index) => {
       return {
         key: index,

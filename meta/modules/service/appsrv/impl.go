@@ -57,9 +57,25 @@ func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err er
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err = checkAdminPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	var (
+		app   appmd.App
+		roles []teammd.Role
+	)
+	app, err = checkAdminPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
 	if err != nil {
 		return
+	}
+	needUpdateRoles := make([]teammd.Role, 0)
+	roles, err = teammd.ListRole(ctx, app.TeamId)
+	for _, role := range roles {
+		if role.Perm != nil && role.Perm.DevelopAppList.Contains(reqDTO.AppId) {
+			appList := role.Perm.DevelopAppList[:]
+			// 去除appId
+			role.Perm.DevelopAppList, _ = listutil.Filter(appList, func(appId string) (bool, error) {
+				return appId != reqDTO.AppId, nil
+			})
+			needUpdateRoles = append(needUpdateRoles, role)
+		}
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 删除应用
@@ -113,7 +129,24 @@ func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err er
 			return err2
 		}
 		// 删除注册中心来源
-		return discoverymd.DeleteEtcdNodeByAppId(ctx, reqDTO.AppId)
+		err2 = discoverymd.DeleteEtcdNodeByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 团队权限检查
+		if len(needUpdateRoles) > 0 {
+			for _, role := range needUpdateRoles {
+				_, err2 = teammd.UpdateRoleById(ctx, teammd.UpdateRoleReqDTO{
+					RoleId: role.Id,
+					Name:   role.Name,
+					Perm:   *role.Perm,
+				})
+				if err2 != nil {
+					return err2
+				}
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -132,7 +165,7 @@ func (*outerImpl) GetApp(ctx context.Context, reqDTO GetAppReqDTO) (AppDTO, erro
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err := checkAdminPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	_, err := checkAdminPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
 	if err != nil {
 		return AppDTO{}, err
 	}
@@ -235,7 +268,7 @@ func (*outerImpl) UpdateApp(ctx context.Context, reqDTO UpdateAppReqDTO) (err er
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验teamId
-	if err = checkAdminPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	if _, err = checkAdminPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return
 	}
 	_, err = appmd.UpdateApp(ctx, appmd.UpdateAppReqDTO{
@@ -319,21 +352,21 @@ func checkPermAdmin(ctx context.Context, operator apisession.UserInfo, teamId in
 	return nil
 }
 
-func checkAdminPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
+func checkAdminPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) (appmd.App, error) {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return appmd.App{}, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return appmd.App{}, util.InvalidArgsError()
 	}
 	if operator.IsAdmin {
-		return nil
+		return app, nil
 	}
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 	if !b || !p.IsAdmin {
-		return util.UnauthorizedError()
+		return app, util.UnauthorizedError()
 	}
-	return nil
+	return app, nil
 }

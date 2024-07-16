@@ -4,7 +4,10 @@
       <a-button type="primary" @click="toCreateTeam" :icon="h(PlusOutlined)">{{t("createTeamText")}}</a-button>
     </div>
     <div class="team-list">
-      <div class="header">{{t("myTeam")}}</div>
+      <div class="header">
+        <TeamOutlined />
+        <span style="margin-left: 8px">{{t("myTeam")}}</span>
+      </div>
       <ul class="body" v-if="teamList.length > 0">
         <li
           v-for="item in teamList"
@@ -26,7 +29,7 @@ import { getTeamListRequest } from "@/api/team/teamApi";
 import { ref, h } from "vue";
 import { useTeamStore } from "@/pinia/teamStore";
 import { getSysCfgRequest } from "@/api/cfg/cfgApi";
-import { PlusOutlined } from "@ant-design/icons-vue";
+import { PlusOutlined, TeamOutlined } from "@ant-design/icons-vue";
 // 团队store
 const teamStore = useTeamStore();
 // i18n
@@ -36,7 +39,7 @@ const teamList = ref([]);
 const router = useRouter();
 // 跳转创建团队页面
 const toCreateTeam = () => {
-  router.push("/createTeam");
+  router.push("/index/team/create");
 };
 // 选择团队
 const selectTeam = team => {
@@ -65,7 +68,7 @@ getSysCfgRequest().then(res => {
   font-weight: bold;
   font-size: 16px;
   line-height: 38px;
-  padding: 0 20px;
+  padding: 0 10px;
 }
 .team-list > .body {
   border-top: 1px solid #d9d9d9;

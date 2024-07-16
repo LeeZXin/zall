@@ -9,29 +9,31 @@ import (
 	"github.com/pingcap/errors"
 )
 
-func ValidateMysqlSelectSql(sql string) (string, string, error) {
+func ValidateMysqlSelectSql(sql string) (string, string, bool, error) {
 	sqlParser := parser.New()
 	parsedStmt, err := sqlParser.ParseOneStmt(sql, "", "")
 	if err != nil {
-		return "", "", errors.New(i18n.GetByKey(i18n.SqlWrongSyntaxMsg))
+		return "", "", false, errors.New(i18n.GetByKey(i18n.SqlWrongSyntaxMsg))
 	}
+	isExplain := false
 	switch parsedStmt.(type) {
 	case *ast.SelectStmt:
 		stmt := parsedStmt.(*ast.SelectStmt)
 		if stmt.Limit != nil {
-			return "", "", errors.New(i18n.GetByKey(i18n.SqlNotAllowHasLimitMsg))
+			return "", "", false, errors.New(i18n.GetByKey(i18n.SqlNotAllowHasLimitMsg))
 		}
 	case *ast.ExplainStmt:
+		isExplain = true
 	default:
-		return "", "", errors.New(i18n.GetByKey(i18n.SqlUnsupportedMsg))
+		return "", "", false, errors.New(i18n.GetByKey(i18n.SqlUnsupportedMsg))
 	}
 	checker := new(mysqltool.Checker)
 	parsedStmt.Accept(checker)
 	tableNames := checker.GetTableNames()
 	if len(tableNames) != 1 || tableNames[0].Schema.String() != "" {
-		return "", "", errors.New(i18n.GetByKey(i18n.SqlUnsupportedMsg))
+		return "", "", false, errors.New(i18n.GetByKey(i18n.SqlUnsupportedMsg))
 	}
-	return tableNames[0].Name.String(), parsedStmt.Text(), nil
+	return tableNames[0].Name.String(), parsedStmt.Text(), isExplain, nil
 }
 
 type ValidateUpdateResult struct {

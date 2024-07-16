@@ -47,7 +47,10 @@ import {
 import ZTable from "@/components/common/ZTable";
 import { ref, h, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { listPropertyFileRequest, deletePropertyFileRequest } from "@/api/app/propertyApi";
+import {
+  listPropertyFileRequest,
+  deletePropertyFileRequest
+} from "@/api/app/propertyApi";
 import { usePropertyFileStore } from "@/pinia/propertyFileStore";
 import EnvSelector from "@/components/app/EnvSelector";
 import { Modal, message } from "ant-design-vue";
@@ -71,13 +74,10 @@ const columns = [
 ];
 
 const listPropertyFile = () => {
-  listPropertyFileRequest(
-    {
-      appId: route.params.appId,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listPropertyFileRequest({
+    appId: route.params.appId,
+    env: selectedEnv.value
+  }).then(res => {
     dataSource.value = res.data.map(item => {
       return {
         key: item.name,
@@ -109,7 +109,7 @@ const deleteFile = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deletePropertyFileRequest(item.id, item.env).then(() => {
+      deletePropertyFileRequest(item.id).then(() => {
         message.success("删除成功");
         listPropertyFile();
       });

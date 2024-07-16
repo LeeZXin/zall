@@ -2,7 +2,6 @@ package cfgsrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/util"
 )
 
 var (
@@ -12,23 +11,21 @@ var (
 
 func Init() {
 	if Inner == nil {
-		Inner = &innerImpl{
-			cfgCache: util.NewGoCache(),
-		}
+		Inner = new(innerImpl)
 		Outer = new(outerImpl)
 	}
 }
 
 type InnerService interface {
-	GetSysCfg(context.Context) (SysCfg, bool)
+	GetSysCfg() (SysCfg, bool)
 	InitSysCfg()
-	GetGitCfg(context.Context) (GitCfg, bool)
+	GetGitCfg() (GitCfg, bool)
 	InitGitCfg()
-	GetEnvCfg(context.Context) ([]string, bool)
+	GetEnvCfg() ([]string, bool)
 	InitEnvCfg()
 	ContainsEnv(string) bool
 	// GetGitRepoServerCfg 获取git服务器地址 从缓存中获取
-	GetGitRepoServerCfg(context.Context) (GitRepoServerCfg, bool)
+	GetGitRepoServerCfg() (GitRepoServerCfg, bool)
 }
 
 type OuterService interface {

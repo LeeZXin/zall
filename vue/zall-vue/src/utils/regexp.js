@@ -49,6 +49,16 @@ const serviceSourceApiKeyRegexp = /^.{0,128}$/;
 const propertySourceNameRegexp = /^.{1,32}$/;
 // 注册中心来源
 const discoverySourceNameRegexp = /^.{1,32}$/;
+// prometheus抓取
+const promScrapeEndpointRegexp = /^[\w-]{1,32}$/;
+const promScrapeTargetRegexp = /^.{1,}$/;
+// db
+const dbHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
+const dbNameRegexp = /^.{1,32}$/;
+const dbUsernameRegexp = /^.+$/;
+const dbAccessBaseRegexp = /^.+$/;
+const dbAccessTablesRegexp = /^.+$/;
+const dbApplyReasonRegexp = /^.{1,255}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -84,5 +94,13 @@ export {
     serviceSourceNameRegexp,
     serviceSourceApiKeyRegexp,
     propertySourceNameRegexp,
-    discoverySourceNameRegexp
+    discoverySourceNameRegexp,
+    promScrapeEndpointRegexp,
+    promScrapeTargetRegexp,
+    dbHostRegexp,
+    dbNameRegexp,
+    dbUsernameRegexp,
+    dbAccessBaseRegexp,
+    dbAccessTablesRegexp,
+    dbApplyReasonRegexp
 }

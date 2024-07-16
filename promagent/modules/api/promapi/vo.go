@@ -4,8 +4,8 @@ import (
 	"github.com/LeeZXin/zall/promagent/modules/model/prommd"
 )
 
-type InsertScrapeReqVO struct {
-	ServerUrl  string            `json:"serverUrl"`
+type CreateScrapeReqVO struct {
+	Endpoint   string            `json:"endpoint"`
 	AppId      string            `json:"appId"`
 	Target     string            `json:"target"`
 	TargetType prommd.TargetType `json:"targetType"`
@@ -13,28 +13,18 @@ type InsertScrapeReqVO struct {
 }
 
 type UpdateScrapeReqVO struct {
-	Id         int64             `json:"id"`
-	ServerUrl  string            `json:"serverUrl"`
+	ScrapeId   int64             `json:"scrapeId"`
+	Endpoint   string            `json:"endpoint"`
 	Target     string            `json:"target"`
 	TargetType prommd.TargetType `json:"targetType"`
-	Env        string            `json:"env"`
-}
-
-type ListScrapeReqVO struct {
-	AppId string `json:"appId"`
-	Env   string `json:"env"`
-}
-
-type DeleteScrapeReqVO struct {
-	Id  int64  `json:"id"`
-	Env string `json:"env"`
 }
 
 type ScrapeVO struct {
-	Id         int64  `json:"id"`
-	ServerUrl  string `json:"serverUrl"`
-	AppId      string `json:"appId"`
-	Target     string `json:"target"`
-	TargetType string `json:"targetType"`
-	Created    string `json:"created"`
+	Id         int64             `json:"id"`
+	Endpoint   string            `json:"endpoint"`
+	AppId      string            `json:"appId"`
+	Target     string            `json:"target"`
+	TargetType prommd.TargetType `json:"targetType"`
+	Created    string            `json:"created"`
+	Env        string            `json:"env"`
 }

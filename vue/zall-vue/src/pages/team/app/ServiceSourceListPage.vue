@@ -2,7 +2,7 @@
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
       <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建服务来源</a-button>
-      <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env"/>
+      <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -46,7 +46,10 @@ import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
 import { ref, h, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { listServiceSourceRequest, deleteServiceSourceRequest } from "@/api/app/serviceApi";
+import {
+  listServiceSourceRequest,
+  deleteServiceSourceRequest
+} from "@/api/app/serviceApi";
 import { useServiceSourceStore } from "@/pinia/serviceSourceStore";
 import { Modal, message } from "ant-design-vue";
 const serviceSourceStore = useServiceSourceStore();
@@ -79,7 +82,7 @@ const deleteServiceSource = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteServiceSourceRequest(item.id, item.env).then(() => {
+      deleteServiceSourceRequest(item.id).then(() => {
         message.success("删除成功");
         listServiceSource();
       });
@@ -89,17 +92,14 @@ const deleteServiceSource = item => {
 };
 
 const listServiceSource = () => {
-  listServiceSourceRequest(
-    {
-      appId: route.params.appId,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listServiceSourceRequest({
+    appId: route.params.appId,
+    env: selectedEnv.value
+  }).then(res => {
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
-        ...item,
+        ...item
       };
     });
   });

@@ -9,20 +9,59 @@ const router = createRouter({
         },
         {
             path: "/index",
-            redirect: "/teamList",
+            redirect: "/index/team/list",
             component: () =>
                 import ("../layouts/IndexLayout"),
             children: [{
-                    path: "/teamList",
+                    path: "/index/team/list",
                     component: () =>
                         import ("../pages/team/team/TeamListPage")
                 },
                 {
-                    path: "/createTeam",
+                    path: "/index/team/create",
                     component: () =>
                         import ("../pages/team/team/TeamCreatePage")
                 }
             ]
+        },
+        {
+            path: "/db",
+            redirect: "/db/mysqlDb/list",
+            component: () =>
+                import ("../layouts/MysqlAuditLayout"),
+            children: [{
+                path: "/db/mysqlDb/list",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlDbListPage")
+            }, {
+                path: "/db/mysqlDb/create",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlDbHandlePage")
+            }, {
+                path: "/db/mysqlDb/:dbId(\\d+)/update",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlDbHandlePage")
+            }, {
+                path: "/db/mysqlReadPermApply/list",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlReadPermApplyListPage")
+            }, {
+                path: "/db/mysqlReadPermApply/apply",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlReadPermApplyCreatePage")
+            }, {
+                path: "/db/mysqlReadPermAudit/list",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlReadPermAuditListPage")
+            }, {
+                path: "/db/mysqlReadPermDetail/list",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlReadPermDetailListPage")
+            }, {
+                path: "/db/mysqlSearch",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlSearchPage")
+            }]
         },
         {
             path: "/team",
@@ -321,6 +360,26 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/app/:appId/settings",
                 component: () =>
                     import ("../pages/team/app/AppSettingsPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/product/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/ProductListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/promScrape/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/PromScrapeListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/promScrape/create",
+                component: () =>
+                    import ("../pages/team/app/PromScrapeHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/promScrape/:scrapeId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/app/PromScrapeHandlePage")
 
             }]
         },

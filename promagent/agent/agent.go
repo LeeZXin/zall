@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"github.com/LeeZXin/zall/promagent/modules/model/prommd"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/quit"
+	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/prom"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/services/discovery"
 	"github.com/LeeZXin/zsf/services/lb"
@@ -17,39 +19,42 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 var (
-	//watchTask   *taskutil.PeriodicalTask
-	serverUrl   string
-	agentEnv    string
+	endpoint    string
 	lastHashSum uint32
 	filePath    string
+	env         string
 )
 
 func StartAgent() {
-	agentEnv = static.GetString("prom.agent.env")
-	if agentEnv == "" {
-		logger.Logger.Fatal("empty prom agent env")
+	env = static.GetString("prom.agent.env")
+	if env == "" {
+		logger.Logger.Fatal("prom agent started with empty env")
 	}
-	serverUrl = static.GetString("prom.agent.serverUrl")
-	if serverUrl == "" {
-		logger.Logger.Fatal("empty prom agent serverUrl")
+	endpoint = static.GetString("prom.agent.endpoint")
+	if endpoint == "" {
+		logger.Logger.Fatal("empty prom agent endpoint")
 	}
 	filePath = static.GetString("prom.agent.filePath")
 	if filePath == "" || !filepath.IsAbs(filePath) {
 		logger.Logger.Fatalf("wrong prom.agent.filesd.path: %v", filePath)
 	}
-	logger.Logger.Infof("prom agent started with env: %v serverUrl: %v filePath: %v", agentEnv, serverUrl, filePath)
-	//watchTask, _ = taskutil.NewPeriodicalTask(5*time.Second, updateFileSd)
-	//watchTask.Start()
-	//quit.AddShutdownHook(watchTask.Stop, true)
+	logger.Logger.Infof("prom agent started with endpoint: %v filePath: %v env: %v", endpoint, filePath, env)
+	stopFunc, _ := taskutil.RunPeriodicalTask(0, 10*time.Second, updateFileSd)
+	quit.AddShutdownHook(quit.ShutdownHook(stopFunc), true)
 }
 
-func updateFileSd() {
+func updateFileSd(context.Context) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	scrapes, err := prommd.GetAllScrapeByServerUrl(ctx, serverUrl, agentEnv)
+	scrapes, err := prommd.GetAllScrape(ctx, prommd.GetAllScrapeReqDTO{
+		Endpoint: endpoint,
+		Env:      env,
+		Cols:     []string{"app_id", "target", "target_type"},
+	})
 	if err != nil {
 		logger.Logger.Error(err)
 		return
@@ -98,13 +103,17 @@ func packFileContent(scrapes []prommd.Scrape) []byte {
 					}
 				} else if len(servers) > 0 {
 					targets, _ := listutil.Map(servers, func(t lb.Server) (string, error) {
-						return fmt.Sprintf("%s:%d", t.Host, 16054), nil
+						return fmt.Sprintf("%s:%d", t.Host, prom.DefaultServerPort), nil
 					})
 					appTargets = append(appTargets, targets...)
 				}
 			case prommd.HostTargetType:
 				if scrape.Target != "" {
-					appTargets = append(appTargets, scrape.Target)
+					targets := strings.Split(scrape.Target, ";")
+					targets, _ = listutil.Filter(targets, func(t string) (bool, error) {
+						return len(t) > 0, nil
+					})
+					appTargets = append(appTargets, targets...)
 				}
 			}
 		}
@@ -118,7 +127,7 @@ func packFileContent(scrapes []prommd.Scrape) []byte {
 
 func NewConfig(targets []string, appId string) Config {
 	// 去重
-	targets = hashset.NewHashSet(targets...).AllKeys()
+	targets = listutil.Distinct(targets...)
 	sort.SliceStable(targets, func(i, j int) bool {
 		return strings.Compare(targets[i], targets[j]) > 0
 	})

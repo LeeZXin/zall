@@ -155,7 +155,7 @@ func GetRoleByTeamIdAndAccount(ctx context.Context, teamId int64, account string
 	return ret, b, err
 }
 
-func UpdateRole(ctx context.Context, reqDTO UpdateRoleReqDTO) (bool, error) {
+func UpdateRoleById(ctx context.Context, reqDTO UpdateRoleReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.RoleId).
 		Cols("perm", "name").
@@ -167,7 +167,7 @@ func UpdateRole(ctx context.Context, reqDTO UpdateRoleReqDTO) (bool, error) {
 	return rows == 1, err
 }
 
-func DeleteRole(ctx context.Context, id int64) (bool, error) {
+func DeleteRoleById(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		Limit(1).
@@ -217,7 +217,7 @@ func ListUserByAccount(ctx context.Context, account string) ([]User, error) {
 	return ret, err
 }
 
-func GetByTeamIdList(ctx context.Context, teamIdList []int64) ([]Team, error) {
+func GetTeamsByTeamIdList(ctx context.Context, teamIdList []int64) ([]Team, error) {
 	ret := make([]Team, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		In("id", teamIdList).
@@ -225,7 +225,7 @@ func GetByTeamIdList(ctx context.Context, teamIdList []int64) ([]Team, error) {
 	return ret, err
 }
 
-func GetByRoleIdList(ctx context.Context, roleIdList []int64) ([]Role, error) {
+func GetRolesByRoleIdList(ctx context.Context, roleIdList []int64) ([]Role, error) {
 	ret := make([]Role, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		In("role_id", roleIdList).

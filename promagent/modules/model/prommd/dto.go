@@ -1,7 +1,7 @@
 package prommd
 
 type InsertScrapeReqDTO struct {
-	ServerUrl  string
+	Endpoint   string
 	AppId      string
 	Target     string
 	TargetType TargetType
@@ -10,8 +10,13 @@ type InsertScrapeReqDTO struct {
 
 type UpdateScrapeByIdReqDTO struct {
 	Id         int64
-	ServerUrl  string
+	Endpoint   string
 	Target     string
 	TargetType TargetType
-	Env        string
+}
+
+type GetAllScrapeReqDTO struct {
+	Endpoint string
+	Env      string
+	Cols     []string
 }

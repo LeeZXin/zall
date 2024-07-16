@@ -162,29 +162,23 @@ const saveOrUpdateFile = () => {
       message.warn("文件名称格式错误");
       return;
     }
-    createPropertyFileRequest(
-      {
-        env: formState.selectedEnv,
-        appId: route.params.appId,
-        content: formState.content,
-        name: formState.name + "." + formState.format
-      },
-      formState.selectedEnv
-    ).then(() => {
+    createPropertyFileRequest({
+      env: formState.selectedEnv,
+      appId: route.params.appId,
+      content: formState.content,
+      name: formState.name + "." + formState.format
+    }).then(() => {
       message.success("创建成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/list/${formState.selectedEnv}`
       );
     });
   } else if (mode === "new") {
-    newVersionRequest(
-      {
-        fileId: propertyFileStore.id,
-        content: formState.content,
-        lastVersion: route.query.from
-      },
-      formState.selectedEnv
-    ).then(() => {
+    newVersionRequest({
+      fileId: propertyFileStore.id,
+      content: formState.content,
+      lastVersion: route.query.from
+    }).then(() => {
       message.success("保存成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
@@ -205,13 +199,10 @@ if (mode === "create") {
       `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
     );
   } else {
-    getHistoryByVersionRequest(
-      {
-        fileId: propertyFileStore.id,
-        version: route.query.from
-      },
-      propertyFileStore.env
-    ).then(res => {
+    getHistoryByVersionRequest({
+      fileId: propertyFileStore.id,
+      version: route.query.from
+    }).then(res => {
       if (res.data.exist) {
         formState.name = propertyFileStore.name;
         formState.selectedEnv = propertyFileStore.env;

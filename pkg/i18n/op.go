@@ -440,7 +440,7 @@ var (
 
 	PromSrvKeysVO = PromSrvKeys{
 		InsertScrape: KeyItem{
-			Id:         "promSrv.InsertScrape",
+			Id:         "promSrv.CreateScrape",
 			DefaultRet: "新增prometheus抓取任务",
 		},
 		UpdateScrape: KeyItem{
@@ -455,7 +455,7 @@ var (
 
 	DbSrvKeysVO = DbSrvKeys{
 		InsertDb: KeyItem{
-			Id:         "dbSrv.InsertDb",
+			Id:         "dbSrv.CreateDb",
 			DefaultRet: "新增数据库",
 		},
 		DeleteDb: KeyItem{
@@ -471,7 +471,7 @@ var (
 			DefaultRet: "删除数据库权限",
 		},
 		SearchDb: KeyItem{
-			Id:         "dbSrv.SearchDb",
+			Id:         "dbSrv.ExecuteSelectSql",
 			DefaultRet: "搜索数据库",
 		},
 	}

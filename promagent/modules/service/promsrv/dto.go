@@ -6,13 +6,11 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/promagent/modules/model/prommd"
 	"github.com/LeeZXin/zall/util"
-	"net/url"
-	"strings"
 	"time"
 )
 
-type InsertScrapeReqDTO struct {
-	ServerUrl  string              `json:"serverUrl"`
+type CreateScrapeReqDTO struct {
+	Endpoint   string              `json:"endpoint"`
 	AppId      string              `json:"appId"`
 	Target     string              `json:"target"`
 	TargetType prommd.TargetType   `json:"targetType"`
@@ -20,9 +18,8 @@ type InsertScrapeReqDTO struct {
 	Operator   apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertScrapeReqDTO) IsValid() error {
-	parsedUrl, err := url.Parse(r.ServerUrl)
-	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
+func (r *CreateScrapeReqDTO) IsValid() error {
+	if !prommd.IsEndpointValid(r.Endpoint) {
 		return util.InvalidArgsError()
 	}
 	if !appmd.IsAppIdValid(r.AppId) {
@@ -34,39 +31,34 @@ func (r *InsertScrapeReqDTO) IsValid() error {
 	if !r.TargetType.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !r.Operator.IsValid() {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
 type UpdateScrapeReqDTO struct {
-	Id         int64               `json:"id"`
-	ServerUrl  string              `json:"serverUrl"`
+	ScrapeId   int64               `json:"scrapeId"`
+	Endpoint   string              `json:"endpoint"`
 	Target     string              `json:"target"`
 	TargetType prommd.TargetType   `json:"targetType"`
-	Env        string              `json:"env"`
 	Operator   apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdateScrapeReqDTO) IsValid() error {
-	if r.Id <= 0 {
+	if r.ScrapeId <= 0 {
 		return util.InvalidArgsError()
 	}
-	parsedUrl, err := url.Parse(r.ServerUrl)
-	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
+	if !prommd.IsEndpointValid(r.Endpoint) {
 		return util.InvalidArgsError()
 	}
 	if !prommd.IsTargetValid(r.Target) {
 		return util.InvalidArgsError()
 	}
 	if !r.TargetType.IsValid() {
-		return util.InvalidArgsError()
-	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -85,10 +77,10 @@ func (r *ListScrapeReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !r.Operator.IsValid() {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -96,24 +88,21 @@ func (r *ListScrapeReqDTO) IsValid() error {
 
 type ScrapeDTO struct {
 	Id         int64
-	ServerUrl  string
+	Endpoint   string
 	AppId      string
 	Target     string
 	TargetType prommd.TargetType
 	Created    time.Time
+	Env        string
 }
 
 type DeleteScrapeReqDTO struct {
-	Id       int64               `json:"id"`
-	Env      string              `json:"env"`
+	ScrapeId int64               `json:"scrapeId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteScrapeReqDTO) IsValid() error {
-	if r.Id <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if r.ScrapeId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

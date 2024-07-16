@@ -120,31 +120,25 @@ const saveOrUpdateServiceSource = () => {
     return;
   }
   if (mode === "create") {
-    createServiceSourceRequest(
-      {
-        env: formState.selectedEnv,
-        appId: route.params.appId,
-        apiKey: formState.apiKey,
-        name: formState.name,
-        host: formState.host
-      },
-      formState.selectedEnv
-    ).then(() => {
+    createServiceSourceRequest({
+      env: formState.selectedEnv,
+      appId: route.params.appId,
+      apiKey: formState.apiKey,
+      name: formState.name,
+      host: formState.host
+    }).then(() => {
       message.success("创建成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/list/${formState.selectedEnv}`
       );
     });
   } else if (mode === "update") {
-    updateServiceSourceRequest(
-      {
-        sourceId: serviceSourceStore.id,
-        host: formState.host,
-        name: formState.name,
-        apiKey: formState.apiKey
-      },
-      formState.selectedEnv
-    ).then(() => {
+    updateServiceSourceRequest({
+      sourceId: serviceSourceStore.id,
+      host: formState.host,
+      name: formState.name,
+      apiKey: formState.apiKey
+    }).then(() => {
       message.success("保存成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/list/${formState.selectedEnv}`

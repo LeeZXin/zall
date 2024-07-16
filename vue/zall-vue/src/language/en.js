@@ -52,7 +52,7 @@ export default {
         timerTask: "Timer task",
         applyApproval: "Apply approval",
         dbAudit: "Database audit",
-        monitorAlert: "Monitor alert",
+        promScrape: "Prometheus scrape",
         roleAndMembers: "Role & Members"
     },
     roleListPage: {
@@ -118,5 +118,12 @@ export default {
         runningStatus: "Running",
         successfulStatus: "Successful",
         closedStatus: "Closed"
+    },
+    mysqlReadPermApply: {
+        pendingStatus: "Pending",
+        agreeStatus: "Agree",
+        disagreeStatus: "Disagree",
+        canceledStatus: "Canceled",
+        unknownStatus: "Unknown"
     }
 }

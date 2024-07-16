@@ -51,7 +51,7 @@ const deleteVars = item => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deletePipelineVarsRequest(item.id, selectedEnv.value).then(() => {
+      deletePipelineVarsRequest(item.id).then(() => {
         message.success("删除成功");
         listVars();
       });
@@ -61,13 +61,10 @@ const deleteVars = item => {
 };
 
 const listVars = () => {
-  listPipelineVarsRequest(
-    {
-      appId: route.params.appId,
-      env: selectedEnv.value
-    },
-    selectedEnv.value
-  ).then(res => {
+  listPipelineVarsRequest({
+    appId: route.params.appId,
+    env: selectedEnv.value
+  }).then(res => {
     varsList.value = res.data;
   });
 };

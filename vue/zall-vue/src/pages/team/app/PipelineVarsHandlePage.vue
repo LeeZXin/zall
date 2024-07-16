@@ -116,28 +116,22 @@ const createOrUpdateVars = () => {
     return;
   }
   if (mode === "create") {
-    createPipelineVarsRequest(
-      {
-        appId: route.params.appId,
-        name: formState.name,
-        content: formState.content,
-        env: formState.selectedEnv
-      },
-      formState.selectedEnv
-    ).then(() => {
+    createPipelineVarsRequest({
+      appId: route.params.appId,
+      name: formState.name,
+      content: formState.content,
+      env: formState.selectedEnv
+    }).then(() => {
       message.success("添加成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${formState.selectedEnv}`
       );
     });
   } else if (mode === "update") {
-    updatePipelineVarsRequest(
-      {
-        id: varsStore.id,
-        content: formState.content
-      },
-      varsStore.env
-    ).then(() => {
+    updatePipelineVarsRequest({
+      id: varsStore.id,
+      content: formState.content
+    }).then(() => {
       message.success("更新成功");
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${formState.selectedEnv}`
@@ -152,7 +146,7 @@ if (mode === "update") {
     );
   } else {
     formState.selectedEnv = varsStore.env;
-    getPipelineVarsRequest(varsStore.id, varsStore.env).then(res => {
+    getPipelineVarsRequest(varsStore.id).then(res => {
       formState.name = res.data.name;
       formState.content = res.data.content;
     });

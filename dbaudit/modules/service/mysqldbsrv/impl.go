@@ -5,16 +5,14 @@ import (
 	"fmt"
 	"github.com/LeeZXin/zall/dbaudit/modules/model/mysqldbmd"
 	"github.com/LeeZXin/zall/dbaudit/modules/service/mysqldbsrv/command"
-	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -22,29 +20,19 @@ import (
 
 type outerImpl struct{}
 
-func (*outerImpl) InsertDb(ctx context.Context, reqDTO InsertDbReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.DbSrvKeysVO.InsertDb),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
+// CreateDb 创建数据库
+func (*outerImpl) CreateDb(ctx context.Context, reqDTO CreateDbReqDTO) (err error) {
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	if err = checkPerm(reqDTO.Operator); err != nil {
+	if err = checkDbaPerm(reqDTO.Operator); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	err = mysqldbmd.InsertDb(ctx, mysqldbmd.InsertDbReqDTO{
-		Name:     reqDTO.Name,
-		DbHost:   reqDTO.DbHost,
-		Username: reqDTO.Username,
-		Password: reqDTO.Password,
+		Name:   reqDTO.Name,
+		Config: reqDTO.Config,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -54,30 +42,20 @@ func (*outerImpl) InsertDb(ctx context.Context, reqDTO InsertDbReqDTO) (err erro
 	return
 }
 
+// UpdateDb 编辑数据库
 func (*outerImpl) UpdateDb(ctx context.Context, reqDTO UpdateDbReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.DbSrvKeysVO.UpdateDb),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	if err = checkPerm(reqDTO.Operator); err != nil {
+	if err = checkDbaPerm(reqDTO.Operator); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err = mysqldbmd.UpdateDb(ctx, mysqldbmd.UpdateDbReqDTO{
-		Id:       reqDTO.Id,
-		Name:     reqDTO.Name,
-		DbHost:   reqDTO.DbHost,
-		Username: reqDTO.Username,
-		Password: reqDTO.Password,
+		Id:     reqDTO.DbId,
+		Name:   reqDTO.Name,
+		Config: reqDTO.Config,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -87,25 +65,17 @@ func (*outerImpl) UpdateDb(ctx context.Context, reqDTO UpdateDbReqDTO) (err erro
 	return
 }
 
+// DeleteDb 删除数据库
 func (*outerImpl) DeleteDb(ctx context.Context, reqDTO DeleteDbReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.DbSrvKeysVO.DeleteDb),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	if err = checkPerm(reqDTO.Operator); err != nil {
+	if err = checkDbaPerm(reqDTO.Operator); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err = mysqldbmd.DeleteDbById(ctx, reqDTO.Id)
+	_, err = mysqldbmd.DeleteDbById(ctx, reqDTO.DbId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -114,60 +84,67 @@ func (*outerImpl) DeleteDb(ctx context.Context, reqDTO DeleteDbReqDTO) (err erro
 	return
 }
 
-func (*outerImpl) ListDb(ctx context.Context, reqDTO ListDbReqDTO) ([]DbDTO, error) {
+// ListDb 数据库列表
+func (*outerImpl) ListDb(ctx context.Context, reqDTO ListDbReqDTO) ([]DbDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	if err := checkPerm(reqDTO.Operator); err != nil {
-		return nil, err
+	if err := checkDbaPerm(reqDTO.Operator); err != nil {
+		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	dbs, err := mysqldbmd.ListDb(ctx)
+	dbs, total, err := mysqldbmd.PageDb(ctx, mysqldbmd.PageDbReqDTO{
+		PageNum:  reqDTO.PageNum,
+		PageSize: 10,
+		Name:     reqDTO.Name,
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
+		return nil, 0, util.InternalError(err)
 	}
-	return listutil.Map(dbs, func(t mysqldbmd.Db) (DbDTO, error) {
-		return DbDTO{
-			Id:       t.Id,
-			Name:     t.Name,
-			DbHost:   t.DbHost,
-			Username: t.Username,
-			Password: t.Password,
-			Created:  t.Created,
-		}, nil
+	data, _ := listutil.Map(dbs, func(t mysqldbmd.Db) (DbDTO, error) {
+		ret := DbDTO{
+			Id:      t.Id,
+			Name:    t.Name,
+			Created: t.Created,
+		}
+		if t.Config != nil {
+			ret.Config = t.Config.Data
+		}
+		return ret, nil
 	})
+	return data, total, nil
 }
 
+// ListSimpleDb 数据库列表
 func (*outerImpl) ListSimpleDb(ctx context.Context, reqDTO ListSimpleDbReqDTO) ([]SimpleDbDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	dbs, err := mysqldbmd.ListDb(ctx)
+	dbs, err := mysqldbmd.ListDb(ctx, []string{"id", "name"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
 	return listutil.Map(dbs, func(t mysqldbmd.Db) (SimpleDbDTO, error) {
 		return SimpleDbDTO{
-			Id:     t.Id,
-			Name:   t.Name,
-			DbHost: t.DbHost,
+			Id:   t.Id,
+			Name: t.Name,
 		}, nil
 	})
 }
 
-// ApplyDbPerm 申请库表权限
-func (*outerImpl) ApplyDbPerm(ctx context.Context, reqDTO ApplyDbPermReqDTO) error {
+// ApplyReadPerm 申请库表读权限
+func (*outerImpl) ApplyReadPerm(ctx context.Context, reqDTO ApplyReadPermReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
+	db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -175,15 +152,15 @@ func (*outerImpl) ApplyDbPerm(ctx context.Context, reqDTO ApplyDbPermReqDTO) err
 	if !b {
 		return util.InvalidArgsError()
 	}
-	err = mysqldbmd.InsertPermApprovalOrder(ctx, mysqldbmd.InsertPermApprovalOrderReqDTO{
+	err = mysqldbmd.InsertReadPermApply(ctx, mysqldbmd.InsertReadPermApplyReqDTO{
 		Account:      reqDTO.Operator.Account,
 		DbId:         reqDTO.DbId,
+		DbName:       db.Name,
 		AccessBase:   reqDTO.AccessBase,
 		AccessTables: reqDTO.AccessTables,
-		PermType:     reqDTO.PermType,
-		OrderStatus:  mysqldbmd.PendingPermOrderStatus,
+		OrderStatus:  mysqldbmd.PendingReadPermApplyStatus,
 		ExpireDay:    reqDTO.ExpireDay,
-		Reason:       reqDTO.Reason,
+		ApplyReason:  reqDTO.ApplyReason,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -192,146 +169,136 @@ func (*outerImpl) ApplyDbPerm(ctx context.Context, reqDTO ApplyDbPermReqDTO) err
 	return nil
 }
 
-// ListPermApprovalOrder 展示审批列表
-func (*outerImpl) ListPermApprovalOrder(ctx context.Context, reqDTO ListPermApprovalOrderReqDTO) ([]PermApprovalOrderDTO, int64, error) {
+// GetReadPermApplyByOperator 操作人查看自己的审批单
+func (*outerImpl) GetReadPermApplyByOperator(ctx context.Context, reqDTO GetReadPermApplyByOperatorReqDTO) (ReadPermApplyDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return ReadPermApplyDTO{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	apply, b, err := mysqldbmd.GetReadPermApplyById(ctx, reqDTO.ApplyId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return ReadPermApplyDTO{}, util.InternalError(err)
+	}
+	if !b {
+		return ReadPermApplyDTO{}, util.InvalidArgsError()
+	}
+	if apply.Account != reqDTO.Operator.Account {
+		return ReadPermApplyDTO{}, util.UnauthorizedError()
+	}
+	return readPermApply2Dto(apply)
+}
+
+// ListReadPermApplyByDba dba查看展示审批列表
+func (*outerImpl) ListReadPermApplyByDba(ctx context.Context, reqDTO ListReadPermApplyByDbaReqDTO) ([]ReadPermApplyDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
-	if err := checkPerm(reqDTO.Operator); err != nil {
+	if err := checkDbaPerm(reqDTO.Operator); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	orders, err := mysqldbmd.ListPermApprovalOrder(ctx, mysqldbmd.ListPermApprovalOrderReqDTO{
-		Cursor:      reqDTO.Cursor,
-		Limit:       reqDTO.Limit,
-		OrderStatus: reqDTO.OrderStatus,
-	})
+	applies, total, err := mysqldbmd.ListReadPermApply(ctx, mysqldbmd.ListReadPermApplyReqDTO{
+		PageNum:     reqDTO.PageNum,
+		PageSize:    10,
+		ApplyStatus: reqDTO.ApplyStatus,
+		DbId:        reqDTO.DbId,
+	},
+	)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	var next int64 = 0
-	if len(orders) == reqDTO.Limit {
-		next = orders[len(orders)-1].Id
-	}
-	dbIdList, _ := listutil.Map(orders, func(t mysqldbmd.PermApprovalOrder) (int64, error) {
-		return t.DbId, nil
-	})
-	dbMap, err := getDbMap(ctx, dbIdList)
-	if err != nil {
-		return nil, 0, err
-	}
-	data, _ := listutil.Map(orders, func(t mysqldbmd.PermApprovalOrder) (PermApprovalOrderDTO, error) {
-		return PermApprovalOrderDTO{
-			Id:           t.Id,
-			Account:      t.Account,
-			DbId:         t.DbId,
-			DbHost:       dbMap[t.DbId].DbHost,
-			DbName:       dbMap[t.DbId].Name,
-			AccessBase:   t.AccessBase,
-			AccessTables: t.AccessTables,
-			PermType:     t.PermType,
-			OrderStatus:  t.OrderStatus,
-			Auditor:      t.Auditor,
-			ExpireDay:    t.ExpireDay,
-			Reason:       t.Reason,
-			Created:      t.Created,
-		}, nil
-	})
-	return data, next, nil
+	data, _ := listutil.Map(applies, readPermApply2Dto)
+	return data, total, nil
 }
 
-// ListAppliedPermApprovalOrder 展示申请的审批列表
-func (*outerImpl) ListAppliedPermApprovalOrder(ctx context.Context, reqDTO ListAppliedPermApprovalOrderReqDTO) ([]PermApprovalOrderDTO, int64, error) {
+func readPermApply2Dto(t mysqldbmd.ReadPermApply) (ReadPermApplyDTO, error) {
+	return ReadPermApplyDTO{
+		Id:             t.Id,
+		Account:        t.Account,
+		DbId:           t.DbId,
+		DbName:         t.DbName,
+		AccessBase:     t.AccessBase,
+		AccessTables:   t.AccessTables,
+		ApplyStatus:    t.ApplyStatus,
+		Auditor:        t.Auditor,
+		ExpireDay:      t.ExpireDay,
+		ApplyReason:    t.ApplyReason,
+		DisagreeReason: t.DisagreeReason,
+		Created:        t.Created,
+		Updated:        t.Updated,
+	}, nil
+}
+
+// ListReadPermApplyByOperator 展示申请的审批列表
+func (*outerImpl) ListReadPermApplyByOperator(ctx context.Context, reqDTO ListReadPermApplyByOperatorReqDTO) ([]ReadPermApplyDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	orders, err := mysqldbmd.ListPermApprovalOrder(ctx, mysqldbmd.ListPermApprovalOrderReqDTO{
-		Cursor:      reqDTO.Cursor,
-		Limit:       reqDTO.Limit,
+	applies, total, err := mysqldbmd.ListReadPermApply(ctx, mysqldbmd.ListReadPermApplyReqDTO{
+		PageNum:     reqDTO.PageNum,
+		PageSize:    10,
 		Account:     reqDTO.Operator.Account,
-		OrderStatus: reqDTO.OrderStatus,
+		ApplyStatus: reqDTO.ApplyStatus,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	var next int64 = 0
-	if len(orders) == reqDTO.Limit {
-		next = orders[len(orders)-1].Id
-	}
-	dbIdList, _ := listutil.Map(orders, func(t mysqldbmd.PermApprovalOrder) (int64, error) {
-		return t.DbId, nil
-	})
-	dbMap, err := getDbMap(ctx, dbIdList)
-	if err != nil {
-		return nil, 0, err
-	}
-	data, _ := listutil.Map(orders, func(t mysqldbmd.PermApprovalOrder) (PermApprovalOrderDTO, error) {
-		return PermApprovalOrderDTO{
-			Id:           t.Id,
-			Account:      t.Account,
-			DbId:         t.DbId,
-			DbHost:       dbMap[t.DbId].DbHost,
-			DbName:       dbMap[t.DbId].Name,
-			AccessBase:   t.AccessBase,
-			AccessTables: t.AccessTables,
-			PermType:     t.PermType,
-			OrderStatus:  t.OrderStatus,
-			Auditor:      t.Auditor,
-			ExpireDay:    t.ExpireDay,
-			Reason:       t.Reason,
-			Created:      t.Created,
-		}, nil
-	})
-	return data, next, nil
+	data, _ := listutil.Map(applies, readPermApply2Dto)
+	return data, total, nil
 }
 
-// AgreeDbPerm 同意审批
-func (*outerImpl) AgreeDbPerm(ctx context.Context, reqDTO AgreeDbPermReqDTO) error {
+// AgreeReadPermApply 同意审批
+func (*outerImpl) AgreeReadPermApply(ctx context.Context, reqDTO AgreeReadPermApplyReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	if err := checkPerm(reqDTO.Operator); err != nil {
+	if err := checkDbaPerm(reqDTO.Operator); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	order, b, err := mysqldbmd.GetPermApprovalOrderById(ctx, reqDTO.OrderId)
+	apply, b, err := mysqldbmd.GetReadPermApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || order.OrderStatus != mysqldbmd.PendingPermOrderStatus {
+	if !b || apply.ApplyStatus != mysqldbmd.PendingReadPermApplyStatus {
 		return util.InvalidArgsError()
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		b, err := mysqldbmd.UpdatePermApprovalOrderStatus(ctx, mysqldbmd.UpdatePermApprovalOrderStatusReqDTO{
-			Id:        reqDTO.OrderId,
-			NewStatus: mysqldbmd.AgreePermOrderStatus,
-			OldStatus: order.OrderStatus,
+		b2, err2 := mysqldbmd.UpdateReadPermApplyStatus(ctx, mysqldbmd.UpdateReadPermApplyStatusReqDTO{
+			Id:        reqDTO.ApplyId,
+			NewStatus: mysqldbmd.AgreeReadPermApplyStatus,
+			OldStatus: apply.ApplyStatus,
 			Auditor:   reqDTO.Operator.Account,
 		})
-		if err != nil {
-			return err
+		if err2 != nil {
+			return err2
 		}
-		if b {
+		if b2 {
 			// 插入权限表
-			expired := time.Now().Add(time.Duration(order.ExpireDay) * 24 * time.Hour)
-			insertReqs, _ := listutil.Map(order.AccessTables, func(table string) (mysqldbmd.InsertPermReqDTO, error) {
-				return mysqldbmd.InsertPermReqDTO{
-					Account:     order.Account,
-					DbId:        order.DbId,
-					AccessBase:  order.AccessBase,
-					AccessTable: table,
-					PermType:    order.PermType,
+			expired := time.Now().Add(time.Duration(apply.ExpireDay) * 24 * time.Hour)
+			tables, _ := listutil.Filter(listutil.Distinct(strings.Split(apply.AccessTables, ";")...), func(t string) (bool, error) {
+				return len(t) > 0, nil
+			})
+			insertReqs, _ := listutil.Map(tables, func(t string) (mysqldbmd.InsertReadPermReqDTO, error) {
+				return mysqldbmd.InsertReadPermReqDTO{
+					Account:     apply.Account,
+					DbId:        apply.DbId,
+					AccessBase:  apply.AccessBase,
+					AccessTable: t,
+					ApplyId:     apply.Id,
 					Expired:     expired,
 				}, nil
 			})
-			return mysqldbmd.BatchInsertPerm(ctx, insertReqs)
+			return mysqldbmd.BatchInsertReadPerm(ctx, insertReqs)
 		}
 		return nil
 	})
@@ -342,28 +309,355 @@ func (*outerImpl) AgreeDbPerm(ctx context.Context, reqDTO AgreeDbPermReqDTO) err
 	return nil
 }
 
-// DisagreeDbPerm 不同意审批
-func (*outerImpl) DisagreeDbPerm(ctx context.Context, reqDTO DisagreeDbPermReqDTO) error {
+// ListAuthorizedDb 展示授权的库表
+func (*outerImpl) ListAuthorizedDb(ctx context.Context, reqDTO ListAuthorizedDbReqDTO) ([]SimpleDbDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 先删除过期数据
+	err := mysqldbmd.DeleteExpiredReadPermByAccount(ctx, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	isDba := checkDbaPerm(reqDTO.Operator) == nil
+	if isDba {
+		dbs, err := mysqldbmd.ListDb(ctx, []string{"id", "name"})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		return listutil.Map(dbs, func(t mysqldbmd.Db) (SimpleDbDTO, error) {
+			return SimpleDbDTO{
+				Id:   t.Id,
+				Name: t.Name,
+			}, nil
+		})
+	}
+	perms, err := mysqldbmd.ListReadPermByAccount(ctx, mysqldbmd.ListReadPermByAccountReqDTO{
+		Account: reqDTO.Operator.Account,
+		Cols:    []string{"db_id"},
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	dbIdList, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (int64, error) {
+		return t.DbId, nil
+	})
+	dbMap, err := getDbMap(ctx, dbIdList)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]SimpleDbDTO, 0)
+	for dbId, db := range dbMap {
+		ret = append(ret, SimpleDbDTO{
+			Id:   dbId,
+			Name: db.Name,
+		})
+	}
+	sort.SliceStable(ret, func(i, j int) bool {
+		return ret[i].Id < ret[j].Id
+	})
+	return ret, nil
+}
+
+// ListAuthorizedBase 展示授权的库
+func (*outerImpl) ListAuthorizedBase(ctx context.Context, reqDTO ListAuthorizedBaseReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 先删除过期数据
+	err := mysqldbmd.DeleteExpiredReadPermByAccount(ctx, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	isDba := checkDbaPerm(reqDTO.Operator) == nil
+	if isDba {
+		db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		if !b {
+			return nil, util.InvalidArgsError()
+		}
+		datasourceName := fmt.Sprintf(
+			"%s:%s@tcp(%s)/?charset=utf8",
+			url.QueryEscape(db.Config.Data.ReadNode.Username),
+			url.QueryEscape(db.Config.Data.ReadNode.Password),
+			db.Config.Data.ReadNode.Host,
+		)
+		_, bases, err := util.MysqlQuery(datasourceName, "show databases")
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		ret := make([]string, 0, len(bases))
+		for _, base := range bases {
+			if len(base) > 0 {
+				ret = append(ret, base[0])
+			}
+		}
+		ret, _ = listutil.Filter(ret, func(t string) (bool, error) {
+			return !defaultBases.Contains(t), nil
+		})
+		return ret, nil
+	}
+	perms, err := mysqldbmd.ListReadPermByAccount(ctx, mysqldbmd.ListReadPermByAccountReqDTO{
+		DbId:    reqDTO.DbId,
+		Account: reqDTO.Operator.Account,
+		Cols:    []string{"access_base"},
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	ret, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (string, error) {
+		return t.AccessBase, nil
+	})
+	ret = listutil.Distinct(ret...)
+	ret, _ = listutil.Filter(ret, func(t string) (bool, error) {
+		return !defaultBases.Contains(t), nil
+	})
+	sort.SliceStable(ret, func(i, j int) bool {
+		return ret[i] < ret[j]
+	})
+	return ret, nil
+}
+
+// ListAuthorizedTable 展示授权的表
+func (*outerImpl) ListAuthorizedTable(ctx context.Context, reqDTO ListAuthorizedTableReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 先删除过期数据
+	err := mysqldbmd.DeleteExpiredReadPermByAccount(ctx, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	isDba := checkDbaPerm(reqDTO.Operator) == nil
+	if isDba {
+		db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		if !b {
+			return nil, util.InvalidArgsError()
+		}
+		datasourceName := fmt.Sprintf(
+			"%s:%s@tcp(%s)/%s?charset=utf8",
+			url.QueryEscape(db.Config.Data.ReadNode.Username),
+			url.QueryEscape(db.Config.Data.ReadNode.Password),
+			db.Config.Data.ReadNode.Host,
+			reqDTO.AccessBase,
+		)
+		_, tables, err := util.MysqlQuery(datasourceName, "show tables")
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		ret := make([]string, 0, len(tables))
+		for _, table := range tables {
+			if len(table) > 0 {
+				ret = append(ret, table[0])
+			}
+		}
+		return ret, nil
+	}
+	perms, err := mysqldbmd.ListReadPermByAccount(ctx, mysqldbmd.ListReadPermByAccountReqDTO{
+		DbId:       reqDTO.DbId,
+		AccessBase: reqDTO.AccessBase,
+		Account:    reqDTO.Operator.Account,
+		Cols:       []string{"access_table"},
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	retTables, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (string, error) {
+		return t.AccessTable, nil
+	})
+	retTables = listutil.Distinct(retTables...)
+	hasStar := false
+	for _, table := range retTables {
+		if table == "*" {
+			hasStar = true
+			break
+		}
+	}
+	if hasStar {
+		db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		if !b {
+			return nil, util.ThereHasBugErr()
+		}
+		datasourceName := fmt.Sprintf(
+			"%s:%s@tcp(%s)/%s?charset=utf8",
+			url.QueryEscape(db.Config.Data.ReadNode.Username),
+			url.QueryEscape(db.Config.Data.ReadNode.Password),
+			db.Config.Data.ReadNode.Host,
+			reqDTO.AccessBase,
+		)
+		_, tables, err := util.MysqlQuery(datasourceName, "show tables")
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		retTables = make([]string, 0)
+		for _, table := range tables {
+			if len(table) > 0 {
+				retTables = append(retTables, table[0])
+			}
+		}
+	}
+	sort.SliceStable(retTables, func(i, j int) bool {
+		return retTables[i] < retTables[j]
+	})
+	return retTables, nil
+}
+
+// GetCreateTableSql 展示建表语句
+func (*outerImpl) GetCreateTableSql(ctx context.Context, reqDTO GetCreateSqlReqDTO) (string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return "", err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 先删除过期数据
+	err := mysqldbmd.DeleteExpiredReadPermByAccount(ctx, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	if !b {
+		return "", util.ThereHasBugErr()
+	}
+	needCheckPerm := checkDbaPerm(reqDTO.Operator) != nil
+	if needCheckPerm {
+		hasPerm, err := mysqldbmd.ExistReadPerm(ctx, mysqldbmd.ExistReadPermReqDTO{
+			Account:      reqDTO.Operator.Account,
+			DbId:         reqDTO.DbId,
+			AccessBase:   reqDTO.AccessBase,
+			AccessTables: []string{reqDTO.AccessTable, "*"},
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return "", util.InternalError(err)
+		}
+		if !hasPerm {
+			return "", util.UnauthorizedError()
+		}
+	}
+	datasourceName := fmt.Sprintf(
+		"%s:%s@tcp(%s)/%s?charset=utf8",
+		url.QueryEscape(db.Config.Data.ReadNode.Username),
+		url.QueryEscape(db.Config.Data.ReadNode.Password),
+		db.Config.Data.ReadNode.Host,
+		reqDTO.AccessBase,
+	)
+	_, data, err := util.MysqlQuery(datasourceName, "show create table "+reqDTO.AccessTable)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	if len(data) == 1 && len(data[0]) == 2 {
+		return data[0][1], nil
+	}
+	return "", nil
+}
+
+// ShowTableIndex 展示索引语句
+func (*outerImpl) ShowTableIndex(ctx context.Context, reqDTO ShowTableIndexReqDTO) ([]string, [][]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 先删除过期数据
+	err := mysqldbmd.DeleteExpiredReadPermByAccount(ctx, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, nil, util.InternalError(err)
+	}
+	db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, nil, util.InternalError(err)
+	}
+	if !b {
+		return nil, nil, util.ThereHasBugErr()
+	}
+	needCheckPerm := checkDbaPerm(reqDTO.Operator) != nil
+	if needCheckPerm {
+		hasPerm, err := mysqldbmd.ExistReadPerm(ctx, mysqldbmd.ExistReadPermReqDTO{
+			Account:      reqDTO.Operator.Account,
+			DbId:         reqDTO.DbId,
+			AccessBase:   reqDTO.AccessBase,
+			AccessTables: []string{reqDTO.AccessTable, "*"},
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, nil, util.InternalError(err)
+		}
+		if !hasPerm {
+			return nil, nil, util.UnauthorizedError()
+		}
+	}
+	datasourceName := fmt.Sprintf(
+		"%s:%s@tcp(%s)/%s?charset=utf8",
+		url.QueryEscape(db.Config.Data.ReadNode.Username),
+		url.QueryEscape(db.Config.Data.ReadNode.Password),
+		db.Config.Data.ReadNode.Host,
+		reqDTO.AccessBase,
+	)
+	columns, data, err := util.MysqlQuery(datasourceName, "show index from "+reqDTO.AccessTable)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, nil, util.InternalError(err)
+	}
+	return columns, data, nil
+}
+
+// DisagreeReadPermApply 不同意审批
+func (*outerImpl) DisagreeReadPermApply(ctx context.Context, reqDTO DisagreeReadPermApplyReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	if err := checkPerm(reqDTO.Operator); err != nil {
+	if err := checkDbaPerm(reqDTO.Operator); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	order, b, err := mysqldbmd.GetPermApprovalOrderById(ctx, reqDTO.OrderId)
+	order, b, err := mysqldbmd.GetReadPermApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || order.OrderStatus != mysqldbmd.PendingPermOrderStatus {
+	if !b || order.ApplyStatus != mysqldbmd.PendingReadPermApplyStatus {
 		return util.InvalidArgsError()
 	}
-	_, err = mysqldbmd.UpdatePermApprovalOrderStatus(ctx, mysqldbmd.UpdatePermApprovalOrderStatusReqDTO{
-		Id:             reqDTO.OrderId,
-		NewStatus:      mysqldbmd.DisagreePermOrderStatus,
-		OldStatus:      order.OrderStatus,
+	_, err = mysqldbmd.UpdateReadPermApplyStatus(ctx, mysqldbmd.UpdateReadPermApplyStatusReqDTO{
+		Id:             reqDTO.ApplyId,
+		NewStatus:      mysqldbmd.DisagreeReadPermApplyStatus,
+		OldStatus:      order.ApplyStatus,
 		Auditor:        reqDTO.Operator.Account,
 		DisagreeReason: reqDTO.DisagreeReason,
 	})
@@ -374,28 +668,28 @@ func (*outerImpl) DisagreeDbPerm(ctx context.Context, reqDTO DisagreeDbPermReqDT
 	return nil
 }
 
-// CancelDbPerm 取消申请
-func (*outerImpl) CancelDbPerm(ctx context.Context, reqDTO CancelDbPermReqDTO) error {
+// CancelReadPermApply 取消申请
+func (*outerImpl) CancelReadPermApply(ctx context.Context, reqDTO CancelReadPermApplyReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	order, b, err := mysqldbmd.GetPermApprovalOrderById(ctx, reqDTO.OrderId)
+	apply, b, err := mysqldbmd.GetReadPermApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || order.OrderStatus != mysqldbmd.PendingPermOrderStatus {
+	if !b || apply.ApplyStatus != mysqldbmd.PendingReadPermApplyStatus {
 		return util.InvalidArgsError()
 	}
-	if order.Account != reqDTO.Operator.Account {
+	if apply.Account != reqDTO.Operator.Account {
 		return util.UnauthorizedError()
 	}
-	_, err = mysqldbmd.UpdatePermApprovalOrderStatus(ctx, mysqldbmd.UpdatePermApprovalOrderStatusReqDTO{
-		Id:        reqDTO.OrderId,
-		NewStatus: mysqldbmd.CanceledPermOrderStatus,
-		OldStatus: order.OrderStatus,
+	_, err = mysqldbmd.UpdateReadPermApplyStatus(ctx, mysqldbmd.UpdateReadPermApplyStatusReqDTO{
+		Id:        reqDTO.ApplyId,
+		NewStatus: mysqldbmd.CanceledReadPermApplyStatus,
+		OldStatus: apply.ApplyStatus,
 		Auditor:   reqDTO.Operator.Account,
 	})
 	if err != nil {
@@ -405,70 +699,67 @@ func (*outerImpl) CancelDbPerm(ctx context.Context, reqDTO CancelDbPermReqDTO) e
 	return nil
 }
 
-// ListDbPerm 权限列表
-func (*outerImpl) ListDbPerm(ctx context.Context, reqDTO ListDbPermReqDTO) ([]PermDTO, int64, error) {
+// ListReadPermByOperator 权限列表
+func (*outerImpl) ListReadPermByOperator(ctx context.Context, reqDTO ListReadPermByOperatorReqDTO) ([]ReadPermDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	perms, err := mysqldbmd.ListPerm(ctx, mysqldbmd.ListPermReqDTO{
-		Cursor:  reqDTO.Cursor,
-		Limit:   reqDTO.Limit,
-		Account: reqDTO.Operator.Account,
+	// 先删除过期的
+	err := mysqldbmd.DeleteExpiredReadPermByAccount(ctx, reqDTO.Operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	perms, total, err := mysqldbmd.PageReadPerm(ctx, mysqldbmd.PageReadPermReqDTO{
+		Account:  reqDTO.Operator.Account,
+		PageNum:  reqDTO.PageNum,
+		PageSize: 10,
+		DbId:     reqDTO.DbId,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	var next int64 = 0
-	if len(perms) == reqDTO.Limit {
-		next = perms[len(perms)-1].Id
-	}
-	dbIdList, _ := listutil.Map(perms, func(t mysqldbmd.Perm) (int64, error) {
+	dbIdList, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (int64, error) {
 		return t.DbId, nil
 	})
 	dbMap, err := getDbMap(ctx, dbIdList)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, _ := listutil.Map(perms, func(t mysqldbmd.Perm) (PermDTO, error) {
-		return PermDTO{
-			Id:          t.Id,
-			Account:     t.Account,
-			DbId:        t.DbId,
-			DbHost:      dbMap[t.DbId].DbHost,
-			DbName:      dbMap[t.DbId].Name,
-			AccessBase:  t.AccessBase,
-			AccessTable: t.AccessTable,
-			PermType:    t.PermType,
-			Created:     t.Created,
-			Expired:     t.Expired,
-		}, nil
+	data, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (ReadPermDTO, error) {
+		return readPerm2Dto(t, dbMap), nil
 	})
-	return data, next, nil
+	return data, total, nil
 }
 
-// DeleteDbPerm 删除权限
-func (*outerImpl) DeleteDbPerm(ctx context.Context, reqDTO DeleteDbPermReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.DbSrvKeysVO.DeleteDb),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
+func readPerm2Dto(t mysqldbmd.ReadPerm, dbMap map[int64]mysqldbmd.Db) ReadPermDTO {
+	return ReadPermDTO{
+		Id:          t.Id,
+		Account:     t.Account,
+		DbId:        t.DbId,
+		DbName:      dbMap[t.DbId].Name,
+		AccessBase:  t.AccessBase,
+		AccessTable: t.AccessTable,
+		Created:     t.Created,
+		Expired:     t.Expired,
+		ApplyId:     t.ApplyId,
+	}
+}
+
+// DeleteReadPermByDba 删除权限
+func (*outerImpl) DeleteReadPermByDba(ctx context.Context, reqDTO DeleteReadPermByDbaReqDTO) (err error) {
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
-	if err = checkPerm(reqDTO.Operator); err != nil {
+	if err = checkDbaPerm(reqDTO.Operator); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err = mysqldbmd.DeletePerm(ctx, reqDTO.PermId)
+	err = mysqldbmd.DeleteReadPermById(ctx, reqDTO.PermId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -477,19 +768,17 @@ func (*outerImpl) DeleteDbPerm(ctx context.Context, reqDTO DeleteDbPermReqDTO) (
 	return
 }
 
-// ListDbPermByAccount 权限列表
-func (*outerImpl) ListDbPermByAccount(ctx context.Context, reqDTO ListDbPermByAccountReqDTO) ([]PermDTO, int64, error) {
+// ListReadPermByAccount 权限列表
+func (*outerImpl) ListReadPermByAccount(ctx context.Context, reqDTO ListReadPermByAccountReqDTO) ([]ReadPermDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
-	if err := checkPerm(reqDTO.Operator); err != nil {
+	if err := checkDbaPerm(reqDTO.Operator); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	perms, err := mysqldbmd.ListPerm(ctx, mysqldbmd.ListPermReqDTO{
-		Cursor:  reqDTO.Cursor,
-		Limit:   reqDTO.Limit,
+	perms, err := mysqldbmd.ListReadPermByAccount(ctx, mysqldbmd.ListReadPermByAccountReqDTO{
 		Account: reqDTO.Account,
 	})
 	if err != nil {
@@ -500,102 +789,21 @@ func (*outerImpl) ListDbPermByAccount(ctx context.Context, reqDTO ListDbPermByAc
 	if len(perms) == reqDTO.Limit {
 		next = perms[len(perms)-1].Id
 	}
-	dbIdList, _ := listutil.Map(perms, func(t mysqldbmd.Perm) (int64, error) {
+	dbIdList, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (int64, error) {
 		return t.DbId, nil
 	})
 	dbMap, err := getDbMap(ctx, dbIdList)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, _ := listutil.Map(perms, func(t mysqldbmd.Perm) (PermDTO, error) {
-		return PermDTO{
-			Id:          t.Id,
-			Account:     t.Account,
-			DbId:        t.DbId,
-			DbHost:      dbMap[t.DbId].DbHost,
-			DbName:      dbMap[t.DbId].Name,
-			AccessTable: t.AccessTable,
-			PermType:    t.PermType,
-			Created:     t.Created,
-			Expired:     t.Expired,
-		}, nil
+	data, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (ReadPermDTO, error) {
+		return readPerm2Dto(t, dbMap), nil
 	})
 	return data, next, nil
 }
 
-// AllTables 展示单个数据库所有表
-func (*outerImpl) AllTables(ctx context.Context, reqDTO AllTablesReqDTO) ([]string, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	if !b {
-		return nil, util.InvalidArgsError()
-	}
-	ret := make([]string, 0)
-	datasourceName := fmt.Sprintf(
-		"%s:%s@tcp(%s)/%s?charset=utf8",
-		url.QueryEscape(db.Username),
-		url.QueryEscape(db.Password),
-		db.DbHost,
-		reqDTO.AccessBase,
-	)
-	_, tables, err := util.MysqlQuery(datasourceName, "show tables")
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	for _, table := range tables {
-		if len(table) > 0 {
-			ret = append(ret, table[0])
-		}
-	}
-	return ret, nil
-}
-
-// AllBases 所有库
-func (*outerImpl) AllBases(ctx context.Context, reqDTO AllBasesReqDTO) ([]string, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	if !b {
-		return nil, util.InvalidArgsError()
-	}
-	ret := make([]string, 0)
-	datasourceName := fmt.Sprintf(
-		"%s:%s@tcp(%s)/?charset=utf8",
-		url.QueryEscape(db.Username),
-		url.QueryEscape(db.Password),
-		db.DbHost,
-	)
-	_, tables, err := util.MysqlQuery(datasourceName, "show databases")
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	for _, table := range tables {
-		if len(table) > 0 {
-			ret = append(ret, table[0])
-		}
-	}
-	return ret, nil
-}
-
-// SearchDb 搜索
-func (*outerImpl) SearchDb(ctx context.Context, reqDTO SearchDbReqDTO) ([]string, [][]string, error) {
+// ExecuteSelectSql 搜索
+func (*outerImpl) ExecuteSelectSql(ctx context.Context, reqDTO ExecuteSelectSqlReqDTO) ([]string, [][]string, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, nil, err
 	}
@@ -606,17 +814,17 @@ func (*outerImpl) SearchDb(ctx context.Context, reqDTO SearchDbReqDTO) ([]string
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, nil, util.InternalError(err)
 	}
-	if !b {
+	if !b || db.Config == nil {
 		return nil, nil, util.InvalidArgsError()
 	}
-	// 检查权限
-	needCheckPerm := checkPerm(reqDTO.Operator) != nil
-	tableName, sql, err := command.ValidateMysqlSelectSql(reqDTO.Cmd)
+	tableName, sql, isExplain, err := command.ValidateMysqlSelectSql(reqDTO.Cmd)
 	if err != nil {
 		return nil, nil, util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
 	}
+	// 检查权限
+	needCheckPerm := checkDbaPerm(reqDTO.Operator) != nil
 	if needCheckPerm {
-		perms, err := mysqldbmd.SearchPerm(ctx, mysqldbmd.SearchPermReqDTO{
+		hasPerm, err := mysqldbmd.ExistReadPerm(ctx, mysqldbmd.ExistReadPermReqDTO{
 			Account:      reqDTO.Operator.Account,
 			DbId:         reqDTO.DbId,
 			AccessBase:   reqDTO.AccessBase,
@@ -626,33 +834,30 @@ func (*outerImpl) SearchDb(ctx context.Context, reqDTO SearchDbReqDTO) ([]string
 			logger.Logger.WithContext(ctx).Error(err)
 			return nil, nil, util.InternalError(err)
 		}
-		permPass := false
-		for _, perm := range perms {
-			if perm.PermType.HasReadPermType() {
-				permPass = true
-				break
-			}
-		}
-		if !permPass {
+		if !hasPerm {
 			return nil, nil, util.UnauthorizedError()
 		}
 	}
 	datasourceName := fmt.Sprintf(
 		"%s:%s@tcp(%s)/%s?charset=utf8",
-		url.QueryEscape(db.Username),
-		url.QueryEscape(db.Password),
-		db.DbHost,
+		url.QueryEscape(db.Config.Data.ReadNode.Username),
+		url.QueryEscape(db.Config.Data.ReadNode.Password),
+		db.Config.Data.ReadNode.Host,
 		reqDTO.AccessBase,
 	)
-	columns, ret, err := util.MysqlQuery(datasourceName, strings.TrimSuffix(sql, ";")+" limit "+strconv.Itoa(reqDTO.Limit))
+	sql = strings.TrimSuffix(sql, ";")
+	if !isExplain {
+		sql = sql + " limit " + strconv.Itoa(reqDTO.Limit)
+	}
+	columns, ret, err := util.MysqlQuery(datasourceName, sql)
 	if err != nil {
 		return nil, nil, util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
 	}
 	return columns, ret, nil
 }
 
-// ApplyDbUpdate 提数据库修改单
-func (*outerImpl) ApplyDbUpdate(ctx context.Context, reqDTO ApplyDbUpdateReqDTO) ([]command.ValidateUpdateResult, bool, error) {
+// ApplyDataUpdate 提数据库修改单
+func (*outerImpl) ApplyDataUpdate(ctx context.Context, reqDTO ApplyDataUpdateReqDTO) ([]command.ValidateUpdateResult, bool, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, false, err
 	}
@@ -666,40 +871,9 @@ func (*outerImpl) ApplyDbUpdate(ctx context.Context, reqDTO ApplyDbUpdateReqDTO)
 	if !b {
 		return nil, false, util.InvalidArgsError()
 	}
-	// 检查权限
-	needCheckPerm := checkPerm(reqDTO.Operator) != nil
 	validateResults, allPass, err := command.ValidateMysqlUpdateSql(reqDTO.Cmd)
 	if err != nil {
 		return nil, false, util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
-	}
-	if needCheckPerm {
-		for i := range validateResults {
-			if !validateResults[i].Pass {
-				continue
-			}
-			perms, err := mysqldbmd.SearchPerm(ctx, mysqldbmd.SearchPermReqDTO{
-				Account:      reqDTO.Operator.Account,
-				DbId:         reqDTO.DbId,
-				AccessBase:   reqDTO.AccessBase,
-				AccessTables: []string{validateResults[i].TableName, "*"},
-			})
-			if err != nil {
-				logger.Logger.WithContext(ctx).Error(err)
-				return nil, false, util.InternalError(err)
-			}
-			permPass := false
-			for _, perm := range perms {
-				if perm.PermType.HasWritePermType() {
-					permPass = true
-					break
-				}
-			}
-			if !permPass {
-				validateResults[i].ErrMsg = i18n.GetByKey(i18n.SystemUnauthorized)
-				validateResults[i].Pass = false
-				allPass = false
-			}
-		}
 	}
 	if allPass {
 		// 插入数据库
@@ -709,7 +883,7 @@ func (*outerImpl) ApplyDbUpdate(ctx context.Context, reqDTO ApplyDbUpdateReqDTO)
 			DbId:        reqDTO.DbId,
 			AccessBase:  reqDTO.AccessBase,
 			UpdateCmd:   reqDTO.Cmd,
-			OrderStatus: mysqldbmd.PendingUpdateOrderStatus,
+			OrderStatus: mysqldbmd.PendingDataUpdateApplyStatus,
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -719,113 +893,108 @@ func (*outerImpl) ApplyDbUpdate(ctx context.Context, reqDTO ApplyDbUpdateReqDTO)
 	return validateResults, allPass, nil
 }
 
-// ListUpdateApprovalOrder 数据库修改审批单
-func (*outerImpl) ListUpdateApprovalOrder(ctx context.Context, reqDTO ListUpdateApprovalOrderReqDTO) ([]UpdateApprovalOrderDTO, int64, error) {
+// ListDataUpdateApplyByDba 数据库修改审批单
+func (*outerImpl) ListDataUpdateApplyByDba(ctx context.Context, reqDTO ListDataUpdateApplyByDbaReqDTO) ([]DataUpdateApplyDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
-	if err := checkPerm(reqDTO.Operator); err != nil {
+	if err := checkDbaPerm(reqDTO.Operator); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	orders, err := mysqldbmd.ListUpdateApprovalOrder(ctx, mysqldbmd.ListUpdateApprovalOrderReqDTO{
-		Cursor:      reqDTO.Cursor,
-		Limit:       reqDTO.Limit,
-		OrderStatus: reqDTO.OrderStatus,
+	applies, total, err := mysqldbmd.ListDataUpdateApply(ctx, mysqldbmd.ListDataUpdateApplyReqDTO{
+		PageNum:     reqDTO.PageNum,
+		PageSize:    10,
+		OrderStatus: reqDTO.ApplyStatus,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	var next int64 = 0
-	if len(orders) == reqDTO.Limit {
-		next = orders[len(orders)-1].Id
-	}
-	data, err := updateApprovalOrdersMd2Dto(ctx, orders)
+	data, err := dataUpdateApplyMd2Dto(ctx, applies)
 	if err != nil {
 		return nil, 0, err
 	}
-	return data, next, nil
+	return data, total, nil
 }
 
-// ListAppliedUpdateApprovalOrder 申请的数据库修改审批单
-func (*outerImpl) ListAppliedUpdateApprovalOrder(ctx context.Context, reqDTO ListAppliedUpdateApprovalOrderReqDTO) ([]UpdateApprovalOrderDTO, int64, error) {
+// ListDataUpdateApplyByOperator 申请的数据库修改审批单
+func (*outerImpl) ListDataUpdateApplyByOperator(ctx context.Context, reqDTO ListDataUpdateApplyByOperatorReqDTO) ([]DataUpdateApplyDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	orders, err := mysqldbmd.ListUpdateApprovalOrder(ctx, mysqldbmd.ListUpdateApprovalOrderReqDTO{
-		Cursor:      reqDTO.Cursor,
-		Limit:       reqDTO.Limit,
+	applies, total, err := mysqldbmd.ListDataUpdateApply(ctx, mysqldbmd.ListDataUpdateApplyReqDTO{
+		PageNum:     reqDTO.PageNum,
+		PageSize:    10,
 		Account:     reqDTO.Operator.Account,
-		OrderStatus: reqDTO.OrderStatus,
+		OrderStatus: reqDTO.ApplyStatus,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	var next int64 = 0
-	if len(orders) == reqDTO.Limit {
-		next = orders[len(orders)-1].Id
-	}
-	data, err := updateApprovalOrdersMd2Dto(ctx, orders)
+	data, err := dataUpdateApplyMd2Dto(ctx, applies)
 	if err != nil {
 		return nil, 0, err
 	}
-	return data, next, nil
+	return data, total, nil
 }
 
-func updateApprovalOrdersMd2Dto(ctx context.Context, orders []mysqldbmd.UpdateApprovalOrder) ([]UpdateApprovalOrderDTO, error) {
-	dbIdList, _ := listutil.Map(orders, func(t mysqldbmd.UpdateApprovalOrder) (int64, error) {
+func dataUpdateApplyMd2Dto(ctx context.Context, applies []mysqldbmd.DataUpdateApply) ([]DataUpdateApplyDTO, error) {
+	dbIdList, _ := listutil.Map(applies, func(t mysqldbmd.DataUpdateApply) (int64, error) {
 		return t.DbId, nil
 	})
 	dbMap, err := getDbMap(ctx, dbIdList)
 	if err != nil {
 		return nil, err
 	}
-	data, _ := listutil.Map(orders, func(t mysqldbmd.UpdateApprovalOrder) (UpdateApprovalOrderDTO, error) {
-		return UpdateApprovalOrderDTO{
+	data, _ := listutil.Map(applies, func(t mysqldbmd.DataUpdateApply) (DataUpdateApplyDTO, error) {
+		ret := DataUpdateApplyDTO{
 			Id:          t.Id,
 			Account:     t.Account,
 			Name:        t.Name,
 			DbId:        t.DbId,
-			DbHost:      dbMap[t.DbId].DbHost,
 			DbName:      dbMap[t.DbId].Name,
 			AccessBase:  t.AccessBase,
-			OrderStatus: t.OrderStatus,
+			ApplyStatus: t.ApplyStatus,
 			UpdateCmd:   t.UpdateCmd,
 			Auditor:     t.Auditor,
 			Created:     t.Created,
 			ExecuteLog:  t.ExecuteLog,
-		}, nil
+		}
+		if dbMap[t.DbId].Config != nil {
+			ret.DbHost = dbMap[t.DbId].Config.Data.WriteNode.Host
+		}
+		return ret, nil
 	})
 	return data, nil
 }
 
-// AgreeDbUpdate 同意修改单
-func (*outerImpl) AgreeDbUpdate(ctx context.Context, reqDTO AgreeDbUpdateReqDTO) error {
+// AgreeDataUpdateApply 同意修改单
+func (*outerImpl) AgreeDataUpdateApply(ctx context.Context, reqDTO AgreeDbUpdateReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	if err := checkPerm(reqDTO.Operator); err != nil {
+	if err := checkDbaPerm(reqDTO.Operator); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	order, b, err := mysqldbmd.GetUpdateApprovalOrderById(ctx, reqDTO.OrderId)
+	order, b, err := mysqldbmd.GetDataUpdateApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || order.OrderStatus != mysqldbmd.PendingUpdateOrderStatus {
+	if !b || order.ApplyStatus != mysqldbmd.PendingDataUpdateApplyStatus {
 		return util.InvalidArgsError()
 	}
-	_, err = mysqldbmd.UpdateUpdateApprovalOrderStatus(ctx, mysqldbmd.UpdateUpdateApprovalOrderStatusReqDTO{
-		Id:        reqDTO.OrderId,
-		NewStatus: mysqldbmd.AgreeUpdateOrderStatus,
-		OldStatus: order.OrderStatus,
+	_, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+		Id:        reqDTO.ApplyId,
+		NewStatus: mysqldbmd.AgreeDataUpdateApplyStatus,
+		OldStatus: order.ApplyStatus,
 		Auditor:   reqDTO.Operator.Account,
 	})
 	if err != nil {
@@ -835,28 +1004,28 @@ func (*outerImpl) AgreeDbUpdate(ctx context.Context, reqDTO AgreeDbUpdateReqDTO)
 	return nil
 }
 
-// DisagreeDbUpdate 不同意修改单
-func (*outerImpl) DisagreeDbUpdate(ctx context.Context, reqDTO DisagreeDbUpdateReqDTO) error {
+// DisagreeDataUpdateApply 不同意修改单
+func (*outerImpl) DisagreeDataUpdateApply(ctx context.Context, reqDTO DisagreeDataUpdateApplyReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	if err := checkPerm(reqDTO.Operator); err != nil {
+	if err := checkDbaPerm(reqDTO.Operator); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	order, b, err := mysqldbmd.GetUpdateApprovalOrderById(ctx, reqDTO.OrderId)
+	order, b, err := mysqldbmd.GetDataUpdateApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || order.OrderStatus != mysqldbmd.PendingUpdateOrderStatus {
+	if !b || order.ApplyStatus != mysqldbmd.PendingDataUpdateApplyStatus {
 		return util.InvalidArgsError()
 	}
-	_, err = mysqldbmd.UpdateUpdateApprovalOrderStatus(ctx, mysqldbmd.UpdateUpdateApprovalOrderStatusReqDTO{
-		Id:             reqDTO.OrderId,
-		NewStatus:      mysqldbmd.DisagreeUpdateOrderStatus,
-		OldStatus:      order.OrderStatus,
+	_, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+		Id:             reqDTO.ApplyId,
+		NewStatus:      mysqldbmd.DisagreeDataUpdateApplyStatus,
+		OldStatus:      order.ApplyStatus,
 		Auditor:        reqDTO.Operator.Account,
 		DisagreeReason: reqDTO.DisagreeReason,
 	})
@@ -867,28 +1036,28 @@ func (*outerImpl) DisagreeDbUpdate(ctx context.Context, reqDTO DisagreeDbUpdateR
 	return nil
 }
 
-// CancelDbUpdate 取消修改单
-func (*outerImpl) CancelDbUpdate(ctx context.Context, reqDTO CancelDbUpdateReqDTO) error {
+// CancelDataUpdateApply 取消修改单
+func (*outerImpl) CancelDataUpdateApply(ctx context.Context, reqDTO CancelDataUpdateApplyReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	order, b, err := mysqldbmd.GetUpdateApprovalOrderById(ctx, reqDTO.OrderId)
+	order, b, err := mysqldbmd.GetDataUpdateApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || order.OrderStatus != mysqldbmd.PendingUpdateOrderStatus {
+	if !b || order.ApplyStatus != mysqldbmd.PendingDataUpdateApplyStatus {
 		return util.InvalidArgsError()
 	}
 	if order.Account != reqDTO.Operator.Account {
 		return util.UnauthorizedError()
 	}
-	_, err = mysqldbmd.UpdateUpdateApprovalOrderStatus(ctx, mysqldbmd.UpdateUpdateApprovalOrderStatusReqDTO{
-		Id:        reqDTO.OrderId,
-		NewStatus: mysqldbmd.CanceledUpdateOrderStatus,
-		OldStatus: order.OrderStatus,
+	_, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+		Id:        reqDTO.ApplyId,
+		NewStatus: mysqldbmd.CanceledDataUpdateApplyStatus,
+		OldStatus: order.ApplyStatus,
 		Auditor:   reqDTO.Operator.Account,
 	})
 	if err != nil {
@@ -898,38 +1067,38 @@ func (*outerImpl) CancelDbUpdate(ctx context.Context, reqDTO CancelDbUpdateReqDT
 	return nil
 }
 
-// ExecuteDbUpdate 执行修改单
-func (*outerImpl) ExecuteDbUpdate(ctx context.Context, reqDTO ExecuteDbUpdateReqDTO) error {
+// ExecuteDataUpdateApply 执行修改单
+func (*outerImpl) ExecuteDataUpdateApply(ctx context.Context, reqDTO ExecuteDataUpdateApplyReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	if err := checkPerm(reqDTO.Operator); err != nil {
+	if err := checkDbaPerm(reqDTO.Operator); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	order, b, err := mysqldbmd.GetUpdateApprovalOrderById(ctx, reqDTO.OrderId)
+	apply, b, err := mysqldbmd.GetDataUpdateApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
 	if !b ||
-		(order.OrderStatus != mysqldbmd.AgreeUpdateOrderStatus &&
-			order.OrderStatus != mysqldbmd.AskToExecuteUpdateOrderStatus) {
+		(apply.ApplyStatus != mysqldbmd.AgreeDataUpdateApplyStatus &&
+			apply.ApplyStatus != mysqldbmd.AskToExecuteDataUpdateApplyStatus) {
 		return util.InvalidArgsError()
 	}
-	db, b, err := mysqldbmd.GetDbById(ctx, order.DbId)
+	db, b, err := mysqldbmd.GetDbById(ctx, apply.DbId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b {
+	if !b || db.Config == nil {
 		return util.ThereHasBugErr()
 	}
-	b, err = mysqldbmd.UpdateUpdateApprovalOrderStatus(ctx, mysqldbmd.UpdateUpdateApprovalOrderStatusReqDTO{
-		Id:        reqDTO.OrderId,
-		NewStatus: mysqldbmd.ExecutedUpdateOrderStatus,
-		OldStatus: order.OrderStatus,
+	b, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+		Id:        reqDTO.ApplyId,
+		NewStatus: mysqldbmd.ExecutedDataUpdateApplyStatus,
+		OldStatus: apply.ApplyStatus,
 		Auditor:   reqDTO.Operator.Account,
 	})
 	if err != nil {
@@ -937,21 +1106,21 @@ func (*outerImpl) ExecuteDbUpdate(ctx context.Context, reqDTO ExecuteDbUpdateReq
 		return util.InternalError(err)
 	}
 	if b {
-		go executeUpdateCmd(&order, &db)
+		go executeUpdateCmd(&apply, &db)
 	}
 	return nil
 }
 
-func executeUpdateCmd(order *mysqldbmd.UpdateApprovalOrder, db *mysqldbmd.Db) {
+func executeUpdateCmd(apply *mysqldbmd.DataUpdateApply, db *mysqldbmd.Db) {
 	logMsg := strings.Builder{}
 	datasourceName := fmt.Sprintf(
 		"%s:%s@tcp(%s)/%s?charset=utf8",
-		url.QueryEscape(db.Username),
-		url.QueryEscape(db.Password),
-		db.DbHost,
-		order.AccessBase,
+		url.QueryEscape(db.Config.Data.WriteNode.Username),
+		url.QueryEscape(db.Config.Data.WriteNode.Password),
+		db.Config.Data.WriteNode.Host,
+		apply.AccessBase,
 	)
-	results, err := util.MysqlExecute(datasourceName, order.UpdateCmd)
+	results, err := util.MysqlExecute(datasourceName, apply.UpdateCmd)
 	if err != nil {
 		logMsg.WriteString(err.Error())
 	} else {
@@ -967,34 +1136,34 @@ func executeUpdateCmd(order *mysqldbmd.UpdateApprovalOrder, db *mysqldbmd.Db) {
 	}
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	_, err = mysqldbmd.UpdateUpdateApprovalOrderExecuteLog(ctx, order.Id, logMsg.String())
+	_, err = mysqldbmd.UpdateDataUpdateApplyExecuteLog(ctx, apply.Id, logMsg.String())
 	if err != nil {
-		logger.Logger.Errorf("db update: %v executed with err: %v", order.Id, err)
+		logger.Logger.Errorf("db update: %v executed with err: %v", apply.Id, err)
 	}
 }
 
-// AskToExecuteDbUpdate 请求执行修改单
-func (*outerImpl) AskToExecuteDbUpdate(ctx context.Context, reqDTO AskToExecuteDbUpdateReqDTO) error {
+// AskToExecuteDataUpdateApply 请求执行修改单
+func (*outerImpl) AskToExecuteDataUpdateApply(ctx context.Context, reqDTO AskToExecuteDataUpdateApplyReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	order, b, err := mysqldbmd.GetUpdateApprovalOrderById(ctx, reqDTO.OrderId)
+	order, b, err := mysqldbmd.GetDataUpdateApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || order.OrderStatus != mysqldbmd.AgreeUpdateOrderStatus {
+	if !b || order.ApplyStatus != mysqldbmd.AgreeDataUpdateApplyStatus {
 		return util.InvalidArgsError()
 	}
 	if order.Account != reqDTO.Operator.Account {
 		return util.UnauthorizedError()
 	}
-	_, err = mysqldbmd.UpdateUpdateApprovalOrderStatus(ctx, mysqldbmd.UpdateUpdateApprovalOrderStatusReqDTO{
-		Id:        reqDTO.OrderId,
-		NewStatus: mysqldbmd.AskToExecuteUpdateOrderStatus,
-		OldStatus: order.OrderStatus,
+	_, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+		Id:        reqDTO.ApplyId,
+		NewStatus: mysqldbmd.AskToExecuteDataUpdateApplyStatus,
+		OldStatus: order.ApplyStatus,
 		Auditor:   reqDTO.Operator.Account,
 	})
 	if err != nil {
@@ -1004,21 +1173,21 @@ func (*outerImpl) AskToExecuteDbUpdate(ctx context.Context, reqDTO AskToExecuteD
 	return nil
 }
 
-func getDbMap(ctx context.Context, dbIdList []int64) (map[int64]mysqldbmd.Db, error) {
-	dbIdList = hashset.NewHashSet(dbIdList...).AllKeys()
-	dbList, err := mysqldbmd.BatchGetDbByIdList(ctx, dbIdList)
+func getDbMap(ctx context.Context, idList []int64) (map[int64]mysqldbmd.Db, error) {
+	idList = listutil.Distinct(idList...)
+	ret := make(map[int64]mysqldbmd.Db, len(idList))
+	dbs, err := mysqldbmd.BatchGetDbByIdList(ctx, idList, []string{"id", "name", "config"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	dbMap := make(map[int64]mysqldbmd.Db)
-	for _, db := range dbList {
-		dbMap[db.Id] = db
+	for _, db := range dbs {
+		ret[db.Id] = db
 	}
-	return dbMap, nil
+	return ret, nil
 }
 
-func checkPerm(operator apisession.UserInfo) error {
+func checkDbaPerm(operator apisession.UserInfo) error {
 	if operator.IsAdmin || operator.RoleType.IsDba() {
 		return nil
 	}
