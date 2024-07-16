@@ -41,6 +41,10 @@
             <BlockOutlined />
             <span>注册中心</span>
           </a-menu-item>
+          <a-menu-item key="/product/list">
+            <DatabaseOutlined />
+            <span>制品库</span>
+          </a-menu-item>
           <a-menu-item key="/settings">
             <SettingOutlined />
             <span>设置</span>
@@ -66,7 +70,8 @@ import {
   ReadOutlined,
   ContainerOutlined,
   BlockOutlined,
-  SettingOutlined
+  SettingOutlined,
+  DatabaseOutlined
 } from "@ant-design/icons-vue";
 const { t } = useI18n();
 const route = useRoute();

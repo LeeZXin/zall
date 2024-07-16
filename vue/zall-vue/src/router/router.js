@@ -322,6 +322,11 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/app/AppSettingsPage")
 
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/product/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/ProductListPage")
+
             }]
         },
         {

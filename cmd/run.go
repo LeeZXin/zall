@@ -8,7 +8,6 @@ import (
 	"github.com/LeeZXin/zall/deploy/modules/api/statusapi"
 	"github.com/LeeZXin/zall/discovery/modules/api/discoveryapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
-	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
 	"github.com/LeeZXin/zall/git/modules/api/lfsapi"
@@ -94,10 +93,6 @@ func runZall(*cli.Context) error {
 	// for approval
 	{
 		approvalapi.InitApi()
-	}
-	// for product
-	{
-		productapi.InitApi()
 	}
 	// for files server
 	{

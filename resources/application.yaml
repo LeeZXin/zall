@@ -50,17 +50,12 @@ propserver:
 httptask:
   token: 123
 
-tcpDetect:
-  enabled: true
-
 discovery:
   type: static
 
 files:
   enabled: true
-  normal:
-    token: 123
-  domain: http://localhost
+  domain: http://127.0.0.1:80
 
 action:
   agent:
