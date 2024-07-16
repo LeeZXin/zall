@@ -56,10 +56,13 @@ const columns = [
   }
 ];
 const listProduct = () => {
-  listProductRequest({
-    appId: route.params.appId,
-    env: selectedEnv.value
-  }).then(res => {
+  listProductRequest(
+    {
+      appId: route.params.appId,
+      env: selectedEnv.value
+    },
+    selectedEnv.value
+  ).then(res => {
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -73,8 +76,10 @@ const deleteProduct = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
+    okText: "ok",
+    cancelText: "cancel",
     onOk() {
-      deleteProductRequest(item.id).then(() => {
+      deleteProductRequest(item.id, item.env).then(() => {
         message.success("删除成功");
         listProduct();
       });
