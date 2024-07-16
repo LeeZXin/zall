@@ -129,20 +129,3 @@ func (c *GitRepoServerCfg) Val() string {
 func (c *GitRepoServerCfg) FromStore(val string) error {
 	return json.Unmarshal([]byte(val), c)
 }
-
-type ZonesCfg struct {
-	Zones []string `json:"zones"`
-}
-
-func (*ZonesCfg) Key() string {
-	return "zones_cfg"
-}
-
-func (c *ZonesCfg) Val() string {
-	ret, _ := json.Marshal(c)
-	return string(ret)
-}
-
-func (c *ZonesCfg) FromStore(val string) error {
-	return json.Unmarshal([]byte(val), c)
-}

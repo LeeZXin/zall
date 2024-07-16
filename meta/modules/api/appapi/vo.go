@@ -6,10 +6,6 @@ type CreateAppReqVO struct {
 	Name   string `json:"name"`
 }
 
-type DeleteAppReqVO struct {
-	AppId string `json:"appId"`
-}
-
 type UpdateAppReqVO struct {
 	AppId string `json:"appId"`
 	Name  string `json:"name"`

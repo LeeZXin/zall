@@ -30,6 +30,7 @@ func IsVarsContentValid(content string) bool {
 
 func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 	ret := Task{
+		RepoId:       reqDTO.RepoId,
 		WorkflowId:   reqDTO.WorkflowId,
 		WorkflowName: reqDTO.WorkflowName,
 		TaskStatus:   reqDTO.TaskStatus,
@@ -192,9 +193,9 @@ func DeleteTaskById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
-func DeleteTaskByWorkflowIdList(ctx context.Context, wfIdList []int64) error {
+func DeleteTaskByRepoId(ctx context.Context, repoId int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).
-		In("workflow_id", wfIdList).
+		Where("repo_id = ?", repoId).
 		Delete(new(Task))
 	return err
 }

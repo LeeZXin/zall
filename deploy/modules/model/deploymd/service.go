@@ -39,6 +39,16 @@ func InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (Plan, error) {
 	return ret, err
 }
 
+func DeletePlanByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).Where("app_id = ?", appId).Delete(new(Plan))
+	return err
+}
+
+func DeleteStageByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).Where("app_id = ?", appId).Delete(new(Stage))
+	return err
+}
+
 func ExistPendingOrRunningPlanByPipelineId(ctx context.Context, pipelineId int64) (bool, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("pipeline_id = ?", pipelineId).
@@ -178,6 +188,7 @@ func BatchInsertDeployStage(ctx context.Context, reqDTOList ...InsertDeployStage
 	stages, _ := listutil.Map(reqDTOList, func(t InsertDeployStageReqDTO) (Stage, error) {
 		return Stage{
 			PlanId:      t.PlanId,
+			AppId:       t.AppId,
 			StageIndex:  t.StageIndex,
 			Agent:       t.Agent,
 			StageStatus: t.StageStatus,
@@ -282,11 +293,18 @@ func ListPipeline(ctx context.Context, reqDTO ListPipelineReqDTO) ([]Pipeline, e
 	return ret, err
 }
 
-func DeletePipeline(ctx context.Context, pipelineId int64) (bool, error) {
+func DeletePipelineById(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", pipelineId).
+		Where("id = ?", id).
 		Delete(new(Pipeline))
 	return rows == 1, err
+}
+
+func DeletePipelineByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		Delete(new(Pipeline))
+	return err
 }
 
 func UpdatePipeline(ctx context.Context, reqDTO UpdatePipelineReqDTO) (bool, error) {
@@ -348,6 +366,13 @@ func DeleteServiceSourceById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
+func DeleteServiceSourceByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		Delete(new(ServiceSource))
+	return err
+}
+
 func GetServiceSourceById(ctx context.Context, id int64) (ServiceSource, bool, error) {
 	var ret ServiceSource
 	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
@@ -403,6 +428,13 @@ func DeletePipelineVarsById(ctx context.Context, id int64) (bool, error) {
 		Where("id = ?", id).
 		Delete(new(PipelineVars))
 	return rows == 1, err
+}
+
+func DeletePipelineVarsByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		Delete(new(PipelineVars))
+	return err
 }
 
 func GetPipelineVarsById(ctx context.Context, id int64) (PipelineVars, bool, error) {

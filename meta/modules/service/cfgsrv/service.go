@@ -11,10 +11,12 @@ var (
 )
 
 func Init() {
-	Inner = &innerImpl{
-		cfgCache: util.NewGoCache(),
+	if Inner == nil {
+		Inner = &innerImpl{
+			cfgCache: util.NewGoCache(),
+		}
+		Outer = new(outerImpl)
 	}
-	Outer = new(outerImpl)
 }
 
 type InnerService interface {
@@ -46,8 +48,4 @@ type OuterService interface {
 	GetGitRepoServerCfg(context.Context, GetGitRepoServerUrlReqDTO) (GitRepoServerCfg, error)
 	// UpdateGitRepoServerCfg 更新git服务器地址
 	UpdateGitRepoServerCfg(context.Context, UpdateGitRepoServerCfgReqDTO) error
-	// GetZonesCfg 获取单元调用配置
-	GetZonesCfg(context.Context, GetZonesCfgReqDTO) ([]string, error)
-	// UpdateZonesCfg 编辑单元调用配置
-	UpdateZonesCfg(context.Context, UpdateZonesCfgReqDTO) error
 }

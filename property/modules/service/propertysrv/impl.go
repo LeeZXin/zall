@@ -121,7 +121,7 @@ func (*outerImpl) DeletePropertySource(ctx context.Context, reqDTO DeletePropert
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 删除节点
-		err2 := propertymd.DeleteEtcdNode(ctx, reqDTO.SourceId)
+		err2 := propertymd.DeleteEtcdNodeById(ctx, reqDTO.SourceId)
 		if err2 != nil {
 			return err2
 		}
@@ -471,6 +471,7 @@ func deployToEtcd(file propertymd.File, history propertymd.History, node propert
 			HistoryId: history.Id,
 			NodeName:  node.Name,
 			FileId:    file.Id,
+			AppId:     file.AppId,
 			Endpoints: node.Endpoints,
 			Username:  node.Username,
 			Password:  node.Password,

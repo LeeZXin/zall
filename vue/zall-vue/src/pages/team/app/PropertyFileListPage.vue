@@ -57,7 +57,7 @@ const route = useRoute();
 const router = useRouter();
 const dataSource = ref([]);
 
-const columns = ref([
+const columns = [
   {
     title: "配置文件",
     dataIndex: "name",
@@ -68,7 +68,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 
 const listPropertyFile = () => {
   listPropertyFileRequest(

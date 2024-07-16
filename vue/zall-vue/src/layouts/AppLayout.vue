@@ -10,28 +10,40 @@
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
         <a-menu theme="dark" mode="inline" @click="onselect" v-model:selectedKeys="selectedKeys">
           <a-menu-item key="/propertySource/list">
-            <book-outlined />
+            <BookOutlined />
             <span>配置中心来源</span>
           </a-menu-item>
           <a-menu-item key="/propertyFile/list">
-            <pull-request-outlined />
+            <ContainerOutlined />
             <span>配置中心</span>
           </a-menu-item>
           <a-menu-item key="/pipeline/list">
-            <tag-outlined />
+            <TagOutlined />
             <span>部署流水线</span>
           </a-menu-item>
           <a-menu-item key="/deployPlan/list">
-            <file-outlined />
+            <FileOutlined />
             <span>发布计划</span>
           </a-menu-item>
           <a-menu-item key="/serviceSource/list">
-            <flag-outlined />
+            <BookOutlined />
             <span>服务状态来源</span>
           </a-menu-item>
           <a-menu-item key="/serviceStatus/list">
-            <read-outlined />
+            <ReadOutlined />
             <span>服务状态</span>
+          </a-menu-item>
+          <a-menu-item key="/discoverySource/list">
+            <BookOutlined />
+            <span>注册中心来源</span>
+          </a-menu-item>
+          <a-menu-item key="/discoveryService/list">
+            <BlockOutlined />
+            <span>注册中心</span>
+          </a-menu-item>
+          <a-menu-item key="/settings">
+            <SettingOutlined />
+            <span>设置</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -50,10 +62,11 @@ import { useRouter, useRoute } from "vue-router";
 import {
   BookOutlined,
   FileOutlined,
-  PullRequestOutlined,
   TagOutlined,
-  FlagOutlined,
-  ReadOutlined
+  ReadOutlined,
+  ContainerOutlined,
+  BlockOutlined,
+  SettingOutlined
 } from "@ant-design/icons-vue";
 const { t } = useI18n();
 const route = useRoute();
@@ -88,7 +101,10 @@ const pagesMap = {
   "/pipeline": "/pipeline/list",
   "/deployPlan": "/deployPlan/list",
   "/serviceSource": "/serviceSource/list",
-  "/serviceStatus": "/serviceStatus/list"
+  "/serviceStatus": "/serviceStatus/list",
+  "/discoverySource": "/discoverySource/list",
+  "/discoveryService": "/discoveryService/list",
+  "/settings": "/settings",
 };
 watch(
   () => router.currentRoute.value.path,

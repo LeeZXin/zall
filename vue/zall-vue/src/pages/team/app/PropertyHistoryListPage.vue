@@ -95,7 +95,7 @@ import { message } from "ant-design-vue";
 import { CodeDiff } from "v-code-diff";
 const deployModalOpen = ref(false);
 const deployModalTitle = ref("");
-const deployColumns = ref([
+const deployColumns = [
   {
     title: "发布节点",
     dataIndex: "nodeName",
@@ -116,7 +116,7 @@ const deployColumns = ref([
     dataIndex: "creator",
     key: "creator"
   }
-]);
+];
 const deployDataSource = ref([]);
 const diffModalOpen = ref(false);
 const route = useRoute();
@@ -133,7 +133,7 @@ const diffState = reactive({
   oldCotent: "",
   oldVersion: ""
 });
-const columns = ref([
+const columns = [
   {
     title: "跟随版本号",
     dataIndex: "lastVersion",
@@ -159,7 +159,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 
 const listHistory = () => {
   listHistoryRequest(

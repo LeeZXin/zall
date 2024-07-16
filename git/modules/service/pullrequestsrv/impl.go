@@ -37,7 +37,7 @@ func (s *outerImpl) GetStats(ctx context.Context, reqDTO GetStatsReqDTO) (GetSta
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, err := checkPrPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return GetStatsRespDTO{}, err
 	}
@@ -76,7 +76,7 @@ func (s *outerImpl) ListPullRequest(ctx context.Context, reqDTO ListPullRequestR
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, err := checkPrPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -125,7 +125,7 @@ func (s *outerImpl) SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequ
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	repo, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, err := checkPrPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -777,12 +777,12 @@ func checkPerm(ctx context.Context, prId int64, operator apisession.UserInfo) (p
 	if !b {
 		return pullrequestmd.PullRequest{}, repomd.Repo{}, util.InvalidArgsError()
 	}
-	repo, err := checkPermByRepoId(ctx, pr.RepoId, operator)
+	repo, err := checkPrPermByRepoId(ctx, pr.RepoId, operator)
 	return pr, repo, err
 }
 
-// checkPermByRepoId 校验权限
-func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
+// checkPrPermByRepoId 校验权限
+func checkPrPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
 	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

@@ -479,7 +479,7 @@ func (*outerImpl) DeletePipeline(ctx context.Context, reqDTO DeletePipelineReqDT
 	if b {
 		return util.AlreadyExistsError()
 	}
-	_, err = deploymd.DeletePipeline(ctx, reqDTO.PipelineId)
+	_, err = deploymd.DeletePipelineById(ctx, reqDTO.PipelineId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)

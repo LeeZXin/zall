@@ -2,12 +2,15 @@ package appsrv
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/deploy/modules/model/deploymd"
+	"github.com/LeeZXin/zall/discovery/modules/model/discoverymd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/property/modules/model/propertymd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
@@ -48,32 +51,103 @@ func (*outerImpl) CreateApp(ctx context.Context, reqDTO CreateAppReqDTO) error {
 }
 
 func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.AppSrvKeysVO.DeleteApp),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	// 校验teamId
-	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	// 校验权限
+	err = checkAdminPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
 		return
 	}
-	_, err = appmd.DeleteByAppId(ctx, reqDTO.AppId)
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		// 删除应用
+		_, err2 := appmd.DeleteByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除配置来源
+		err2 = propertymd.DeleteEtcdNodeByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除配置文件
+		err2 = propertymd.DeleteFileByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除部署记录
+		err2 = propertymd.DeleteDeployByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除部署流水线
+		err2 = deploymd.DeletePipelineByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除部署流水线变量
+		err2 = deploymd.DeletePipelineVarsByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除发布计划
+		err2 = deploymd.DeletePlanByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除发布计划步骤
+		err2 = deploymd.DeleteStageByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除服务状态来源
+		err2 = deploymd.DeleteServiceSourceByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除下线服务
+		err2 = discoverymd.DeleteDownServiceByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除注册中心来源
+		return discoverymd.DeleteEtcdNodeByAppId(ctx, reqDTO.AppId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 		return
 	}
-	// todo 删除其他附加东西
+
 	return
+}
+
+// GetApp 获取服务信息
+func (*outerImpl) GetApp(ctx context.Context, reqDTO GetAppReqDTO) (AppDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return AppDTO{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 校验权限
+	err := checkAdminPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
+		return AppDTO{}, err
+	}
+	app, b, err := appmd.GetByAppId(ctx, reqDTO.AppId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return AppDTO{}, util.InternalError(err)
+	}
+	if !b {
+		return AppDTO{}, util.InvalidArgsError()
+	}
+	return AppDTO{
+		AppId: app.AppId,
+		Name:  app.Name,
+	}, nil
 }
 
 // ListApp 应用服务列表
@@ -155,22 +229,13 @@ func checkAppList(ctx context.Context, operator apisession.UserInfo, teamId int6
 }
 
 func (*outerImpl) UpdateApp(ctx context.Context, reqDTO UpdateAppReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.AppSrvKeysVO.TransferTeam),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验teamId
-	if err = checkPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	if err = checkAdminPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
 		return
 	}
 	_, err = appmd.UpdateApp(ctx, appmd.UpdateAppReqDTO{
@@ -254,7 +319,7 @@ func checkPermAdmin(ctx context.Context, operator apisession.UserInfo, teamId in
 	return nil
 }
 
-func checkPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
+func checkAdminPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

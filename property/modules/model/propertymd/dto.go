@@ -35,6 +35,7 @@ type InsertDeployReqDTO struct {
 	NodeName  string
 	HistoryId int64
 	FileId    int64
+	AppId     string
 	Endpoints string
 	Username  string
 	Password  string
@@ -48,7 +49,7 @@ type PageHistoryReqDTO struct {
 }
 
 type ListEtcdNodeReqDTO struct {
-	AppId string   `json:"appId"`
-	Env   string   `json:"env"`
-	Cols  []string `json:"cols"`
+	AppId string
+	Env   string
+	Cols  []string
 }

@@ -122,7 +122,7 @@ const errLog = ref("");
 const errLogModalOpen = ref(false);
 const taskModalOpen = ref(false);
 const task = ref();
-const columns = ref([
+const columns = [
   {
     title: "操作人",
     dataIndex: "triggerBy",
@@ -148,7 +148,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 const triggerTypeMap = {
   1: "timerTask.autoTriggerType",
   2: "timerTask.manualTriggerType"

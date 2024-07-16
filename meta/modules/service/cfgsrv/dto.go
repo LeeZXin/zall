@@ -99,31 +99,3 @@ func (r *UpdateGitRepoServerCfgReqDTO) IsValid() error {
 	}
 	return nil
 }
-
-type GetZonesCfgReqDTO struct {
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *GetZonesCfgReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type UpdateZonesCfgReqDTO struct {
-	ZonesCfg
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *UpdateZonesCfgReqDTO) IsValid() error {
-	for _, zone := range r.Zones {
-		if !validZonesRegexp.MatchString(zone) {
-			return util.InvalidArgsError()
-		}
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}

@@ -16,8 +16,6 @@ const (
 	UnauthorizedCode
 	UserAlreadyExistsCode
 	PullRequestCannotMergeCode
-	TeamUserGroupHasUserWhenDelCode
-	CannotUpdateTeamUserAdminGroupCode
 	ForcePushForbiddenCode
 	ProtectedBranchNotAllowPushCode
 	MethodUnImplementedCode

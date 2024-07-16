@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div class="container">
       <div class="header">
         <span v-if="mode==='create'">创建角色</span>

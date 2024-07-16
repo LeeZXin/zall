@@ -60,7 +60,7 @@ const teamRoleStore = useTeamRoleStore();
 const router = useRouter();
 const route = useRoute();
 const dataSource = ref([]);
-const columns = ref([
+const columns = [
   {
     i18nTitle: "roleListPage.roleName",
     dataIndex: "name",
@@ -71,7 +71,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 const listRoles = () => {
   listRolesRequest(route.params.teamId).then(res => {
     dataSource.value = res.data.map(item => {

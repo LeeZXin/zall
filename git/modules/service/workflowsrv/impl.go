@@ -157,6 +157,7 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		var err2 error
 		task, err2 = workflowmd.InsertTask(ctx, workflowmd.InsertTaskReqDTO{
+			RepoId:       wf.RepoId,
 			WorkflowId:   wf.Id,
 			WorkflowName: wf.Name,
 			TaskStatus:   sshagent.QueueStatus,

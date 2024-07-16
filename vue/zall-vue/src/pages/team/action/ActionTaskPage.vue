@@ -54,7 +54,7 @@ const dataSource = ref([
   }
 ]);
 
-const columns = ref([
+const columns = [
   {
     title: "任务id",
     dataIndex: "name",
@@ -90,7 +90,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 
 const backToActionList = () => {
   router.push("/team/action/list");

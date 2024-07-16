@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div style="margin-bottom:10px">
       <a-button type="primary" :icon="h(PlusOutlined)" @click="showAddModal">添加成员</a-button>
     </div>
@@ -114,7 +114,7 @@ const dataSource = ref([]);
 const addUserModalOpen = ref(false);
 const allUserList = ref([]);
 const userList = ref([]);
-const columns = ref([
+const columns = [
   {
     title: "帐号",
     dataIndex: "account",
@@ -136,7 +136,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 const userStore = useUserStore();
 const showChangeRoleModal = item => {
   changeRoleModalOpen.value = true;

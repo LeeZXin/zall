@@ -67,7 +67,7 @@ const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
 const dataSource = ref([]);
-const columns = ref([
+const columns = [
   {
     title: "名称",
     dataIndex: "name",
@@ -78,7 +78,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 
 const deletePipeline = item => {
   Modal.confirm({

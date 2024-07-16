@@ -55,6 +55,7 @@ type ListPlanReqDTO struct {
 
 type InsertDeployStageReqDTO struct {
 	PlanId      int64
+	AppId       string
 	StageIndex  int
 	Agent       string
 	TaskId      string

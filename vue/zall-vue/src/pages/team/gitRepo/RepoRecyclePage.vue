@@ -81,7 +81,7 @@ const searchChange = () => {
     return item.name.indexOf(searchKey) >= 0;
   });
 };
-const columns = ref([
+const columns = [
   {
     title: "仓库名称",
     dataIndex: "name",
@@ -112,7 +112,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 const getDeletedRepo = () => {
   // 获取仓库列表
   getDeletedRepoListRequest(route.params.teamId).then(res => {

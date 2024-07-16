@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div style="margin-bottom:10px">
       <a-radio-group v-model:value="prStatus" @change="selectPrStatus">
         <a-radio-button value="0">

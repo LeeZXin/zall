@@ -297,6 +297,31 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/app/PropertySourceHandlePage")
 
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/discoverySource/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/DiscoverySourceListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/discoverySource/create",
+                component: () =>
+                    import ("../pages/team/app/DiscoverySourceHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/discoverySource/:sourceId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/app/DiscoverySourceHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/discoveryService/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/DiscoveryServiceListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/settings",
+                component: () =>
+                    import ("../pages/team/app/AppSettingsPage")
+
             }]
         },
         {

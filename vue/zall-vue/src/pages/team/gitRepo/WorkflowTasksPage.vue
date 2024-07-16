@@ -83,7 +83,7 @@ const PrIdRender = params => {
     : h("span");
 };
 const listInterval = ref(null);
-const columns = ref([
+const columns = [
   {
     title: "触发方式",
     dataIndex: "triggerType",
@@ -119,7 +119,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 const gotoTaskDetail = item => {
   taskStore.id = item.id;
   taskStore.triggerType = item.triggerType;

@@ -80,6 +80,21 @@ func (r *UpdateAppReqDTO) IsValid() error {
 	return nil
 }
 
+type GetAppReqDTO struct {
+	AppId    string              `json:"appId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetAppReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type TransferTeamReqDTO struct {
 	AppId    string              `json:"appId"`
 	TeamId   int64               `json:"teamId"`

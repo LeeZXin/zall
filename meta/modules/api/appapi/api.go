@@ -19,8 +19,12 @@ func InitApi() {
 		{
 			// 创建应用服务
 			group.POST("/create", createApp)
+			// 编辑应用服务
 			group.POST("/update", updateApp)
-			group.POST("/delete", deleteApp)
+			// 获取应用服务
+			group.GET("/get/:appId", getApp)
+			// 删除应用服务
+			group.DELETE("/delete/:appId", deleteApp)
 			// 应用服务列表
 			group.GET("/list/:teamId", listApp)
 			// 所有应用服务列表 管理员权限
@@ -64,18 +68,33 @@ func updateApp(c *gin.Context) {
 }
 
 func deleteApp(c *gin.Context) {
-	var req DeleteAppReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := appsrv.Outer.DeleteApp(c, appsrv.DeleteAppReqDTO{
-			AppId:    req.AppId,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+	err := appsrv.Outer.DeleteApp(c, appsrv.DeleteAppReqDTO{
+		AppId:    c.Param("appId"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
+}
+
+func getApp(c *gin.Context) {
+	app, err := appsrv.Outer.GetApp(c, appsrv.GetAppReqDTO{
+		AppId:    c.Param("appId"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[AppVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: AppVO{
+			AppId: app.AppId,
+			Name:  app.Name,
+		},
+	})
 }
 
 func listApp(c *gin.Context) {

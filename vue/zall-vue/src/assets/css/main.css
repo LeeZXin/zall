@@ -58,6 +58,11 @@ ul {
     display: flex;
 }
 
+.flex-right {
+    display: flex;
+    justify-content: flex-end;
+}
+
 .op-icon {
     display: inline-block;
     width: 24px;

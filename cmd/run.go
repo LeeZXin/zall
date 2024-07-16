@@ -6,6 +6,7 @@ import (
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
 	"github.com/LeeZXin/zall/deploy/modules/api/deployapi"
 	"github.com/LeeZXin/zall/deploy/modules/api/statusapi"
+	"github.com/LeeZXin/zall/discovery/modules/api/discoveryapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/productapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
@@ -29,10 +30,7 @@ import (
 	"github.com/LeeZXin/zall/promagent/agent"
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
-	"github.com/LeeZXin/zall/tcpdetect/modules/api/detectapi"
-	"github.com/LeeZXin/zall/tcpdetect/modules/service/detectsrv"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
-	"github.com/LeeZXin/zsf/actuator"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/prom"
@@ -93,14 +91,6 @@ func runZall(*cli.Context) error {
 	{
 		propertyapi.InitApi()
 	}
-	// for tcp detect
-	{
-		detectapi.InitApi()
-		if static.GetBool("tcpDetect.enabled") {
-			logger.Logger.Info("tcp detect enabled")
-			detectsrv.InitDetect()
-		}
-	}
 	// for approval
 	{
 		approvalapi.InitApi()
@@ -151,9 +141,12 @@ func runZall(*cli.Context) error {
 			logger.Logger.Info("zallet status server enabled")
 			statusapi.InitApi()
 		}
-
 	}
-	lifeCycles = append(lifeCycles, httpserver.NewServer(), actuator.NewServer(), prom.NewServer())
+	// for discovery
+	{
+		discoveryapi.InitApi()
+	}
+	lifeCycles = append(lifeCycles, httpserver.NewServer(), prom.NewServer())
 	zsf.Run(
 		zsf.WithLifeCycles(lifeCycles...),
 	)

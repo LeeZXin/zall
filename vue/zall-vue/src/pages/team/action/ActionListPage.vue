@@ -80,7 +80,7 @@ const dataSource = ref([
   }
 ]);
 
-const columns = ref([
+const columns = [
   {
     title: "AppId",
     dataIndex: "name",
@@ -101,7 +101,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 
 const gotoCreatePage = () => {
   router.push("/team/action/create");

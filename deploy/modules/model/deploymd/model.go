@@ -115,6 +115,7 @@ const (
 type Stage struct {
 	Id          int64                                   `json:"id" xorm:"pk autoincr"`
 	PlanId      int64                                   `json:"planId"`
+	AppId       string                                  `json:"appId"`
 	Agent       string                                  `json:"agent"`
 	InputArgs   *xormutil.Conversion[map[string]string] `json:"inputArgs"`
 	StageIndex  int                                     `json:"stageIndex"`

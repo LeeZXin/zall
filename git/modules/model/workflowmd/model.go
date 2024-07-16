@@ -42,7 +42,9 @@ const (
 )
 
 type Task struct {
-	Id           int64                                     `json:"id" xorm:"pk autoincr"`
+	Id int64 `json:"id" xorm:"pk autoincr"`
+	// 方便查询删除
+	RepoId       int64                                     `json:"repoId"`
 	WorkflowId   int64                                     `json:"workflowId"`
 	WorkflowName string                                    `json:"workflowName"`
 	TaskStatus   sshagent.Status                           `json:"taskStatus"`

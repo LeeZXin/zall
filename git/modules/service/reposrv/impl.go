@@ -64,47 +64,6 @@ func newOuterImpl() OuterService {
 	if limit <= 0 {
 		limit = 10
 	}
-	psub.Subscribe(eventbus.GitRepoEventTopic, func(data any) {
-		event, ok := data.(eventbus.GitRepoEvent)
-		if ok {
-			ctx, closer := xormstore.Context(context.Background())
-			defer closer.Close()
-			/*
-				如果是永久删除某个仓库
-				则需要删除相关数据
-					1、合并请求
-					2、工作流、任务记录、密钥
-			*/
-			if event.Action == string(webhook.RepoDeletePermanentlyAction) {
-				// 删除合并请求
-				err := pullrequestmd.DeletePullRequestByRepoId(ctx, event.RepoId)
-				if err != nil {
-					logger.Logger.Error(err)
-				}
-				// 删除工作流任务
-				wflist, _ := workflowmd.ListWorkflowByRepoId(ctx, event.RepoId)
-				if len(wflist) > 0 {
-					wfIdList, _ := listutil.Map(wflist, func(t workflowmd.Workflow) (int64, error) {
-						return t.Id, nil
-					})
-					err = workflowmd.DeleteTaskByWorkflowIdList(ctx, wfIdList)
-					if err != nil {
-						logger.Logger.Error(err)
-					}
-				}
-				// 删除工作流
-				err = workflowmd.DeleteWorkflowsByRepoId(ctx, event.RepoId)
-				if err != nil {
-					logger.Logger.Error(err)
-				}
-				// 删除工作流密钥
-				err = workflowmd.DeleteVarsByRepoId(ctx, event.RepoId)
-				if err != nil {
-					logger.Logger.Error(err)
-				}
-			}
-		}
-	})
 	return &outerImpl{
 		CreateArchiveLimiter: limiter.NewCountLimiter(limit),
 	}
@@ -558,19 +517,44 @@ func (s *outerImpl) DeleteRepoPermanently(ctx context.Context, reqDTO DeleteRepo
 		return err
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		// 删除db
 		_, err2 := repomd.DeleteRepo(ctx, reqDTO.RepoId)
 		if err2 != nil {
 			return err2
 		}
-		return client.DeleteRepo(ctx, reqvo.DeleteRepoReq{
+		// 删除远程仓库
+		err2 = client.DeleteRepo(ctx, reqvo.DeleteRepoReq{
 			RepoPath: repo.Path,
 		})
+		if err2 != nil {
+			return err2
+		}
+		// 删除合并请求
+		err2 = pullrequestmd.DeletePullRequestByRepoId(ctx, reqDTO.RepoId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除工作流任务
+		err2 = workflowmd.DeleteTaskByRepoId(ctx, reqDTO.RepoId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除工作流
+		err2 = workflowmd.DeleteWorkflowsByRepoId(ctx, reqDTO.RepoId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除工作流密钥
+		err2 = workflowmd.DeleteVarsByRepoId(ctx, reqDTO.RepoId)
+		if err2 != nil {
+			return err2
+		}
+		return nil
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoDeletePermanentlyAction)
 	return nil
 }
 

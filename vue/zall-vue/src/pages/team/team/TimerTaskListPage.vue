@@ -97,7 +97,7 @@ const pageSize = 10;
 const totalCount = ref(0);
 const selectedEnv = ref();
 const searchName = ref("");
-const columns = ref([
+const columns = [
   {
     title: "名称",
     dataIndex: "name",
@@ -123,7 +123,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 const listTimerTask = () => {
   listTimerTaskRequest(
     {

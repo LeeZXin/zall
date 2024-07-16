@@ -12,7 +12,6 @@ var (
 		GitHook,
 		Timer,
 		PropServer,
-		TcpDetect,
 		FileServer,
 		Probe,
 		DeployServer,

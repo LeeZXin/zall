@@ -47,6 +47,8 @@ const serviceSourceNameRegexp = /^.{1,32}$/;
 const serviceSourceApiKeyRegexp = /^.{0,128}$/;
 // 配置来源
 const propertySourceNameRegexp = /^.{1,32}$/;
+// 注册中心来源
+const discoverySourceNameRegexp = /^.{1,32}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -82,4 +84,5 @@ export {
     serviceSourceNameRegexp,
     serviceSourceApiKeyRegexp,
     propertySourceNameRegexp,
+    discoverySourceNameRegexp
 }

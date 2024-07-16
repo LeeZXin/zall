@@ -296,7 +296,7 @@ import {
 import { readableTimeComparingNow } from "@/utils/time";
 import { prCommentRegexp } from "@/utils/regexp";
 import RunStatus from "@/components/git/WorkflowRunStatus";
-const reviewColumns = ref([
+const reviewColumns = [
   {
     title: "评审人",
     dataIndex: "reviewer",
@@ -312,7 +312,7 @@ const reviewColumns = ref([
     dataIndex: "reviewStatus",
     key: "reviewStatus"
   }
-]);
+];
 const router = useRouter();
 const reviewList = ref([]);
 const user = useUserStore();

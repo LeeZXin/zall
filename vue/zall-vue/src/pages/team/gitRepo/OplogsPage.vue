@@ -67,7 +67,7 @@ const pageSize = 10;
 const totalCount = ref(0);
 const reqBody = ref("");
 const reqBodyModalOpen = ref(false);
-const columns = ref([
+const columns = [
   {
     title: "操作人",
     dataIndex: "account",
@@ -88,7 +88,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 const showReqBody = (req) => {
   reqBodyModalOpen.value = true;
   let jsonReq = JSON.parse(req);

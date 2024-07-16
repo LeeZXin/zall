@@ -39,9 +39,16 @@ func InsertEtcdNode(ctx context.Context, reqDTO InsertEtcdNodeReqDTO) error {
 	return err
 }
 
-func DeleteEtcdNode(ctx context.Context, id int64) error {
+func DeleteEtcdNodeById(ctx context.Context, id int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
+		Delete(new(EtcdNode))
+	return err
+}
+
+func DeleteEtcdNodeByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
 		Delete(new(EtcdNode))
 	return err
 }
@@ -74,6 +81,13 @@ func DeleteFileById(ctx context.Context, id int64) (bool, error) {
 		Where("id = ?", id).
 		Delete(new(File))
 	return rows == 1, err
+}
+
+func DeleteFileByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		Delete(new(File))
+	return err
 }
 
 func GetFileById(ctx context.Context, id int64) (File, bool, error) {
@@ -118,6 +132,13 @@ func DeleteDeployByFileId(ctx context.Context, fileId int64) error {
 	return err
 }
 
+func DeleteDeployByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		Delete(new(Deploy))
+	return err
+}
+
 func ListFile(ctx context.Context, appId, env string) ([]File, error) {
 	ret := make([]File, 0)
 	err := xormutil.MustGetXormSession(ctx).
@@ -141,6 +162,7 @@ func InsertDeploy(ctx context.Context, reqDTO InsertDeployReqDTO) error {
 			HistoryId: reqDTO.HistoryId,
 			NodeName:  reqDTO.NodeName,
 			FileId:    reqDTO.FileId,
+			AppId:     reqDTO.AppId,
 			Endpoints: reqDTO.Endpoints,
 			Username:  reqDTO.Username,
 			Password:  reqDTO.Password,

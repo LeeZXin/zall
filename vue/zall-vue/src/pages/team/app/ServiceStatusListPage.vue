@@ -14,6 +14,10 @@
     <div style="margin-bottom:10px;">
       <span class="check-btn" @click="backToSource">返回集群选择</span>
     </div>
+    <div style="margin-bottom:10px;font-weight:bold">
+      <span>{{selectedSource?selectedSource.name:""}}</span>
+      <a-tag color="orange" style="margin-left:10px">{{selectedSource?selectedSource.env:""}}</a-tag>
+    </div>
     <ZTable :columns="statusColumns" :dataSource="statusDataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
@@ -46,7 +50,7 @@ const selectedEnv = ref("");
 const router = useRouter();
 const sourceDataSource = ref([]);
 const showStatusList = ref(false);
-const sourceColumns = ref([
+const sourceColumns = [
   {
     title: "名称",
     dataIndex: "name",
@@ -57,8 +61,8 @@ const sourceColumns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
-const statusColumns = ref([
+];
+const statusColumns = [
   {
     title: "id",
     dataIndex: "id",
@@ -89,7 +93,7 @@ const statusColumns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 const statusDataSource = ref([]);
 const statusInterval = ref(null);
 const selectedSource = ref(null);

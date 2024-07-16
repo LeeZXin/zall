@@ -8,7 +8,7 @@
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
-          <div class="op-icon" @click="deleteServiceSource(dataItem)">
+          <div class="op-icon" @click="deletePropertySource(dataItem)">
             <a-tooltip placement="top">
               <template #title>
                 <span>Delete Source</span>
@@ -57,7 +57,7 @@ const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
 const dataSource = ref([]);
-const columns = ref([
+const columns = [
   {
     title: "名称",
     dataIndex: "name",
@@ -73,9 +73,9 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 
-const deleteServiceSource = item => {
+const deletePropertySource = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),

@@ -6,6 +6,7 @@ import (
 )
 
 type InsertTaskReqDTO struct {
+	RepoId       int64
 	WorkflowId   int64
 	WorkflowName string
 	TaskStatus   sshagent.Status

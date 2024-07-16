@@ -86,7 +86,7 @@ const gotoCreatePage = () => {
 const gotoRecyclePage = () => {
   router.push(`/team/${route.params.teamId}/gitRepo/recycle`);
 };
-const columns = ref([
+const columns = [
   {
     title: "仓库名称",
     dataIndex: "name",
@@ -117,7 +117,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 // 获取团队权限 判断是否可以创建仓库
 getTeamPermRequest(route.params.teamId).then(res => {
   canCreateRepo.value = res.data.canCreateRepo;

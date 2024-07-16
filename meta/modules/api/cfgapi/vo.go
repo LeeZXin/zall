@@ -19,7 +19,3 @@ type UpdateEnvCfgReqVO struct {
 type UpdateGitRepoServerCfgReqVO struct {
 	cfgsrv.GitRepoServerCfg
 }
-
-type UpdateZonesCfgReqVO struct {
-	cfgsrv.ZonesCfg
-}

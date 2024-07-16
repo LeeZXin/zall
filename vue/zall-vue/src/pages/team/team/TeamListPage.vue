@@ -1,7 +1,7 @@
 <template>
   <div style="padding:10px" class="container">
     <div v-if="allowUserCreateTeam" style="text-align:right">
-      <a-button type="primary" @click="toCreateTeam">{{t("createTeamText")}}</a-button>
+      <a-button type="primary" @click="toCreateTeam" :icon="h(PlusOutlined)">{{t("createTeamText")}}</a-button>
     </div>
     <div class="team-list">
       <div class="header">{{t("myTeam")}}</div>
@@ -23,9 +23,10 @@
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { getTeamListRequest } from "@/api/team/teamApi";
-import { ref } from "vue";
+import { ref, h } from "vue";
 import { useTeamStore } from "@/pinia/teamStore";
 import { getSysCfgRequest } from "@/api/cfg/cfgApi";
+import { PlusOutlined } from "@ant-design/icons-vue";
 // 团队store
 const teamStore = useTeamStore();
 // i18n

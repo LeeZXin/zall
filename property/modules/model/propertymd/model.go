@@ -55,7 +55,10 @@ type Deploy struct {
 	Id        int64 `json:"id" xorm:"pk autoincr"`
 	HistoryId int64 `json:"historyId"`
 	// 方便查询删除
-	FileId    int64     `json:"fileId"`
+	FileId int64 `json:"fileId"`
+	// 方便查询删除
+	AppId string `json:"appId"`
+
 	NodeName  string    `json:"nodeName"`
 	Endpoints string    `json:"endpoints"`
 	Username  string    `json:"username"`

@@ -30,7 +30,7 @@ const route = useRoute();
 const searchApp = ref("");
 const dataSource = ref([]);
 const allAppList = ref([]);
-const columns = ref([
+const columns = [
   {
     title: "AppId",
     dataIndex: "appId",
@@ -46,7 +46,7 @@ const columns = ref([
     dataIndex: "operation",
     key: "operation"
   }
-]);
+];
 
 const gotoCreatePage = () => {
   router.push(`/team/${route.params.teamId}/app/create`);
