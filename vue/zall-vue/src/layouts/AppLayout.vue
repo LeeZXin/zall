@@ -45,6 +45,10 @@
             <DatabaseOutlined />
             <span>制品库</span>
           </a-menu-item>
+          <a-menu-item key="/promScrape/list">
+            <alert-outlined />
+            <span>Prometheus</span>
+          </a-menu-item>
           <a-menu-item key="/settings">
             <SettingOutlined />
             <span>设置</span>
@@ -71,7 +75,8 @@ import {
   ContainerOutlined,
   BlockOutlined,
   SettingOutlined,
-  DatabaseOutlined
+  DatabaseOutlined,
+  AlertOutlined
 } from "@ant-design/icons-vue";
 const { t } = useI18n();
 const route = useRoute();
@@ -110,6 +115,7 @@ const pagesMap = {
   "/discoverySource": "/discoverySource/list",
   "/discoveryService": "/discoveryService/list",
   "/settings": "/settings",
+  "/promScrape": "/promScrape/list"
 };
 watch(
   () => router.currentRoute.value.path,
