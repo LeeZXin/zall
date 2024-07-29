@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div class="create-form container">
       <div class="header">{{t("createGitRepo.createText")}}</div>
       <div class="section">
@@ -37,8 +37,8 @@
         </div>
       </div>
       <div class="form-item">
-        <a-checkbox v-model:checked="formState.addReadme" style="margin-top:6px">
-          <div class="add-readme-text">{{t("createGitRepo.addReadme")}}</div>
+        <a-checkbox v-model:checked="formState.addReadme">
+          <div>{{t("createGitRepo.addReadme")}}</div>
         </a-checkbox>
       </div>
       <div class="form-item">
@@ -116,8 +116,5 @@ const create = () => {
 .star-text {
   font-size: 14px;
   line-height: 24px;
-}
-.add-readme-text {
-  font-size: 14px;
 }
 </style>

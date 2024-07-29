@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <CommitList :commits="commits" :diffNumsStats="diffNumsStats" style="margin-top:0px" />
     <div>
       <FileDiffDetail

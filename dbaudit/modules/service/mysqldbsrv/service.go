@@ -3,6 +3,7 @@ package mysqldbsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/dbaudit/modules/service/mysqldbsrv/command"
+	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 )
 
@@ -41,14 +42,14 @@ type OuterService interface {
 	DisagreeReadPermApply(context.Context, DisagreeReadPermApplyReqDTO) error
 	// CancelReadPermApply 取消申请
 	CancelReadPermApply(context.Context, CancelReadPermApplyReqDTO) error
-	// GetReadPermApplyByOperator 操作人查看自己的审批单
-	GetReadPermApplyByOperator(context.Context, GetReadPermApplyByOperatorReqDTO) (ReadPermApplyDTO, error)
+	// GetReadPermApply 查看读权限审批单
+	GetReadPermApply(context.Context, GetReadPermApplyReqDTO) (ReadPermApplyDTO, error)
 	// ListReadPermByOperator 权限列表
 	ListReadPermByOperator(context.Context, ListReadPermByOperatorReqDTO) ([]ReadPermDTO, int64, error)
 	// DeleteReadPermByDba 删除权限
 	DeleteReadPermByDba(context.Context, DeleteReadPermByDbaReqDTO) error
-	// ListReadPermByAccount 权限列表
-	ListReadPermByAccount(context.Context, ListReadPermByAccountReqDTO) ([]ReadPermDTO, int64, error)
+	// ListReadPermByDba 权限列表
+	ListReadPermByDba(context.Context, ListReadPermByDbaReqDTO) ([]ReadPermDTO, int64, error)
 	// ListAuthorizedDb 展示授权的数据库
 	ListAuthorizedDb(context.Context, ListAuthorizedDbReqDTO) ([]SimpleDbDTO, error)
 	// ListAuthorizedBase 展示授权的库
@@ -60,9 +61,11 @@ type OuterService interface {
 	// ShowTableIndex 展示索引语句
 	ShowTableIndex(context.Context, ShowTableIndexReqDTO) ([]string, [][]string, error)
 	// ExecuteSelectSql 搜索
-	ExecuteSelectSql(context.Context, ExecuteSelectSqlReqDTO) ([]string, [][]string, error)
+	ExecuteSelectSql(context.Context, ExecuteSelectSqlReqDTO) (util.MysqlQueryResult, error)
 	// ApplyDataUpdate 提数据库修改单
 	ApplyDataUpdate(context.Context, ApplyDataUpdateReqDTO) ([]command.ValidateUpdateResult, bool, error)
+	// ExplainDataUpdate 数据库修改单的执行计划
+	ExplainDataUpdate(context.Context, ExplainDataUpdateReqDTO) (string, error)
 	// ListDataUpdateApplyByDba 数据库修改审批单
 	ListDataUpdateApplyByDba(context.Context, ListDataUpdateApplyByDbaReqDTO) ([]DataUpdateApplyDTO, int64, error)
 	// ListDataUpdateApplyByOperator 申请的数据库修改审批单

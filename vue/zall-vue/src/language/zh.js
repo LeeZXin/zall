@@ -126,5 +126,14 @@ export default {
         disagreeStatus: "不同意",
         canceledStatus: "已取消",
         unknownStatus: "未知"
+    },
+    mysqlDataUpdateApply: {
+        pendingStatus: "等待审批",
+        agreeStatus: "同意",
+        disagreeStatus: "不同意",
+        canceledStatus: "已取消",
+        askToExecuteStatus: "请求执行",
+        executedStatus: "已执行",
+        unknownStatus: "未知"
     }
 }

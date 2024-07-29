@@ -59,18 +59,11 @@ func (c *MysqlConfig) Execute() (map[string]string, error) {
 		c.Host,
 		c.Database,
 	)
-	columns, data, err := util.MysqlQuery(datasourceName, strings.TrimSuffix(c.SelectSql, ";")+" limit 1")
+	result, err := util.MysqlQuery(datasourceName, strings.TrimSuffix(c.SelectSql, ";")+" limit 1")
 	if err != nil {
 		return nil, err
 	}
-	ret := make([]map[string]string, 0, 1)
-	for _, item := range data {
-		obj := make(map[string]string, len(columns))
-		for i := range columns {
-			obj[columns[i]] = item[i]
-		}
-		ret = append(ret, obj)
-	}
+	ret := result.ToMap()
 	if len(ret) > 0 {
 		return ret[0], nil
 	}

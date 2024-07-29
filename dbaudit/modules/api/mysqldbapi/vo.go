@@ -41,10 +41,10 @@ type DisagreeReadPermReqVO struct {
 	DisagreeReason string `json:"disagreeReason"`
 }
 
-type ListDbPermByAccountReqVO struct {
-	Cursor  int64  `json:"cursor"`
-	Limit   int    `json:"limit"`
+type ListDbPermByDbaReqVO struct {
+	PageNum int    `json:"pageNum"`
 	Account string `json:"account"`
+	DbId    int64  `json:"dbId"`
 }
 
 type ListDbReqVO struct {
@@ -81,6 +81,7 @@ type ReadPermApplyVO struct {
 
 type ListDataUpdateApplyByDbaReqVO struct {
 	PageNum     int                             `json:"pageNum"`
+	DbId        int64                           `json:"dbId"`
 	ApplyStatus mysqldbmd.DataUpdateApplyStatus `json:"applyStatus"`
 }
 
@@ -90,18 +91,22 @@ type ListDataUpdateApplyByOperatorReqVO struct {
 }
 
 type DataUpdateApplyVO struct {
-	Id          int64                           `json:"id"`
-	Name        string                          `json:"name"`
-	Account     string                          `json:"account"`
-	DbId        int64                           `json:"dbId"`
-	DbHost      string                          `json:"dbHost"`
-	DbName      string                          `json:"dbName"`
-	AccessBase  string                          `json:"accessBase"`
-	UpdateCmd   string                          `json:"updateCmd"`
-	ApplyStatus mysqldbmd.DataUpdateApplyStatus `json:"applyStatus"`
-	Auditor     string                          `json:"auditor"`
-	ExecuteLog  string                          `json:"executeLog"`
-	Created     string                          `json:"created"`
+	Id               int64                           `json:"id"`
+	Account          string                          `json:"account"`
+	DbId             int64                           `json:"dbId"`
+	DbName           string                          `json:"dbName"`
+	AccessBase       string                          `json:"accessBase"`
+	UpdateCmd        string                          `json:"updateCmd"`
+	ApplyStatus      mysqldbmd.DataUpdateApplyStatus `json:"applyStatus"`
+	Executor         string                          `json:"executor"`
+	Auditor          string                          `json:"auditor"`
+	ApplyReason      string                          `json:"applyReason"`
+	DisagreeReason   string                          `json:"disagreeReason"`
+	ExecuteLog       string                          `json:"executeLog"`
+	ExecuteWhenApply bool                            `json:"executeWhenApply"`
+	Created          string                          `json:"created"`
+	Updated          string                          `json:"updated"`
+	IsUnExecuted     bool                            `json:"isUnExecuted"`
 }
 
 type ReadPermVO struct {
@@ -128,11 +133,12 @@ type ExecuteSelectSqlResultVO struct {
 	Data    []map[string]string `json:"data"`
 }
 
-type ApplyDbUpdateReqVO struct {
-	Name       string `json:"name"`
-	DbId       int64  `json:"dbId"`
-	AccessBase string `json:"accessBase"`
-	Cmd        string `json:"cmd"`
+type ApplyDataUpdateReqVO struct {
+	DbId             int64  `json:"dbId"`
+	AccessBase       string `json:"accessBase"`
+	Cmd              string `json:"cmd"`
+	ExecuteWhenApply bool   `json:"executeWhenApply"`
+	ApplyReason      string `json:"applyReason"`
 }
 
 type ApplyDbUpdateResultVO struct {
@@ -140,25 +146,9 @@ type ApplyDbUpdateResultVO struct {
 	AllPass bool                           `json:"allPass"`
 }
 
-type AgreeDbUpdateReqVO struct {
-	OrderId int64 `json:"orderId"`
-}
-
-type DisagreeDbUpdateReqVO struct {
-	OrderId        int64  `json:"orderId"`
+type DisagreeDataUpdateReqVO struct {
+	ApplyId        int64  `json:"applyId"`
 	DisagreeReason string `json:"disagreeReason"`
-}
-
-type CancelDbUpdateReqVO struct {
-	OrderId int64 `json:"orderId"`
-}
-
-type ExecuteDbUpdateReqVO struct {
-	OrderId int64 `json:"orderId"`
-}
-
-type AskToExecuteDbUpdateReqVO struct {
-	OrderId int64 `json:"orderId"`
 }
 
 type ListReadPermByOperatorReqVO struct {

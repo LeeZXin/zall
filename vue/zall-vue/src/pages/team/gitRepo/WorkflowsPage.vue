@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div style="margin-bottom:10px">
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建工作流</a-button>
       <a-button type="primary" @click="gotoVarsPage" :icon="h(KeyOutlined)" style="margin-left:8px">管理变量</a-button>

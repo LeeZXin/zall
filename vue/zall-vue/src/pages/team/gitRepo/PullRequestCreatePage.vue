@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <ZNaviBack :url="naviBackUrl" name="合并请求列表" />
     <div class="header">
       <div class="title">Compare changes</div>

@@ -62,6 +62,22 @@ const router = createRouter({
                 path: "/db/mysqlSearch",
                 component: () =>
                     import ("../pages/db/mysql/MysqlSearchPage")
+            }, {
+                path: "/db/mysqlDataUpdateApply/list",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlDataUpdateApplyListPage")
+            }, {
+                path: "/db/mysqlDataUpdateApply/apply",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlDataUpdateApplyCreatePage")
+            }, {
+                path: "/db/mysqlDataUpdateAudit/list",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlDataUpdateAuditListPage")
+            }, {
+                path: "/db/mysqlReadPermManage/list",
+                component: () =>
+                    import ("../pages/db/mysql/MysqlReadPermManageListPage")
             }]
         },
         {

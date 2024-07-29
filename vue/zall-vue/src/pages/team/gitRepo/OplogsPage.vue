@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <a-date-picker v-model:value="dateVal" style="margin-bottom:10px" @change="pageLog" />
     <ZTable
       :columns="columns"

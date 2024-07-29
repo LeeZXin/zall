@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div class="container">
       <div class="header">
         <span v-if="mode === 'create'">添加变量</span>
@@ -43,7 +43,10 @@ import {
   getVarsContentRequest
 } from "@/api/git/workflowApi";
 import { useRoute, useRouter } from "vue-router";
-import { workflowVarsNameRegexp, workflowVarsContentRegexp } from "@/utils/regexp";
+import {
+  workflowVarsNameRegexp,
+  workflowVarsContentRegexp
+} from "@/utils/regexp";
 import { message } from "ant-design-vue";
 const route = useRoute();
 const getMode = () => {
@@ -83,7 +86,9 @@ const createOrUpdateVars = () => {
       content: formState.content
     }).then(() => {
       message.success("添加成功");
-      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`);
+      router.push(
+        `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`
+      );
     });
   } else if (mode === "update") {
     updateVarsRequest({
@@ -91,7 +96,9 @@ const createOrUpdateVars = () => {
       content: formState.content
     }).then(() => {
       message.success("更新成功");
-      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`);
+      router.push(
+        `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`
+      );
     });
   }
 };

@@ -59,6 +59,7 @@ const dbUsernameRegexp = /^.+$/;
 const dbAccessBaseRegexp = /^.+$/;
 const dbAccessTablesRegexp = /^.+$/;
 const dbApplyReasonRegexp = /^.{1,255}$/;
+const dbDatUpdateCmdRegexp = /^.{1,10240}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -102,5 +103,6 @@ export {
     dbUsernameRegexp,
     dbAccessBaseRegexp,
     dbAccessTablesRegexp,
-    dbApplyReasonRegexp
+    dbApplyReasonRegexp,
+    dbDatUpdateCmdRegexp
 }

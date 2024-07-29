@@ -36,7 +36,8 @@ type ListDataUpdateApplyReqDTO struct {
 	PageNum     int
 	PageSize    int
 	Account     string
-	OrderStatus DataUpdateApplyStatus
+	ApplyStatus DataUpdateApplyStatus
+	DbId        int64
 }
 
 type InsertReadPermReqDTO struct {
@@ -56,11 +57,19 @@ type UpdateReadPermApplyStatusReqDTO struct {
 	DisagreeReason string
 }
 
-type UpdateDataUpdateApplyStatusReqDTO struct {
+type UpdateDataUpdateApplyStatusWithAuditorReqDTO struct {
 	Id             int64
 	NewStatus      DataUpdateApplyStatus
 	OldStatus      DataUpdateApplyStatus
 	Auditor        string
+	DisagreeReason string
+}
+
+type UpdateDataUpdateApplyStatusWithExecutorReqDTO struct {
+	Id             int64
+	NewStatus      DataUpdateApplyStatus
+	OldStatus      DataUpdateApplyStatus
+	Executor       string
 	DisagreeReason string
 }
 
@@ -71,13 +80,14 @@ type ExistReadPermReqDTO struct {
 	AccessTables []string
 }
 
-type InsertUpdateApprovalOrderReqDTO struct {
-	Name        string
-	Account     string
-	DbId        int64
-	AccessBase  string
-	UpdateCmd   string
-	OrderStatus DataUpdateApplyStatus
+type InsertDataUpdateApplyReqDTO struct {
+	Account          string
+	DbId             int64
+	AccessBase       string
+	UpdateCmd        string
+	ApplyStatus      DataUpdateApplyStatus
+	ApplyReason      string
+	ExecuteWhenApply bool
 }
 
 type PageDbReqDTO struct {
@@ -98,4 +108,11 @@ type ListReadPermByAccountReqDTO struct {
 	AccessBase string
 	Account    string
 	Cols       []string
+}
+
+type ListReadPermReqDTO struct {
+	DbId     int64
+	Account  string
+	PageSize int
+	PageNum  int
 }

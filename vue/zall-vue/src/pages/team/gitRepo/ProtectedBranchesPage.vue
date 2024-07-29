@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div class="header">
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加保护分支</a-button>
     </div>

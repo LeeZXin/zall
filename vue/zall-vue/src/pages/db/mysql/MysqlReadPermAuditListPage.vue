@@ -83,8 +83,8 @@ import {
 import {
   listReadPermApplyByDbaRequest,
   getAllMysqlDbRequest,
-  agreeReadPermRequest,
-  disagreeReadPermRequest
+  agreeReadPermApplyRequest,
+  disagreeReadPermApplyRequest
 } from "@/api/db/mysqlApi";
 import { ref, createVNode, reactive } from "vue";
 import { Modal, message } from "ant-design-vue";
@@ -401,7 +401,7 @@ const agreeApply = item => {
     title: `你确定要同意${item.account}的申请吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      agreeReadPermRequest(item.id).then(() => {
+      agreeReadPermApplyRequest(item.id).then(() => {
         message.success("操作成功");
         currPage.value = 1;
         listApply();
@@ -422,7 +422,7 @@ const disagreeApply = () => {
     message.warn("原因格式错误");
     return;
   }
-  disagreeReadPermRequest({
+  disagreeReadPermApplyRequest({
     applyId: disagreeObj.id,
     disagreeReason: disagreeObj.reason
   }).then(() => {

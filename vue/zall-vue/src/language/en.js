@@ -125,5 +125,14 @@ export default {
         disagreeStatus: "Disagree",
         canceledStatus: "Canceled",
         unknownStatus: "Unknown"
+    },
+    mysqlDataUpdateApply: {
+        pendingStatus: "Pending",
+        agreeStatus: "Agree",
+        disagreeStatus: "Disagree",
+        canceledStatus: "Canceled",
+        askToExecuteStatus: "Ask To Execute",
+        executedStatus: "Executed",
+        unknownStatus: "Unknown"
     }
 }

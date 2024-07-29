@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div class="container">
       <div class="title">创建应用服务</div>
       <div class="section">

@@ -228,12 +228,12 @@ func (r *CancelReadPermApplyReqDTO) IsValid() error {
 	return nil
 }
 
-type GetReadPermApplyByOperatorReqDTO struct {
+type GetReadPermApplyReqDTO struct {
 	ApplyId  int64               `json:"applyId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *GetReadPermApplyByOperatorReqDTO) IsValid() error {
+func (r *GetReadPermApplyReqDTO) IsValid() error {
 	if r.ApplyId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -278,18 +278,21 @@ func (r *ListReadPermByOperatorReqDTO) IsValid() error {
 	return nil
 }
 
-type ListReadPermByAccountReqDTO struct {
-	Cursor   int64               `json:"cursor"`
-	Limit    int                 `json:"limit"`
+type ListReadPermByDbaReqDTO struct {
+	PageNum  int                 `json:"pageNum"`
+	DbId     int64               `json:"dbId"`
 	Account  string              `json:"account"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListReadPermByAccountReqDTO) IsValid() error {
-	if r.Cursor < 0 || r.Limit <= 0 || r.Limit > 1000 {
+func (r *ListReadPermByDbaReqDTO) IsValid() error {
+	if r.DbId < 0 {
 		return util.InvalidArgsError()
 	}
-	if !usermd.IsAccountValid(r.Account) {
+	if r.PageNum <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.Account != "" && !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -468,17 +471,15 @@ func (r *ExplainDbReqDTO) IsValid() error {
 }
 
 type ApplyDataUpdateReqDTO struct {
-	Name       string              `json:"name"`
-	DbId       int64               `json:"dbId"`
-	AccessBase string              `json:"accessBase"`
-	Cmd        string              `json:"cmd"`
-	Operator   apisession.UserInfo `json:"operator"`
+	DbId             int64               `json:"dbId"`
+	AccessBase       string              `json:"accessBase"`
+	Cmd              string              `json:"cmd"`
+	ApplyReason      string              `json:"applyReason"`
+	ExecuteWhenApply bool                `json:"executeWhenApply"`
+	Operator         apisession.UserInfo `json:"operator"`
 }
 
 func (r *ApplyDataUpdateReqDTO) IsValid() error {
-	if !mysqldbmd.IsUpdateApplyNameValid(r.Name) {
-		return util.InvalidArgsError()
-	}
 	if r.DbId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -491,13 +492,32 @@ func (r *ApplyDataUpdateReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
+	if !mysqldbmd.IsReasonValid(r.ApplyReason) {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ExplainDataUpdateReqDTO struct {
+	ApplyId  int64               `json:"applyId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ExplainDataUpdateReqDTO) IsValid() error {
+	if r.ApplyId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
 	return nil
 }
 
 type ListDataUpdateApplyByDbaReqDTO struct {
 	PageNum     int                             `json:"pageNum"`
-	ApplyStatus mysqldbmd.DataUpdateApplyStatus `json:"applyStatus"`
+	DbId        int64                           `json:"dbId"`
 	Operator    apisession.UserInfo             `json:"operator"`
+	ApplyStatus mysqldbmd.DataUpdateApplyStatus `json:"applyStatus"`
 }
 
 func (r *ListDataUpdateApplyByDbaReqDTO) IsValid() error {
@@ -505,6 +525,9 @@ func (r *ListDataUpdateApplyByDbaReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.DbId < 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.ApplyStatus.IsValid() {
@@ -533,19 +556,21 @@ func (r *ListDataUpdateApplyByOperatorReqDTO) IsValid() error {
 }
 
 type DataUpdateApplyDTO struct {
-	Id             int64
-	Name           string
-	Account        string
-	DbId           int64
-	DbHost         string
-	DbName         string
-	AccessBase     string
-	UpdateCmd      string
-	ApplyStatus    mysqldbmd.DataUpdateApplyStatus
-	Auditor        string
-	DisagreeReason string
-	ExecuteLog     string
-	Created        time.Time
+	Id               int64
+	Account          string
+	DbId             int64
+	DbName           string
+	AccessBase       string
+	UpdateCmd        string
+	ApplyStatus      mysqldbmd.DataUpdateApplyStatus
+	Auditor          string
+	Executor         string
+	ApplyReason      string
+	DisagreeReason   string
+	ExecuteLog       string
+	ExecuteWhenApply bool
+	Created          time.Time
+	Updated          time.Time
 }
 
 type AgreeDbUpdateReqDTO struct {

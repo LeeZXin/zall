@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div class="workflow-name">{{workflowStore.name}}</div>
     <div class="workflow-desc">{{workflowStore.desc}}</div>
     <ZTable :columns="columns" :dataSource="taskList" label="任务列表" style="margin-top:10px">

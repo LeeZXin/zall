@@ -12,7 +12,7 @@
             <TeamOutlined />
             <span>团队协作</span>
           </a-menu-item>
-          <a-menu-item key="/db/mysqlDb/list">
+          <a-menu-item key="/db/mysqlReadPermApply/list">
             <DatabaseOutlined />
             <span>Mysql审计</span>
           </a-menu-item>

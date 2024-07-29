@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" v-if="totalCount > 0">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'pullRequest'">

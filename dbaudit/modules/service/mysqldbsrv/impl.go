@@ -1,6 +1,7 @@
 package mysqldbsrv
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/LeeZXin/zall/dbaudit/modules/model/mysqldbmd"
@@ -75,7 +76,26 @@ func (*outerImpl) DeleteDb(ctx context.Context, reqDTO DeleteDbReqDTO) (err erro
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err = mysqldbmd.DeleteDbById(ctx, reqDTO.DbId)
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		// 删除数据库
+		_, err2 := mysqldbmd.DeleteDbById(ctx, reqDTO.DbId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除读权限
+		_, err2 = mysqldbmd.DeleteReadPermByDbId(ctx, reqDTO.DbId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除读权限申请
+		_, err2 = mysqldbmd.DeleteReadPermApplyByDbId(ctx, reqDTO.DbId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除数据库修改单
+		_, err2 = mysqldbmd.DeleteDataUpdateApplyByDbId(ctx, reqDTO.DbId)
+		return err2
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -169,8 +189,8 @@ func (*outerImpl) ApplyReadPerm(ctx context.Context, reqDTO ApplyReadPermReqDTO)
 	return nil
 }
 
-// GetReadPermApplyByOperator 操作人查看自己的审批单
-func (*outerImpl) GetReadPermApplyByOperator(ctx context.Context, reqDTO GetReadPermApplyByOperatorReqDTO) (ReadPermApplyDTO, error) {
+// GetReadPermApply 查看读权限审批单
+func (*outerImpl) GetReadPermApply(ctx context.Context, reqDTO GetReadPermApplyReqDTO) (ReadPermApplyDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return ReadPermApplyDTO{}, err
 	}
@@ -184,7 +204,7 @@ func (*outerImpl) GetReadPermApplyByOperator(ctx context.Context, reqDTO GetRead
 	if !b {
 		return ReadPermApplyDTO{}, util.InvalidArgsError()
 	}
-	if apply.Account != reqDTO.Operator.Account {
+	if checkDbaPerm(reqDTO.Operator) != nil && apply.Account != reqDTO.Operator.Account {
 		return ReadPermApplyDTO{}, util.UnauthorizedError()
 	}
 	return readPermApply2Dto(apply)
@@ -393,11 +413,12 @@ func (*outerImpl) ListAuthorizedBase(ctx context.Context, reqDTO ListAuthorizedB
 			url.QueryEscape(db.Config.Data.ReadNode.Password),
 			db.Config.Data.ReadNode.Host,
 		)
-		_, bases, err := util.MysqlQuery(datasourceName, "show databases")
+		result, err := util.MysqlQuery(datasourceName, "show databases")
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return nil, util.InternalError(err)
 		}
+		bases := result.Data
 		ret := make([]string, 0, len(bases))
 		for _, base := range bases {
 			if len(base) > 0 {
@@ -461,11 +482,12 @@ func (*outerImpl) ListAuthorizedTable(ctx context.Context, reqDTO ListAuthorized
 			db.Config.Data.ReadNode.Host,
 			reqDTO.AccessBase,
 		)
-		_, tables, err := util.MysqlQuery(datasourceName, "show tables")
+		result, err := util.MysqlQuery(datasourceName, "show tables")
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return nil, util.InternalError(err)
 		}
+		tables := result.Data
 		ret := make([]string, 0, len(tables))
 		for _, table := range tables {
 			if len(table) > 0 {
@@ -511,12 +533,13 @@ func (*outerImpl) ListAuthorizedTable(ctx context.Context, reqDTO ListAuthorized
 			db.Config.Data.ReadNode.Host,
 			reqDTO.AccessBase,
 		)
-		_, tables, err := util.MysqlQuery(datasourceName, "show tables")
+		result, err := util.MysqlQuery(datasourceName, "show tables")
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return nil, util.InternalError(err)
 		}
-		retTables = make([]string, 0)
+		tables := result.Data
+		retTables = make([]string, 0, len(tables))
 		for _, table := range tables {
 			if len(table) > 0 {
 				retTables = append(retTables, table[0])
@@ -573,11 +596,12 @@ func (*outerImpl) GetCreateTableSql(ctx context.Context, reqDTO GetCreateSqlReqD
 		db.Config.Data.ReadNode.Host,
 		reqDTO.AccessBase,
 	)
-	_, data, err := util.MysqlQuery(datasourceName, "show create table "+reqDTO.AccessTable)
+	result, err := util.MysqlQuery(datasourceName, "show create table "+reqDTO.AccessTable)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
 	}
+	data := result.Data
 	if len(data) == 1 && len(data[0]) == 2 {
 		return data[0][1], nil
 	}
@@ -628,12 +652,12 @@ func (*outerImpl) ShowTableIndex(ctx context.Context, reqDTO ShowTableIndexReqDT
 		db.Config.Data.ReadNode.Host,
 		reqDTO.AccessBase,
 	)
-	columns, data, err := util.MysqlQuery(datasourceName, "show index from "+reqDTO.AccessTable)
+	result, err := util.MysqlQuery(datasourceName, "show index from "+reqDTO.AccessTable)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, nil, util.InternalError(err)
 	}
-	return columns, data, nil
+	return result.Columns, result.Data, nil
 }
 
 // DisagreeReadPermApply 不同意审批
@@ -768,8 +792,8 @@ func (*outerImpl) DeleteReadPermByDba(ctx context.Context, reqDTO DeleteReadPerm
 	return
 }
 
-// ListReadPermByAccount 权限列表
-func (*outerImpl) ListReadPermByAccount(ctx context.Context, reqDTO ListReadPermByAccountReqDTO) ([]ReadPermDTO, int64, error) {
+// ListReadPermByDba 权限列表
+func (*outerImpl) ListReadPermByDba(ctx context.Context, reqDTO ListReadPermByDbaReqDTO) ([]ReadPermDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
@@ -778,16 +802,15 @@ func (*outerImpl) ListReadPermByAccount(ctx context.Context, reqDTO ListReadPerm
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	perms, err := mysqldbmd.ListReadPermByAccount(ctx, mysqldbmd.ListReadPermByAccountReqDTO{
-		Account: reqDTO.Account,
+	perms, total, err := mysqldbmd.ListReadPerm(ctx, mysqldbmd.ListReadPermReqDTO{
+		DbId:     reqDTO.DbId,
+		Account:  reqDTO.Account,
+		PageSize: 10,
+		PageNum:  reqDTO.PageNum,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
-	}
-	var next int64 = 0
-	if len(perms) == reqDTO.Limit {
-		next = perms[len(perms)-1].Id
 	}
 	dbIdList, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (int64, error) {
 		return t.DbId, nil
@@ -799,27 +822,27 @@ func (*outerImpl) ListReadPermByAccount(ctx context.Context, reqDTO ListReadPerm
 	data, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (ReadPermDTO, error) {
 		return readPerm2Dto(t, dbMap), nil
 	})
-	return data, next, nil
+	return data, total, nil
 }
 
 // ExecuteSelectSql 搜索
-func (*outerImpl) ExecuteSelectSql(ctx context.Context, reqDTO ExecuteSelectSqlReqDTO) ([]string, [][]string, error) {
+func (*outerImpl) ExecuteSelectSql(ctx context.Context, reqDTO ExecuteSelectSqlReqDTO) (util.MysqlQueryResult, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return nil, nil, err
+		return util.MysqlQueryResult{}, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, nil, util.InternalError(err)
+		return util.MysqlQueryResult{}, util.InternalError(err)
 	}
 	if !b || db.Config == nil {
-		return nil, nil, util.InvalidArgsError()
+		return util.MysqlQueryResult{}, util.InvalidArgsError()
 	}
 	tableName, sql, isExplain, err := command.ValidateMysqlSelectSql(reqDTO.Cmd)
 	if err != nil {
-		return nil, nil, util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
+		return util.MysqlQueryResult{}, util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
 	}
 	// 检查权限
 	needCheckPerm := checkDbaPerm(reqDTO.Operator) != nil
@@ -832,10 +855,10 @@ func (*outerImpl) ExecuteSelectSql(ctx context.Context, reqDTO ExecuteSelectSqlR
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
-			return nil, nil, util.InternalError(err)
+			return util.MysqlQueryResult{}, util.InternalError(err)
 		}
 		if !hasPerm {
-			return nil, nil, util.UnauthorizedError()
+			return util.MysqlQueryResult{}, util.UnauthorizedError()
 		}
 	}
 	datasourceName := fmt.Sprintf(
@@ -849,11 +872,11 @@ func (*outerImpl) ExecuteSelectSql(ctx context.Context, reqDTO ExecuteSelectSqlR
 	if !isExplain {
 		sql = sql + " limit " + strconv.Itoa(reqDTO.Limit)
 	}
-	columns, ret, err := util.MysqlQuery(datasourceName, sql)
+	result, err := util.MysqlQuery(datasourceName, sql)
 	if err != nil {
-		return nil, nil, util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
+		return util.MysqlQueryResult{}, util.NewBizErrWithMsg(apicode.OperationFailedErrCode, err.Error())
 	}
-	return columns, ret, nil
+	return result, nil
 }
 
 // ApplyDataUpdate 提数据库修改单
@@ -877,13 +900,14 @@ func (*outerImpl) ApplyDataUpdate(ctx context.Context, reqDTO ApplyDataUpdateReq
 	}
 	if allPass {
 		// 插入数据库
-		err = mysqldbmd.InsertUpdateApprovalOrder(ctx, mysqldbmd.InsertUpdateApprovalOrderReqDTO{
-			Name:        reqDTO.Name,
-			Account:     reqDTO.Operator.Account,
-			DbId:        reqDTO.DbId,
-			AccessBase:  reqDTO.AccessBase,
-			UpdateCmd:   reqDTO.Cmd,
-			OrderStatus: mysqldbmd.PendingDataUpdateApplyStatus,
+		err = mysqldbmd.InsertDataUpdateApply(ctx, mysqldbmd.InsertDataUpdateApplyReqDTO{
+			Account:          reqDTO.Operator.Account,
+			DbId:             reqDTO.DbId,
+			AccessBase:       reqDTO.AccessBase,
+			UpdateCmd:        reqDTO.Cmd,
+			ApplyReason:      reqDTO.ApplyReason,
+			ApplyStatus:      mysqldbmd.PendingDataUpdateApplyStatus,
+			ExecuteWhenApply: reqDTO.ExecuteWhenApply,
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -891,6 +915,88 @@ func (*outerImpl) ApplyDataUpdate(ctx context.Context, reqDTO ApplyDataUpdateReq
 		}
 	}
 	return validateResults, allPass, nil
+}
+
+// ExplainDataUpdate 数据库修改单的执行计划
+func (*outerImpl) ExplainDataUpdate(ctx context.Context, reqDTO ExplainDataUpdateReqDTO) (string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return "", err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	apply, b, err := mysqldbmd.GetDataUpdateApplyById(ctx, reqDTO.ApplyId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	if !b || !apply.ApplyStatus.IsUnExecuted() {
+		return "", util.InvalidArgsError()
+	}
+	// 校验权限
+	if apply.Account != reqDTO.Operator.Account && checkDbaPerm(reqDTO.Operator) != nil {
+		return "", util.UnauthorizedError()
+	}
+	db, b, err := mysqldbmd.GetDbById(ctx, apply.DbId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	if !b {
+		return "", util.ThereHasBugErr()
+	}
+	validateResults, allPass, err := command.ValidateMysqlUpdateSql(apply.UpdateCmd)
+	if err != nil || !allPass {
+		return "", util.ThereHasBugErr()
+	}
+	datasourceName := fmt.Sprintf(
+		"%s:%s@tcp(%s)/%s?charset=utf8",
+		url.QueryEscape(db.Config.Data.ReadNode.Username),
+		url.QueryEscape(db.Config.Data.ReadNode.Password),
+		db.Config.Data.ReadNode.Host,
+		apply.AccessBase,
+	)
+	explainableSqls := make([]string, 0)
+	unexplainableSqls := make([]string, 0)
+	for _, result := range validateResults {
+		if result.IsExplainable {
+			explainableSqls = append(explainableSqls, result.Sql)
+		} else {
+			unexplainableSqls = append(unexplainableSqls, result.Sql)
+		}
+	}
+	explainableSqls, _ = listutil.Map(explainableSqls, func(t string) (string, error) {
+		return "explain " + t, nil
+	})
+	explainableResults, err := util.MysqlQueries(datasourceName, explainableSqls...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.OperationFailedError()
+	}
+	if len(explainableSqls) != len(explainableResults) {
+		return "", util.ThereHasBugErr()
+	}
+	ret := new(bytes.Buffer)
+	separator := "\n---------------\n"
+	for _, sql := range unexplainableSqls {
+		ret.WriteString(strings.TrimSpace(sql) + "\n\n")
+		ret.WriteString(separator)
+	}
+	for i := range explainableSqls {
+		ret.WriteString(strings.TrimSpace(strings.TrimPrefix(explainableSqls[i], "explain ")) + "\n\n")
+		result := explainableResults[i]
+		if result.Err != nil {
+			ret.WriteString("err: " + result.Err.Error() + "\n")
+		} else {
+			m := result.ToMap()
+			if len(m) > 0 {
+				ret.WriteString("rows: " + m[0]["rows"] + "\n")
+				ret.WriteString("type: " + m[0]["type"] + "\n")
+				ret.WriteString("possible_keys: " + m[0]["possible_keys"] + "\n")
+			}
+		}
+		ret.WriteString(separator)
+	}
+	return ret.String(), nil
 }
 
 // ListDataUpdateApplyByDba 数据库修改审批单
@@ -906,7 +1012,8 @@ func (*outerImpl) ListDataUpdateApplyByDba(ctx context.Context, reqDTO ListDataU
 	applies, total, err := mysqldbmd.ListDataUpdateApply(ctx, mysqldbmd.ListDataUpdateApplyReqDTO{
 		PageNum:     reqDTO.PageNum,
 		PageSize:    10,
-		OrderStatus: reqDTO.ApplyStatus,
+		DbId:        reqDTO.DbId,
+		ApplyStatus: reqDTO.ApplyStatus,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -930,7 +1037,7 @@ func (*outerImpl) ListDataUpdateApplyByOperator(ctx context.Context, reqDTO List
 		PageNum:     reqDTO.PageNum,
 		PageSize:    10,
 		Account:     reqDTO.Operator.Account,
-		OrderStatus: reqDTO.ApplyStatus,
+		ApplyStatus: reqDTO.ApplyStatus,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -953,20 +1060,21 @@ func dataUpdateApplyMd2Dto(ctx context.Context, applies []mysqldbmd.DataUpdateAp
 	}
 	data, _ := listutil.Map(applies, func(t mysqldbmd.DataUpdateApply) (DataUpdateApplyDTO, error) {
 		ret := DataUpdateApplyDTO{
-			Id:          t.Id,
-			Account:     t.Account,
-			Name:        t.Name,
-			DbId:        t.DbId,
-			DbName:      dbMap[t.DbId].Name,
-			AccessBase:  t.AccessBase,
-			ApplyStatus: t.ApplyStatus,
-			UpdateCmd:   t.UpdateCmd,
-			Auditor:     t.Auditor,
-			Created:     t.Created,
-			ExecuteLog:  t.ExecuteLog,
-		}
-		if dbMap[t.DbId].Config != nil {
-			ret.DbHost = dbMap[t.DbId].Config.Data.WriteNode.Host
+			Id:               t.Id,
+			Account:          t.Account,
+			DbId:             t.DbId,
+			DbName:           dbMap[t.DbId].Name,
+			AccessBase:       t.AccessBase,
+			UpdateCmd:        t.UpdateCmd,
+			ApplyStatus:      t.ApplyStatus,
+			Auditor:          t.Auditor,
+			Executor:         t.Executor,
+			ApplyReason:      t.ApplyReason,
+			DisagreeReason:   t.DisagreeReason,
+			ExecuteLog:       t.ExecuteLog,
+			ExecuteWhenApply: t.ExecuteWhenApply,
+			Created:          t.Created,
+			Updated:          t.Updated,
 		}
 		return ret, nil
 	})
@@ -991,7 +1099,7 @@ func (*outerImpl) AgreeDataUpdateApply(ctx context.Context, reqDTO AgreeDbUpdate
 	if !b || order.ApplyStatus != mysqldbmd.PendingDataUpdateApplyStatus {
 		return util.InvalidArgsError()
 	}
-	_, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+	_, err = mysqldbmd.UpdateDataUpdateApplyStatusWithAuditor(ctx, mysqldbmd.UpdateDataUpdateApplyStatusWithAuditorReqDTO{
 		Id:        reqDTO.ApplyId,
 		NewStatus: mysqldbmd.AgreeDataUpdateApplyStatus,
 		OldStatus: order.ApplyStatus,
@@ -1022,7 +1130,7 @@ func (*outerImpl) DisagreeDataUpdateApply(ctx context.Context, reqDTO DisagreeDa
 	if !b || order.ApplyStatus != mysqldbmd.PendingDataUpdateApplyStatus {
 		return util.InvalidArgsError()
 	}
-	_, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+	_, err = mysqldbmd.UpdateDataUpdateApplyStatusWithAuditor(ctx, mysqldbmd.UpdateDataUpdateApplyStatusWithAuditorReqDTO{
 		Id:             reqDTO.ApplyId,
 		NewStatus:      mysqldbmd.DisagreeDataUpdateApplyStatus,
 		OldStatus:      order.ApplyStatus,
@@ -1043,21 +1151,21 @@ func (*outerImpl) CancelDataUpdateApply(ctx context.Context, reqDTO CancelDataUp
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	order, b, err := mysqldbmd.GetDataUpdateApplyById(ctx, reqDTO.ApplyId)
+	apply, b, err := mysqldbmd.GetDataUpdateApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || order.ApplyStatus != mysqldbmd.PendingDataUpdateApplyStatus {
+	if !b || apply.ApplyStatus != mysqldbmd.PendingDataUpdateApplyStatus {
 		return util.InvalidArgsError()
 	}
-	if order.Account != reqDTO.Operator.Account {
+	if apply.Account != reqDTO.Operator.Account {
 		return util.UnauthorizedError()
 	}
-	_, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+	_, err = mysqldbmd.UpdateDataUpdateApplyStatusWithAuditor(ctx, mysqldbmd.UpdateDataUpdateApplyStatusWithAuditorReqDTO{
 		Id:        reqDTO.ApplyId,
 		NewStatus: mysqldbmd.CanceledDataUpdateApplyStatus,
-		OldStatus: order.ApplyStatus,
+		OldStatus: apply.ApplyStatus,
 		Auditor:   reqDTO.Operator.Account,
 	})
 	if err != nil {
@@ -1082,9 +1190,7 @@ func (*outerImpl) ExecuteDataUpdateApply(ctx context.Context, reqDTO ExecuteData
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b ||
-		(apply.ApplyStatus != mysqldbmd.AgreeDataUpdateApplyStatus &&
-			apply.ApplyStatus != mysqldbmd.AskToExecuteDataUpdateApplyStatus) {
+	if !b || !apply.ApplyStatus.IsExecutable() {
 		return util.InvalidArgsError()
 	}
 	db, b, err := mysqldbmd.GetDbById(ctx, apply.DbId)
@@ -1095,15 +1201,15 @@ func (*outerImpl) ExecuteDataUpdateApply(ctx context.Context, reqDTO ExecuteData
 	if !b || db.Config == nil {
 		return util.ThereHasBugErr()
 	}
-	b, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+	b, err = mysqldbmd.UpdateDataUpdateApplyStatusWithExecutor(ctx, mysqldbmd.UpdateDataUpdateApplyStatusWithExecutorReqDTO{
 		Id:        reqDTO.ApplyId,
 		NewStatus: mysqldbmd.ExecutedDataUpdateApplyStatus,
 		OldStatus: apply.ApplyStatus,
-		Auditor:   reqDTO.Operator.Account,
+		Executor:  reqDTO.Operator.Account,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return err
 	}
 	if b {
 		go executeUpdateCmd(&apply, &db)
@@ -1125,13 +1231,12 @@ func executeUpdateCmd(apply *mysqldbmd.DataUpdateApply, db *mysqldbmd.Db) {
 		logMsg.WriteString(err.Error())
 	} else {
 		for _, result := range results {
-			logMsg.WriteString("sql: " + result.Sql + "\n")
+			logMsg.WriteString("sql: " + strings.TrimSpace(result.Sql) + "\n")
 			logMsg.WriteString("affectedRows: " + strconv.FormatInt(result.AffectedRows, 10) + "\n")
 			if result.ErrMsg != "" {
 				logMsg.WriteString("errMsg: " + result.ErrMsg + "\n")
 			}
-			logMsg.WriteString("\n")
-			logMsg.WriteString("\n")
+			logMsg.WriteString("\n\n")
 		}
 	}
 	ctx, closer := xormstore.Context(context.Background())
@@ -1160,7 +1265,7 @@ func (*outerImpl) AskToExecuteDataUpdateApply(ctx context.Context, reqDTO AskToE
 	if order.Account != reqDTO.Operator.Account {
 		return util.UnauthorizedError()
 	}
-	_, err = mysqldbmd.UpdateDataUpdateApplyStatus(ctx, mysqldbmd.UpdateDataUpdateApplyStatusReqDTO{
+	_, err = mysqldbmd.UpdateDataUpdateApplyStatusWithAuditor(ctx, mysqldbmd.UpdateDataUpdateApplyStatusWithAuditorReqDTO{
 		Id:        reqDTO.ApplyId,
 		NewStatus: mysqldbmd.AskToExecuteDataUpdateApplyStatus,
 		OldStatus: order.ApplyStatus,
@@ -1176,7 +1281,7 @@ func (*outerImpl) AskToExecuteDataUpdateApply(ctx context.Context, reqDTO AskToE
 func getDbMap(ctx context.Context, idList []int64) (map[int64]mysqldbmd.Db, error) {
 	idList = listutil.Distinct(idList...)
 	ret := make(map[int64]mysqldbmd.Db, len(idList))
-	dbs, err := mysqldbmd.BatchGetDbByIdList(ctx, idList, []string{"id", "name", "config"})
+	dbs, err := mysqldbmd.BatchGetDbByIdList(ctx, idList, []string{"id", "name"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)

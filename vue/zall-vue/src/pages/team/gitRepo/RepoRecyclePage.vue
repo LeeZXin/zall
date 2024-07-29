@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div style="margin-bottom:16px">
       <div style="font-size:16px;font-weight:bold;margin-bottom:8px">仓库回收站</div>
     </div>

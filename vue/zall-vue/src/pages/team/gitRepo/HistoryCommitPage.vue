@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <template v-if="branches.length > 0">
       <div style="margin-bottom: 10px">
         <BranchTagSelect

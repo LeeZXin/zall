@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <ZNaviBack
       :url="`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/tasks`"
       name="任务列表"

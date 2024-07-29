@@ -19,11 +19,11 @@ const listReadPermApplyByDbaRequest = (data) => request.get("/api/mysqlReadPermA
 // 申请读权限
 const applyReadPermRequest = (data) => request.post("/api/mysqlReadPerm/apply", data);
 // 撤销申请读权限
-const cancelReadPermRequest = (applyId) => request.put("/api/mysqlReadPerm/cancel/" + applyId);
+const cancelReadPermApplyRequest = (applyId) => request.put("/api/mysqlReadPerm/cancel/" + applyId);
 // 同意申请读权限
-const agreeReadPermRequest = (applyId) => request.put("/api/mysqlReadPermApply/agree/" + applyId);
+const agreeReadPermApplyRequest = (applyId) => request.put("/api/mysqlReadPermApply/agree/" + applyId);
 // 不同意申请读权限
-const disagreeReadPermRequest = (data) => request.put("/api/mysqlReadPermApply/disagree", data);
+const disagreeReadPermApplyRequest = (data) => request.put("/api/mysqlReadPermApply/disagree", data);
 // 查看审批单
 const getReadPermApplyRequest = (applyId) => request.get("/api/mysqlReadPerm/getApply/" + applyId);
 // 查看授权过的数据库
@@ -38,6 +38,28 @@ const getCreateTableSqlRequest = (data) => request.get("/api/mysqlSearch/getCrea
 const showTableIndexRequest = (data) => request.get("/api/mysqlSearch/showTableIndex", { params: data });
 // 执行select语句
 const executeSelectSqlRequest = (data) => request.post("/api/mysqlSearch/executeSelectSql", data);
+// 查看数据修改审批单列表
+const listDataUpdateApplyByOperatorRequest = (data) => request.get("/api/mysqlDataUpdate/listApply", { params: data });
+// 申请数据库修改单
+const applyDataUpdateRequest = (data) => request.post("/api/mysqlDataUpdate/apply", data);
+// 申请数据库修改单的执行计划
+const explainDataUpdateApplyRequest = (applyId) => request.get("/api/mysqlDataUpdate/explainApply/" + applyId);
+// 取消数据修改单申请
+const cancelDataUpdateApplyRequest = (applyId) => request.put("/api/mysqlDataUpdate/cancelApply/" + applyId);
+// dba查看数据修改审批单列表
+const listDataUpdateApplyByDbaRequest = (data) => request.get("/api/mysqlDataUpdateApply/list", { params: data });
+// 同意数据修改单
+const agreeDataUpdateApplyRequest = (applyId) => request.put("/api/mysqlDataUpdateApply/agree/" + applyId);
+// 请求执行
+const askToExecuteDataUpdateApplyRequest = (applyId) => request.put("/api/mysqlDataUpdateApply/askToExecute/" + applyId);
+// 执行数据库修改单
+const executeDataUpdateApplyRequest = (applyId) => request.put("/api/mysqlDataUpdateApply/execute/" + applyId);
+// 不同意数据库修改单
+const disagreedataUpdateApplyRequest = (data) => request.put("/api/mysqlDataUpdateApply/disagree", data);
+// dba查看读权限列表
+const listReadPermByDbaRequest = (data) => request.get("/api/mysqlReadPerm/listManage", { params: data });
+// 删除读权限
+const deleteReadPermRequest = (permId) => request.delete("/api/mysqlReadPerm/delete/" + permId);
 export {
     listMysqlDbRequest,
     getAllMysqlDbRequest,
@@ -48,14 +70,25 @@ export {
     listReadPermApplyByDbaRequest,
     listReadPermApplyByOperatorRequest,
     applyReadPermRequest,
-    cancelReadPermRequest,
-    agreeReadPermRequest,
-    disagreeReadPermRequest,
+    cancelReadPermApplyRequest,
+    agreeReadPermApplyRequest,
+    disagreeReadPermApplyRequest,
     getReadPermApplyRequest,
     listAuthorizedDbRequest,
     listAuthorizedBaseRequest,
     listAuthorizedTableRequest,
     getCreateTableSqlRequest,
     showTableIndexRequest,
-    executeSelectSqlRequest
+    executeSelectSqlRequest,
+    listDataUpdateApplyByOperatorRequest,
+    applyDataUpdateRequest,
+    explainDataUpdateApplyRequest,
+    cancelDataUpdateApplyRequest,
+    listDataUpdateApplyByDbaRequest,
+    agreeDataUpdateApplyRequest,
+    askToExecuteDataUpdateApplyRequest,
+    executeDataUpdateApplyRequest,
+    disagreedataUpdateApplyRequest,
+    listReadPermByDbaRequest,
+    deleteReadPermRequest
 }

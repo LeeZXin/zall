@@ -17,23 +17,11 @@
     </div>
     <div class="drawer-item">
       <user-outlined style="font-size:18px" />
-      <span>cnm</span>
+      <span>修改密码</span>
     </div>
     <div class="drawer-item">
       <user-outlined style="font-size:18px" />
-      <span>cnm</span>
-    </div>
-    <div class="drawer-item">
-      <user-outlined style="font-size:18px" />
-      <span>cnm</span>
-    </div>
-    <div class="drawer-item">
-      <user-outlined style="font-size:18px" />
-      <span>cnm</span>
-    </div>
-    <div class="drawer-item">
-      <user-outlined style="font-size:18px" />
-      <span>cnm</span>
+      <span>后台管理</span>
     </div>
     <a-divider style="margin-bottom: 10px" />
     <div>

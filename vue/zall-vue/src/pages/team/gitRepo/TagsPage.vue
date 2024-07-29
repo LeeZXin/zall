@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <ul class="tag-list" v-if="dataSource.length > 0">
       <li v-for="item in dataSource" v-bind:key="item.name">
         <TagItem

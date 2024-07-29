@@ -23,10 +23,6 @@ func IsReasonValid(reason string) bool {
 	return len(reason) <= 255
 }
 
-func IsUpdateApplyNameValid(name string) bool {
-	return len(name) > 0 && len(name) <= 32
-}
-
 func InsertDb(ctx context.Context, reqDTO InsertDbReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&Db{
@@ -67,6 +63,21 @@ func PageDb(ctx context.Context, reqDTO PageDbReqDTO) ([]Db, int64, error) {
 
 func DeleteDbById(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Delete(new(Db))
+	return rows == 1, err
+}
+
+func DeleteReadPermByDbId(ctx context.Context, dbId int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).Where("db_id = ?", dbId).Delete(new(ReadPerm))
+	return rows == 1, err
+}
+
+func DeleteReadPermApplyByDbId(ctx context.Context, dbId int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).Where("db_id = ?", dbId).Delete(new(ReadPermApply))
+	return rows == 1, err
+}
+
+func DeleteDataUpdateApplyByDbId(ctx context.Context, dbId int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).Where("db_id = ?", dbId).Delete(new(DataUpdateApply))
 	return rows == 1, err
 }
 
@@ -119,14 +130,17 @@ func ListReadPermApply(ctx context.Context, reqDTO ListReadPermApplyReqDTO) ([]R
 
 func ListDataUpdateApply(ctx context.Context, reqDTO ListDataUpdateApplyReqDTO) ([]DataUpdateApply, int64, error) {
 	session := xormutil.MustGetXormSession(ctx)
-	if reqDTO.OrderStatus > 0 {
-		session.And("order_status = ?", reqDTO.OrderStatus)
+	if reqDTO.ApplyStatus > 0 {
+		session.And("apply_status = ?", reqDTO.ApplyStatus)
+	}
+	if reqDTO.DbId > 0 {
+		session.And("db_id = ?", reqDTO.DbId)
 	}
 	if reqDTO.Account != "" {
 		session.And("account = ?", reqDTO.Account)
 	}
 	ret := make([]DataUpdateApply, 0)
-	total, err := session.Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).FindAndCount(&ret)
+	total, err := session.Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).Desc("updated").FindAndCount(&ret)
 	return ret, total, err
 }
 
@@ -155,7 +169,7 @@ func UpdateReadPermApplyStatus(ctx context.Context, reqDTO UpdateReadPermApplySt
 	return rows == 1, err
 }
 
-func UpdateDataUpdateApplyStatus(ctx context.Context, reqDTO UpdateDataUpdateApplyStatusReqDTO) (bool, error) {
+func UpdateDataUpdateApplyStatusWithAuditor(ctx context.Context, reqDTO UpdateDataUpdateApplyStatusWithAuditorReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
 		And("apply_status = ?", reqDTO.OldStatus).
@@ -164,6 +178,19 @@ func UpdateDataUpdateApplyStatus(ctx context.Context, reqDTO UpdateDataUpdateApp
 			DisagreeReason: reqDTO.DisagreeReason,
 			ApplyStatus:    reqDTO.NewStatus,
 			Auditor:        reqDTO.Auditor,
+		})
+	return rows == 1, err
+}
+
+func UpdateDataUpdateApplyStatusWithExecutor(ctx context.Context, reqDTO UpdateDataUpdateApplyStatusWithExecutorReqDTO) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", reqDTO.Id).
+		And("apply_status = ?", reqDTO.OldStatus).
+		Cols("apply_status", "executor", "disagree_reason").
+		Update(&DataUpdateApply{
+			DisagreeReason: reqDTO.DisagreeReason,
+			ApplyStatus:    reqDTO.NewStatus,
+			Executor:       reqDTO.Executor,
 		})
 	return rows == 1, err
 }
@@ -228,6 +255,19 @@ func ListReadPermByAccount(ctx context.Context, reqDTO ListReadPermByAccountReqD
 	return ret, err
 }
 
+func ListReadPerm(ctx context.Context, reqDTO ListReadPermReqDTO) ([]ReadPerm, int64, error) {
+	ret := make([]ReadPerm, 0)
+	session := xormutil.MustGetXormSession(ctx)
+	if reqDTO.Account != "" {
+		session.And("account = ?", reqDTO.Account)
+	}
+	if reqDTO.DbId > 0 {
+		session.And("db_id = ?", reqDTO.DbId)
+	}
+	total, err := session.Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).Desc("id").FindAndCount(&ret)
+	return ret, total, err
+}
+
 func PageReadPerm(ctx context.Context, reqDTO PageReadPermReqDTO) ([]ReadPerm, int64, error) {
 	ret := make([]ReadPerm, 0)
 	session := xormutil.MustGetXormSession(ctx).
@@ -257,15 +297,16 @@ func ExistReadPerm(ctx context.Context, reqDTO ExistReadPermReqDTO) (bool, error
 		Exist(new(ReadPerm))
 }
 
-func InsertUpdateApprovalOrder(ctx context.Context, reqDTO InsertUpdateApprovalOrderReqDTO) error {
+func InsertDataUpdateApply(ctx context.Context, reqDTO InsertDataUpdateApplyReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&DataUpdateApply{
-			Name:        reqDTO.Name,
-			Account:     reqDTO.Account,
-			DbId:        reqDTO.DbId,
-			AccessBase:  reqDTO.AccessBase,
-			UpdateCmd:   reqDTO.UpdateCmd,
-			ApplyStatus: reqDTO.OrderStatus,
+			Account:          reqDTO.Account,
+			DbId:             reqDTO.DbId,
+			AccessBase:       reqDTO.AccessBase,
+			UpdateCmd:        reqDTO.UpdateCmd,
+			ApplyStatus:      reqDTO.ApplyStatus,
+			ApplyReason:      reqDTO.ApplyReason,
+			ExecuteWhenApply: reqDTO.ExecuteWhenApply,
 		})
 	return err
 }

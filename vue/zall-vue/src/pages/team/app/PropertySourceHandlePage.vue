@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div class="container">
       <div class="title">
         <span v-if="mode === 'create'">创建配置来源</span>

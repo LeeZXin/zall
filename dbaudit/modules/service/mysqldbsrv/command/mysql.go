@@ -37,10 +37,11 @@ func ValidateMysqlSelectSql(sql string) (string, string, bool, error) {
 }
 
 type ValidateUpdateResult struct {
-	TableName string `json:"tableName"`
-	Sql       string `json:"sql"`
-	Pass      bool   `json:"pass"`
-	ErrMsg    string `json:"errMsg"`
+	TableName     string `json:"tableName"`
+	Sql           string `json:"sql"`
+	Pass          bool   `json:"pass"`
+	ErrMsg        string `json:"errMsg"`
+	IsExplainable bool   `json:"isExplainable"`
 }
 
 func ValidateMysqlUpdateSql(sql string) ([]ValidateUpdateResult, bool, error) {
@@ -66,9 +67,14 @@ func ValidateMysqlUpdateSql(sql string) ([]ValidateUpdateResult, bool, error) {
 		} else {
 			result.TableName = tableNames[0].Name.String()
 			switch stmt.(type) {
-			case *ast.CreateTableStmt, *ast.InsertStmt, *ast.AlterTableStmt:
+			case *ast.InsertStmt:
+				result.IsExplainable = true
+				result.Pass = true
+			case *ast.CreateIndexStmt, *ast.DropIndexStmt, *ast.TruncateTableStmt, *ast.DropTableStmt,
+				*ast.CreateTableStmt, *ast.AlterTableStmt, *ast.RenameTableStmt:
 				result.Pass = true
 			case *ast.DeleteStmt:
+				result.IsExplainable = true
 				d := stmt.(*ast.DeleteStmt)
 				if d.Where == nil {
 					result.ErrMsg = i18n.GetByKey(i18n.SqlNotAllowNoWhereMsg)
@@ -76,6 +82,7 @@ func ValidateMysqlUpdateSql(sql string) ([]ValidateUpdateResult, bool, error) {
 					result.Pass = true
 				}
 			case *ast.UpdateStmt:
+				result.IsExplainable = true
 				u := stmt.(*ast.UpdateStmt)
 				if u.Where == nil {
 					result.ErrMsg = i18n.GetByKey(i18n.SqlNotAllowNoWhereMsg)

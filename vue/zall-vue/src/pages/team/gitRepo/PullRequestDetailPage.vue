@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <div class="pr-title no-wrap">
       <span class="pr-id">#{{prStore.id}}</span>
       <span>{{prStore.prTitle}}</span>

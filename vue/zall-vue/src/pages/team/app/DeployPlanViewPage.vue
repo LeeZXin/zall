@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:14px">
+  <div style="padding:10px">
     <ul class="info-list" v-if="planDetail">
       <li>
         <div class="info-name">名称</div>

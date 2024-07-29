@@ -11,31 +11,35 @@
         <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
           <a-menu-item key="/mysqlDb/list">
             <DatabaseOutlined />
-            <span>Mysql数据源</span>
+            <span>数据源</span>
           </a-menu-item>
           <a-menu-item key="/mysqlReadPermApply/list">
             <CarryOutOutlined />
-            <span>Mysql读权限申请</span>
-          </a-menu-item>
-          <a-menu-item key="/mysqlReadPermDetail/list">
-            <UnorderedListOutlined />
-            <span>Mysql读权限列表</span>
-          </a-menu-item>
-          <a-menu-item key="/mysqlDataUpdate/list">
-            <BookOutlined />
-            <span>Mysql数据修改单</span>
-          </a-menu-item>
-          <a-menu-item key="/mysqlSearch">
-            <FileSearchOutlined />
-            <span>Mysql数据查询</span>
+            <span>读权限申请</span>
           </a-menu-item>
           <a-menu-item key="/mysqlReadPermAudit/list">
             <AuditOutlined />
-            <span>Mysql读权限审批</span>
+            <span>读权限审批</span>
           </a-menu-item>
-          <a-menu-item key="/mysqlReadPerm/manage">
+          <a-menu-item key="/mysqlReadPermDetail/list">
+            <UnorderedListOutlined />
+            <span>读权限列表</span>
+          </a-menu-item>
+          <a-menu-item key="/mysqlReadPermManage/list">
             <BlockOutlined />
-            <span>Mysql读权限管理</span>
+            <span>读权限管理</span>
+          </a-menu-item>
+          <a-menu-item key="/mysqlDataUpdateApply/list">
+            <BookOutlined />
+            <span>数据修改单</span>
+          </a-menu-item>
+          <a-menu-item key="/mysqlDataUpdateAudit/list">
+            <AuditOutlined />
+            <span>数据修改单审批</span>
+          </a-menu-item>
+          <a-menu-item key="/mysqlSearch">
+            <FileSearchOutlined />
+            <span>数据查询</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -88,7 +92,10 @@ const pagesMap = {
   "/mysqlReadPermApply": "/mysqlReadPermApply/list",
   "/mysqlReadPermAudit": "/mysqlReadPermAudit/list",
   "/mysqlReadPermDetail": "/mysqlReadPermDetail/list",
-  "/mysqlSearch": "/mysqlSearch"
+  "/mysqlSearch": "/mysqlSearch",
+  "/mysqlDataUpdateApply": "/mysqlDataUpdateApply/list",
+  "/mysqlDataUpdateAudit": "/mysqlDataUpdateAudit/list",
+  "/mysqlReadPermManage": "/mysqlReadPermManage/list"
 };
 changeSelectedKey(route.path);
 watch(
