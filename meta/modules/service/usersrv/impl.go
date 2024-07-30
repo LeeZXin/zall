@@ -468,12 +468,12 @@ func (s *outerImpl) ListAllUser(ctx context.Context, reqDTO ListAllUserReqDTO) (
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	users, err := usermd.ListAllUser(ctx)
+	users, err := usermd.ListAllUser(ctx, []string{"account", "name"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(users, func(t usermd.SimpleUserDTO) (SimpleUserDTO, error) {
+	return listutil.Map(users, func(t usermd.User) (SimpleUserDTO, error) {
 		return SimpleUserDTO{
 			Account: t.Account,
 			Name:    t.Name,

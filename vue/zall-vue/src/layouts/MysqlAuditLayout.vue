@@ -17,7 +17,7 @@
             <CarryOutOutlined />
             <span>读权限申请</span>
           </a-menu-item>
-          <a-menu-item key="/mysqlReadPermAudit/list">
+          <a-menu-item key="/mysqlReadPermAudit/list" v-if="userStore.isDba">
             <AuditOutlined />
             <span>读权限审批</span>
           </a-menu-item>
@@ -25,7 +25,7 @@
             <UnorderedListOutlined />
             <span>读权限列表</span>
           </a-menu-item>
-          <a-menu-item key="/mysqlReadPermManage/list">
+          <a-menu-item key="/mysqlReadPermManage/list" v-if="userStore.isDba">
             <BlockOutlined />
             <span>读权限管理</span>
           </a-menu-item>
@@ -33,7 +33,7 @@
             <BookOutlined />
             <span>数据修改单</span>
           </a-menu-item>
-          <a-menu-item key="/mysqlDataUpdateAudit/list">
+          <a-menu-item key="/mysqlDataUpdateAudit/list" v-if="userStore.isDba">
             <AuditOutlined />
             <span>数据修改单审批</span>
           </a-menu-item>
@@ -63,6 +63,8 @@ import {
   BlockOutlined,
   CarryOutOutlined
 } from "@ant-design/icons-vue";
+import { useUserStore } from "@/pinia/userStore";
+const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
 const selectedKeys = ref([]);

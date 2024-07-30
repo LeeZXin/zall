@@ -44,7 +44,7 @@ func InitApi() {
 			group.POST("/updateAdmin", updateAdmin)
 			// 禁用用户
 			group.POST("/setProhibited", setProhibited)
-			// 管理员角色展示所有用户列表
+			// 展示所有用户列表
 			group.GET("/listAll", listAll)
 		}
 	})

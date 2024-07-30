@@ -2,7 +2,6 @@ package usermd
 
 import (
 	"context"
-	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"regexp"
 )
@@ -77,18 +76,10 @@ func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]User, error) {
 	return ret, err
 }
 
-func ListAllUser(ctx context.Context) ([]SimpleUserDTO, error) {
+func ListAllUser(ctx context.Context, cols []string) ([]User, error) {
 	ret := make([]User, 0)
-	err := xormutil.MustGetXormSession(ctx).Cols("account", "name").Find(&ret)
-	if err != nil {
-		return nil, err
-	}
-	return listutil.Map(ret, func(t User) (SimpleUserDTO, error) {
-		return SimpleUserDTO{
-			Account: t.Account,
-			Name:    t.Name,
-		}, nil
-	})
+	err := xormutil.MustGetXormSession(ctx).Cols(cols...).Find(&ret)
+	return ret, err
 }
 
 func UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (bool, error) {

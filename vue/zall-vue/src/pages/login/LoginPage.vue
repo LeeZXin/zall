@@ -61,7 +61,7 @@ const login = () => {
     user.email = res.session.userInfo.email;
     user.isAdmin = res.session.userInfo.isAdmin;
     user.name = res.session.userInfo.name;
-    user.roleType = res.session.userInfo.roleType;
+    user.isDba = res.session.userInfo.isDba;
     user.sessionId = res.session.sessionId;
     user.sessionExpireAt = res.session.expireAt;
     if (route.query && route.query.redirect_uri) {

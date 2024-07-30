@@ -259,7 +259,7 @@ const getApply = item => {
 
 const deleteReadPerm = item => {
   Modal.confirm({
-    title: `你确定要同意${item.account}的权限吗?`,
+    title: `你确定要删除${item.account}的权限吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteReadPermRequest(item.id).then(() => {
