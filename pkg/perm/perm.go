@@ -6,15 +6,17 @@ import (
 )
 
 var (
-	DefaultTeamPerm = TeamPerm{
-		CanCreateRepo:            true,
-		CanCreateDeployPlan:      true,
-		CanManageTimer:           true,
+	DefaultAppPerm = AppPerm{
+		CanDevelop:               true,
 		CanManagePipeline:        true,
 		CanManageServiceSource:   true,
 		CanManagePropertySource:  true,
 		CanManageDiscoverySource: true,
 		CanManagePromAgent:       true,
+		CanCreateDeployPlan:      true,
+	}
+	DefaultTeamPerm = TeamPerm{
+		CanManageTimer: true,
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:              true,
@@ -29,6 +31,7 @@ var (
 	DefaultPermDetail = Detail{
 		TeamPerm:        DefaultTeamPerm,
 		DefaultRepoPerm: DefaultRepoPerm,
+		DefaultAppPerm:  DefaultAppPerm,
 	}
 )
 
@@ -39,8 +42,10 @@ type Detail struct {
 	DefaultRepoPerm RepoPerm `json:"defaultRepoPerm"`
 	// 特殊仓库权限
 	RepoPermList []RepoPermWithId `json:"repoPermList,omitempty"`
-	// 可开发应用
-	DevelopAppList listutil.ComparableList[string] `json:"developAppList,omitempty"`
+	// 应用服务权限
+	DefaultAppPerm AppPerm `json:"defaultAppPerm"`
+	// 特殊应用服务权限
+	AppPermList []AppPermWithId `json:"appPermList,omitempty"`
 }
 
 func (d *Detail) GetRepoPerm(repoId int64) RepoPerm {
@@ -55,14 +60,43 @@ func (d *Detail) GetRepoPerm(repoId int64) RepoPerm {
 	return RepoPerm{}
 }
 
+func (d *Detail) GetAppPerm(appId string) AppPerm {
+	if len(d.AppPermList) == 0 {
+		return d.DefaultAppPerm
+	}
+	for _, p := range d.AppPermList {
+		if p.AppId == appId {
+			return p.AppPerm
+		}
+	}
+	return AppPerm{}
+}
+
 func (d *Detail) IsValid() bool {
-	if len(d.RepoPermList) > 1000 || len(d.DevelopAppList) > 1000 {
+	if len(d.RepoPermList) > 1000 || len(d.AppPermList) > 1000 {
 		return false
 	}
 	for _, repoPerm := range d.RepoPermList {
 		if repoPerm.RepoId <= 0 {
 			return false
 		}
+	}
+	repoIdList, _ := listutil.Map(d.RepoPermList, func(t RepoPermWithId) (int64, error) {
+		return t.RepoId, nil
+	})
+	if len(listutil.Distinct(repoIdList...)) != len(repoIdList) {
+		return false
+	}
+	for _, appPerm := range d.AppPermList {
+		if appPerm.AppId == "" {
+			return false
+		}
+	}
+	appIdList, _ := listutil.Map(d.AppPermList, func(t AppPermWithId) (string, error) {
+		return t.AppId, nil
+	})
+	if len(listutil.Distinct(appIdList...)) != len(appIdList) {
+		return false
 	}
 	return true
 }
@@ -78,6 +112,11 @@ func (d *Detail) ToDB() ([]byte, error) {
 type RepoPermWithId struct {
 	RepoPerm
 	RepoId int64 `json:"repoId"`
+}
+
+type AppPermWithId struct {
+	AppPerm
+	AppId string `json:"appId"`
 }
 
 type RepoPerm struct {
@@ -100,12 +139,13 @@ type RepoPerm struct {
 }
 
 type TeamPerm struct {
-	// 是否可创建仓库
-	CanCreateRepo bool `json:"canCreateRepo"`
-	// 是否可直接创建发布计划
-	CanCreateDeployPlan bool `json:"canCreateDeployPlan"`
 	// 是否可管理定时任务
 	CanManageTimer bool `json:"canManageTimer"`
+}
+
+type AppPerm struct {
+	// 是否可开发
+	CanDevelop bool `json:"canDevelop"`
 	// 是否可管理流水线
 	CanManagePipeline bool `json:"canManagePipeline"`
 	// 是否可管理服务来源
@@ -116,4 +156,6 @@ type TeamPerm struct {
 	CanManageDiscoverySource bool `json:"canManageDiscoverySource"`
 	// 是否可管理监控告警
 	CanManagePromAgent bool `json:"canManagePromAgent"`
+	// 是否可直接创建发布计划
+	CanCreateDeployPlan bool `json:"canCreateDeployPlan"`
 }

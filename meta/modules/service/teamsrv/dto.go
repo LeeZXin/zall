@@ -54,36 +54,6 @@ func (r *DeleteTeamReqDTO) IsValid() error {
 	return nil
 }
 
-type IsAdminReqDTO struct {
-	TeamId   int64               `json:"teamId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *IsAdminReqDTO) IsValid() error {
-	if r.TeamId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type GetTeamPermReqDTO struct {
-	TeamId   int64               `json:"teamId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *GetTeamPermReqDTO) IsValid() error {
-	if r.TeamId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
 type DeleteUserReqDTO struct {
 	RelationId int64               `json:"relationId"`
 	Operator   apisession.UserInfo `json:"operator"`
@@ -230,6 +200,17 @@ func (r *ListTeamReqDTO) IsValid() error {
 	return nil
 }
 
+type ListAllByAdminReqDTO struct {
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAllByAdminReqDTO) IsValid() error {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type UserDTO struct {
 	Account string `json:"account"`
 	Name    string `json:"name"`
@@ -290,4 +271,16 @@ func (r *ChangeRoleReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	return nil
+}
+
+type TeamWithPermDTO struct {
+	Id      int64
+	Name    string
+	IsAdmin bool
+	Perm    perm.TeamPerm
+}
+
+type TeamDTO struct {
+	Id   int64
+	Name string
 }

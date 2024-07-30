@@ -22,6 +22,12 @@ func GetByTeamId(ctx context.Context, id int64) (Team, bool, error) {
 	return ret, b, err
 }
 
+func ExistByTeamId(ctx context.Context, id int64) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Exist(new(Team))
+}
+
 func InsertTeam(ctx context.Context, reqDTO InsertTeamReqDTO) (Team, error) {
 	ret := Team{
 		Name: reqDTO.Name,
@@ -180,6 +186,12 @@ func ListRole(ctx context.Context, teamId int64) ([]Role, error) {
 	err := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
 		Find(&ret)
+	return ret, err
+}
+
+func ListAllTeam(ctx context.Context) ([]Team, error) {
+	ret := make([]Team, 0)
+	err := xormutil.MustGetXormSession(ctx).Find(&ret)
 	return ret, err
 }
 

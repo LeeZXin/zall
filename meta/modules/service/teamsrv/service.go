@@ -3,7 +3,6 @@ package teamsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
-	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/util"
 )
 
@@ -26,14 +25,12 @@ type InnerService interface {
 type OuterService interface {
 	// CreateTeam 创建团队
 	CreateTeam(context.Context, CreateTeamReqDTO) error
+	// UpdateTeam 编辑团队
 	UpdateTeam(context.Context, UpdateTeamReqDTO) error
+	// DeleteTeam 删除团队
 	DeleteTeam(context.Context, DeleteTeamReqDTO) error
-	// IsAdmin 是否是团队管理员
-	IsAdmin(context.Context, IsAdminReqDTO) (bool, error)
-	// GetTeamPerm 获取团队权限
-	GetTeamPerm(context.Context, GetTeamPermReqDTO) (perm.TeamPerm, error)
 	// GetTeam 获取团队信息
-	GetTeam(context.Context, GetTeamReqDTO) (teammd.Team, error)
+	GetTeam(context.Context, GetTeamReqDTO) (TeamWithPermDTO, error)
 	// ListUserByTeamId 获取成员账号
 	ListUserByTeamId(context.Context, ListUserByTeamIdReqDTO) ([]UserDTO, error)
 	// ListRoleUser 展示团队成员角色信息
@@ -51,7 +48,9 @@ type OuterService interface {
 	// ListRole 角色列表
 	ListRole(context.Context, ListRoleReqDTO) ([]RoleDTO, error)
 	// ListTeam 展示用户所在团队列表
-	ListTeam(context.Context, ListTeamReqDTO) ([]teammd.Team, error)
+	ListTeam(context.Context, ListTeamReqDTO) ([]TeamDTO, error)
 	// ChangeRole 更换角色
 	ChangeRole(context.Context, ChangeRoleReqDTO) error
+	// ListAllByAdmin 管理员查看所有团队
+	ListAllByAdmin(context.Context, ListAllByAdminReqDTO) ([]TeamDTO, error)
 }

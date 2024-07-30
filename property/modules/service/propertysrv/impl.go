@@ -558,10 +558,7 @@ func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInf
 	if !b {
 		return util.UnauthorizedError()
 	}
-	if p.IsAdmin {
-		return nil
-	}
-	if p.PermDetail.DevelopAppList.Contains(appId) {
+	if p.IsAdmin || p.PermDetail.GetAppPerm(appId).CanDevelop {
 		return nil
 	}
 	return util.UnauthorizedError()
@@ -583,10 +580,7 @@ func checkManagePropertySourcePermByAppId(ctx context.Context, operator apisessi
 	if !b {
 		return util.UnauthorizedError()
 	}
-	if p.IsAdmin {
-		return nil
-	}
-	if p.PermDetail.TeamPerm.CanManagePropertySource {
+	if p.IsAdmin || p.PermDetail.GetAppPerm(appId).CanManagePropertySource {
 		return nil
 	}
 	return util.UnauthorizedError()
@@ -616,10 +610,7 @@ func checkManagePropertySourcePermBySourceId(ctx context.Context, operator apise
 	if !b {
 		return util.UnauthorizedError()
 	}
-	if p.IsAdmin {
-		return nil
-	}
-	if p.PermDetail.TeamPerm.CanManagePropertySource {
+	if p.IsAdmin || p.PermDetail.GetAppPerm(ps.AppId).CanManagePropertySource {
 		return nil
 	}
 	return util.UnauthorizedError()

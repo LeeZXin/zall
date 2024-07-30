@@ -38,12 +38,12 @@ func (r *CreateRepoReqDTO) IsValid() error {
 	return nil
 }
 
-type GetRepoReqDTO struct {
+type GetRepoAndPermReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *GetRepoReqDTO) IsValid() error {
+func (r *GetRepoAndPermReqDTO) IsValid() error {
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -530,12 +530,12 @@ func (r *TransferTeamReqDTO) IsValid() error {
 	return nil
 }
 
-type SimpleInfoReqDTO struct {
+type GetSimpleInfoReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *SimpleInfoReqDTO) IsValid() error {
+func (r *GetSimpleInfoReqDTO) IsValid() error {
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -545,7 +545,22 @@ func (r *SimpleInfoReqDTO) IsValid() error {
 	return nil
 }
 
-type SimpleInfoRespDTO struct {
+type GetDetailInfoReqDTO struct {
+	RepoId   int64               `json:"repoId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetDetailInfoReqDTO) IsValid() error {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type SimpleInfoDTO struct {
 	Branches     []string `json:"branches"`
 	Tags         []string `json:"tags"`
 	CloneHttpUrl string   `json:"cloneHttpUrl"`
@@ -577,15 +592,15 @@ func (r *PageRefCommitsReqDTO) IsValid() error {
 }
 
 type BranchCommitDTO struct {
-	Name              string          `json:"name"`
-	IsProtectedBranch bool            `json:"isProtectedBranch"`
-	LastCommit        CommitDTO       `json:"lastCommit"`
-	LastPullRequest   *PullRequestDTO `json:"lastPullRequest,omitempty"`
+	Name              string
+	IsProtectedBranch bool
+	LastCommit        CommitDTO
+	LastPullRequest   *PullRequestDTO
 }
 
 type TagCommitDTO struct {
-	Name   string    `json:"name"`
-	Commit CommitDTO `json:"commit"`
+	Name   string
+	Commit CommitDTO
 }
 
 type PullRequestDTO struct {
@@ -752,4 +767,5 @@ func (r *ListRepoByAdminReqDTO) IsValid() error {
 type SimpleRepoDTO struct {
 	RepoId int64
 	Name   string
+	TeamId int64
 }

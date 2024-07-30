@@ -20,6 +20,9 @@ func GetByKey(ctx context.Context, kv util.KeyVal) (bool, error) {
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("cfg_key = ?", kv.Key()).
 		Get(&ret)
+	if err != nil {
+		return false, err
+	}
 	if b {
 		err = kv.FromStore(ret.Content)
 	}

@@ -12,16 +12,16 @@
     @close="closeDrawer"
   >
     <div class="drawer-item">
-      <key-outlined style="font-size:18px" />
+      <KeyOutlined style="font-size:18px" />
       <span>{{t("settings.sshAndGpg")}}</span>
     </div>
     <div class="drawer-item">
-      <user-outlined style="font-size:18px" />
+      <LockOutlined style="font-size:18px" />
       <span>修改密码</span>
     </div>
     <div class="drawer-item">
-      <user-outlined style="font-size:18px" />
-      <span>后台管理</span>
+      <UserOutlined style="font-size:18px" />
+      <span>超级管理员</span>
     </div>
     <a-divider style="margin-bottom: 10px" />
     <div>
@@ -33,7 +33,7 @@
 import { useUserStore } from "@/pinia/userStore";
 import { defineProps, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { UserOutlined, KeyOutlined } from "@ant-design/icons-vue";
+import { UserOutlined, KeyOutlined, LockOutlined } from "@ant-design/icons-vue";
 import { useRouter } from "vue-router";
 import { logoutRequest } from "@/api/user/loginApi";
 const bodyStyle = {

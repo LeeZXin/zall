@@ -53,7 +53,10 @@ func ListAppByTeamId(ctx context.Context, teamId int64) ([]App, error) {
 
 func GetByAppIdList(ctx context.Context, appIdList []string) ([]App, error) {
 	ret := make([]App, 0)
-	err := xormutil.MustGetXormSession(ctx).In("app_id", appIdList).Desc("id").Find(&ret)
+	err := xormutil.MustGetXormSession(ctx).
+		In("app_id", appIdList).
+		Desc("id").
+		Find(&ret)
 	return ret, err
 }
 
@@ -71,7 +74,7 @@ func ExistByAppId(ctx context.Context, appId string) (bool, error) {
 		Exist(new(App))
 }
 
-func CountByTeamId(ctx context.Context, teamId int64) (int64, error) {
+func CountAppByTeamId(ctx context.Context, teamId int64) (int64, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
 		Count(new(App))

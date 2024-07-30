@@ -1,13 +1,13 @@
 package usermd
 
 type UserInfo struct {
-	Account      string   `json:"account"`
-	Name         string   `json:"name"`
-	Email        string   `json:"email"`
-	IsProhibited bool     `json:"isProhibited"`
-	AvatarUrl    string   `json:"avatarUrl"`
-	IsAdmin      bool     `json:"isAdmin"`
-	RoleType     RoleType `json:"roleType"`
+	Account      string `json:"account"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	IsProhibited bool   `json:"isProhibited"`
+	AvatarUrl    string `json:"avatarUrl"`
+	IsAdmin      bool   `json:"isAdmin"`
+	IsDba        bool   `json:"isDba"`
 }
 
 func (i *UserInfo) IsValid() bool {
@@ -21,7 +21,7 @@ type InsertUserReqDTO struct {
 	Password  string
 	AvatarUrl string
 	IsAdmin   bool
-	RoleType  RoleType
+	IsDba     bool
 }
 
 type UpdateUserReqDTO struct {

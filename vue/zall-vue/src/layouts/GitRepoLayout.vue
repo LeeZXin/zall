@@ -29,23 +29,26 @@
             <cloud-upload-outlined />
             <span>提交历史</span>
           </a-menu-item>
-          <a-menu-item key="/workflow/list">
+          <a-menu-item
+            key="/workflow/list"
+            v-if="repo.perm?.canManageWorkflow ||  repo.perm?.canTriggerWorkflow"
+          >
             <node-index-outlined />
             <span>工作流</span>
           </a-menu-item>
-          <a-menu-item key="/protectedBranch/list" v-if="isAdmin">
+          <a-menu-item key="/protectedBranch/list" v-if="teamStore.isAdmin">
             <branches-outlined />
             <span>保护分支</span>
           </a-menu-item>
-          <a-menu-item key="/webhook/list" v-if="isAdmin">
+          <a-menu-item key="/webhook/list" v-if="repo.perm?.canManageWebhook">
             <api-outlined />
             <span>Webhook</span>
           </a-menu-item>
-          <a-menu-item key="/opLogs" v-if="isAdmin">
+          <a-menu-item key="/opLogs" v-if="teamStore.isAdmin">
             <calendar-outlined />
             <span>操作日志</span>
           </a-menu-item>
-          <a-menu-item key="/config" v-if="isAdmin">
+          <a-menu-item key="/config" v-if="teamStore.isAdmin">
             <setting-outlined />
             <span>设置</span>
           </a-menu-item>
@@ -80,8 +83,10 @@ import {
   NodeIndexOutlined
 } from "@ant-design/icons-vue";
 import { getRepoRequest } from "@/api/git/repoApi";
-import { isTeamAdminRequest } from "@/api/team/teamApi";
+import { getTeamRequest } from "@/api/team/teamApi";
 import { useRepoStore } from "@/pinia/repoStore";
+import { useTeamStore } from "@/pinia/teamStore";
+const teamStore = useTeamStore();
 const { t } = useI18n();
 const collapsed = ref(false);
 const router = useRouter();
@@ -89,9 +94,8 @@ const route = useRoute();
 const repo = useRepoStore();
 const selectedKeys = ref([]);
 const routeKey = `/team/${route.params.teamId}/gitRepo/${route.params.repoId}`;
-const routerActive = ref(true);
+const routerActive = ref(false);
 const container = ref(null);
-const isAdmin = ref(false);
 // 为了子页面能体现在导航栏
 const pagesMap = {
   "/index": "/index",
@@ -115,21 +119,23 @@ const clickPage = event => {
     force: true
   });
 };
-const getIsTeamAdmin = () => {
-  isTeamAdminRequest(repo.teamId).then(res => {
-    isAdmin.value = res.data;
-  });
-};
-if (repo.repoId === 0) {
-  getRepoRequest(parseInt(route.params.repoId)).then(res => {
+const getRepo = () => {
+  getRepoRequest(route.params.repoId).then(res => {
     repo.repoId = res.data.repoId;
     repo.name = res.data.name;
     repo.teamId = res.data.teamId;
-    getIsTeamAdmin();
+    repo.perm = res.data.perm;
+    routerActive.value = true;
   });
-} else {
-  getIsTeamAdmin();
-}
+};
+const getTeam = () => {
+  getTeamRequest(route.params.teamId).then(res => {
+    teamStore.teamId = res.data.teamId;
+    teamStore.name = res.data.name;
+    teamStore.isAdmin = res.data.isAdmin;
+    teamStore.perm = res.data.perm;
+  });
+};
 const changeSelectedKey = path => {
   const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
   for (let key in pagesMap) {
@@ -140,6 +146,10 @@ const changeSelectedKey = path => {
     }
   }
 };
+if (teamStore.teamId === 0) {
+  getTeam();
+}
+getRepo();
 changeSelectedKey(route.path);
 provide("gitRepoLayoutReload", () => {
   routerActive.value = false;

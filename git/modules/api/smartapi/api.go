@@ -11,6 +11,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/http/httpserver"
+	"github.com/LeeZXin/zsf/logger"
 	"github.com/gin-gonic/gin"
 	"html"
 	"net/http"
@@ -47,8 +48,9 @@ func handleGoGet(c *gin.Context) {
 			c.Next()
 			return
 		}
-		cfg, b := cfgsrv.Inner.GetGitCfg()
-		if !b {
+		cfg, err := cfgsrv.Inner.GetGitCfg()
+		if err != nil {
+			logger.Logger.WithContext(c).Error(err)
 			c.String(http.StatusInternalServerError, "")
 			return
 		}

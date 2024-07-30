@@ -5,7 +5,6 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -71,42 +70,7 @@ func newOuterService() OuterService {
 	return new(outerImpl)
 }
 
-func CreateSuperAdmin() {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
-	_, b, err := usermd.GetByAccount(ctx, "superAdmin")
-	if err != nil {
-		logger.Logger.Fatalf("create super admin failed: %v", err)
-	}
-	if !b {
-		password := "superAdmin"
-		const account = "superAdmin"
-		err = usermd.InsertUser(ctx, usermd.InsertUserReqDTO{
-			Account:   account,
-			Name:      "SuperAdmin",
-			Email:     "admin@noreply.com",
-			Password:  util.EncryptUserPassword(password),
-			AvatarUrl: "",
-			IsAdmin:   true,
-			RoleType:  usermd.DeveloperRole,
-		})
-		if err != nil {
-			logger.Logger.Fatalf("create super admin failed: %v", err)
-		}
-		logger.Logger.Infof("create administrator account: %s, password: %s, please change password first!!!", account, password)
-	}
-}
-
 func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (session apisession.Session, err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Account,
-			OpDesc:     i18n.GetByKey(i18n.UserSrvKeysVO.Login),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
@@ -154,6 +118,7 @@ func (s *outerImpl) Login(ctx context.Context, reqDTO LoginReqDTO) (session apis
 			IsProhibited: user.IsProhibited,
 			AvatarUrl:    user.AvatarUrl,
 			IsAdmin:      user.IsAdmin,
+			IsDba:        user.IsDba,
 		},
 		ExpireAt: expireAt,
 	}
@@ -204,15 +169,6 @@ func (*outerImpl) Logout(ctx context.Context, reqDTO LogoutReqDTO) error {
 }
 
 func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.UserSrvKeysVO.Login),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
@@ -230,7 +186,6 @@ func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (er
 		Email:     reqDTO.Email,
 		Password:  util.EncryptUserPassword(reqDTO.Password),
 		AvatarUrl: reqDTO.AvatarUrl,
-		RoleType:  usermd.DeveloperRole,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -241,29 +196,39 @@ func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (er
 
 // RegisterUser 注册用户
 func (*outerImpl) RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Account,
-			OpDesc:     i18n.GetByKey(i18n.UserSrvKeysVO.RegisterUser),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 获取系统配置检查是否禁用注册功能
-	sysCfg, b := cfgsrv.Inner.GetSysCfg()
-	if !b || sysCfg.DisableSelfRegisterUser {
+	sysCfg, err := cfgsrv.Inner.GetSysCfg(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if sysCfg.DisableSelfRegisterUser {
 		err = util.UnauthorizedError()
 		return
 	}
+	var (
+		b         bool
+		userCount int64
+	)
 	_, b, err = usermd.GetByAccount(ctx, reqDTO.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+	}
 	if b {
 		err = util.NewBizErr(apicode.UserAlreadyExistsCode, i18n.UserAlreadyExists)
+		return
+	}
+	userCount, err = usermd.CountAllUsers(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
 		return
 	}
 	// 添加账号
@@ -272,8 +237,7 @@ func (*outerImpl) RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (
 		Name:     reqDTO.Name,
 		Email:    reqDTO.Email,
 		Password: util.EncryptUserPassword(reqDTO.Password),
-		IsAdmin:  false,
-		RoleType: usermd.DeveloperRole,
+		IsAdmin:  userCount == 0,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -284,15 +248,6 @@ func (*outerImpl) RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (
 
 // DeleteUser 注销用户
 func (*outerImpl) DeleteUser(ctx context.Context, reqDTO DeleteUserReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.UserSrvKeysVO.DeleteUser),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
@@ -316,14 +271,13 @@ func (*outerImpl) DeleteUser(ctx context.Context, reqDTO DeleteUserReqDTO) (err 
 	// 数据库删除用户
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 用户表
-		_, err := usermd.DeleteUser(ctx, reqDTO.Operator.Account)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
+		_, err2 := usermd.DeleteUser(ctx, reqDTO.Operator.Account)
+		if err2 != nil {
+			return err2
 		}
 		// 权限表
-		_, err = teammd.DeleteAllTeamUserByAccount(ctx, reqDTO.Account)
-		return err
+		_, err2 = teammd.DeleteAllTeamUserByAccount(ctx, reqDTO.Account)
+		return err2
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -375,15 +329,6 @@ func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDT
 }
 
 func (*outerImpl) UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.UserSrvKeysVO.UpdateUser),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
@@ -417,15 +362,6 @@ func (*outerImpl) UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (err 
 }
 
 func (*outerImpl) UpdateAdmin(ctx context.Context, reqDTO UpdateAdminReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.UserSrvKeysVO.UpdateAdmin),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
@@ -463,15 +399,6 @@ func (*outerImpl) UpdateAdmin(ctx context.Context, reqDTO UpdateAdminReqDTO) (er
 }
 
 func (*outerImpl) UpdatePassword(ctx context.Context, reqDTO UpdatePasswordReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.UserSrvKeysVO.UpdatePassword),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
@@ -499,15 +426,6 @@ func (*outerImpl) UpdatePassword(ctx context.Context, reqDTO UpdatePasswordReqDT
 }
 
 func (s *outerImpl) SetProhibited(ctx context.Context, reqDTO SetProhibitedReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.UserSrvKeysVO.SetProhibited),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}

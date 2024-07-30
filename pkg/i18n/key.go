@@ -298,41 +298,9 @@ var (
 )
 
 var (
-	TimerTaskPendingStatus = KeyItem{
-		Id:         "timerTask.pending",
-		DefaultRet: "等待执行",
-	}
-	TimerTaskRunningStatus = KeyItem{
-		Id:         "timerTask.running",
-		DefaultRet: "正在执行",
-	}
-	TimerTaskSuccessfulStatus = KeyItem{
-		Id:         "timerTask.successful",
-		DefaultRet: "执行成功",
-	}
-	TimerTaskFailedStatus = KeyItem{
-		Id:         "timerTask.failed",
-		DefaultRet: "执行失败",
-	}
-	TimerTaskClosedStatus = KeyItem{
-		Id:         "timerTask.pending",
-		DefaultRet: "已关闭",
-	}
-	TimerTaskUnknownStatus = KeyItem{
-		Id:         "timerTask.pending",
-		DefaultRet: "未知",
-	}
-	TimerTaskAutoTriggerType = KeyItem{
-		Id:         "timerTask.autoTriggerType",
-		DefaultRet: "自动触发",
-	}
-	TimerTaskManualTriggerType = KeyItem{
-		Id:         "timerTask.manualTriggerType",
-		DefaultRet: "手动触发",
-	}
-	TimerTaskUnknownTriggerType = KeyItem{
-		Id:         "timerTask.unknownTriggerType",
-		DefaultRet: "未知",
+	TimerTaskRemainCountGreaterThanZero = KeyItem{
+		Id:         "timerTask.remainCountGreaterThanZero",
+		DefaultRet: "定时任务数量仍大于0",
 	}
 )
 
@@ -414,42 +382,6 @@ var (
 	WorkflowUnknownTriggerType = KeyItem{
 		Id:         "action.unknownTriggerType",
 		DefaultRet: "未知类型触发",
-	}
-	WorkflowTaskRunningStatus = KeyItem{
-		Id:         "action.taskRunningStatus",
-		DefaultRet: "执行中",
-	}
-	WorkflowTaskSuccessStatus = KeyItem{
-		Id:         "action.taskSuccessStatus",
-		DefaultRet: "执行成功",
-	}
-	WorkflowTaskFailStatus = KeyItem{
-		Id:         "action.taskFailStatus",
-		DefaultRet: "执行失败",
-	}
-	WorkflowTaskUnknownStatus = KeyItem{
-		Id:         "action.taskUnknownStatus",
-		DefaultRet: "未知状态",
-	}
-	WorkflowStepWaitingStatus = KeyItem{
-		Id:         "action.stepWaitingStatus",
-		DefaultRet: "未执行",
-	}
-	WorkflowStepRunningStatus = KeyItem{
-		Id:         "action.stepRunningStatus",
-		DefaultRet: "执行中",
-	}
-	WorkflowStepSuccessStatus = KeyItem{
-		Id:         "action.stepSuccessStatus",
-		DefaultRet: "执行成功",
-	}
-	WorkflowStepFailStatus = KeyItem{
-		Id:         "action.stepFailStatus",
-		DefaultRet: "执行失败",
-	}
-	WorkflowStepUnknownStatus = KeyItem{
-		Id:         "action.stepUnknownStatus",
-		DefaultRet: "未知状态",
 	}
 )
 

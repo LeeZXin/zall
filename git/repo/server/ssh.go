@@ -92,14 +92,15 @@ func InitSshServer() zsf.LifeCycle {
 
 func handleGitCommand(user *usermd.UserInfo, session ssh.Session) error {
 	ctx := session.Context()
-	gitCfg, b := cfgsrv.Inner.GetGitCfg()
-	if !b {
+	gitCfg, err := cfgsrv.Inner.GetGitCfg()
+	if err != nil {
+		logger.Logger.Error(err)
 		return errors.New(i18n.GetByKey(i18n.SystemInternalError))
 	}
 	cmd := session.RawCommand()
 	// 命令为空
 	if cmd == "" {
-		_, err := fmt.Fprintln(session, fmt.Sprintf(hiWords, user.Name))
+		_, err = fmt.Fprintln(session, fmt.Sprintf(hiWords, user.Name))
 		return err
 	}
 	words, err := shellquote.Split(cmd)

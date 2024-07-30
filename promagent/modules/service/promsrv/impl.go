@@ -128,7 +128,7 @@ func checkManagePromAgentPermByAppId(ctx context.Context, appId string, operator
 	if !b {
 		return util.UnauthorizedError()
 	}
-	if p.IsAdmin || p.PermDetail.TeamPerm.CanManagePromAgent {
+	if p.IsAdmin || p.PermDetail.GetAppPerm(appId).CanManagePromAgent {
 		return nil
 	}
 	return util.UnauthorizedError()

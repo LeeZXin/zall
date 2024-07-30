@@ -17,15 +17,18 @@ func Init() {
 }
 
 type InnerService interface {
-	GetSysCfg() (SysCfg, bool)
+	// GetSysCfg 获取系统配置
+	GetSysCfg(context.Context) (SysCfg, error)
 	InitSysCfg()
-	GetGitCfg() (GitCfg, bool)
+	// GetGitCfg 获取git配置
+	GetGitCfg() (GitCfg, error)
 	InitGitCfg()
-	GetEnvCfg() ([]string, bool)
+	// GetEnvCfg 获取环境配置
+	GetEnvCfg(context.Context) ([]string, error)
 	InitEnvCfg()
 	ContainsEnv(string) bool
-	// GetGitRepoServerCfg 获取git服务器地址 从缓存中获取
-	GetGitRepoServerCfg() (GitRepoServerCfg, bool)
+	// GetGitRepoServerCfg 获取git服务器地址
+	GetGitRepoServerCfg() (GitRepoServerCfg, error)
 }
 
 type OuterService interface {

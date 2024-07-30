@@ -187,7 +187,7 @@ func checkPermByAppId(ctx context.Context, appId string, operator apisession.Use
 	if p.IsAdmin {
 		return nil
 	}
-	if p.PermDetail.DevelopAppList.Contains(appId) {
+	if p.PermDetail.GetAppPerm(appId).CanDevelop {
 		return nil
 	}
 	return util.UnauthorizedError()

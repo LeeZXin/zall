@@ -90,7 +90,7 @@ func UpdateLastOperated(ctx context.Context, repoId int64, lastOperated time.Tim
 	return rows == 1, err
 }
 
-func GetRepoListByTeamId(ctx context.Context, teamId int64) ([]Repo, error) {
+func ListRepoByTeamId(ctx context.Context, teamId int64) ([]Repo, error) {
 	ret := make([]Repo, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
@@ -162,10 +162,9 @@ func SetRepoUnDeleted(ctx context.Context, repoId int64) (bool, error) {
 	return rows == 1, err
 }
 
-func CountByTeamId(ctx context.Context, teamId int64) (int64, error) {
+func CountRepoByTeamId(ctx context.Context, teamId int64) (int64, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
-		And("is_deleted = 0").
 		Count(new(Repo))
 }
 

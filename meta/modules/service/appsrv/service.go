@@ -19,11 +19,12 @@ type OuterService interface {
 	DeleteApp(context.Context, DeleteAppReqDTO) error
 	// UpdateApp 编辑应用服务
 	UpdateApp(context.Context, UpdateAppReqDTO) error
-	// GetApp 获取服务信息
-	GetApp(context.Context, GetAppReqDTO) (AppDTO, error)
+	// GetAppWithPerm 获取服务信息
+	GetAppWithPerm(context.Context, GetAppWithPermReqDTO) (AppWithPermDTO, error)
 	// ListApp 应用服务列表
 	ListApp(context.Context, ListAppReqDTO) ([]AppDTO, error)
 	// ListAllAppByAdmin 所有应用服务列表 管理员权限
 	ListAllAppByAdmin(context.Context, ListAppReqDTO) ([]AppDTO, error)
+	// TransferTeam 迁移团队
 	TransferTeam(context.Context, TransferTeamReqDTO) error
 }

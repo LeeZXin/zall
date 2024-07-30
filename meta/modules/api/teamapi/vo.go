@@ -56,8 +56,11 @@ type TeamVO struct {
 	Name   string `json:"name"`
 }
 
-type DeleteTeamReqVO struct {
-	TeamId int64 `json:"teamId"`
+type TeamWithPermVO struct {
+	TeamId  int64         `json:"teamId"`
+	Name    string        `json:"name"`
+	IsAdmin bool          `json:"isAdmin"`
+	Perm    perm.TeamPerm `json:"perm"`
 }
 
 type ChangeRoleReqVO struct {

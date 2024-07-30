@@ -1,7 +1,7 @@
 <template>
   <a-layout>
     <a-layout-header style="font-size:22px;color:white">
-      <span>{{team.name}}</span>
+      <span>{{teamStore.name}}</span>
       <span class="switch-text" @click="switchTeam">{{t("switchTeam")}}</span>
       <AvatarName style="float:right;" />
       <I18nSelect style="float:right;margin-right: 20px" />
@@ -17,22 +17,22 @@
             <appstore-outlined />
             <span>{{t("teamMenu.app")}}</span>
           </a-menu-item>
-          <a-menu-item key="/timerTask/list">
+          <a-menu-item key="/timerTask/list" v-if="teamStore.perm?.canManageTimer">
             <clock-circle-outlined />
             <span>{{t("teamMenu.timerTask")}}</span>
           </a-menu-item>
-          <a-menu-item key="/role/list" v-if="isAdmin">
+          <a-menu-item key="/role/list" v-if="teamStore.isAdmin">
             <user-outlined />
             <span>{{t("teamMenu.roleAndMembers")}}</span>
           </a-menu-item>
-          <a-menu-item key="/team/settings" v-if="isAdmin">
+          <a-menu-item key="/settings" v-if="teamStore.isAdmin">
             <setting-outlined />
             <span>设置</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
       <a-layout-content style="height: calc(100vh - 64px); overflow: scroll;background-color:white">
-        <router-view />
+        <router-view v-if="teamInfoLoaded" />
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -51,8 +51,9 @@ import {
   SettingOutlined,
   UserOutlined
 } from "@ant-design/icons-vue";
-import { isTeamAdminRequest, getTeamRequest } from "@/api/team/teamApi";
-const team = useTeamStore();
+import { getTeamRequest } from "@/api/team/teamApi";
+const teamStore = useTeamStore();
+const teamInfoLoaded = ref(false);
 const router = useRouter();
 const { t } = useI18n();
 const collapsed = ref(false);
@@ -62,7 +63,6 @@ const routeKey = `/team/${route.params.teamId}`;
 const switchTeam = () => {
   router.push("/index");
 };
-const isAdmin = ref(false);
 const onselect = event => {
   router.push({
     path: routeKey + event.key,
@@ -84,18 +84,17 @@ const pagesMap = {
   "/gitRepo": "/gitRepo/list",
   "/role": "/role/list",
   "/timerTask": "/timerTask/list",
-  "/app": "/app/list"
+  "/app": "/app/list",
+  "/settings": "/settings"
 };
 changeSelectedKey(route.path);
-isTeamAdminRequest(route.params.teamId).then(res => {
-  isAdmin.value = res.data;
+getTeamRequest(route.params.teamId).then(res => {
+  teamStore.teamId = res.data.teamId;
+  teamStore.name = res.data.name;
+  teamStore.isAdmin = res.data.isAdmin;
+  teamStore.perm = res.data.perm;
+  teamInfoLoaded.value = true;
 });
-if (team.teamId === 0) {
-  getTeamRequest(route.params.teamId).then(res => {
-    team.teamId = res.data.teamId;
-    team.name = res.data.name;
-  });
-}
 watch(
   () => router.currentRoute.value.path,
   newPath => changeSelectedKey(newPath)

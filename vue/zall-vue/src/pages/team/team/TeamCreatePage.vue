@@ -2,12 +2,15 @@
   <div style="padding: 10px">
     <div class="container">
       <div class="title">创建团队</div>
-      <div class="form-item">
-        <div class="label">
+      <div class="section">
+        <div class="section-title">
           <span>{{t("createTeam.teamName")}}</span>
         </div>
-        <div>
-          <a-input type="input" v-model:value="teamName" />
+        <div class="section-body">
+          <div class="input-item">
+            <a-input v-model:value="teamName" />
+          </div>
+          <div class="input-desc">不包含特殊字符,长度不得超过32</div>
         </div>
       </div>
       <div class="form-item">

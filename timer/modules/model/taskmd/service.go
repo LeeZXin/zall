@@ -179,6 +179,12 @@ func DeleteExecuteByTaskId(ctx context.Context, taskId int64) (bool, error) {
 	return rows == 1, err
 }
 
+func CountTaskByTeamId(ctx context.Context, teamId int64) (int64, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("team_id = ?", teamId).
+		Count(new(Task))
+}
+
 func DeleteLogByTaskId(ctx context.Context, taskId int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Where("task_id = ?", taskId).

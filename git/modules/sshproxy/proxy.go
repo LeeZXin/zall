@@ -1,7 +1,7 @@
 package sshproxy
 
 import (
-	"errors"
+	"fmt"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/git"
 	zssh "github.com/LeeZXin/zall/pkg/ssh"
@@ -67,9 +67,9 @@ func handleGitCommand(session ssh.Session) error {
 }
 
 func pickRepoSshHost() (string, error) {
-	cfg, b := cfgsrv.Inner.GetGitRepoServerCfg()
-	if !b {
-		return "", errors.New("git repo server ssh host is not set")
+	cfg, err := cfgsrv.Inner.GetGitRepoServerCfg()
+	if err != nil {
+		return "", fmt.Errorf("git repo server ssh host is not set: %w", err)
 	}
 	return cfg.SshHost, nil
 }

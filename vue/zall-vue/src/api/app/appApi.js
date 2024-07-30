@@ -12,11 +12,14 @@ const getAppRequest = (appId) => request.get("/api/app/get/" + appId);
 const updateAppRequest = (data) => request.post("/api/app/update", data);
 // 删除应用服务
 const deleteAppRequest = (appId) => request.delete("/api/app/delete/" + appId);
+// 迁移团队
+const transferAppRequest = (data) => request.put("/api/app/transferTeam", data);
 export {
     listAppRequest,
     createAppRequest,
     listAllAppByAdminRequest,
     getAppRequest,
     updateAppRequest,
-    deleteAppRequest
+    deleteAppRequest,
+    transferAppRequest
 }

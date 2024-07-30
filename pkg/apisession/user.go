@@ -2,17 +2,16 @@ package apisession
 
 import (
 	"encoding/json"
-	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 )
 
 type UserInfo struct {
-	Account      string          `json:"account"`
-	Name         string          `json:"name"`
-	Email        string          `json:"email"`
-	IsProhibited bool            `json:"isProhibited"`
-	AvatarUrl    string          `json:"avatarUrl"`
-	IsAdmin      bool            `json:"isAdmin"`
-	RoleType     usermd.RoleType `json:"roleType"`
+	Account      string `json:"account"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	IsProhibited bool   `json:"isProhibited"`
+	AvatarUrl    string `json:"avatarUrl"`
+	IsAdmin      bool   `json:"isAdmin"`
+	IsDba        bool   `json:"isDba"`
 }
 
 func (i *UserInfo) IsValid() bool {

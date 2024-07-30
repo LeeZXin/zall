@@ -3,10 +3,8 @@ import request from '@/utils/request.js'
 const getTeamListRequest = () => request.get("/api/team/list");
 // 创建团队
 const createTeamRequest = (data) => request.post("/api/team/create", data);
-// 是否是团队管理员
-const isTeamAdminRequest = (teamId) => request.get("/api/team/isAdmin/" + teamId);
-// 获取团队权限
-const getTeamPermRequest = (teamId) => request.get("/api/team/getTeamPerm/" + teamId);
+// 编辑团队
+const updateTeamRequest = (data) => request.post("/api/team/update", data);
 // 获取单个团队信息
 const getTeamRequest = (teamId) => request.get("/api/team/get/" + teamId);
 // 获取团队成员账号
@@ -27,11 +25,13 @@ const createTeamUserRequest = (data) => request.post("/api/teamUser/create", dat
 const deleteTeamUserRequest = (relationId) => request.delete("/api/teamUser/delete/" + relationId);
 // 更换角色
 const changeRoleRequest = (data) => request.post("/api/teamUser/change", data);
+// 删除团队
+const deleteTeamRequest = (teamId) => request.delete("/api/team/delete/" + teamId);
+// 管理员获取所有团队列表
+const listAllByAdminRequest = () => request.get("/api/team/listAllByAdmin");
 export {
     getTeamListRequest,
     createTeamRequest,
-    isTeamAdminRequest,
-    getTeamPermRequest,
     getTeamRequest,
     listUserByTeamIdRequest,
     listRolesRequest,
@@ -41,5 +41,8 @@ export {
     listRoleUserRequest,
     createTeamUserRequest,
     deleteTeamUserRequest,
-    changeRoleRequest
+    changeRoleRequest,
+    updateTeamRequest,
+    deleteTeamRequest,
+    listAllByAdminRequest
 }

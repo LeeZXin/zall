@@ -107,7 +107,8 @@ const gotoUpdatePage = item => {
   teamRoleStore.teamPerm = item.perm.teamPerm;
   teamRoleStore.defaultRepoPerm = item.perm.defaultRepoPerm;
   teamRoleStore.repoPermList = item.perm.repoPermList;
-  teamRoleStore.developAppList = item.perm.developAppList;
+  teamRoleStore.defaultAppPerm = item.perm.defaultAppPerm;
+  teamRoleStore.appPermList = item.perm.appPermList;
   router.push(`/team/${route.params.teamId}/role/${item.roleId}/update`);
 };
 const gotoUserPage = () => {

@@ -10,7 +10,7 @@
       <a-button
         type="primary"
         @click="gotoCreatePage"
-        v-if="canCreateRepo"
+        v-if="teamStore.isAdmin"
         :icon="h(PlusOutlined)"
       >{{t("gitRepo.createRepoText")}}</a-button>
       <a-button
@@ -19,14 +19,17 @@
         :icon="h(DeleteOutlined)"
         danger
         style="float:right"
+        v-if="teamStore.isAdmin"
       >仓库回收站</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="repoList" v-if="wholeRepoList.length > 0">
+    <ZTable :columns="columns" :dataSource="repoList">
       <template #bodyCell="{dataIndex, dataItem}">
         <span @click="checkRepo(dataItem)" class="check-btn" v-if="dataIndex === 'operation'">查看</span>
         <span v-else-if="dataIndex === 'gitSize'">{{readableVolumeSize(dataItem[dataIndex])}}</span>
         <span v-else-if="dataIndex === 'lfsSize'">{{readableVolumeSize(dataItem[dataIndex])}}</span>
-        <span v-else-if="dataIndex === 'lastOperated'">{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
+        <span
+          v-else-if="dataIndex === 'lastOperated'"
+        >{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
         <span v-else-if="dataIndex === 'name'">
           <span>{{dataItem[dataIndex]}}</span>
           <a-tag v-if="dataItem['isArchived']" color="red" style="margin-left:4px">已归档</a-tag>
@@ -34,33 +37,22 @@
         <span v-else>{{dataItem[dataIndex]}}</span>
       </template>
     </ZTable>
-    <ZNoData v-else>
-      <template #desc>
-        <div class="no-data">
-          <span v-if="canCreateRepo">暂无仓库数据, 你可点击上方"创建仓库"</span>
-          <span v-else>暂无仓库数据, 管理员已禁用“创建仓库”权限</span>
-        </div>
-      </template>
-    </ZNoData>
   </div>
 </template>
 <script setup>
-import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons-vue";
 import { ref, h } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter, useRoute } from "vue-router";
-import { getTeamPermRequest } from "@/api/team/teamApi";
 import { getRepoListRequest } from "@/api/git/repoApi";
-import { useRepoStore } from "@/pinia/repoStore";
 import { readableVolumeSize } from "@/utils/size";
 import { readableTimeComparingNow } from "@/utils/time";
+import { useTeamStore } from "@/pinia/teamStore";
+const teamStore = useTeamStore();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-// 是否可以创建仓库
-const canCreateRepo = ref(false);
 // 搜索框key
 const searchRepo = ref("");
 // 所有仓库列表
@@ -118,10 +110,6 @@ const columns = [
     key: "operation"
   }
 ];
-// 获取团队权限 判断是否可以创建仓库
-getTeamPermRequest(route.params.teamId).then(res => {
-  canCreateRepo.value = res.data.canCreateRepo;
-});
 // 获取仓库列表
 getRepoListRequest(route.params.teamId).then(res => {
   const ret = res.data.map(item => {
@@ -135,18 +123,10 @@ getRepoListRequest(route.params.teamId).then(res => {
 });
 // 跳转仓库代码首页
 const checkRepo = item => {
-  const repo = useRepoStore();
-  repo.repoId = item.repoId;
-  repo.name = item.name;
-  repo.teamId = item.teamId;
   router.push(`/team/${route.params.teamId}/gitRepo/${item.repoId}/index`);
 };
 </script>
 <style scoped>
-.no-data {
-  font-size: 16px;
-  text-align: center;
-}
 .check-btn {
   font-size: 14px;
 }

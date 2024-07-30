@@ -77,7 +77,7 @@ func checkAppDevelopPerm(ctx context.Context, operator apisession.UserInfo, app 
 	if p.IsAdmin {
 		return nil
 	}
-	if !p.PermDetail.DevelopAppList.Contains(app.AppId) {
+	if !p.PermDetail.GetAppPerm(app.AppId).CanDevelop {
 		return util.UnauthorizedError()
 	}
 	return nil
@@ -138,8 +138,7 @@ func checkCreateDeployPlanPerm(ctx context.Context, operator apisession.UserInfo
 	if p.IsAdmin {
 		return nil
 	}
-	if !p.PermDetail.DevelopAppList.Contains(app.AppId) ||
-		!p.PermDetail.TeamPerm.CanCreateDeployPlan {
+	if !p.PermDetail.GetAppPerm(app.AppId).CanCreateDeployPlan {
 		return util.UnauthorizedError()
 	}
 	return nil
@@ -162,7 +161,7 @@ func checkManagePipelinePermByAppId(ctx context.Context, appId string, operator 
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || (!p.IsAdmin && !p.PermDetail.TeamPerm.CanManagePipeline) {
+	if !b || (!p.IsAdmin && !p.PermDetail.GetAppPerm(appId).CanManagePipeline) {
 		return util.UnauthorizedError()
 	}
 	return nil
@@ -207,8 +206,7 @@ func checkManageServiceSourcePerm(ctx context.Context, operator apisession.UserI
 	if p.IsAdmin {
 		return nil
 	}
-	if !p.PermDetail.DevelopAppList.Contains(app.AppId) ||
-		!p.PermDetail.TeamPerm.CanManageServiceSource {
+	if !p.PermDetail.GetAppPerm(app.AppId).CanManageServiceSource {
 		return util.UnauthorizedError()
 	}
 	return nil

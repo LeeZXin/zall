@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
-	"regexp"
 	"time"
 )
 
@@ -23,7 +22,6 @@ var (
 			"prd",
 		},
 	}
-	validZonesRegexp = regexp.MustCompile(`^\w+$`)
 )
 
 type SysCfg struct {

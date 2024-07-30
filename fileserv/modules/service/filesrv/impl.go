@@ -205,7 +205,7 @@ func checkAppDevelopPermByAppId(ctx context.Context, appId string, operator apis
 	if p.IsAdmin {
 		return nil
 	}
-	if p.PermDetail.DevelopAppList.Contains(appId) {
+	if p.PermDetail.GetAppPerm(appId).CanDevelop {
 		return nil
 	}
 	return nil

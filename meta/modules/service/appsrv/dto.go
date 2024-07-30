@@ -3,12 +3,18 @@ package appsrv
 import (
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/util"
 )
 
 type AppDTO struct {
 	AppId string `json:"appId"`
 	Name  string `json:"name"`
+}
+
+type AppWithPermDTO struct {
+	AppDTO
+	Perm perm.AppPerm `json:"perm"`
 }
 
 type ListAppReqDTO struct {
@@ -80,12 +86,12 @@ func (r *UpdateAppReqDTO) IsValid() error {
 	return nil
 }
 
-type GetAppReqDTO struct {
+type GetAppWithPermReqDTO struct {
 	AppId    string              `json:"appId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *GetAppReqDTO) IsValid() error {
+func (r *GetAppWithPermReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}

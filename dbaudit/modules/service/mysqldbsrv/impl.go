@@ -1293,7 +1293,7 @@ func getDbMap(ctx context.Context, idList []int64) (map[int64]mysqldbmd.Db, erro
 }
 
 func checkDbaPerm(operator apisession.UserInfo) error {
-	if operator.IsAdmin || operator.RoleType.IsDba() {
+	if operator.IsAdmin || operator.IsDba {
 		return nil
 	}
 	return util.UnauthorizedError()

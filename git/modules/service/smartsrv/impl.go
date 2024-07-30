@@ -24,20 +24,12 @@ const (
 type outerImpl struct{}
 
 func (s *outerImpl) UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.AccessRepo),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
-	cfg, b := cfgsrv.Inner.GetGitCfg()
-	if !b {
+	cfg, err := cfgsrv.Inner.GetGitCfg()
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(errors.New("can not get git config"))
 	}
 	// 获取权限
@@ -70,8 +62,9 @@ func (s *outerImpl) ReceivePack(ctx context.Context, reqDTO ReceivePackReqDTO) (
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
-	cfg, b := cfgsrv.Inner.GetGitCfg()
-	if !b {
+	cfg, err := cfgsrv.Inner.GetGitCfg()
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(errors.New("can not get git config"))
 	}
 	// 获取权限

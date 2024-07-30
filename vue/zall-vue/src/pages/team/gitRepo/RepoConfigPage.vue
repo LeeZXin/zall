@@ -84,7 +84,7 @@
         <div class="section-body">
           <div class="input-item">
             <a-button type="primary" danger @click="deleteRepo">删除代码仓库</a-button>
-            <div class="input-desc">将临时删除代码仓库, 在回收站保持30天, 30天后若没重置, 则将永久删除代码文件、lfs文件、合并请求、工作流等记录</div>
+            <div class="input-desc">将临时删除代码仓库, 会到仓库回收站, 可在仓库回收站进行永久删除</div>
           </div>
           <div class="input-item" v-if="repoInfo.isArchived">
             <a-button type="primary" danger @click="setArchivedStatus(false)">取消归档代码仓库</a-button>
@@ -94,30 +94,43 @@
             <a-button type="primary" danger @click="setArchivedStatus(true)">归档代码仓库</a-button>
             <div class="input-desc">将代码仓库置为归档状态且后续代码仅可读, 不可被推送</div>
           </div>
-          <div class="input-item">
-            <a-button type="primary" danger>迁移仓库至其他团队</a-button>
+          <div class="input-item" v-if="userStore.isAdmin">
+            <a-button type="primary" danger @click="showTransferModal">迁移仓库至其他团队</a-button>
             <div class="input-desc">将代码仓库迁移至其他团队, 该仓库原有的团队配置将失效</div>
           </div>
         </div>
       </div>
     </div>
   </div>
+  <a-modal v-model:open="transferModal.open" title="迁移团队" @ok="handleTransferModalOk">
+    <a-select
+      v-model:value="transferModal.teamId"
+      style="width:100%"
+      :options="teamList"
+      show-search
+      :filter-option="filterTeamListOption"
+    />
+  </a-modal>
 </template>
 <script setup>
 import { readableVolumeSize, calcUnit, Unit } from "@/utils/size";
-import { reactive, createVNode } from "vue";
+import { reactive, createVNode, ref } from "vue";
 import {
-  getRepoRequest,
+  getDetailInfoRequest,
   gcRequest,
   updateRepoRequest,
   setArchivedRequest,
   setUnArchivedRequest,
-  deleteRepoRequest
+  deleteRepoRequest,
+  transferRepoRequest
 } from "@/api/git/repoApi";
 import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
 import { useRoute, useRouter } from "vue-router";
 import { message, Modal } from "ant-design-vue";
 import { useRepoStore } from "@/pinia/repoStore";
+import { useUserStore } from "@/pinia/userStore";
+import { listAllByAdminRequest } from "@/api/team/teamApi";
+const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
 const repoId = parseInt(route.params.repoId);
@@ -134,8 +147,53 @@ const repoInfo = reactive({
   repoDesc: "",
   loaded: false
 });
+const transferModal = reactive({
+  open: false,
+  teamId: null
+});
+const teamList = ref([]);
+const showTransferModal = () => {
+  if (teamList.value.length === 0) {
+    listAllTeam();
+  }
+  transferModal.open = true;
+};
+const listAllTeam = () => {
+  listAllByAdminRequest().then(res => {
+    let t = res.data.map(item => {
+      return {
+        value: item.teamId,
+        label: item.name
+      };
+    });
+    let teamId = parseInt(route.params.teamId);
+    t = t.filter(item => item.value !== teamId);
+    teamList.value = t;
+    if (t.length > 0) {
+      transferModal.teamId = t[0].value;
+    }
+  });
+};
+
+const filterTeamListOption = (input, option) => {
+  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+
+const handleTransferModalOk = () => {
+  if (!transferModal.teamId) {
+    message.warn("请选择团队");
+    return;
+  }
+  transferRepoRequest({
+    repoId: repoId,
+    teamId: transferModal.teamId
+  }).then(() => {
+    message.success("迁移成功");
+    router.push(`/team/${transferModal.teamId}/gitRepo/list`);
+  });
+};
 const getRepo = () => {
-  getRepoRequest(repoId).then(res => {
+  getDetailInfoRequest(repoId).then(res => {
     repoInfo.gitSize = res.data.gitSize;
     repoInfo.lfsSize = res.data.lfsSize;
     if (!repoInfo.loaded) {
@@ -187,10 +245,10 @@ const setArchivedStatus = isArchived => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      request(repoId).then(()=>{
-          message.success("操作成功");
-          getRepo();
-      })
+      request(repoId).then(() => {
+        message.success("操作成功");
+        getRepo();
+      });
     },
     onCancel() {}
   });
@@ -202,10 +260,10 @@ const deleteRepo = () => {
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteRepoRequest(repoId).then(()=>{
-          message.success("删除成功");
-          router.push(`/team/${useRepoStore().teamId}/gitRepo/list`)
-      })
+      deleteRepoRequest(repoId).then(() => {
+        message.success("删除成功");
+        router.push(`/team/${useRepoStore().teamId}/gitRepo/list`);
+      });
     },
     onCancel() {}
   });

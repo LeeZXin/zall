@@ -104,5 +104,5 @@ export {
     dbAccessBaseRegexp,
     dbAccessTablesRegexp,
     dbApplyReasonRegexp,
-    dbDatUpdateCmdRegexp
+    dbDatUpdateCmdRegexp,
 }

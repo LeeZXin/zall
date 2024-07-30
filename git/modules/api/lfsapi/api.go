@@ -97,8 +97,9 @@ func packRepoPath(c *gin.Context) {
 			return
 		}
 	} else {
-		cfg, b := cfgsrv.Inner.GetGitCfg()
-		if !b {
+		cfg, err := cfgsrv.Inner.GetGitCfg()
+		if err != nil {
+			logger.Logger.WithContext(c).Error(err)
 			c.JSON(http.StatusInternalServerError, ErrVO{
 				Message: i18n.GetByKey(i18n.SystemInternalError),
 			})
@@ -187,8 +188,9 @@ func batch(c *gin.Context) {
 		})
 		return
 	}
-	cfg, b := cfgsrv.Inner.GetGitCfg()
-	if !b {
+	cfg, err := cfgsrv.Inner.GetGitCfg()
+	if err != nil {
+		logger.Logger.WithContext(c).Error(err)
 		c.JSON(http.StatusInternalServerError, ErrVO{
 			Message:   i18n.GetByKey(i18n.SystemInternalError),
 			RequestID: logger.GetTraceId(c),

@@ -9,7 +9,7 @@
     <a-layout>
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
         <a-menu theme="dark" mode="inline" @click="onselect" v-model:selectedKeys="selectedKeys">
-          <a-menu-item key="/propertySource/list">
+          <a-menu-item key="/propertySource/list" v-if="appStore.perm?.canManagePropertySource">
             <BookOutlined />
             <span>配置中心来源</span>
           </a-menu-item>
@@ -17,7 +17,7 @@
             <ContainerOutlined />
             <span>配置中心</span>
           </a-menu-item>
-          <a-menu-item key="/pipeline/list">
+          <a-menu-item key="/pipeline/list" v-if="appStore.perm?.canManagePipeline">
             <TagOutlined />
             <span>部署流水线</span>
           </a-menu-item>
@@ -25,7 +25,7 @@
             <FileOutlined />
             <span>发布计划</span>
           </a-menu-item>
-          <a-menu-item key="/serviceSource/list">
+          <a-menu-item key="/serviceSource/list" v-if="appStore.perm?.canManageServiceSource">
             <BookOutlined />
             <span>服务状态来源</span>
           </a-menu-item>
@@ -33,7 +33,7 @@
             <ReadOutlined />
             <span>服务状态</span>
           </a-menu-item>
-          <a-menu-item key="/discoverySource/list">
+          <a-menu-item key="/discoverySource/list" v-if="appStore.perm?.canManageDiscoverySource">
             <BookOutlined />
             <span>注册中心来源</span>
           </a-menu-item>
@@ -45,18 +45,18 @@
             <DatabaseOutlined />
             <span>制品库</span>
           </a-menu-item>
-          <a-menu-item key="/promScrape/list">
+          <a-menu-item key="/promScrape/list" v-if="appStore.perm?.canManagePromAgent">
             <alert-outlined />
             <span>Prometheus</span>
           </a-menu-item>
-          <a-menu-item key="/settings">
+          <a-menu-item key="/settings" v-if="teamStore.isAdmin">
             <SettingOutlined />
             <span>设置</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
       <a-layout-content style="height: calc(100vh - 64px); overflow: scroll;background-color:white">
-        <router-view />
+        <router-view v-if="appLoaded" />
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -78,11 +78,18 @@ import {
   DatabaseOutlined,
   AlertOutlined
 } from "@ant-design/icons-vue";
+import { getAppRequest } from "@/api/app/appApi";
+import { useAppStore } from "@/pinia/appStore";
+import { useTeamStore } from "@/pinia/teamStore";
+import { getTeamRequest } from "@/api/team/teamApi";
+const teamStore = useTeamStore();
+const appStore = useAppStore();
 const { t } = useI18n();
 const route = useRoute();
 const collapsed = ref(false);
 const router = useRouter();
 const selectedKeys = ref([]);
+const appLoaded = ref(false);
 const routeKey = `/team/${route.params.teamId}/app/${route.params.appId}`;
 const switchApp = () => {
   router.push(`/team/${route.params.teamId}/app/list`);
@@ -122,6 +129,28 @@ watch(
   newPath => changeSelectedKey(newPath)
 );
 changeSelectedKey(route.path);
+// 获取app信息和权限
+const getApp = () => {
+  getAppRequest(route.params.appId).then(res => {
+    appStore.appId = res.data.appId;
+    appStore.name = res.data.name;
+    appStore.perm = res.data.perm;
+    appLoaded.value = true;
+  });
+};
+// 获取团队信息和权限
+const getTeam = () => {
+  getTeamRequest(route.params.teamId).then(res => {
+    teamStore.teamId = res.data.teamId;
+    teamStore.name = res.data.name;
+    teamStore.isAdmin = res.data.isAdmin;
+    teamStore.perm = res.data.perm;
+  });
+};
+getApp();
+if (teamStore.teamId === 0) {
+  getTeam();
+}
 </script>
 <style scoped>
 .switch-app-text {

@@ -136,6 +136,10 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/app/create",
                 component: () =>
                     import ("../pages/team/app/AppCreatePage")
+            }, {
+                path: "/team/:teamId(\\d+)/settings",
+                component: () =>
+                    import ("../pages/team/team/TeamSettingsPage")
             }]
         },
         {

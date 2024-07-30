@@ -21,10 +21,12 @@ func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/gitRepo", apisession.CheckLogin)
 		{
-			// 仓库信息
+			// 仓库信息+权限
 			group.GET("/get/:repoId", getRepo)
 			// 基本信息
 			group.GET("/simpleInfo/:repoId", getSimpleInfo)
+			// 详细信息
+			group.GET("/detail/:repoId", getDetailInfo)
 			// 获取模版列表
 			group.GET("/allGitIgnoreTemplateList", allGitIgnoreTemplateList)
 			// 初始化仓库
@@ -65,8 +67,8 @@ func InitApi() {
 			group.GET("/diffFile", diffFile)
 			// 历史提交
 			group.GET("/historyCommits", historyCommits)
-			// 迁移项目组
-			group.POST("/transferTeam", transferTeam)
+			// 迁移团队
+			group.PUT("/transferTeam", transferTeam)
 			// 获取每一行提交信息
 			group.GET("/blame", blame)
 			// 删除分支
@@ -98,6 +100,7 @@ func listRepoByAdmin(c *gin.Context) {
 		return SimpleRepoVO{
 			RepoId: t.RepoId,
 			Name:   t.Name,
+			TeamId: t.TeamId,
 		}, nil
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleRepoVO]{
@@ -133,7 +136,7 @@ func setUnArchived(c *gin.Context) {
 }
 
 func getRepo(c *gin.Context) {
-	repo, err := reposrv.Outer.GetRepo(c, reposrv.GetRepoReqDTO{
+	repo, perm, err := reposrv.Outer.GetRepoAndPerm(c, reposrv.GetRepoAndPermReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -141,9 +144,16 @@ func getRepo(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, ginutil.DataResp[RepoVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[RepoWithPermVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     repo2VO(repo),
+		Data: RepoWithPermVO{
+			SimpleRepoVO: SimpleRepoVO{
+				RepoId: repo.RepoId,
+				Name:   repo.Name,
+				TeamId: repo.TeamId,
+			},
+			Perm: perm,
+		},
 	})
 }
 
@@ -167,7 +177,7 @@ func updateRepo(c *gin.Context) {
 }
 
 func getSimpleInfo(c *gin.Context) {
-	info, err := reposrv.Outer.SimpleInfo(c, reposrv.SimpleInfoReqDTO{
+	info, err := reposrv.Outer.GetSimpleInfo(c, reposrv.GetSimpleInfoReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -183,6 +193,21 @@ func getSimpleInfo(c *gin.Context) {
 			CloneHttpUrl: info.CloneHttpUrl,
 			CloneSshUrl:  info.CloneSshUrl,
 		},
+	})
+}
+
+func getDetailInfo(c *gin.Context) {
+	info, err := reposrv.Outer.GetDetailInfo(c, reposrv.GetDetailInfoReqDTO{
+		RepoId:   getRepoId(c),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[RepoVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     repo2VO(info),
 	})
 }
 
@@ -765,7 +790,7 @@ func historyCommits(c *gin.Context) {
 }
 
 func transferTeam(c *gin.Context) {
-	var req TransferTeam
+	var req TransferTeamReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := reposrv.Outer.TransferTeam(c, reposrv.TransferTeamReqDTO{
 			RepoId:   req.RepoId,

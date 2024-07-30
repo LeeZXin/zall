@@ -53,7 +53,10 @@ const deleteRepoPermanentlyRequest = (repoId) => request.delete("/api/gitRepo/de
 const reoverFromRecycleRequest = (repoId) => request.put("/api/gitRepo/recoverFromRecycle/" + repoId);
 // 管理员展示仓库列表
 const getRepoListByAdminRequest = (teamId) => request.get("/api/gitRepo/listByAdmin/" + teamId);
-
+// 详细信息
+const getDetailInfoRequest = (repoId) => request.get("/api/gitRepo/detail/" + repoId);
+// 迁移团队
+const transferRepoRequest = (data) => request.put("/api/gitRepo/transferTeam", data);
 export {
     createRepoRequest,
     allGitIgnoreTemplateListRequest,
@@ -81,5 +84,7 @@ export {
     getDeletedRepoListRequest,
     deleteRepoPermanentlyRequest,
     reoverFromRecycleRequest,
-    getRepoListByAdminRequest
+    getRepoListByAdminRequest,
+    getDetailInfoRequest,
+    transferRepoRequest
 }

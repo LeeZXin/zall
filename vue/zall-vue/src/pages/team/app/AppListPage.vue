@@ -7,7 +7,12 @@
         style="width:240px;margin-right:10px"
         @change="searchChange"
       />
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建应用服务</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+        v-if="teamStore.isAdmin"
+      >创建应用服务</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -25,6 +30,8 @@ import { PlusOutlined } from "@ant-design/icons-vue";
 import { listAppRequest } from "@/api/app/appApi";
 import { ref, h } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { useTeamStore } from "@/pinia/teamStore";
+const teamStore = useTeamStore();
 const router = useRouter();
 const route = useRoute();
 const searchApp = ref("");
@@ -78,8 +85,10 @@ const searchChange = () => {
 };
 
 const gotoAppPage = item => {
-  router.push(`/team/${route.params.teamId}/app/${item.appId}/propertyFile/list`);
-}
+  router.push(
+    `/team/${route.params.teamId}/app/${item.appId}/propertyFile/list`
+  );
+};
 listApp();
 </script>
 <style scoped>

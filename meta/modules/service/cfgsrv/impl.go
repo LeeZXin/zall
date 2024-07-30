@@ -2,11 +2,11 @@ package cfgsrv
 
 import (
 	"context"
+	"fmt"
 	"github.com/LeeZXin/zall/meta/modules/model/cfgmd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
@@ -30,20 +30,19 @@ func (s *innerImpl) InitSysCfg() {
 	}
 }
 
-func (s *innerImpl) GetSysCfg() (SysCfg, bool) {
-	cfg := new(SysCfg)
-	b := getFromDB(cfg)
-	return *cfg, b
+func (s *innerImpl) GetSysCfg(ctx context.Context) (SysCfg, error) {
+	var cfg SysCfg
+	err := getFromDB(ctx, &cfg)
+	return cfg, err
 }
 
 func (s *innerImpl) InitGitCfg() {
-	ctx := context.Background()
-	ctx, closer := xormstore.Context(ctx)
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	ret := GitCfg{}
 	b, err := cfgmd.GetByKey(ctx, &ret)
 	if err != nil {
-		logger.Logger.WithContext(ctx).Fatalf("init sys config with err: %v", err)
+		logger.Logger.Fatalf("init sys config with err: %v", err)
 	}
 	if !b {
 		err = cfgmd.InsertCfg(ctx, DefaultGitCfg)
@@ -53,16 +52,18 @@ func (s *innerImpl) InitGitCfg() {
 	}
 }
 
-func (s *innerImpl) GetGitCfg() (GitCfg, bool) {
-	cfg := new(GitCfg)
-	b := getFromDB(cfg)
-	return *cfg, b
+func (s *innerImpl) GetGitCfg() (GitCfg, error) {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	var cfg GitCfg
+	err := getFromDB(ctx, &cfg)
+	return cfg, err
 }
 
-func (s *innerImpl) GetEnvCfg() ([]string, bool) {
-	cfg := new(EnvCfg)
-	b := getFromDB(cfg)
-	return cfg.Envs, b
+func (s *innerImpl) GetEnvCfg(ctx context.Context) ([]string, error) {
+	var cfg EnvCfg
+	err := getFromDB(ctx, &cfg)
+	return cfg.Envs, err
 }
 
 func (s *innerImpl) InitEnvCfg() {
@@ -83,29 +84,35 @@ func (s *innerImpl) InitEnvCfg() {
 }
 
 func (s *innerImpl) ContainsEnv(env string) bool {
-	envs, _ := s.GetEnvCfg()
-	contains, _ := listutil.Contains(envs, func(t string) (bool, error) {
-		return t == env, nil
-	})
-	return contains
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	envs, _ := s.GetEnvCfg(ctx)
+	for _, s2 := range envs {
+		if s2 == env {
+			return true
+		}
+	}
+	return false
 }
 
 // GetGitRepoServerCfg 获取git服务器地址 从缓存中获取
-func (s *innerImpl) GetGitRepoServerCfg() (GitRepoServerCfg, bool) {
-	cfg := new(GitRepoServerCfg)
-	b := getFromDB(cfg)
-	return *cfg, b
-}
-
-func getFromDB(cfg util.KeyVal) bool {
+func (s *innerImpl) GetGitRepoServerCfg() (GitRepoServerCfg, error) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
+	var cfg GitRepoServerCfg
+	err := getFromDB(ctx, &cfg)
+	return cfg, err
+}
+
+func getFromDB(ctx context.Context, cfg util.KeyVal) error {
 	b, err := cfgmd.GetByKey(ctx, cfg)
 	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return false
+		return err
 	}
-	return b
+	if !b {
+		return fmt.Errorf("%s not found", cfg.Key())
+	}
+	return nil
 }
 
 type outerImpl struct{}

@@ -1,10 +1,9 @@
 import { defineStore } from 'pinia'
 
-export const useRepoStore = defineStore('repoStore', {
+export const useAppStore = defineStore('app', {
     state: () => ({
-        repoId: 0,
+        appId: "",
         name: "",
-        teamId: 0,
         perm: null
     })
 })

@@ -45,7 +45,7 @@
       <div class="section">
         <div class="section-title">密码</div>
         <div class="section-body">
-          <a-input v-model:value="formState.password" type="password" />
+          <a-input-password v-model:value="formState.password" />
           <div class="input-desc">etcd密码</div>
         </div>
       </div>

@@ -7,8 +7,8 @@ export const useUserStore = defineStore('userStore', {
         email: "",
         isProhibited: false,
         avatarUrl: "",
-        isAdmin: true,
-        roleType: 0,
+        isAdmin: false,
+        isDba: false,
         sessionExpireAt: 0,
         sessionId: ""
     })

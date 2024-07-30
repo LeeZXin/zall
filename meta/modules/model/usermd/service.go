@@ -28,7 +28,7 @@ func InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) error {
 			Password:  reqDTO.Password,
 			AvatarUrl: reqDTO.AvatarUrl,
 			IsAdmin:   reqDTO.IsAdmin,
-			RoleType:  reqDTO.RoleType,
+			IsDba:     reqDTO.IsDba,
 		})
 	return err
 }
@@ -55,12 +55,18 @@ func ListUserByAccounts(ctx context.Context, accounts []string) ([]User, error) 
 }
 
 func CountUserByAccounts(ctx context.Context, accounts []string) (int64, error) {
-	return xormutil.MustGetXormSession(ctx).In("account", accounts).Count(new(User))
+	return xormutil.MustGetXormSession(ctx).
+		In("account", accounts).
+		Count(new(User))
+}
+
+func CountAllUsers(ctx context.Context) (int64, error) {
+	return xormutil.MustGetXormSession(ctx).Count(new(User))
 }
 
 func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]User, error) {
 	ret := make([]User, 0)
-	session := xormutil.MustGetXormSession(ctx).OrderBy("id asc").Limit(reqDTO.Limit)
+	session := xormutil.MustGetXormSession(ctx).Limit(reqDTO.Limit)
 	if reqDTO.Account != "" {
 		session.And("account like ?", "%"+reqDTO.Account+"%")
 	}

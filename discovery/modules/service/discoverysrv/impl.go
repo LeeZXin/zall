@@ -397,7 +397,7 @@ func checkManageDiscoverySourcePermByAppId(ctx context.Context, operator apisess
 	if p.IsAdmin {
 		return nil
 	}
-	if p.PermDetail.TeamPerm.CanManageDiscoverySource {
+	if p.PermDetail.GetAppPerm(appId).CanManageDiscoverySource {
 		return nil
 	}
 	return util.UnauthorizedError()
@@ -422,7 +422,7 @@ func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInf
 	if p.IsAdmin {
 		return nil
 	}
-	if p.PermDetail.DevelopAppList.Contains(appId) {
+	if p.PermDetail.GetAppPerm(appId).CanDevelop {
 		return nil
 	}
 	return util.UnauthorizedError()

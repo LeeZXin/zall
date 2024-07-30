@@ -1,8 +1,18 @@
 <template>
   <div style="padding:10px">
     <div style="margin-bottom:10px">
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建工作流</a-button>
-      <a-button type="primary" @click="gotoVarsPage" :icon="h(KeyOutlined)" style="margin-left:8px">管理变量</a-button>
+      <a-button
+        type="primary"
+        @click="gotoVarsPage"
+        :icon="h(KeyOutlined)"
+        style="margin-right:8px"
+      >管理变量</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+        v-if="repoStore.perm?.canManageWorkflow"
+      >创建工作流</a-button>
     </div>
     <ul class="workflow-list" v-if="workflowList.length > 0">
       <li v-for="item in workflowList" v-bind:key="item.id">
@@ -12,29 +22,36 @@
             <div class="name">{{item.name}}</div>
           </a-tooltip>
           <span>
-            <a-tooltip placement="top" v-if="!item.lastTask || (item.lastTask.taskStatus !== 1 && item.lastTask.taskStatus !== 0)">
-              <template #title>手动执行</template>
-              <span class="op-icon" @click="showBranchModal(item)">
-                <PlayCircleFilled />
-              </span>
-            </a-tooltip>
-            <a-tooltip placement="top" v-else>
-              <template #title>停止执行</template>
-              <span class="op-icon" @click="killTask(item)">
-                <PauseOutlined />
-              </span>
-            </a-tooltip>
+            <template v-if="repoStore.perm?.canTriggerWorkflow">
+              <a-tooltip
+                placement="top"
+                v-if="!item.lastTask || (item.lastTask.taskStatus !== 1 && item.lastTask.taskStatus !== 0)"
+              >
+                <template #title>手动执行</template>
+                <span class="op-icon" @click="showBranchModal(item)">
+                  <PlayCircleFilled />
+                </span>
+              </a-tooltip>
+              <a-tooltip placement="top" v-else>
+                <template #title>停止执行</template>
+                <span class="op-icon" @click="killTask(item)">
+                  <PauseOutlined />
+                </span>
+              </a-tooltip>
+            </template>
             <a-popover placement="bottomRight" trigger="hover">
               <template #content>
                 <ul class="op-list">
-                  <li @click="deleteWorkflow(item)">
-                    <DeleteOutlined />
-                    <span style="margin-left:4px">删除工作流</span>
-                  </li>
-                  <li @click="gotoDetailPage(item.id)">
-                    <EditOutlined />
-                    <span style="margin-left:4px">编辑工作流</span>
-                  </li>
+                  <template v-if="repoStore.perm?.canManageWorkflow">
+                    <li @click="deleteWorkflow(item)">
+                      <DeleteOutlined />
+                      <span style="margin-left:4px">删除工作流</span>
+                    </li>
+                    <li @click="gotoDetailPage(item.id)">
+                      <EditOutlined />
+                      <span style="margin-left:4px">编辑工作流</span>
+                    </li>
+                  </template>
                   <li @click="gotoTasksPage(item)">
                     <EyeOutlined />
                     <span style="margin-left:4px">查看任务</span>
@@ -48,7 +65,7 @@
           </span>
         </div>
         <div class="workflow-status">
-          <WorkflowTaskStatusIconText :status="item.lastTask?.taskStatus"/>
+          <WorkflowTaskStatusIconText :status="item.lastTask?.taskStatus" />
           <div
             class="no-wrap"
             style="margin-top:10px;"
@@ -105,6 +122,8 @@ import { Modal, message } from "ant-design-vue";
 import { workflowBranchRegexp } from "@/utils/regexp";
 import { readableTimeComparingNow } from "@/utils/time";
 import { useWorkflowStore } from "@/pinia/workflowStore";
+import { useRepoStore } from "@/pinia/repoStore";
+const repoStore = useRepoStore();
 const workflowStore = useWorkflowStore();
 const router = useRouter();
 const route = useRoute();
@@ -114,7 +133,9 @@ const branchModalTitle = ref("");
 const triggerBranch = ref("");
 const triggerWfId = ref(0);
 const gotoCreatePage = () => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/create`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/create`
+  );
 };
 const listWorkflow = () => {
   listWorkflowRequest(route.params.repoId).then(res => {
@@ -122,16 +143,22 @@ const listWorkflow = () => {
   });
 };
 const gotoDetailPage = id => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${id}/update`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${id}/update`
+  );
 };
 const gotoVarsPage = () => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`);
-}
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`
+  );
+};
 const gotoTasksPage = item => {
   workflowStore.id = item.id;
   workflowStore.name = item.name;
   workflowStore.desc = item.desc;
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${item.id}/tasks`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${item.id}/tasks`
+  );
 };
 const showBranchModal = item => {
   branchModalOpen.value = true;

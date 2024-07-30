@@ -3,6 +3,7 @@ package reposrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
+	"github.com/LeeZXin/zall/pkg/perm"
 )
 
 var (
@@ -22,10 +23,12 @@ type InnerService interface {
 }
 
 type OuterService interface {
-	// SimpleInfo 基本信息
-	SimpleInfo(context.Context, SimpleInfoReqDTO) (SimpleInfoRespDTO, error)
-	// GetRepo 获取仓库信息
-	GetRepo(context.Context, GetRepoReqDTO) (RepoDTO, error)
+	// GetSimpleInfo 基本信息
+	GetSimpleInfo(context.Context, GetSimpleInfoReqDTO) (SimpleInfoDTO, error)
+	// GetDetailInfo 基本信息
+	GetDetailInfo(context.Context, GetDetailInfoReqDTO) (RepoDTO, error)
+	// GetRepoAndPerm 获取仓库信息和权限信息
+	GetRepoAndPerm(context.Context, GetRepoAndPermReqDTO) (SimpleRepoDTO, perm.RepoPerm, error)
 	// UpdateRepo 更新仓库配置
 	UpdateRepo(context.Context, UpdateRepoReqDTO) error
 	// EntriesRepo 文件列表

@@ -29,7 +29,8 @@ func InitApi() {
 			group.GET("/list/:teamId", listApp)
 			// 所有应用服务列表 管理员权限
 			group.GET("/listAllByAdmin/:teamId", listAllByAdmin)
-			group.POST("/transferTeam", transferTeam)
+			// 迁移团队
+			group.PUT("/transferTeam", transferTeam)
 		}
 	})
 }
@@ -80,7 +81,7 @@ func deleteApp(c *gin.Context) {
 }
 
 func getApp(c *gin.Context) {
-	app, err := appsrv.Outer.GetApp(c, appsrv.GetAppReqDTO{
+	app, err := appsrv.Outer.GetAppWithPerm(c, appsrv.GetAppWithPermReqDTO{
 		AppId:    c.Param("appId"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -88,11 +89,14 @@ func getApp(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, ginutil.DataResp[AppVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[AppWithPermVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data: AppVO{
-			AppId: app.AppId,
-			Name:  app.Name,
+		Data: AppWithPermVO{
+			AppVO: AppVO{
+				AppId: app.AppId,
+				Name:  app.Name,
+			},
+			Perm: app.Perm,
 		},
 	})
 }

@@ -3,6 +3,7 @@ package repoapi
 import (
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/pkg/git"
+	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
@@ -208,7 +209,7 @@ type HistoryCommitsRespVO struct {
 	Cursor int        `json:"cursor"`
 }
 
-type TransferTeam struct {
+type TransferTeamReqVO struct {
 	RepoId int64 `json:"repoId"`
 	TeamId int64 `json:"teamId"`
 }
@@ -273,4 +274,10 @@ type UpdateRepoReqVO struct {
 type SimpleRepoVO struct {
 	RepoId int64  `json:"repoId"`
 	Name   string `json:"name"`
+	TeamId int64  `json:"teamId"`
+}
+
+type RepoWithPermVO struct {
+	SimpleRepoVO
+	Perm perm.RepoPerm `json:"perm"`
 }
