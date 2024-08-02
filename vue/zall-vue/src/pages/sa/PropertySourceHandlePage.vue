@@ -111,16 +111,13 @@ const saveOrUpdateServiceSource = () => {
   if (mode === "create") {
     createPropertySourceRequest({
       env: formState.selectedEnv,
-      appId: route.params.appId,
       endpoints: endpoints,
       username: formState.username,
       password: formState.password,
       name: formState.name
     }).then(() => {
       message.success("创建成功");
-      router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/list/${formState.selectedEnv}`
-      );
+      router.push(`/sa/propertySource/list/${formState.selectedEnv}`);
     });
   } else if (mode === "update") {
     updatePropertySourceRequest({
@@ -131,9 +128,7 @@ const saveOrUpdateServiceSource = () => {
       name: formState.name
     }).then(() => {
       message.success("保存成功");
-      router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/list/${formState.selectedEnv}`
-      );
+      router.push(`/sa/propertySource/list/${formState.selectedEnv}`);
     });
   }
 };
@@ -142,9 +137,7 @@ if (mode === "create") {
   getEnvCfg();
 } else if (mode === "update") {
   if (propertySourceStore.id === 0) {
-    router.push(
-      `/team/${route.params.teamId}/app/${route.params.appId}/propertySource/list`
-    );
+    router.push(`/sa/propertySource/list`);
   } else {
     formState.name = propertySourceStore.name;
     formState.selectedEnv = propertySourceStore.env;

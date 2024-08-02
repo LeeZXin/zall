@@ -93,7 +93,6 @@ const deleteDiscoverySource = item => {
 
 const listDiscoverySource = () => {
   listDiscoverySourceRequest({
-    appId: route.params.appId,
     env: selectedEnv.value
   }).then(res => {
     dataSource.value = res.data.map(item => {
@@ -107,9 +106,7 @@ const listDiscoverySource = () => {
 };
 
 const gotoCreatePage = () => {
-  router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/discoverySource/create?env=${selectedEnv.value}`
-  );
+  router.push(`/sa/discoverySource/create?env=${selectedEnv.value}`);
 };
 
 const gotoUpdatePage = item => {
@@ -119,15 +116,11 @@ const gotoUpdatePage = item => {
   discoverySourceStore.endpoints = item.endpoints;
   discoverySourceStore.username = item.username;
   discoverySourceStore.password = item.password;
-  router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/discoverySource/${item.id}/update`
-  );
+  router.push(`/sa/discoverySource/${item.id}/update`);
 };
 
 const onEnvChange = e => {
-  router.replace(
-    `/team/${route.params.teamId}/app/${route.params.appId}/discoverySource/list/${e.newVal}`
-  );
+  router.replace(`/sa/discoverySource/list/${e.newVal}`);
   selectedEnv.value = e.newVal;
   listDiscoverySource();
 };

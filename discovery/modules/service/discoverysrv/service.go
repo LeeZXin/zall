@@ -17,8 +17,12 @@ func Init() {
 type OuterService interface {
 	// ListDiscoverySource 注册中心来源
 	ListDiscoverySource(context.Context, ListDiscoverySourceReqDTO) ([]DiscoverySourceDTO, error)
-	// ListSimpleDiscoverySource 注册中心来源
-	ListSimpleDiscoverySource(context.Context, ListDiscoverySourceReqDTO) ([]SimpleDiscoverySourceDTO, error)
+	// ListAllDiscoverySource 获取所有注册中心来源
+	ListAllDiscoverySource(context.Context, ListAllDiscoverySourceReqDTO) ([]SimpleDiscoverySourceDTO, error)
+	// ListBindDiscoverySource 获取绑定注册中心来源
+	ListBindDiscoverySource(context.Context, ListBindDiscoverySourceReqDTO) ([]SimpleBindDiscoverySourceDTO, error)
+	// BindAppAndDiscoverySource 绑定注册中心来源
+	BindAppAndDiscoverySource(context.Context, BindAppAndDiscoverySourceReqDTO) error
 	// CreateDiscoverySource 创建注册中心来源
 	CreateDiscoverySource(context.Context, CreateDiscoverySourceReqDTO) error
 	// DeleteDiscoverySource 删除注册中心来源

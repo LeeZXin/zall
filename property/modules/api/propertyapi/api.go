@@ -28,6 +28,12 @@ func InitApi() {
 			group.POST("/update", updatePropertySource)
 			// 删除配置来源
 			group.DELETE("/delete/:sourceId", deletePropertySource)
+			// 所有配置来源列表
+			group.GET("/listAll/:env", listAllPropertySource)
+			// 获取应用服务绑定的配置来源
+			group.GET("/listBind", listBindPropertySource)
+			// 绑定应用服务和配置来源
+			group.POST("/bindApp", bindAppAndPropertySource)
 		}
 		group = e.Group("/api/propertyFile", apisession.CheckLogin)
 		{
@@ -79,7 +85,6 @@ func createPropertySource(c *gin.Context) {
 	var req CreatePropertySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := propertysrv.Outer.CreatePropertySource(c, propertysrv.CreatePropertySourceReqDTO{
-			AppId:     req.AppId,
 			Endpoints: req.Endpoints,
 			Username:  req.Username,
 			Password:  req.Password,
@@ -127,31 +132,85 @@ func deletePropertySource(c *gin.Context) {
 }
 
 func listPropertySource(c *gin.Context) {
-	var req ListPropertySourceReqVO
-	if util.ShouldBindQuery(&req, c) {
-		nodes, err := propertysrv.Outer.ListPropertySource(c, propertysrv.ListPropertySourceReqDTO{
-			AppId:    req.AppId,
-			Env:      req.Env,
-			Operator: apisession.MustGetLoginUser(c),
+	nodes, err := propertysrv.Outer.ListPropertySource(c, propertysrv.ListPropertySourceReqDTO{
+		Env:      c.Query("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(nodes, func(t propertysrv.PropertySourceDTO) (PropertySourceVO, error) {
+		return PropertySourceVO{
+			Id:        t.Id,
+			Name:      t.Name,
+			Endpoints: t.Endpoints,
+			Username:  t.Username,
+			Password:  t.Password,
+			Env:       t.Env,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]PropertySourceVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func listAllPropertySource(c *gin.Context) {
+	nodes, err := propertysrv.Outer.ListAllPropertySource(c, propertysrv.ListAllPropertySourceReqDTO{
+		Env:      c.Param("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimplePropertySourceVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     sourceDto2SimpleVo(nodes),
+	})
+}
+
+func sourceDto2SimpleVo(sources []propertysrv.SimplePropertySourceDTO) []SimplePropertySourceVO {
+	data, _ := listutil.Map(sources, func(t propertysrv.SimplePropertySourceDTO) (SimplePropertySourceVO, error) {
+		return SimplePropertySourceVO{
+			Id:   t.Id,
+			Name: t.Name,
+		}, nil
+	})
+	return data
+}
+
+func listBindPropertySource(c *gin.Context) {
+	nodes, err := propertysrv.Outer.ListBindPropertySource(c, propertysrv.ListBindPropertySourceReqDTO{
+		AppId:    c.Query("appId"),
+		Env:      c.Query("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimplePropertySourceVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     sourceDto2SimpleVo(nodes),
+	})
+}
+
+func bindAppAndPropertySource(c *gin.Context) {
+	var req BindAppAndPropertySourceReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := propertysrv.Outer.BindAppAndPropertySource(c, propertysrv.BindAppAndPropertySourceReqDTO{
+			AppId:        req.AppId,
+			SourceIdList: req.SourceIdList,
+			Env:          req.Env,
+			Operator:     apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(nodes, func(t propertysrv.PropertySourceDTO) (PropertySourceVO, error) {
-			return PropertySourceVO{
-				Id:        t.Id,
-				Name:      t.Name,
-				Endpoints: t.Endpoints,
-				Username:  t.Username,
-				Password:  t.Password,
-				Env:       t.Env,
-			}, nil
-		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]PropertySourceVO]{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Data:     data,
-		})
+		util.DefaultOkResponse(c)
 	}
 }
 
@@ -164,15 +223,9 @@ func listPropertySourceByFileId(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(nodes, func(t propertysrv.SimplePropertySourceDTO) (SimplePropertySourceVO, error) {
-		return SimplePropertySourceVO{
-			Id:   t.Id,
-			Name: t.Name,
-		}, nil
-	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimplePropertySourceVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
+		Data:     sourceDto2SimpleVo(nodes),
 	})
 }
 

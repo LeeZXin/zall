@@ -1,14 +1,14 @@
 <template>
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
-      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建服务来源</a-button>
+      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建配置来源</a-button>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
-          <div class="op-icon" @click="deleteServiceSource(dataItem)">
+          <div class="op-icon" @click="deletePropertySource(dataItem)">
             <a-tooltip placement="top">
               <template #title>
                 <span>Delete Source</span>
@@ -21,7 +21,7 @@
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
                   <edit-outlined />
-                  <span style="margin-left:4px">编辑服务来源</span>
+                  <span style="margin-left:4px">编辑配置来源</span>
                 </li>
               </ul>
             </template>
@@ -47,12 +47,12 @@ import ZTable from "@/components/common/ZTable";
 import { ref, h, createVNode } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
-  listServiceSourceRequest,
-  deleteServiceSourceRequest
-} from "@/api/app/serviceApi";
-import { useServiceSourceStore } from "@/pinia/serviceSourceStore";
+  listPropertySourceRequest,
+  deletePropertySourceRequest
+} from "@/api/app/propertyApi";
+import { usePropertySourceStore } from "@/pinia/propertySourceStore";
 import { Modal, message } from "ant-design-vue";
-const serviceSourceStore = useServiceSourceStore();
+const propertySourceStore = usePropertySourceStore();
 const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
@@ -64,9 +64,9 @@ const columns = [
     key: "name"
   },
   {
-    title: "host",
-    dataIndex: "host",
-    key: "host"
+    title: "endpoints",
+    dataIndex: "endpoints",
+    key: "endpoints"
   },
   {
     title: "操作",
@@ -75,59 +75,54 @@ const columns = [
   }
 ];
 
-const deleteServiceSource = item => {
+const deletePropertySource = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     okText: "ok",
     cancelText: "cancel",
     onOk() {
-      deleteServiceSourceRequest(item.id).then(() => {
+      deletePropertySourceRequest(item.id).then(() => {
         message.success("删除成功");
-        listServiceSource();
+        listPropertySource();
       });
     },
     onCancel() {}
   });
 };
 
-const listServiceSource = () => {
-  listServiceSourceRequest({
-    appId: route.params.appId,
+const listPropertySource = () => {
+  listPropertySourceRequest({
     env: selectedEnv.value
   }).then(res => {
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
-        ...item
+        ...item,
+        endpoints: item.endpoints ? item.endpoints.join(";") : ""
       };
     });
   });
 };
 
 const gotoCreatePage = () => {
-  router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/create?env=${selectedEnv.value}`
-  );
+  router.push(`/sa/propertySource/create?env=${selectedEnv.value}`);
 };
 
 const gotoUpdatePage = item => {
-  serviceSourceStore.id = item.id;
-  serviceSourceStore.name = item.name;
-  serviceSourceStore.env = item.env;
-  serviceSourceStore.host = item.host;
-  serviceSourceStore.apiKey = item.apiKey;
-  router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/${item.id}/update`
-  );
+  propertySourceStore.id = item.id;
+  propertySourceStore.name = item.name;
+  propertySourceStore.env = item.env;
+  propertySourceStore.endpoints = item.endpoints;
+  propertySourceStore.username = item.username;
+  propertySourceStore.password = item.password;
+  router.push(`/sa/propertySource/${item.id}/update`);
 };
 
 const onEnvChange = e => {
-  router.replace(
-    `/team/${route.params.teamId}/app/${route.params.appId}/serviceSource/list/${e.newVal}`
-  );
+  router.replace(`/sa/propertySource/list/${e.newVal}`);
   selectedEnv.value = e.newVal;
-  listServiceSource();
+  listPropertySource();
 };
 </script>
 <style scoped>

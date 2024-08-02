@@ -822,13 +822,11 @@ func (*outerImpl) ListServiceSource(ctx context.Context, reqDTO ListServiceSourc
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
-	if err != nil {
-		return nil, err
+	if !reqDTO.Operator.IsAdmin {
+		return nil, util.UnauthorizedError()
 	}
 	sources, err := deploymd.ListServiceSource(ctx, deploymd.ListServiceSourceReqDTO{
-		AppId: reqDTO.AppId,
-		Env:   reqDTO.Env,
+		Env: reqDTO.Env,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -838,11 +836,34 @@ func (*outerImpl) ListServiceSource(ctx context.Context, reqDTO ListServiceSourc
 		return ServiceSourceDTO{
 			Id:      t.Id,
 			Name:    t.Name,
-			AppId:   t.AppId,
 			Env:     t.Env,
 			Host:    t.Host,
 			ApiKey:  t.ApiKey,
 			Created: t.Created,
+		}, nil
+	})
+	return data, nil
+}
+
+// ListAllServiceSource 所有服务状态来源
+func (*outerImpl) ListAllServiceSource(ctx context.Context, reqDTO ListAllServiceSourceReqDTO) ([]SimpleServiceSourceDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	sources, err := deploymd.ListServiceSource(ctx, deploymd.ListServiceSourceReqDTO{
+		Env:  reqDTO.Env,
+		Cols: []string{"id", "name"},
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	data, _ := listutil.Map(sources, func(t deploymd.ServiceSource) (SimpleServiceSourceDTO, error) {
+		return SimpleServiceSourceDTO{
+			Id:   t.Id,
+			Name: t.Name,
 		}, nil
 	})
 	return data, nil
@@ -855,13 +876,11 @@ func (*outerImpl) CreateServiceSource(ctx context.Context, reqDTO CreateServiceS
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkManageServiceSourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
-	if err != nil {
-		return err
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
 	}
-	err = deploymd.InsertServiceSource(ctx, deploymd.InsertServiceSourceReqDTO{
+	err := deploymd.InsertServiceSource(ctx, deploymd.InsertServiceSourceReqDTO{
 		Name:   reqDTO.Name,
-		AppId:  reqDTO.AppId,
 		Env:    reqDTO.Env,
 		Host:   reqDTO.Host,
 		ApiKey: reqDTO.ApiKey,
@@ -880,11 +899,10 @@ func (*outerImpl) UpdateServiceSource(ctx context.Context, reqDTO UpdateServiceS
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkManageServiceSourcePermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId)
-	if err != nil {
-		return err
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
 	}
-	_, err = deploymd.UpdateServiceSource(ctx, deploymd.UpdateServiceSourceReqDTO{
+	_, err := deploymd.UpdateServiceSource(ctx, deploymd.UpdateServiceSourceReqDTO{
 		Id:     reqDTO.SourceId,
 		Name:   reqDTO.Name,
 		Host:   reqDTO.Host,
@@ -904,11 +922,16 @@ func (*outerImpl) DeleteServiceSource(ctx context.Context, reqDTO DeleteServiceS
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkManageServiceSourcePermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId)
-	if err != nil {
-		return err
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
 	}
-	_, err = deploymd.DeleteServiceSourceById(ctx, reqDTO.SourceId)
+	err := xormstore.WithTx(ctx, func(ctx context.Context) error {
+		_, err2 := deploymd.DeleteServiceSourceById(ctx, reqDTO.SourceId)
+		if err2 != nil {
+			return err2
+		}
+		return deploymd.DeleteAppServiceSourceBindBySourceId(ctx, reqDTO.SourceId)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -1036,35 +1059,6 @@ func (*outerImpl) GetPipelineVarsContent(ctx context.Context, reqDTO GetPipeline
 	}, nil
 }
 
-// ListStatusSource 为了展示服务状态时展示服务来源
-func (*outerImpl) ListStatusSource(ctx context.Context, reqDTO ListStatusSourceReqDTO) ([]StatusSourceDTO, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
-	if err != nil {
-		return nil, err
-	}
-	sources, err := deploymd.ListServiceSource(ctx, deploymd.ListServiceSourceReqDTO{
-		AppId: reqDTO.AppId,
-		Env:   reqDTO.Env,
-		Cols:  []string{"id", "name", "env"},
-	})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	return listutil.Map(sources, func(t deploymd.ServiceSource) (StatusSourceDTO, error) {
-		return StatusSourceDTO{
-			Id:   t.Id,
-			Name: t.Name,
-			Env:  t.Env,
-		}, nil
-	})
-}
-
 // ListServiceStatus 展示服务状态列表
 func (*outerImpl) ListServiceStatus(ctx context.Context, reqDTO ListServiceStatusReqDTO) ([]status.Service, error) {
 	if err := reqDTO.IsValid(); err != nil {
@@ -1072,12 +1066,12 @@ func (*outerImpl) ListServiceStatus(ctx context.Context, reqDTO ListServiceStatu
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	source, err := checkAppDevelopPermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId)
+	appId, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return nil, err
 	}
 	url := strings.TrimSuffix(source.Host, "/") +
-		fmt.Sprintf("/api/service/v1/status/list?app=%s&env=%s", source.AppId, source.Env)
+		fmt.Sprintf("/api/service/v1/status/list?app=%s&env=%s", appId, source.Env)
 	resp := make([]status.Service, 0)
 	err = httputil.Get(
 		ctx,
@@ -1102,7 +1096,7 @@ func (*outerImpl) DoStatusAction(ctx context.Context, reqDTO DoStatusActionReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	source, err := checkAppDevelopPermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId)
+	_, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return err
 	}
@@ -1146,7 +1140,7 @@ func (*outerImpl) ListStatusActions(ctx context.Context, reqDTO ListStatusAction
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	source, err := checkAppDevelopPermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId)
+	_, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return nil, err
 	}
@@ -1158,6 +1152,103 @@ func (*outerImpl) ListStatusActions(ctx context.Context, reqDTO ListStatusAction
 	return listutil.Map(actions, func(t status.Action) (string, error) {
 		return t.Label, nil
 	})
+}
+
+// ListBindServiceSource 获取绑定服务来源
+func (*outerImpl) ListBindServiceSource(ctx context.Context, reqDTO ListBindServiceSourceReqDTO) ([]SimpleBindServiceSourceDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 校验权限
+	err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
+		return nil, err
+	}
+	binds, err := deploymd.ListAppServiceSourceBindByAppIdAndEnv(ctx, reqDTO.AppId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if len(binds) == 0 {
+		return []SimpleBindServiceSourceDTO{}, nil
+	}
+	bindMap := make(map[int64]deploymd.AppServiceSourceBind, len(binds))
+	sourceIdList, _ := listutil.Map(binds, func(t deploymd.AppServiceSourceBind) (int64, error) {
+		bindMap[t.SourceId] = t
+		return t.SourceId, nil
+	})
+	sources, err := deploymd.BatchGetServiceSourceByIdList(ctx, sourceIdList, []string{"id", "name"})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(sources, func(t deploymd.ServiceSource) (SimpleBindServiceSourceDTO, error) {
+		bind := bindMap[t.Id]
+		return SimpleBindServiceSourceDTO{
+			Id:     t.Id,
+			Name:   t.Name,
+			BindId: bind.Id,
+			Env:    bind.Env,
+		}, nil
+	})
+}
+
+// BindAppAndServiceSource 绑定应用服务和服务来源
+func (*outerImpl) BindAppAndServiceSource(ctx context.Context, reqDTO BindAppAndServiceSourceReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 校验权限
+	err := checkManageServiceSourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
+		return err
+	}
+	if len(reqDTO.SourceIdList) == 0 {
+		err = deploymd.DeleteAppServiceSourceBindByAppIdAndEnv(ctx, reqDTO.AppId, reqDTO.Env)
+		if err != nil {
+			return util.InternalError(err)
+		}
+		return nil
+	}
+	// 校验sourceIdList
+	sources, err := deploymd.BatchGetServiceSourceByIdList(ctx, reqDTO.SourceIdList, nil)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if len(sources) == 0 {
+		return util.InvalidArgsError()
+	}
+	for _, source := range sources {
+		if source.Env != reqDTO.Env {
+			return util.InvalidArgsError()
+		}
+	}
+	insertReqs, _ := listutil.Map(reqDTO.SourceIdList, func(t int64) (deploymd.InsertAppServiceSourceBindReqDTO, error) {
+		return deploymd.InsertAppServiceSourceBindReqDTO{
+			SourceId: t,
+			AppId:    reqDTO.AppId,
+			Env:      reqDTO.Env,
+		}, nil
+	})
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		// 先删除
+		err2 := deploymd.DeleteAppServiceSourceBindByAppIdAndEnv(ctx, reqDTO.AppId, reqDTO.Env)
+		if err2 != nil {
+			return err2
+		}
+		// 批量插入
+		return deploymd.BatchInsertAppServiceSourceBind(ctx, insertReqs)
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }
 
 func listActions(ctx context.Context, source deploymd.ServiceSource) ([]status.Action, error) {

@@ -79,15 +79,19 @@ func InitApi() {
 			group.DELETE("/delete/:sourceId", deleteServiceSource)
 			// 服务来源列表
 			group.GET("/list", listServiceSource)
+			// 所有配置来源列表
+			group.GET("/listAll/:env", listAllServiceSource)
+			// 获取应用服务绑定的配置来源
+			group.GET("/listBind", listBindServiceSource)
+			// 绑定应用服务和配置来源
+			group.POST("/bindApp", bindAppAndServiceSource)
 		}
 		group = e.Group("/api/service", apisession.CheckLogin)
 		{
-			// 展示服务来源
-			group.GET("/listSource", listStatusSource)
 			// 展示服务状态
-			group.GET("/listStatus/:sourceId", listServiceStatus)
+			group.GET("/listStatus/:bindId", listServiceStatus)
 			// 获取操作列表
-			group.GET("/listActions/:sourceId", listServiceStatusActions)
+			group.GET("/listActions/:bindId", listServiceStatusActions)
 			// 操作服务
 			group.PUT("/doAction", doServiceStatusAction)
 
@@ -99,7 +103,7 @@ func doServiceStatusAction(c *gin.Context) {
 	var req DoServiceStatusActionReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.Outer.DoStatusAction(c, deploysrv.DoStatusActionReqDTO{
-			SourceId:  req.SourceId,
+			BindId:    req.BindId,
 			ServiceId: req.ServiceId,
 			Action:    req.Action,
 			Operator:  apisession.MustGetLoginUser(c),
@@ -115,7 +119,7 @@ func doServiceStatusAction(c *gin.Context) {
 
 func listServiceStatus(c *gin.Context) {
 	services, err := deploysrv.Outer.ListServiceStatus(c, deploysrv.ListServiceStatusReqDTO{
-		SourceId: cast.ToInt64(c.Param("sourceId")),
+		BindId:   cast.ToInt64(c.Param("bindId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -130,7 +134,7 @@ func listServiceStatus(c *gin.Context) {
 
 func listServiceStatusActions(c *gin.Context) {
 	actions, err := deploysrv.Outer.ListStatusActions(c, deploysrv.ListStatusActionReqDTO{
-		SourceId: cast.ToInt64(c.Param("sourceId")),
+		BindId:   cast.ToInt64(c.Param("bindId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -236,7 +240,6 @@ func deletePipelineVars(c *gin.Context) {
 
 func listServiceSource(c *gin.Context) {
 	sources, err := deploysrv.Outer.ListServiceSource(c, deploysrv.ListServiceSourceReqDTO{
-		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -248,7 +251,6 @@ func listServiceSource(c *gin.Context) {
 		return ServiceSourceVO{
 			Id:      t.Id,
 			Name:    t.Name,
-			AppId:   t.AppId,
 			Env:     t.Env,
 			Host:    t.Host,
 			ApiKey:  t.ApiKey,
@@ -261,24 +263,22 @@ func listServiceSource(c *gin.Context) {
 	})
 }
 
-func listStatusSource(c *gin.Context) {
-	sources, err := deploysrv.Outer.ListStatusSource(c, deploysrv.ListStatusSourceReqDTO{
-		AppId:    c.Query("appId"),
-		Env:      c.Query("env"),
+func listAllServiceSource(c *gin.Context) {
+	sources, err := deploysrv.Outer.ListAllServiceSource(c, deploysrv.ListAllServiceSourceReqDTO{
+		Env:      c.Param("env"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(sources, func(t deploysrv.StatusSourceDTO) (StatusSourceVO, error) {
-		return StatusSourceVO{
+	data, _ := listutil.Map(sources, func(t deploysrv.SimpleServiceSourceDTO) (SimpleServiceSourceVO, error) {
+		return SimpleServiceSourceVO{
 			Id:   t.Id,
 			Name: t.Name,
-			Env:  t.Env,
 		}, nil
 	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]StatusSourceVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleServiceSourceVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     data,
 	})
@@ -288,7 +288,6 @@ func createServiceSource(c *gin.Context) {
 	var req CreateServiceSourceReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.Outer.CreateServiceSource(c, deploysrv.CreateServiceSourceReqDTO{
-			AppId:    req.AppId,
 			Env:      req.Env,
 			Name:     req.Name,
 			Host:     req.Host,
@@ -630,4 +629,45 @@ func listPipelineWhenCreatePlan(c *gin.Context) {
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     data,
 	})
+}
+
+func listBindServiceSource(c *gin.Context) {
+	sources, err := deploysrv.Outer.ListBindServiceSource(c, deploysrv.ListBindServiceSourceReqDTO{
+		AppId:    c.Query("appId"),
+		Env:      c.Query("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(sources, func(t deploysrv.SimpleBindServiceSourceDTO) (SimpleBindServiceSourceVO, error) {
+		return SimpleBindServiceSourceVO{
+			Id:     t.Id,
+			Name:   t.Name,
+			BindId: t.BindId,
+			Env:    t.Env,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleBindServiceSourceVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func bindAppAndServiceSource(c *gin.Context) {
+	var req BindAppAndServiceSourceReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.Outer.BindAppAndServiceSource(c, deploysrv.BindAppAndServiceSourceReqDTO{
+			AppId:        req.AppId,
+			SourceIdList: req.SourceIdList,
+			Env:          req.Env,
+			Operator:     apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
 }

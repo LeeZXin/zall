@@ -19,7 +19,7 @@
       <LockOutlined style="font-size:18px" />
       <span>修改密码</span>
     </div>
-    <div class="drawer-item">
+    <div class="drawer-item" @click="goto('/sa/cfg/list')" v-if="user.isAdmin">
       <UserOutlined style="font-size:18px" />
       <span>超级管理员</span>
     </div>
@@ -55,6 +55,9 @@ const logout = () => {
     router.push("/login/login");
   });
 };
+const goto = url => {
+  router.push(url);
+}
 </script>
 <style scoped>
 .avatar-name {

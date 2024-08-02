@@ -1,7 +1,5 @@
 import request from '@/utils/request.js'
 
-// 服务来源配置列表
-const listSimpleServiceSourceRequest = (data) => request.get("/api/service/listSource", { params: data });
 // 服务状态配置列表
 const listServiceStatusRequest = (sourceId) => request.get("/api/service/listStatus/" + sourceId);
 // 服务操作列表
@@ -16,9 +14,13 @@ const createServiceSourceRequest = (data) => request.post("/api/serviceSource/cr
 const updateServiceSourceRequest = (data) => request.post("/api/serviceSource/update", data);
 // 删除服务来源配置
 const deleteServiceSourceRequest = (sourceId) => request.delete("/api/serviceSource/delete/" + sourceId);
-
+// 所有服务来源
+const listAllServiceSourceRequest = (env) => request.get("/api/serviceSource/listAll/" + env);
+// 获取绑定服务来源
+const listBindServiceSourceRequest = (data) => request.get("/api/serviceSource/listBind", { params: data });
+// 绑定应用服务和服务来源
+const bindAppAndServiceSourceRequest = (data) => request.post("/api/serviceSource/bindApp", data);
 export {
-    listSimpleServiceSourceRequest,
     listServiceStatusRequest,
     listStatusActionsRequest,
     doStatusActionRequest,
@@ -26,4 +28,7 @@ export {
     createServiceSourceRequest,
     updateServiceSourceRequest,
     deleteServiceSourceRequest,
+    listAllServiceSourceRequest,
+    listBindServiceSourceRequest,
+    bindAppAndServiceSourceRequest
 }

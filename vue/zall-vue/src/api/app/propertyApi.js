@@ -26,7 +26,12 @@ const deletePropertyFileRequest = (fileId) => request.delete("/api/propertyFile/
 const deployHistoryRequest = (data) => request.post("/api/propertyHistory/deploy", data);
 // 发布记录
 const listDeployRequest = (historyId) => request.get("/api/propertyHistory/listDeploy/" + historyId);
-
+// 所有配置来源
+const listAllPropertySourceRequest = (env) => request.get("/api/propertySource/listAll/" + env);
+// 获取绑定配置来源
+const listBindPropertySourceRequest = (data) => request.get("/api/propertySource/listBind", { params: data });
+// 绑定应用服务和配置来源
+const bindAppAndPropertySourceRequest = (data) => request.post("/api/propertySource/bindApp", data);
 export {
     listPropertyFileRequest,
     createPropertyFileRequest,
@@ -40,5 +45,8 @@ export {
     listPropertySourceByFileIdRequest,
     deployHistoryRequest,
     listDeployRequest,
-    deletePropertyFileRequest
+    deletePropertyFileRequest,
+    listAllPropertySourceRequest,
+    listBindPropertySourceRequest,
+    bindAppAndPropertySourceRequest
 }

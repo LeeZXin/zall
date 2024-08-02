@@ -9,10 +9,6 @@
     <a-layout>
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
         <a-menu theme="dark" mode="inline" @click="onselect" v-model:selectedKeys="selectedKeys">
-          <a-menu-item key="/propertySource/list" v-if="appStore.perm?.canManagePropertySource">
-            <BookOutlined />
-            <span>配置中心来源</span>
-          </a-menu-item>
           <a-menu-item key="/propertyFile/list">
             <ContainerOutlined />
             <span>配置中心</span>
@@ -25,17 +21,9 @@
             <FileOutlined />
             <span>发布计划</span>
           </a-menu-item>
-          <a-menu-item key="/serviceSource/list" v-if="appStore.perm?.canManageServiceSource">
-            <BookOutlined />
-            <span>服务状态来源</span>
-          </a-menu-item>
           <a-menu-item key="/serviceStatus/list">
             <ReadOutlined />
             <span>服务状态</span>
-          </a-menu-item>
-          <a-menu-item key="/discoverySource/list" v-if="appStore.perm?.canManageDiscoverySource">
-            <BookOutlined />
-            <span>注册中心来源</span>
           </a-menu-item>
           <a-menu-item key="/discoveryService/list">
             <BlockOutlined />
@@ -68,7 +56,6 @@ import { useI18n } from "vue-i18n";
 import { ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
-  BookOutlined,
   FileOutlined,
   TagOutlined,
   ReadOutlined,
@@ -112,14 +99,11 @@ const changeSelectedKey = path => {
 };
 // 为了子页面能体现在导航栏
 const pagesMap = {
-  "/propertySource": "/propertySource/list",
   "/propertyFile": "/propertyFile/list",
   "/deployConfig": "/deployConfig/list",
   "/pipeline": "/pipeline/list",
   "/deployPlan": "/deployPlan/list",
-  "/serviceSource": "/serviceSource/list",
   "/serviceStatus": "/serviceStatus/list",
-  "/discoverySource": "/discoverySource/list",
   "/discoveryService": "/discoveryService/list",
   "/settings": "/settings",
   "/promScrape": "/promScrape/list"

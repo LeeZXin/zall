@@ -25,13 +25,17 @@ func InitApi() {
 			group.POST("/update", updateDiscoverySource)
 			// 删除
 			group.DELETE("/delete/:sourceId", deleteDiscoverySource)
+			// 所有来源列表
+			group.GET("/listAll/:env", listAllDiscoverySource)
+			// 绑定来源列表
+			group.GET("/listBind", listBindDiscoverySource)
+			// 绑定来源
+			group.POST("/bindApp", bindAppAndDiscoverySource)
 		}
 		group = e.Group("/api/discoveryService", apisession.CheckLogin)
 		{
-			// 来源列表
-			group.GET("/listSource", listSimpleDiscoverySource)
 			// 获取服务列表
-			group.GET("/listService/:sourceId", listDiscoveryService)
+			group.GET("/listService/:bindId", listDiscoveryService)
 			// 下线服务
 			group.POST("/deregister", deregisterService)
 			// 上线服务
@@ -46,7 +50,6 @@ func listDiscoverySource(c *gin.Context) {
 	var req ListDiscoverySourceReqVO
 	if util.ShouldBindQuery(&req, c) {
 		sources, err := discoverysrv.Outer.ListDiscoverySource(c, discoverysrv.ListDiscoverySourceReqDTO{
-			AppId:    req.AppId,
 			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -71,10 +74,10 @@ func listDiscoverySource(c *gin.Context) {
 	}
 }
 
-func listSimpleDiscoverySource(c *gin.Context) {
-	var req ListDiscoverySourceReqVO
+func listBindDiscoverySource(c *gin.Context) {
+	var req ListBindDiscoverySourceReqVO
 	if util.ShouldBindQuery(&req, c) {
-		sources, err := discoverysrv.Outer.ListSimpleDiscoverySource(c, discoverysrv.ListDiscoverySourceReqDTO{
+		sources, err := discoverysrv.Outer.ListBindDiscoverySource(c, discoverysrv.ListBindDiscoverySourceReqDTO{
 			AppId:    req.AppId,
 			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
@@ -83,13 +86,15 @@ func listSimpleDiscoverySource(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(sources, func(t discoverysrv.SimpleDiscoverySourceDTO) (SimpleDiscoverySourceVO, error) {
-			return SimpleDiscoverySourceVO{
-				Id:   t.Id,
-				Name: t.Name,
+		data, _ := listutil.Map(sources, func(t discoverysrv.SimpleBindDiscoverySourceDTO) (SimpleBindDiscoverySourceVO, error) {
+			return SimpleBindDiscoverySourceVO{
+				Id:     t.Id,
+				Name:   t.Name,
+				BindId: t.BindId,
+				Env:    t.Env,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleDiscoverySourceVO]{
+		c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleBindDiscoverySourceVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data:     data,
 		})
@@ -100,7 +105,6 @@ func createDiscoverySource(c *gin.Context) {
 	var req CreateDiscoverySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := discoverysrv.Outer.CreateDiscoverySource(c, discoverysrv.CreateDiscoverySourceReqDTO{
-			AppId:     req.AppId,
 			Name:      req.Name,
 			Endpoints: req.Endpoints,
 			Username:  req.Username,
@@ -149,7 +153,7 @@ func deleteDiscoverySource(c *gin.Context) {
 
 func listDiscoveryService(c *gin.Context) {
 	services, err := discoverysrv.Outer.ListDiscoveryService(c, discoverysrv.ListDiscoveryServiceReqDTO{
-		SourceId: cast.ToInt64(c.Param("sourceId")),
+		BindId:   cast.ToInt64(c.Param("bindId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -173,7 +177,7 @@ func deregisterService(c *gin.Context) {
 	var req DeregisterServiceReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := discoverysrv.Outer.DeregisterService(c, discoverysrv.DeregisterServiceReqDTO{
-			SourceId:   req.SourceId,
+			BindId:     req.BindId,
 			InstanceId: req.InstanceId,
 			Operator:   apisession.MustGetLoginUser(c),
 		})
@@ -189,7 +193,7 @@ func reRegisterService(c *gin.Context) {
 	var req ReRegisterServiceReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := discoverysrv.Outer.ReRegisterService(c, discoverysrv.ReRegisterServiceReqDTO{
-			SourceId:   req.SourceId,
+			BindId:     req.BindId,
 			InstanceId: req.InstanceId,
 			Operator:   apisession.MustGetLoginUser(c),
 		})
@@ -205,7 +209,7 @@ func deleteDownService(c *gin.Context) {
 	var req DeleteDownServiceReqVO
 	if util.ShouldBindQuery(&req, c) {
 		err := discoverysrv.Outer.DeleteDownService(c, discoverysrv.DeleteDownServiceReqDTO{
-			SourceId:   req.SourceId,
+			BindId:     req.BindId,
 			InstanceId: req.InstanceId,
 			Operator:   apisession.MustGetLoginUser(c),
 		})
@@ -215,4 +219,42 @@ func deleteDownService(c *gin.Context) {
 		}
 		util.DefaultOkResponse(c)
 	}
+}
+
+func bindAppAndDiscoverySource(c *gin.Context) {
+	var req BindAppAndDiscoverySourceReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := discoverysrv.Outer.BindAppAndDiscoverySource(c, discoverysrv.BindAppAndDiscoverySourceReqDTO{
+			AppId:        req.AppId,
+			SourceIdList: req.SourceIdList,
+			Env:          req.Env,
+			Operator:     apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func listAllDiscoverySource(c *gin.Context) {
+	nodes, err := discoverysrv.Outer.ListAllDiscoverySource(c, discoverysrv.ListAllDiscoverySourceReqDTO{
+		Env:      c.Param("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(nodes, func(t discoverysrv.SimpleDiscoverySourceDTO) (SimpleDiscoverySourceVO, error) {
+		return SimpleDiscoverySourceVO{
+			Id:   t.Id,
+			Name: t.Name,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleDiscoverySourceVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }

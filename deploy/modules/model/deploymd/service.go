@@ -327,7 +327,6 @@ func GetPipelineById(ctx context.Context, pipelineId int64) (Pipeline, bool, err
 func ListServiceSource(ctx context.Context, reqDTO ListServiceSourceReqDTO) ([]ServiceSource, error) {
 	ret := make([]ServiceSource, 0)
 	session := xormutil.MustGetXormSession(ctx).
-		Where("app_id = ?", reqDTO.AppId).
 		And("env = ?", reqDTO.Env)
 	if len(reqDTO.Cols) > 0 {
 		session.Cols(reqDTO.Cols...)
@@ -339,7 +338,6 @@ func ListServiceSource(ctx context.Context, reqDTO ListServiceSourceReqDTO) ([]S
 func InsertServiceSource(ctx context.Context, reqDTO InsertServiceSourceReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ServiceSource{
 		Name:   reqDTO.Name,
-		AppId:  reqDTO.AppId,
 		Env:    reqDTO.Env,
 		Host:   reqDTO.Host,
 		ApiKey: reqDTO.ApiKey,
@@ -366,17 +364,26 @@ func DeleteServiceSourceById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
-func DeleteServiceSourceByAppId(ctx context.Context, appId string) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Where("app_id = ?", appId).
-		Delete(new(ServiceSource))
-	return err
-}
-
 func GetServiceSourceById(ctx context.Context, id int64) (ServiceSource, bool, error) {
 	var ret ServiceSource
 	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
 	return ret, b, err
+}
+
+func GetAppServiceSourceBindById(ctx context.Context, id int64) (AppServiceSourceBind, bool, error) {
+	var ret AppServiceSourceBind
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	return ret, b, err
+}
+
+func BatchGetServiceSourceByIdList(ctx context.Context, idList []int64, cols []string) ([]ServiceSource, error) {
+	ret := make([]ServiceSource, 0)
+	session := xormutil.MustGetXormSession(ctx).In("id", idList)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Find(&ret)
+	return ret, err
 }
 
 func ListPipelineVars(ctx context.Context, appId, env string, cols []string) ([]PipelineVars, error) {
@@ -451,4 +458,47 @@ func ExistPipelineVarsByAppIdAndEnvAndName(ctx context.Context, appId, env, name
 		And("env = ?", env).
 		And("name = ?", name).
 		Exist(new(PipelineVars))
+}
+
+func BatchInsertAppServiceSourceBind(ctx context.Context, reqDTOs []InsertAppServiceSourceBindReqDTO) error {
+	binds, _ := listutil.Map(reqDTOs, func(t InsertAppServiceSourceBindReqDTO) (AppServiceSourceBind, error) {
+		return AppServiceSourceBind{
+			SourceId: t.SourceId,
+			AppId:    t.AppId,
+			Env:      t.Env,
+		}, nil
+	})
+	_, err := xormutil.MustGetXormSession(ctx).Insert(binds)
+	return err
+}
+
+func DeleteAppServiceSourceBindBySourceId(ctx context.Context, sourceId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("source_id = ?", sourceId).
+		Delete(new(AppServiceSourceBind))
+	return err
+}
+
+func DeleteAppServiceSourceBindByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		Delete(new(AppServiceSourceBind))
+	return err
+}
+
+func DeleteAppServiceSourceBindByAppIdAndEnv(ctx context.Context, appId, env string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env).
+		Delete(new(AppServiceSourceBind))
+	return err
+}
+
+func ListAppServiceSourceBindByAppIdAndEnv(ctx context.Context, appId, env string) ([]AppServiceSourceBind, error) {
+	ret := make([]AppServiceSourceBind, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env).
+		Find(&ret)
+	return ret, err
 }

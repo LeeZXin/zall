@@ -50,16 +50,24 @@ func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInf
 	return checkAppDevelopPerm(ctx, operator, &app)
 }
 
-func checkAppDevelopPermBySourceId(ctx context.Context, operator apisession.UserInfo, sourceId int64) (deploymd.ServiceSource, error) {
-	source, b, err := deploymd.GetServiceSourceById(ctx, sourceId)
+func checkAppDevelopPermByBindId(ctx context.Context, operator apisession.UserInfo, bindId int64) (string, deploymd.ServiceSource, error) {
+	bind, b, err := deploymd.GetAppServiceSourceBindById(ctx, bindId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return deploymd.ServiceSource{}, util.InternalError(err)
+		return "", deploymd.ServiceSource{}, util.InternalError(err)
 	}
 	if !b {
-		return deploymd.ServiceSource{}, util.InvalidArgsError()
+		return "", deploymd.ServiceSource{}, util.InvalidArgsError()
 	}
-	return source, checkAppDevelopPermByAppId(ctx, operator, source.AppId)
+	source, b, err := deploymd.GetServiceSourceById(ctx, bind.SourceId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", deploymd.ServiceSource{}, util.InternalError(err)
+	}
+	if !b {
+		return "", deploymd.ServiceSource{}, util.ThereHasBugErr()
+	}
+	return bind.AppId, source, checkAppDevelopPermByAppId(ctx, operator, bind.AppId)
 }
 
 func checkAppDevelopPerm(ctx context.Context, operator apisession.UserInfo, app *appmd.App) error {
@@ -222,16 +230,4 @@ func checkManageServiceSourcePermByAppId(ctx context.Context, operator apisessio
 		return util.InvalidArgsError()
 	}
 	return checkManageServiceSourcePerm(ctx, operator, &app)
-}
-
-func checkManageServiceSourcePermBySourceId(ctx context.Context, operator apisession.UserInfo, sourceId int64) (deploymd.ServiceSource, error) {
-	ret, b, err := deploymd.GetServiceSourceById(ctx, sourceId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return deploymd.ServiceSource{}, util.InternalError(err)
-	}
-	if !b {
-		return deploymd.ServiceSource{}, util.InvalidArgsError()
-	}
-	return ret, checkManageServiceSourcePermByAppId(ctx, operator, ret.AppId)
 }

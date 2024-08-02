@@ -111,16 +111,13 @@ const saveOrUpdateServiceSource = () => {
   if (mode === "create") {
     createDiscoverySourceRequest({
       env: formState.selectedEnv,
-      appId: route.params.appId,
       endpoints: endpoints,
       username: formState.username,
       password: formState.password,
       name: formState.name
     }).then(() => {
       message.success("创建成功");
-      router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/discoverySource/list/${formState.selectedEnv}`
-      );
+      router.push(`/sa/discoverySource/list/${formState.selectedEnv}`);
     });
   } else if (mode === "update") {
     updateDiscoverySourceRequest({
@@ -131,9 +128,7 @@ const saveOrUpdateServiceSource = () => {
       name: formState.name
     }).then(() => {
       message.success("保存成功");
-      router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/discoverySource/list/${formState.selectedEnv}`
-      );
+      router.push(`/sa/discoverySource/list/${formState.selectedEnv}`);
     });
   }
 };
@@ -143,9 +138,7 @@ if (mode === "create") {
 } else if (mode === "update") {
   console.log(discoverySourceStore.id);
   if (discoverySourceStore.id === 0) {
-    router.push(
-      `/team/${route.params.teamId}/app/${route.params.appId}/discoverySource/list`
-    );
+    router.push(`/sa/discoverySource/list`);
   } else {
     formState.name = discoverySourceStore.name;
     formState.selectedEnv = discoverySourceStore.env;

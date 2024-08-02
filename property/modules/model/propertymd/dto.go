@@ -1,7 +1,6 @@
 package propertymd
 
 type InsertEtcdNodeReqDTO struct {
-	AppId     string
 	Name      string
 	Endpoints string
 	Username  string
@@ -49,7 +48,12 @@ type PageHistoryReqDTO struct {
 }
 
 type ListEtcdNodeReqDTO struct {
-	AppId string
-	Env   string
-	Cols  []string
+	Env  string
+	Cols []string
+}
+
+type InsertAppEtcdNodeBindReqDTO struct {
+	NodeId int64
+	AppId  string
+	Env    string
 }

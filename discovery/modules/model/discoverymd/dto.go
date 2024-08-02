@@ -3,7 +3,6 @@ package discoverymd
 import "github.com/LeeZXin/zsf/services/lb"
 
 type InsertEtcdNodeReqDTO struct {
-	AppId     string
 	Name      string
 	Endpoints string
 	Username  string
@@ -20,9 +19,8 @@ type UpdateEtcdNodeReqDTO struct {
 }
 
 type ListEtcdNodeReqDTO struct {
-	AppId string
-	Env   string
-	Cols  []string
+	Env  string
+	Cols []string
 }
 
 type InsertDownServiceDTO struct {
@@ -30,4 +28,10 @@ type InsertDownServiceDTO struct {
 	AppId      string
 	Service    lb.Server
 	InstanceId string
+}
+
+type InsertAppEtcdNodeBindReqDTO struct {
+	NodeId int64
+	AppId  string
+	Env    string
 }

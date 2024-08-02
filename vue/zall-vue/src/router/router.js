@@ -26,6 +26,62 @@ const router = createRouter({
             ]
         },
         {
+            path: "/sa",
+            redirect: "/sa/cfg/list",
+            component: () =>
+                import ("../layouts/SaLayout"),
+            children: [{
+                path: "/sa/cfg/list",
+                component: () =>
+                    import ("../pages/sa/CfgListPage")
+            }, {
+                path: "/sa/propertySource/list/:env?",
+                component: () =>
+                    import ("../pages/sa/PropertySourceListPage")
+
+            }, {
+                path: "/sa/propertySource/create",
+                component: () =>
+                    import ("../pages/sa/PropertySourceHandlePage")
+
+            }, {
+                path: "/sa/propertySource/:sourceId(\\d+)/update",
+                component: () =>
+                    import ("../pages/sa/PropertySourceHandlePage")
+
+            }, {
+                path: "/sa/serviceSource/list/:env?",
+                component: () =>
+                    import ("../pages/sa/ServiceSourceListPage")
+
+            }, {
+                path: "/sa/serviceSource/create",
+                component: () =>
+                    import ("../pages/sa/ServiceSourceHandlePage")
+
+            }, {
+                path: "/sa/serviceSource/:sourceId(\\d+)/update",
+                component: () =>
+                    import ("../pages/sa/ServiceSourceHandlePage")
+
+            }, {
+                path: "/sa/discoverySource/list/:env?",
+                component: () =>
+                    import ("../pages/sa/DiscoverySourceListPage")
+
+            }, {
+                path: "/sa/discoverySource/create",
+                component: () =>
+                    import ("../pages/sa/DiscoverySourceHandlePage")
+
+            }, {
+                path: "/sa/discoverySource/:sourceId(\\d+)/update",
+                component: () =>
+                    import ("../pages/sa/DiscoverySourceHandlePage")
+
+            }]
+        },
+        {
             path: "/db",
             redirect: "/db/mysqlDb/list",
             component: () =>
@@ -253,11 +309,6 @@ const router = createRouter({
             component: () =>
                 import ("../layouts/AppLayout"),
             children: [{
-                path: "/team/:teamId(\\d+)/app/:appId/propertySource/list/:env?",
-                component: () =>
-                    import ("../pages/team/app/PropertySourceListPage")
-
-            }, {
                 path: "/team/:teamId(\\d+)/app/:appId/propertyFile/list/:env?",
                 component: () =>
                     import ("../pages/team/app/PropertyFileListPage")
@@ -313,21 +364,6 @@ const router = createRouter({
                     import ("../pages/team/app/DeployPlanViewPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/serviceSource/list/:env?",
-                component: () =>
-                    import ("../pages/team/app/ServiceSourceListPage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/serviceSource/create",
-                component: () =>
-                    import ("../pages/team/app/ServiceSourceHandlePage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/serviceSource/:sourceId(\\d+)/update",
-                component: () =>
-                    import ("../pages/team/app/ServiceSourceHandlePage")
-
-            }, {
                 path: "/team/:teamId(\\d+)/app/:appId/pipeline/vars/:env?",
                 component: () =>
                     import ("../pages/team/app/PipelineVarsPage")
@@ -346,31 +382,6 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/app/:appId/serviceStatus/list/:env?",
                 component: () =>
                     import ("../pages/team/app/ServiceStatusListPage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/propertySource/create",
-                component: () =>
-                    import ("../pages/team/app/PropertySourceHandlePage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/propertySource/:sourceId(\\d+)/update",
-                component: () =>
-                    import ("../pages/team/app/PropertySourceHandlePage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/discoverySource/list/:env?",
-                component: () =>
-                    import ("../pages/team/app/DiscoverySourceListPage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/discoverySource/create",
-                component: () =>
-                    import ("../pages/team/app/DiscoverySourceHandlePage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/discoverySource/:sourceId(\\d+)/update",
-                component: () =>
-                    import ("../pages/team/app/DiscoverySourceHandlePage")
 
             }, {
                 path: "/team/:teamId(\\d+)/app/:appId/discoveryService/list/:env?",

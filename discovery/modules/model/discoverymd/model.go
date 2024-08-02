@@ -7,14 +7,14 @@ import (
 )
 
 const (
-	EtcdNodeTableName    = "zdiscovery_etcd_node"
-	DownServiceTableName = "zdiscovery_down_service"
+	EtcdNodeTableName        = "zdiscovery_etcd_node"
+	DownServiceTableName     = "zdiscovery_down_service"
+	AppEtcdNodeBindTableName = "zdiscovery_app_etcd_node_bind"
 )
 
 type EtcdNode struct {
 	Id        int64     `json:"id" xorm:"pk autoincr"`
 	Name      string    `json:"name"`
-	AppId     string    `json:"appId"`
 	Env       string    `json:"env"`
 	Endpoints string    `json:"endpoints"`
 	Username  string    `json:"username"`
@@ -38,4 +38,16 @@ type DownService struct {
 
 func (*DownService) TableName() string {
 	return DownServiceTableName
+}
+
+type AppEtcdNodeBind struct {
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	AppId   string    `json:"appId"`
+	NodeId  int64     `json:"nodeId"`
+	Env     string    `json:"env"`
+	Created time.Time `json:"created" xorm:"created"`
+}
+
+func (*AppEtcdNodeBind) TableName() string {
+	return AppEtcdNodeBindTableName
 }

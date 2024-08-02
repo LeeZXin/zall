@@ -56,20 +56,24 @@ type OuterService interface {
 	KillStage(context.Context, KillStageReqDTO) error
 	// ConfirmInteractStage 交互阶段确认
 	ConfirmInteractStage(context.Context, ConfirmInteractStageReqDTO) error
-	// ListServiceSource 查看流水线数据来源
+	// ListServiceSource 查看服务状态来源
 	ListServiceSource(context.Context, ListServiceSourceReqDTO) ([]ServiceSourceDTO, error)
-	// CreateServiceSource 插入流水线数据来源
+	// ListAllServiceSource 所有服务状态来源
+	ListAllServiceSource(context.Context, ListAllServiceSourceReqDTO) ([]SimpleServiceSourceDTO, error)
+	// CreateServiceSource 插入服务状态来源
 	CreateServiceSource(context.Context, CreateServiceSourceReqDTO) error
-	// UpdateServiceSource 更新数据流水线来源
+	// UpdateServiceSource 更新服务状态来源
 	UpdateServiceSource(context.Context, UpdateServiceSourceReqDTO) error
-	// DeleteServiceSource 删除数据流水线来源
+	// DeleteServiceSource 删除服务状态来源
 	DeleteServiceSource(context.Context, DeleteServiceSourceReqDTO) error
-	// ListStatusSource 为了展示服务状态时展示服务来源
-	ListStatusSource(context.Context, ListStatusSourceReqDTO) ([]StatusSourceDTO, error)
 	// ListServiceStatus 展示服务状态列表
 	ListServiceStatus(context.Context, ListServiceStatusReqDTO) ([]status.Service, error)
 	// ListStatusActions 获取服务操作列表
 	ListStatusActions(context.Context, ListStatusActionReqDTO) ([]string, error)
 	// DoStatusAction 操作服务
 	DoStatusAction(context.Context, DoStatusActionReqDTO) error
+	// ListBindServiceSource 获取绑定服务来源
+	ListBindServiceSource(context.Context, ListBindServiceSourceReqDTO) ([]SimpleBindServiceSourceDTO, error)
+	// BindAppAndServiceSource 绑定应用服务和服务来源
+	BindAppAndServiceSource(context.Context, BindAppAndServiceSourceReqDTO) error
 }

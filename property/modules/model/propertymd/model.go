@@ -6,13 +6,13 @@ const (
 	PropertyHistoryTableName = "zproperty_history"
 	PropertyFileTableName    = "zproperty_file"
 	EtcdNodeTableName        = "zproperty_etcd_node"
+	AppEtcdNodeBindTableName = "zproperty_app_etcd_node_bind"
 	DeployTableName          = "zproperty_deploy"
 )
 
 type EtcdNode struct {
 	Id        int64     `json:"id" xorm:"pk autoincr"`
 	Name      string    `json:"name"`
-	AppId     string    `json:"appId"`
 	Env       string    `json:"env"`
 	Endpoints string    `json:"endpoints"`
 	Username  string    `json:"username"`
@@ -23,6 +23,18 @@ type EtcdNode struct {
 
 func (*EtcdNode) TableName() string {
 	return EtcdNodeTableName
+}
+
+type AppEtcdNodeBind struct {
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	NodeId  int64     `json:"nodeId"`
+	AppId   string    `json:"appId"`
+	Env     string    `json:"env"`
+	Created time.Time `json:"created" xorm:"created"`
+}
+
+func (*AppEtcdNodeBind) TableName() string {
+	return AppEtcdNodeBindTableName
 }
 
 type File struct {
@@ -57,8 +69,7 @@ type Deploy struct {
 	// 方便查询删除
 	FileId int64 `json:"fileId"`
 	// 方便查询删除
-	AppId string `json:"appId"`
-
+	AppId     string    `json:"appId"`
 	NodeName  string    `json:"nodeName"`
 	Endpoints string    `json:"endpoints"`
 	Username  string    `json:"username"`

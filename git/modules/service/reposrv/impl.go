@@ -187,13 +187,7 @@ func (*outerImpl) ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]RepoDT
 		if !b {
 			return nil, util.UnauthorizedError()
 		}
-		if p.PermDetail.DefaultRepoPerm.CanAccessRepo {
-			repoList, err = repomd.ListRepoByTeamId(ctx, reqDTO.TeamId)
-			if err != nil {
-				logger.Logger.WithContext(ctx).Error(err)
-				return nil, util.InternalError(err)
-			}
-		} else if len(p.PermDetail.RepoPermList) > 0 {
+		if len(p.PermDetail.RepoPermList) > 0 {
 			// 访问部分仓库
 			repoPermList, _ := listutil.Filter(p.PermDetail.RepoPermList, func(p perm.RepoPermWithId) (bool, error) {
 				return p.CanAccessRepo, nil
@@ -210,6 +204,12 @@ func (*outerImpl) ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]RepoDT
 				}
 			} else {
 				repoList = []repomd.Repo{}
+			}
+		} else if p.PermDetail.DefaultRepoPerm.CanAccessRepo {
+			repoList, err = repomd.ListRepoByTeamId(ctx, reqDTO.TeamId)
+			if err != nil {
+				logger.Logger.WithContext(ctx).Error(err)
+				return nil, util.InternalError(err)
 			}
 		} else {
 			repoList = []repomd.Repo{}

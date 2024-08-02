@@ -83,7 +83,6 @@ type ListPipelineReqDTO struct {
 
 type InsertServiceSourceReqDTO struct {
 	Name   string
-	AppId  string
 	Env    string
 	Host   string
 	ApiKey string
@@ -97,9 +96,8 @@ type UpdateServiceSourceReqDTO struct {
 }
 
 type ListServiceSourceReqDTO struct {
-	AppId string
-	Env   string
-	Cols  []string
+	Env  string
+	Cols []string
 }
 
 type InsertPipelineVarsReqDTO struct {
@@ -112,4 +110,10 @@ type InsertPipelineVarsReqDTO struct {
 type UpdatePipelineVarsReqDTO struct {
 	Id      int64
 	Content string
+}
+
+type InsertAppServiceSourceBindReqDTO struct {
+	SourceId int64
+	AppId    string
+	Env      string
 }

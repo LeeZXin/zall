@@ -2,6 +2,7 @@ package propertymd
 
 import (
 	"context"
+	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"regexp"
 )
@@ -17,8 +18,7 @@ func IsPropertySourceNameValid(name string) bool {
 func ListEtcdNode(ctx context.Context, reqDTO ListEtcdNodeReqDTO) ([]EtcdNode, error) {
 	ret := make([]EtcdNode, 0)
 	session := xormutil.MustGetXormSession(ctx).
-		Where("app_id = ?", reqDTO.AppId).
-		And("env = ?", reqDTO.Env)
+		Where("env = ?", reqDTO.Env)
 	if len(reqDTO.Cols) > 0 {
 		session.Cols(reqDTO.Cols...)
 	}
@@ -29,7 +29,6 @@ func ListEtcdNode(ctx context.Context, reqDTO ListEtcdNodeReqDTO) ([]EtcdNode, e
 func InsertEtcdNode(ctx context.Context, reqDTO InsertEtcdNodeReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&EtcdNode{
-			AppId:     reqDTO.AppId,
 			Name:      reqDTO.Name,
 			Env:       reqDTO.Env,
 			Endpoints: reqDTO.Endpoints,
@@ -42,13 +41,6 @@ func InsertEtcdNode(ctx context.Context, reqDTO InsertEtcdNodeReqDTO) error {
 func DeleteEtcdNodeById(ctx context.Context, id int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
-		Delete(new(EtcdNode))
-	return err
-}
-
-func DeleteEtcdNodeByAppId(ctx context.Context, appId string) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Where("app_id = ?", appId).
 		Delete(new(EtcdNode))
 	return err
 }
@@ -148,11 +140,14 @@ func ListFile(ctx context.Context, appId, env string) ([]File, error) {
 	return ret, err
 }
 
-func BatchGetEtcdNodes(ctx context.Context, nodeIdList []int64) ([]EtcdNode, error) {
+func BatchGetEtcdNodesById(ctx context.Context, nodeIdList []int64, cols []string) ([]EtcdNode, error) {
 	ret := make([]EtcdNode, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		In("id", nodeIdList).
-		Find(&ret)
+	session := xormutil.MustGetXormSession(ctx).
+		In("id", nodeIdList)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Find(&ret)
 	return ret, err
 }
 
@@ -214,8 +209,54 @@ func ListDeployByHistoryId(ctx context.Context, historyId int64) ([]Deploy, erro
 	return ret, err
 }
 
-func GetEtcdNodeById(ctx context.Context, nodeId int64) (EtcdNode, bool, error) {
-	var ret EtcdNode
-	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", nodeId).Get(&ret)
-	return ret, b, err
+func BatchInsertAppEtcdNodeBind(ctx context.Context, reqDTOs []InsertAppEtcdNodeBindReqDTO) error {
+	binds, _ := listutil.Map(reqDTOs, func(t InsertAppEtcdNodeBindReqDTO) (AppEtcdNodeBind, error) {
+		return AppEtcdNodeBind{
+			NodeId: t.NodeId,
+			AppId:  t.AppId,
+			Env:    t.Env,
+		}, nil
+	})
+	_, err := xormutil.MustGetXormSession(ctx).Insert(binds)
+	return err
+}
+
+func DeleteAppEtcdNodeBindByNodeId(ctx context.Context, nodeId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("node_id = ?", nodeId).
+		Delete(new(AppEtcdNodeBind))
+	return err
+}
+
+func DeleteAppEtcdNodeBindByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		Delete(new(AppEtcdNodeBind))
+	return err
+}
+
+func DeleteAppEtcdNodeBindByAppIdAndEnv(ctx context.Context, appId, env string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env).
+		Delete(new(AppEtcdNodeBind))
+	return err
+}
+
+func BatchGetAppEtcdNodeBindByNodeIdListAndAppId(ctx context.Context, nodeIdList []int64, appId string) ([]AppEtcdNodeBind, error) {
+	ret := make([]AppEtcdNodeBind, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		And("app_id = ?", appId).
+		In("node_id", nodeIdList).
+		Find(&ret)
+	return ret, err
+}
+
+func ListAppEtcdNodeBindByAppIdAndEnv(ctx context.Context, appId, env string) ([]AppEtcdNodeBind, error) {
+	ret := make([]AppEtcdNodeBind, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env).
+		Find(&ret)
+	return ret, err
 }

@@ -7,13 +7,14 @@ import (
 )
 
 const (
-	StageTableName        = "zservice_deploy_stage"
-	DeployLogTableName    = "zservice_deploy_log"
-	PlanTableName         = "zservice_deploy_plan"
-	OpLogTableName        = "zservice_op_log"
-	PipelineTableName     = "zservice_pipeline"
-	PipelineVarsTableName = "zservice_pipeline_vars"
-	SourceTableName       = "zservice_source"
+	StageTableName         = "zservice_deploy_stage"
+	DeployLogTableName     = "zservice_deploy_log"
+	PlanTableName          = "zservice_deploy_plan"
+	OpLogTableName         = "zservice_op_log"
+	PipelineTableName      = "zservice_pipeline"
+	PipelineVarsTableName  = "zservice_pipeline_vars"
+	SourceTableName        = "zservice_source"
+	AppSourceBindTableName = "zservice_app_source_bind"
 )
 
 type PlanStatus int
@@ -154,7 +155,6 @@ func (*Pipeline) TableName() string {
 type ServiceSource struct {
 	Id      int64     `json:"id" xorm:"pk autoincr"`
 	Name    string    `json:"name"`
-	AppId   string    `json:"appId"`
 	Env     string    `json:"env"`
 	Host    string    `json:"host"`
 	ApiKey  string    `json:"apiKey"`
@@ -164,6 +164,18 @@ type ServiceSource struct {
 
 func (*ServiceSource) TableName() string {
 	return SourceTableName
+}
+
+type AppServiceSourceBind struct {
+	Id       int64     `json:"id" xorm:"pk autoincr"`
+	SourceId int64     `json:"sourceId"`
+	AppId    string    `json:"appId"`
+	Env      string    `json:"env"`
+	Created  time.Time `json:"created" xorm:"created"`
+}
+
+func (*AppServiceSourceBind) TableName() string {
+	return AppSourceBindTableName
 }
 
 type PipelineVars struct {

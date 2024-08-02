@@ -24,12 +24,42 @@ type SimplePropertySourceDTO struct {
 }
 
 type ListPropertySourceReqDTO struct {
-	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListPropertySourceReqDTO) IsValid() error {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListAllPropertySourceReqDTO struct {
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAllPropertySourceReqDTO) IsValid() error {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListBindPropertySourceReqDTO struct {
+	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListBindPropertySourceReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
@@ -37,6 +67,31 @@ func (r *ListPropertySourceReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type BindAppAndPropertySourceReqDTO struct {
+	AppId        string              `json:"appId"`
+	SourceIdList []int64             `json:"sourceIdList"`
+	Env          string              `json:"env"`
+	Operator     apisession.UserInfo `json:"operator"`
+}
+
+func (r *BindAppAndPropertySourceReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	for _, i := range r.SourceIdList {
+		if i <= 0 {
+			return util.InvalidArgsError()
+		}
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -58,7 +113,6 @@ func (r *ListPropertySourceByFileIdReqDTO) IsValid() error {
 }
 
 type CreatePropertySourceReqDTO struct {
-	AppId     string              `json:"appId"`
 	Name      string              `json:"name"`
 	Endpoints []string            `json:"endpoints"`
 	Username  string              `json:"username"`
@@ -69,9 +123,6 @@ type CreatePropertySourceReqDTO struct {
 
 func (r *CreatePropertySourceReqDTO) IsValid() error {
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Endpoints) == 0 {

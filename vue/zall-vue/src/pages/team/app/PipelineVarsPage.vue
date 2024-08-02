@@ -4,7 +4,7 @@
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加变量</a-button>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
-    <ul class="vars-list" v-if="varsList.length > 0">
+    <ul class="vars-list">
       <li v-for="item in varsList" v-bind:key="item.id">
         <div class="vars-pattern no-wrap">{{item.name}}</div>
         <ul class="op-btns">
@@ -13,18 +13,12 @@
         </ul>
       </li>
     </ul>
-    <ZNoData v-else>
-      <template #desc>
-        <div class="no-data-text">Variables are used for sensitive or long data</div>
-      </template>
-    </ZNoData>
   </div>
 </template>
 <script setup>
 import EnvSelector from "@/components/app/EnvSelector";
 import { ref, createVNode, h } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import ZNoData from "@/components/common/ZNoData";
 import { ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
 import {

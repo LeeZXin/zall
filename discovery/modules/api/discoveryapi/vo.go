@@ -3,6 +3,10 @@ package discoveryapi
 import "github.com/LeeZXin/zsf/services/lb"
 
 type ListDiscoverySourceReqVO struct {
+	Env string `json:"env"`
+}
+
+type ListBindDiscoverySourceReqVO struct {
 	AppId string `json:"appId"`
 	Env   string `json:"env"`
 }
@@ -17,7 +21,6 @@ type DiscoverySourceVO struct {
 }
 
 type CreateDiscoverySourceReqVO struct {
-	AppId     string   `json:"appId"`
 	Name      string   `json:"name"`
 	Endpoints []string `json:"endpoints"`
 	Username  string   `json:"username"`
@@ -45,16 +48,29 @@ type ServiceVO struct {
 }
 
 type DeregisterServiceReqVO struct {
-	SourceId   int64  `json:"sourceId"`
+	BindId     int64  `json:"bindId"`
 	InstanceId string `json:"instanceId"`
 }
 
 type ReRegisterServiceReqVO struct {
-	SourceId   int64  `json:"sourceId"`
+	BindId     int64  `json:"bindId"`
 	InstanceId string `json:"instanceId"`
 }
 
 type DeleteDownServiceReqVO struct {
-	SourceId   int64  `json:"sourceId"`
+	BindId     int64  `json:"bindId"`
 	InstanceId string `json:"instanceId"`
+}
+
+type BindAppAndDiscoverySourceReqVO struct {
+	AppId        string  `json:"appId"`
+	SourceIdList []int64 `json:"sourceIdList"`
+	Env          string  `json:"env"`
+}
+
+type SimpleBindDiscoverySourceVO struct {
+	Id     int64  `json:"id"`
+	Name   string `json:"name"`
+	BindId int64  `json:"bindId"`
+	Env    string `json:"env"`
 }

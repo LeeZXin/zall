@@ -1,12 +1,20 @@
 <template>
   <div style="padding:10px;height:100%" v-show="!showStatusList">
-    <div style="margin-bottom:10px;" class="flex-end">
+    <div style="margin-bottom:10px;" class="flex-between">
+      <div>
+        <a-button
+          type="primary"
+          :icon="h(SettingOutlined)"
+          @click="showBindServiceSourceModal"
+          v-if="appStore.perm?.canManageServiceSource"
+        >管理服务状态来源绑定</a-button>
+      </div>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="sourceColumns" :dataSource="sourceDataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
-        <span v-else class="check-btn" @click="getStatusList(dataItem)">查看</span>
+        <span v-else class="check-btn" @click="listAndShowStatusList(dataItem)">查看</span>
       </template>
     </ZTable>
   </div>
@@ -31,25 +39,52 @@
       </template>
     </ZTable>
   </div>
+  <a-modal v-model:open="bindModal.open" title="绑定配置来源" @ok="handleBindModalOk">
+    <a-select
+      style="width: 100%"
+      placeholder="请选择"
+      v-model:value="bindModal.selectIdList"
+      :options="bindModal.sourceList"
+      show-search
+      mode="multiple"
+      :filter-option="filterSourceListOption"
+    />
+  </a-modal>
 </template>
 <script setup>
-import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
+import {
+  ExclamationCircleOutlined,
+  SettingOutlined
+} from "@ant-design/icons-vue";
 import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
-import { ref, onUnmounted, createVNode } from "vue";
+import { ref, onUnmounted, createVNode, reactive, h } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
-  listSimpleServiceSourceRequest,
+  listBindServiceSourceRequest,
   listServiceStatusRequest,
   listStatusActionsRequest,
-  doStatusActionRequest
+  doStatusActionRequest,
+  listAllServiceSourceRequest,
+  bindAppAndServiceSourceRequest
 } from "@/api/app/serviceApi";
 import { message, Modal } from "ant-design-vue";
+import { useAppStore } from "@/pinia/appStore";
+const appStore = useAppStore();
 const route = useRoute();
+const bindModal = reactive({
+  open: false,
+  selectIdList: [],
+  sourceList: []
+});
+// 当前环境
 const selectedEnv = ref("");
 const router = useRouter();
+// 服务来源数据
 const sourceDataSource = ref([]);
+// 状态 <-> 来源切换flag
 const showStatusList = ref(false);
+// 来源数据项
 const sourceColumns = [
   {
     title: "名称",
@@ -62,6 +97,7 @@ const sourceColumns = [
     key: "operation"
   }
 ];
+// 状态数据项
 const statusColumns = [
   {
     title: "id",
@@ -94,11 +130,15 @@ const statusColumns = [
     key: "operation"
   }
 ];
+// 状态数据
 const statusDataSource = ref([]);
+// 间隔获取状态interval
 const statusInterval = ref(null);
+// 选择的来源
 const selectedSource = ref(null);
+// 获取服务来源状态
 const listServiceSource = () => {
-  listSimpleServiceSourceRequest({
+  listBindServiceSourceRequest({
     appId: route.params.appId,
     env: selectedEnv.value
   }).then(res => {
@@ -110,13 +150,15 @@ const listServiceSource = () => {
     });
   });
 };
+// 操作列表
 const actionList = ref([]);
+// 清除interval
 const clearStatusInterval = () => {
   if (statusInterval.value) {
     clearInterval(statusInterval.value);
   }
 };
-
+// 环境变化
 const onEnvChange = e => {
   router.replace(
     `/team/${route.params.teamId}/app/${route.params.appId}/serviceStatus/list/${e.newVal}`
@@ -124,20 +166,20 @@ const onEnvChange = e => {
   selectedEnv.value = e.newVal;
   listServiceSource();
 };
-
+// 返回来源界面
 const backToSource = () => {
   showStatusList.value = false;
   clearStatusInterval();
 };
-
-const getStatusList = data => {
+// 获取状态数据并切换界面
+const listAndShowStatusList = data => {
   selectedSource.value = data;
   if (actionList.value.length === 0) {
-    listStatusActionsRequest(data.id).then(res => {
+    listStatusActionsRequest(data.bindId).then(res => {
       actionList.value = res.data;
     });
   }
-  listServiceStatusRequest(data.id).then(res => {
+  listServiceStatusRequest(data.bindId).then(res => {
     showStatusList.value = true;
     statusDataSource.value = res.data.map(item => {
       return {
@@ -150,12 +192,9 @@ const getStatusList = data => {
     refreshStatus();
   });
 };
-
+// 获取状态数据
 const listStatus = () => {
-  listServiceStatusRequest(
-    selectedSource.value.id,
-    selectedSource.value.env
-  ).then(res => {
+  listServiceStatusRequest(selectedSource.value.bindId).then(res => {
     statusDataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -166,12 +205,12 @@ const listStatus = () => {
     });
   });
 };
-
+// 刷新状态数据
 const refreshStatus = () => {
   clearStatusInterval();
   statusInterval.value = setInterval(listStatus, 5000);
 };
-
+// 执行自定义操作
 const doAction = (item, action) => {
   Modal.confirm({
     title: `你确定要${action}${item.id}吗?`,
@@ -181,7 +220,7 @@ const doAction = (item, action) => {
     onOk() {
       doStatusActionRequest({
         serviceId: item.id,
-        sourceId: selectedSource.value.id,
+        bindId: selectedSource.value.bindId,
         action: action
       }).then(() => {
         message.success("操作成功");
@@ -191,7 +230,44 @@ const doAction = (item, action) => {
     onCancel() {}
   });
 };
-
+// 下拉框搜索过滤
+const filterSourceListOption = (input, option) => {
+  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+// 展示绑定来源modal
+const showBindServiceSourceModal = () => {
+  if (!selectedEnv.value) {
+    return;
+  }
+  listAllServiceSourceRequest(selectedEnv.value).then(res => {
+    bindModal.sourceList = res.data.map(item => {
+      return {
+        value: item.id,
+        label: item.name
+      };
+    });
+    listBindServiceSourceRequest({
+      appId: route.params.appId,
+      env: selectedEnv.value
+    }).then(res => {
+      bindModal.selectIdList = res.data.map(item => item.id);
+      bindModal.open = true;
+    });
+  });
+};
+// 绑定modal点击“确定”按钮
+const handleBindModalOk = () => {
+  bindAppAndServiceSourceRequest({
+    appId: route.params.appId,
+    sourceIdList: bindModal.selectIdList,
+    env: selectedEnv.value
+  }).then(() => {
+    message.success("操作成功");
+    bindModal.open = false;
+    listServiceSource();
+  });
+};
+// 解除interval
 onUnmounted(() => clearStatusInterval());
 </script>
 <style scoped>

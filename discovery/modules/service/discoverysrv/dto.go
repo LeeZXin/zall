@@ -10,7 +10,6 @@ import (
 )
 
 type CreateDiscoverySourceReqDTO struct {
-	AppId     string              `json:"appId"`
 	Name      string              `json:"name"`
 	Endpoints []string            `json:"endpoints"`
 	Username  string              `json:"username"`
@@ -21,9 +20,6 @@ type CreateDiscoverySourceReqDTO struct {
 
 func (r *CreateDiscoverySourceReqDTO) IsValid() error {
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
-		return util.InvalidArgsError()
-	}
-	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Endpoints) == 0 {
@@ -89,12 +85,42 @@ func (r *UpdateDiscoverySourceReqDTO) IsValid() error {
 }
 
 type ListDiscoverySourceReqDTO struct {
-	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListDiscoverySourceReqDTO) IsValid() error {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListAllDiscoverySourceReqDTO struct {
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAllDiscoverySourceReqDTO) IsValid() error {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListBindDiscoverySourceReqDTO struct {
+	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListBindDiscoverySourceReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
@@ -117,17 +143,24 @@ type DiscoverySourceDTO struct {
 }
 
 type SimpleDiscoverySourceDTO struct {
-	Id   int64  `json:"id"`
-	Name string `json:"name"`
+	Id   int64
+	Name string
+}
+
+type SimpleBindDiscoverySourceDTO struct {
+	Id     int64
+	Name   string
+	BindId int64
+	Env    string
 }
 
 type ListDiscoveryServiceReqDTO struct {
-	SourceId int64               `json:"sourceId"`
+	BindId   int64               `json:"bindId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListDiscoveryServiceReqDTO) IsValid() error {
-	if r.SourceId <= 0 {
+	if r.BindId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -143,13 +176,13 @@ type ServiceDTO struct {
 }
 
 type DeregisterServiceReqDTO struct {
-	SourceId   int64               `json:"sourceId"`
+	BindId     int64               `json:"bindId"`
 	InstanceId string              `json:"instanceId"`
 	Operator   apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeregisterServiceReqDTO) IsValid() error {
-	if r.SourceId <= 0 {
+	if r.BindId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if len(r.InstanceId) == 0 || len(r.InstanceId) > 32 {
@@ -162,13 +195,13 @@ func (r *DeregisterServiceReqDTO) IsValid() error {
 }
 
 type ReRegisterServiceReqDTO struct {
-	SourceId   int64               `json:"sourceId"`
+	BindId     int64               `json:"bindId"`
 	InstanceId string              `json:"instanceId"`
 	Operator   apisession.UserInfo `json:"operator"`
 }
 
 func (r *ReRegisterServiceReqDTO) IsValid() error {
-	if r.SourceId <= 0 {
+	if r.BindId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if len(r.InstanceId) == 0 || len(r.InstanceId) > 32 {
@@ -181,19 +214,44 @@ func (r *ReRegisterServiceReqDTO) IsValid() error {
 }
 
 type DeleteDownServiceReqDTO struct {
-	SourceId   int64               `json:"sourceId"`
+	BindId     int64               `json:"bindId"`
 	InstanceId string              `json:"instanceId"`
 	Operator   apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteDownServiceReqDTO) IsValid() error {
-	if r.SourceId <= 0 {
+	if r.BindId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if len(r.InstanceId) == 0 || len(r.InstanceId) > 32 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type BindAppAndDiscoverySourceReqDTO struct {
+	AppId        string              `json:"appId"`
+	SourceIdList []int64             `json:"sourceIdList"`
+	Env          string              `json:"env"`
+	Operator     apisession.UserInfo `json:"operator"`
+}
+
+func (r *BindAppAndDiscoverySourceReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	for _, i := range r.SourceIdList {
+		if i <= 0 {
+			return util.InvalidArgsError()
+		}
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil

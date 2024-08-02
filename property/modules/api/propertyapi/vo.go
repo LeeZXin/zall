@@ -1,7 +1,6 @@
 package propertyapi
 
 type CreatePropertySourceReqVO struct {
-	AppId     string   `json:"appId"`
 	Endpoints []string `json:"endpoints"`
 	Username  string   `json:"username"`
 	Password  string   `json:"password"`
@@ -80,7 +79,8 @@ type DeployVO struct {
 	Creator   string `json:"creator"`
 }
 
-type ListPropertySourceReqVO struct {
-	AppId string `json:"appId"`
-	Env   string `json:"env"`
+type BindAppAndPropertySourceReqVO struct {
+	AppId        string  `json:"appId"`
+	SourceIdList []int64 `json:"sourceIdList"`
+	Env          string  `json:"env"`
 }

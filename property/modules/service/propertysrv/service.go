@@ -9,12 +9,20 @@ var (
 )
 
 func Init() {
-	Outer = new(outerImpl)
+	if Outer == nil {
+		Outer = new(outerImpl)
+	}
 }
 
 type OuterService interface {
 	// ListPropertySource 配置来源
 	ListPropertySource(context.Context, ListPropertySourceReqDTO) ([]PropertySourceDTO, error)
+	// ListAllPropertySource 所有配置来源
+	ListAllPropertySource(context.Context, ListAllPropertySourceReqDTO) ([]SimplePropertySourceDTO, error)
+	// ListBindPropertySource 获取绑定的配置来源
+	ListBindPropertySource(context.Context, ListBindPropertySourceReqDTO) ([]SimplePropertySourceDTO, error)
+	// BindAppAndPropertySource 绑定应用服务和配置来源
+	BindAppAndPropertySource(context.Context, BindAppAndPropertySourceReqDTO) error
 	// ListPropertySourceByFileId 配置来源
 	ListPropertySourceByFileId(context.Context, ListPropertySourceByFileIdReqDTO) ([]SimplePropertySourceDTO, error)
 	// CreatePropertySource 创建配置来源

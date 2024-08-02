@@ -30,13 +30,12 @@ func (*outerImpl) ListPropertySource(ctx context.Context, reqDTO ListPropertySou
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err := checkManagePropertySourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
-		return nil, err
+	if !reqDTO.Operator.IsAdmin {
+		return nil, util.UnauthorizedError()
 	}
 	nodes, err := propertymd.ListEtcdNode(ctx, propertymd.ListEtcdNodeReqDTO{
-		AppId: reqDTO.AppId,
-		Env:   reqDTO.Env,
-		Cols:  []string{"id", "name", "endpoints", "username", "password", "env"},
+		Env:  reqDTO.Env,
+		Cols: []string{"id", "name", "endpoints", "username", "password", "env"},
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -54,6 +53,64 @@ func (*outerImpl) ListPropertySource(ctx context.Context, reqDTO ListPropertySou
 	})
 }
 
+// ListAllPropertySource 所有配置来源
+func (*outerImpl) ListAllPropertySource(ctx context.Context, reqDTO ListAllPropertySourceReqDTO) ([]SimplePropertySourceDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	nodes, err := propertymd.ListEtcdNode(ctx, propertymd.ListEtcdNodeReqDTO{
+		Env:  reqDTO.Env,
+		Cols: []string{"id", "name"},
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return etcdNodeMd2SimpleDto(nodes)
+}
+
+func etcdNodeMd2SimpleDto(nodes []propertymd.EtcdNode) ([]SimplePropertySourceDTO, error) {
+	return listutil.Map(nodes, func(t propertymd.EtcdNode) (SimplePropertySourceDTO, error) {
+		return SimplePropertySourceDTO{
+			Id:   t.Id,
+			Name: t.Name,
+		}, nil
+	})
+}
+
+// ListBindPropertySource 获取绑定的配置来源
+func (*outerImpl) ListBindPropertySource(ctx context.Context, reqDTO ListBindPropertySourceReqDTO) ([]SimplePropertySourceDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	binds, err := propertymd.ListAppEtcdNodeBindByAppIdAndEnv(ctx, reqDTO.AppId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	if len(binds) == 0 {
+		return []SimplePropertySourceDTO{}, nil
+	}
+	nodeIdList, _ := listutil.Map(binds, func(t propertymd.AppEtcdNodeBind) (int64, error) {
+		return t.NodeId, nil
+	})
+	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, nodeIdList, []string{"id", "name"})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return etcdNodeMd2SimpleDto(nodes)
+}
+
 // ListPropertySourceByFileId 配置来源
 func (*outerImpl) ListPropertySourceByFileId(ctx context.Context, reqDTO ListPropertySourceByFileIdReqDTO) ([]SimplePropertySourceDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
@@ -66,21 +123,78 @@ func (*outerImpl) ListPropertySourceByFileId(ctx context.Context, reqDTO ListPro
 	if err != nil {
 		return nil, err
 	}
-	nodes, err := propertymd.ListEtcdNode(ctx, propertymd.ListEtcdNodeReqDTO{
-		AppId: file.AppId,
-		Env:   file.Env,
-		Cols:  []string{"id", "name"},
-	})
+	binds, err := propertymd.ListAppEtcdNodeBindByAppIdAndEnv(ctx, file.AppId, file.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	return listutil.Map(nodes, func(t propertymd.EtcdNode) (SimplePropertySourceDTO, error) {
-		return SimplePropertySourceDTO{
-			Id:   t.Id,
-			Name: t.Name,
+	if len(binds) == 0 {
+		return []SimplePropertySourceDTO{}, nil
+	}
+	nodeIdList, _ := listutil.Map(binds, func(t propertymd.AppEtcdNodeBind) (int64, error) {
+		return t.NodeId, nil
+	})
+	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, nodeIdList, nil)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return etcdNodeMd2SimpleDto(nodes)
+}
+
+// BindAppAndPropertySource 绑定应用服务和配置来源
+func (*outerImpl) BindAppAndPropertySource(ctx context.Context, reqDTO BindAppAndPropertySourceReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err := checkManagePropertySourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
+		return err
+	}
+	if len(reqDTO.SourceIdList) == 0 {
+		err = propertymd.DeleteAppEtcdNodeBindByAppIdAndEnv(ctx, reqDTO.AppId, reqDTO.Env)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		return nil
+	}
+	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, reqDTO.SourceIdList, []string{"id", "env"})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if len(nodes) == 0 {
+		return util.InvalidArgsError()
+	}
+	for _, node := range nodes {
+		if node.Env != reqDTO.Env {
+			return util.InvalidArgsError()
+		}
+	}
+	insertReqs, _ := listutil.Map(nodes, func(t propertymd.EtcdNode) (propertymd.InsertAppEtcdNodeBindReqDTO, error) {
+		return propertymd.InsertAppEtcdNodeBindReqDTO{
+			NodeId: t.Id,
+			AppId:  reqDTO.AppId,
+			Env:    reqDTO.Env,
 		}, nil
 	})
+	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		// 先删除
+		err2 := propertymd.DeleteAppEtcdNodeBindByAppIdAndEnv(ctx, reqDTO.AppId, reqDTO.Env)
+		if err2 != nil {
+			return err2
+		}
+		// 批量插入
+		return propertymd.BatchInsertAppEtcdNodeBind(ctx, insertReqs)
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }
 
 // CreatePropertySource 新增配置来源
@@ -91,11 +205,11 @@ func (*outerImpl) CreatePropertySource(ctx context.Context, reqDTO CreatePropert
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err = checkManagePropertySourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
-		return err
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
 	}
 	err = propertymd.InsertEtcdNode(ctx, propertymd.InsertEtcdNodeReqDTO{
-		AppId:     reqDTO.AppId,
 		Endpoints: strings.Join(reqDTO.Endpoints, ";"),
 		Username:  reqDTO.Username,
 		Password:  reqDTO.Password,
@@ -110,14 +224,15 @@ func (*outerImpl) CreatePropertySource(ctx context.Context, reqDTO CreatePropert
 	return
 }
 
+// DeletePropertySource 删除配置来源
 func (*outerImpl) DeletePropertySource(ctx context.Context, reqDTO DeletePropertySourceReqDTO) (err error) {
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err = checkManagePropertySourcePermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId); err != nil {
-		return
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 删除节点
@@ -125,8 +240,8 @@ func (*outerImpl) DeletePropertySource(ctx context.Context, reqDTO DeletePropert
 		if err2 != nil {
 			return err2
 		}
-		// todo 删除历史
-		return nil
+		// 删除绑定
+		return propertymd.DeleteAppEtcdNodeBindByNodeId(ctx, reqDTO.SourceId)
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -143,8 +258,8 @@ func (*outerImpl) UpdatePropertySource(ctx context.Context, reqDTO UpdatePropert
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err = checkManagePropertySourcePermBySourceId(ctx, reqDTO.Operator, reqDTO.SourceId); err != nil {
-		return
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
 	}
 	_, err = propertymd.UpdateEtcdNode(ctx, propertymd.UpdateEtcdNodeReqDTO{
 		Id:        reqDTO.SourceId,
@@ -161,6 +276,7 @@ func (*outerImpl) UpdatePropertySource(ctx context.Context, reqDTO UpdatePropert
 	return
 }
 
+// CreateFile 创建配置文件
 func (*outerImpl) CreateFile(ctx context.Context, reqDTO CreateFileReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
@@ -201,6 +317,7 @@ func (*outerImpl) CreateFile(ctx context.Context, reqDTO CreateFileReqDTO) error
 	return nil
 }
 
+// NewVersion 创建配置文件新版本
 func (*outerImpl) NewVersion(ctx context.Context, reqDTO NewVersionReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
@@ -235,6 +352,7 @@ func (*outerImpl) NewVersion(ctx context.Context, reqDTO NewVersionReqDTO) error
 	return nil
 }
 
+// DeleteFile 删除配置文件
 func (*outerImpl) DeleteFile(ctx context.Context, reqDTO DeleteFileReqDTO) (err error) {
 	if err = reqDTO.IsValid(); err != nil {
 		return
@@ -340,22 +458,36 @@ func (*outerImpl) DeployHistory(ctx context.Context, reqDTO DeployHistoryReqDTO)
 	if err != nil {
 		return
 	}
-	sources, err := propertymd.BatchGetEtcdNodes(ctx, reqDTO.SourceIdList)
+	// 校验发布节点
+	binds, err := propertymd.BatchGetAppEtcdNodeBindByNodeIdListAndAppId(ctx, reqDTO.SourceIdList, file.AppId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 		return
 	}
-	if len(sources) == 0 {
+	if len(binds) == 0 {
+		err = util.InvalidArgsError()
+		return
+	}
+	nodeIdList, _ := listutil.Map(binds, func(t propertymd.AppEtcdNodeBind) (int64, error) {
+		return t.NodeId, nil
+	})
+	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, nodeIdList, nil)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if len(nodes) == 0 {
 		return util.InvalidArgsError()
 	}
-	for _, source := range sources {
-		if source.AppId != file.AppId || source.Env != file.Env {
+	for _, node := range nodes {
+		if node.Env != file.Env {
 			return util.InvalidArgsError()
 		}
 	}
 	go func() {
-		for _, source := range sources {
+		for _, source := range nodes {
 			deployToEtcd(file, history, source, reqDTO.Operator)
 		}
 	}()
@@ -426,10 +558,15 @@ func (*outerImpl) ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]De
 func deleteFromEtcd(file propertymd.File) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	nodes, err := propertymd.ListEtcdNode(ctx, propertymd.ListEtcdNodeReqDTO{
-		AppId: file.AppId,
-		Env:   file.Env,
+	binds, err := propertymd.ListAppEtcdNodeBindByAppIdAndEnv(ctx, file.AppId, file.Env)
+	if err != nil {
+		logger.Logger.Error(err)
+		return
+	}
+	nodeIdList, _ := listutil.Map(binds, func(t propertymd.AppEtcdNodeBind) (int64, error) {
+		return t.NodeId, nil
 	})
+	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, nodeIdList, nil)
 	if err != nil {
 		logger.Logger.Error(err)
 		return
@@ -586,32 +723,32 @@ func checkManagePropertySourcePermByAppId(ctx context.Context, operator apisessi
 	return util.UnauthorizedError()
 }
 
-func checkManagePropertySourcePermBySourceId(ctx context.Context, operator apisession.UserInfo, sourceId int64) error {
-	ps, b, err := propertymd.GetEtcdNodeById(ctx, sourceId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	app, b, err := appmd.GetByAppId(ctx, ps.AppId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	if operator.IsAdmin {
-		return nil
-	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
-	if !b {
-		return util.UnauthorizedError()
-	}
-	if p.IsAdmin || p.PermDetail.GetAppPerm(ps.AppId).CanManagePropertySource {
-		return nil
-	}
-	return util.UnauthorizedError()
-}
+//func checkManagePropertySourcePermBySourceId(ctx context.Context, operator apisession.UserInfo, sourceId int64) error {
+//	ps, b, err := propertymd.GetEtcdNodeById(ctx, sourceId)
+//	if err != nil {
+//		logger.Logger.WithContext(ctx).Error(err)
+//		return util.InternalError(err)
+//	}
+//	if !b {
+//		return util.InvalidArgsError()
+//	}
+//	app, b, err := appmd.GetByAppId(ctx, ps.AppId)
+//	if err != nil {
+//		logger.Logger.WithContext(ctx).Error(err)
+//		return util.InternalError(err)
+//	}
+//	if !b {
+//		return util.InvalidArgsError()
+//	}
+//	if operator.IsAdmin {
+//		return nil
+//	}
+//	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+//	if !b {
+//		return util.UnauthorizedError()
+//	}
+//	if p.IsAdmin || p.PermDetail.GetAppPerm(ps.AppId).CanManagePropertySource {
+//		return nil
+//	}
+//	return util.UnauthorizedError()
+//}

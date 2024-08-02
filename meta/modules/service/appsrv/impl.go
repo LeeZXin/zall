@@ -84,8 +84,8 @@ func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err er
 		if err2 != nil {
 			return err2
 		}
-		// 删除配置来源
-		err2 = propertymd.DeleteEtcdNodeByAppId(ctx, reqDTO.AppId)
+		// 删除配置来源绑定
+		err2 = propertymd.DeleteAppEtcdNodeBindByAppId(ctx, reqDTO.AppId)
 		if err2 != nil {
 			return err2
 		}
@@ -119,8 +119,8 @@ func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err er
 		if err2 != nil {
 			return err2
 		}
-		// 删除服务状态来源
-		err2 = deploymd.DeleteServiceSourceByAppId(ctx, reqDTO.AppId)
+		// 删除服务状态来源绑定
+		err2 = deploymd.DeleteAppServiceSourceBindByAppId(ctx, reqDTO.AppId)
 		if err2 != nil {
 			return err2
 		}
@@ -130,7 +130,7 @@ func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err er
 			return err2
 		}
 		// 删除注册中心来源
-		err2 = discoverymd.DeleteEtcdNodeByAppId(ctx, reqDTO.AppId)
+		err2 = discoverymd.DeleteAppEtcdNodeBindByAppId(ctx, reqDTO.AppId)
 		if err2 != nil {
 			return err2
 		}
@@ -186,7 +186,7 @@ func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, 
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	appPermList, isAdmin, err := checkAppList(ctx, reqDTO.Operator, reqDTO.TeamId)
+	permDetail, isAdmin, err := checkAppList(ctx, reqDTO.Operator, reqDTO.TeamId)
 	if err != nil {
 		return nil, err
 	}
@@ -196,8 +196,8 @@ func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, 
 	if isAdmin {
 		// 管理员可访问所有app
 		apps, err = appmd.ListAppByTeamId(ctx, reqDTO.TeamId)
-	} else if len(appPermList) > 0 {
-		appList, _ := listutil.Filter(appPermList, func(t perm.AppPermWithId) (bool, error) {
+	} else if len(permDetail.AppPermList) > 0 {
+		appList, _ := listutil.Filter(permDetail.AppPermList, func(t perm.AppPermWithId) (bool, error) {
 			return t.CanDevelop, nil
 		})
 		appIdList, _ := listutil.Map(appList, func(t perm.AppPermWithId) (string, error) {
@@ -208,6 +208,9 @@ func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, 
 		} else {
 			apps = []appmd.App{}
 		}
+	} else if permDetail.DefaultAppPerm.CanDevelop {
+		// 默认访问权限可访问所有app
+		apps, err = appmd.ListAppByTeamId(ctx, reqDTO.TeamId)
 	} else {
 		apps = []appmd.App{}
 	}
@@ -253,18 +256,18 @@ func (*outerImpl) ListAllAppByAdmin(ctx context.Context, reqDTO ListAppReqDTO) (
 	return ret, nil
 }
 
-func checkAppList(ctx context.Context, operator apisession.UserInfo, teamId int64) ([]perm.AppPermWithId, bool, error) {
+func checkAppList(ctx context.Context, operator apisession.UserInfo, teamId int64) (perm.Detail, bool, error) {
 	if operator.IsAdmin {
-		return nil, true, nil
+		return perm.Detail{}, true, nil
 	}
 	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
 	if !b {
-		return nil, false, util.UnauthorizedError()
+		return perm.Detail{}, false, util.UnauthorizedError()
 	}
 	if p.IsAdmin {
-		return nil, true, nil
+		return perm.Detail{}, true, nil
 	}
-	return p.PermDetail.AppPermList, false, nil
+	return p.PermDetail, false, nil
 }
 
 func (*outerImpl) UpdateApp(ctx context.Context, reqDTO UpdateAppReqDTO) (err error) {

@@ -417,15 +417,26 @@ type StageDTO struct {
 }
 
 type ListServiceSourceReqDTO struct {
-	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListServiceSourceReqDTO) IsValid() error {
-	if !appmd.IsAppIdValid(r.AppId) {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListAllServiceSourceReqDTO struct {
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAllServiceSourceReqDTO) IsValid() error {
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
@@ -438,15 +449,25 @@ func (r *ListServiceSourceReqDTO) IsValid() error {
 type ServiceSourceDTO struct {
 	Id      int64
 	Name    string
-	AppId   string
 	Env     string
 	Host    string
 	ApiKey  string
 	Created time.Time
 }
 
+type SimpleServiceSourceDTO struct {
+	Id   int64
+	Name string
+}
+
+type SimpleBindServiceSourceDTO struct {
+	Id     int64
+	Name   string
+	BindId int64
+	Env    string
+}
+
 type CreateServiceSourceReqDTO struct {
-	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
 	Name     string              `json:"name"`
 	Host     string              `json:"host"`
@@ -456,9 +477,6 @@ type CreateServiceSourceReqDTO struct {
 
 func (r *CreateServiceSourceReqDTO) IsValid() error {
 	if !deploymd.IsServiceSourceNameValid(r.Name) {
-		return util.InvalidArgsError()
-	}
-	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
@@ -618,13 +636,63 @@ func (r *GetPipelineVarsContentReqDTO) IsValid() error {
 	return nil
 }
 
-type ListStatusSourceReqDTO struct {
+type ListServiceStatusReqDTO struct {
+	BindId   int64               `json:"bindId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListServiceStatusReqDTO) IsValid() error {
+	if r.BindId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type DoStatusActionReqDTO struct {
+	BindId    int64               `json:"bindId"`
+	ServiceId string              `json:"serviceId"`
+	Action    string              `json:"action"`
+	Operator  apisession.UserInfo `json:"operator"`
+}
+
+func (r *DoStatusActionReqDTO) IsValid() error {
+	if r.BindId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.ServiceId == "" {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListStatusActionReqDTO struct {
+	BindId   int64               `json:"bindId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListStatusActionReqDTO) IsValid() error {
+	if r.BindId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListBindServiceSourceReqDTO struct {
 	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListStatusSourceReqDTO) IsValid() error {
+func (r *ListBindServiceSourceReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
@@ -637,51 +705,23 @@ func (r *ListStatusSourceReqDTO) IsValid() error {
 	return nil
 }
 
-type StatusSourceDTO struct {
-	Id   int64
-	Name string
-	Env  string
+type BindAppAndServiceSourceReqDTO struct {
+	AppId        string              `json:"appId"`
+	SourceIdList []int64             `json:"sourceIdList"`
+	Env          string              `json:"env"`
+	Operator     apisession.UserInfo `json:"operator"`
 }
 
-type ListServiceStatusReqDTO struct {
-	SourceId int64               `json:"sourceId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *ListServiceStatusReqDTO) IsValid() error {
-	if r.SourceId <= 0 {
+func (r *BindAppAndServiceSourceReqDTO) IsValid() error {
+	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
+	for _, i := range r.SourceIdList {
+		if i <= 0 {
+			return util.InvalidArgsError()
+		}
 	}
-	return nil
-}
-
-type DoStatusActionReqDTO struct {
-	SourceId  int64               `json:"sourceId"`
-	ServiceId string              `json:"serviceId"`
-	Action    string              `json:"action"`
-	Operator  apisession.UserInfo `json:"operator"`
-}
-
-func (r *DoStatusActionReqDTO) IsValid() error {
-	if r.SourceId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type ListStatusActionReqDTO struct {
-	SourceId int64               `json:"sourceId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *ListStatusActionReqDTO) IsValid() error {
-	if r.SourceId <= 0 {
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
