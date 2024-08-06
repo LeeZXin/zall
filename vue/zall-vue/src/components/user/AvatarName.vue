@@ -1,7 +1,7 @@
 <template>
   <div class="avatar-name" :style="props.style" @click="showDrawer">
-    <img v-if="user.avatar" :src="user.avatar" />
-    <div v-if="!user.avatar" class="avatar-fake">{{user.name?.substring(0,1)}}</div>
+    <img v-if="user.avatarUrl" :src="user.avatarUrl" class="avatar" />
+    <div v-else class="avatar-fake">{{user.name?.substring(0,1)}}</div>
     <span>{{user.name}}</span>
   </div>
   <a-drawer
@@ -19,6 +19,10 @@
       <LockOutlined style="font-size:18px" />
       <span>修改密码</span>
     </div>
+    <div class="drawer-item">
+      <EditOutlined style="font-size:18px" />
+      <span>修改个人信息</span>
+    </div>
     <div class="drawer-item" @click="goto('/sa/cfg/list')" v-if="user.isAdmin">
       <UserOutlined style="font-size:18px" />
       <span>超级管理员</span>
@@ -33,7 +37,7 @@
 import { useUserStore } from "@/pinia/userStore";
 import { defineProps, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { UserOutlined, KeyOutlined, LockOutlined } from "@ant-design/icons-vue";
+import { UserOutlined, KeyOutlined, LockOutlined, EditOutlined } from "@ant-design/icons-vue";
 import { useRouter } from "vue-router";
 import { logoutRequest } from "@/api/user/loginApi";
 const bodyStyle = {
@@ -57,9 +61,15 @@ const logout = () => {
 };
 const goto = url => {
   router.push(url);
-}
+};
 </script>
 <style scoped>
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
 .avatar-name {
   display: flex;
   align-items: center;
@@ -77,7 +87,7 @@ const goto = url => {
   font-size: 18px;
   line-height: 42px;
   border-radius: 50%;
-  margin-right: 4px;
+  margin-right: 8px;
 }
 .select-item {
   line-height: 28px;

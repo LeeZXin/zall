@@ -13,7 +13,7 @@
             <SettingOutlined />
             <span>系统配置</span>
           </a-menu-item>
-          <a-menu-item key="/userManage/list">
+          <a-menu-item key="/user/list">
             <UserOutlined />
             <span>用户管理</span>
           </a-menu-item>
@@ -28,6 +28,10 @@
           <a-menu-item key="/discoverySource/list">
             <BookOutlined />
             <span>注册中心来源</span>
+          </a-menu-item>
+          <a-menu-item key="/zallet/list">
+            <BookOutlined />
+            <span>Zallet代理</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -73,7 +77,7 @@ const changeSelectedKey = path => {
 // 为了子页面能体现在导航栏
 const pagesMap = {
   "/cfg": "/cfg/list",
-  "/userManage": "/userManage/list",
+  "/user": "/user/list",
   "/propertySource": "/propertySource/list",
   "/serviceSource": "/serviceSource/list",
   "/discoverySource": "/discoverySource/list"

@@ -50,7 +50,7 @@ var (
 			DefaultRet: "登出",
 		},
 		InsertUser: KeyItem{
-			Id:         "userSrv.InsertUser",
+			Id:         "userSrv.CreateUser",
 			DefaultRet: "新增用户",
 		},
 		RegisterUser: KeyItem{
@@ -66,7 +66,7 @@ var (
 			DefaultRet: "编辑用户",
 		},
 		UpdateAdmin: KeyItem{
-			Id:         "userSrv.UpdateAdmin",
+			Id:         "userSrv.SetAdmin",
 			DefaultRet: "编辑系统管理员",
 		},
 		UpdatePassword: KeyItem{

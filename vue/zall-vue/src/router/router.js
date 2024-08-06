@@ -79,6 +79,18 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/sa/DiscoverySourceHandlePage")
 
+            }, {
+                path: "/sa/user/list",
+                component: () =>
+                    import ("../pages/sa/UserManageListPage")
+            }, {
+                path: "/sa/user/create",
+                component: () =>
+                    import ("../pages/sa/UserManageHandlePage")
+            }, {
+                path: "/sa/user/:account(.+)/update",
+                component: () =>
+                    import ("../pages/sa/UserManageHandlePage")
             }]
         },
         {
@@ -453,7 +465,7 @@ router.beforeEach((to, from, next) => {
             user.email = res.session.userInfo.email;
             user.isAdmin = res.session.userInfo.isAdmin;
             user.name = res.session.userInfo.name;
-            user.roleType = res.session.userInfo.roleType;
+            user.isDba = res.session.userInfo.isDba;
             user.sessionId = res.session.sessionId;
             user.sessionExpireAt = res.session.expireAt;
         });

@@ -18,7 +18,7 @@ var (
 	storeImpl Store
 )
 
-func init() {
+func Init() {
 	switch static.GetString("apisession.store.type") {
 	case MemStoreType:
 		storeImpl = newMemStore()

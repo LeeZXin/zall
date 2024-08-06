@@ -93,15 +93,6 @@ func DeleteAllTeamUserByAccount(ctx context.Context, account string) (int64, err
 		Delete(new(User))
 }
 
-func GetTeamUser(ctx context.Context, teamId int64, account string) (User, bool, error) {
-	ret := User{}
-	b, err := xormutil.MustGetXormSession(ctx).
-		Where("team_id = ?", teamId).
-		And("account = ?", account).
-		Get(&ret)
-	return ret, b, err
-}
-
 func GetTeamUserById(ctx context.Context, relationId int64) (User, bool, error) {
 	ret := User{}
 	b, err := xormutil.MustGetXormSession(ctx).

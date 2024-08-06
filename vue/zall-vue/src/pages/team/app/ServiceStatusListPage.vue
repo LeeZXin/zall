@@ -24,7 +24,7 @@
     </div>
     <div style="margin-bottom:10px;font-weight:bold">
       <span>{{selectedSource?selectedSource.name:""}}</span>
-      <a-tag color="orange" style="margin-left:10px">{{selectedSource?selectedSource.env:""}}</a-tag>
+      <a-tag color="orange" style="margin-left:10px">{{selectedSource.env}}</a-tag>
     </div>
     <ZTable :columns="statusColumns" :dataSource="statusDataSource">
       <template #bodyCell="{dataIndex, dataItem}">

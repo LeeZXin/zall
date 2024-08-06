@@ -44,6 +44,7 @@
               style="width:100%"
               @click="downloadZip"
               v-if="branches.length > 0 && selectedRef.refType === 'branch'"
+              :icon="h(DownloadOutlined)"
             >下载zip</a-button>
           </div>
         </template>
@@ -121,12 +122,13 @@
   </div>
 </template>
 <script setup>
-import { ref, reactive } from "vue";
+import { ref, reactive, h } from "vue";
 import {
   CaretDownOutlined,
   FileOutlined,
   CopyOutlined,
-  FolderOutlined
+  FolderOutlined,
+  DownloadOutlined
 } from "@ant-design/icons-vue";
 import VMdEditor from "@kangc/v-md-editor";
 import "@kangc/v-md-editor/lib/style/base-editor.css";

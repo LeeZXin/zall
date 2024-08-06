@@ -31,22 +31,27 @@ func InitApi() {
 		group = e.Group("/api/user", apisession.CheckLogin)
 		{
 			// 新增用户
-			group.POST("/insert", insertUser)
+			group.POST("/create", createUser)
 			// 删除用户
-			group.POST("/deleteUser", deleteUser)
+			group.DELETE("/delete/:account", deleteUser)
 			// 更新用户
 			group.POST("/update", updateUser)
-			// 展示用户列表
-			group.POST("/list", listUser)
+			// 展示用户列表 管理员权限
+			group.GET("/list", listUser)
 			// 更新密码
 			group.POST("/updatePassword", updatePassword)
 			// 系统管理员设置
-			group.POST("/updateAdmin", updateAdmin)
+			group.PUT("/setAdmin", setAdmin)
 			// 禁用用户
-			group.POST("/setProhibited", setProhibited)
+			group.PUT("/setProhibited", setProhibited)
+			// 设置dba
+			group.PUT("/setDba", setDba)
 			// 展示所有用户列表
 			group.GET("/listAll", listAll)
+			// 重置密码
+			group.PUT("/resetPassword/:account", resetPassword)
 		}
+
 	})
 }
 
@@ -125,16 +130,15 @@ func logout(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func insertUser(c *gin.Context) {
-	var reqVO InsertUserReqVO
-	if util.ShouldBindJSON(&reqVO, c) {
-		err := usersrv.Outer.InsertUser(c, usersrv.InsertUserReqDTO{
-			Account:   reqVO.Account,
-			Name:      reqVO.Name,
-			Email:     reqVO.Email,
-			Password:  reqVO.Password,
-			AvatarUrl: reqVO.AvatarUrl,
-			IsAdmin:   reqVO.IsAdmin,
+func createUser(c *gin.Context) {
+	var req CreateUserReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := usersrv.Outer.CreateUser(c, usersrv.CreateUserReqDTO{
+			Account:   req.Account,
+			Name:      req.Name,
+			Email:     req.Email,
+			Password:  req.Password,
+			AvatarUrl: req.AvatarUrl,
 			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -146,28 +150,26 @@ func insertUser(c *gin.Context) {
 }
 
 func deleteUser(c *gin.Context) {
-	var req DeleteUserReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := usersrv.Outer.DeleteUser(c, usersrv.DeleteUserReqDTO{
-			Account:  req.Account,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
+	err := usersrv.Outer.DeleteUser(c, usersrv.DeleteUserReqDTO{
+		Account:  c.Param("account"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
 	}
+	util.DefaultOkResponse(c)
 }
 
 func updateUser(c *gin.Context) {
 	var req UpdateUserReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := usersrv.Outer.UpdateUser(c, usersrv.UpdateUserReqDTO{
-			Account:  req.Account,
-			Name:     req.Name,
-			Email:    req.Email,
-			Operator: apisession.MustGetLoginUser(c),
+			Account:   req.Account,
+			Name:      req.Name,
+			Email:     req.Email,
+			AvatarUrl: req.AvatarUrl,
+			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -179,11 +181,10 @@ func updateUser(c *gin.Context) {
 
 func listUser(c *gin.Context) {
 	var req ListUserReqVO
-	if util.ShouldBindJSON(&req, c) {
-		users, next, err := usersrv.Outer.ListUser(c, usersrv.ListUserReqDTO{
+	if util.ShouldBindQuery(&req, c) {
+		users, total, err := usersrv.Outer.ListUser(c, usersrv.ListUserReqDTO{
 			Account:  req.Account,
-			Cursor:   req.Cursor,
-			Limit:    req.Limit,
+			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -199,15 +200,16 @@ func listUser(c *gin.Context) {
 				IsProhibited: t.IsProhibited,
 				AvatarUrl:    t.AvatarUrl,
 				Created:      t.Created.Format(time.DateTime),
-				Updated:      t.Updated.Format(time.DateTime),
+				IsDba:        t.IsDba,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.PageResp[UserVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[UserVO]{
 			DataResp: ginutil.DataResp[[]UserVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},
-			Next: next,
+			PageNum:    req.PageNum,
+			TotalCount: total,
 		})
 	}
 }
@@ -244,10 +246,10 @@ func register(c *gin.Context) {
 	}
 }
 
-func updateAdmin(c *gin.Context) {
-	var req UpdateAdminReqVO
+func setAdmin(c *gin.Context) {
+	var req SetAdminReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := usersrv.Outer.UpdateAdmin(c, usersrv.UpdateAdminReqDTO{
+		err := usersrv.Outer.SetAdmin(c, usersrv.SetAdminReqDTO{
 			Account:  req.Account,
 			IsAdmin:  req.IsAdmin,
 			Operator: apisession.MustGetLoginUser(c),
@@ -273,5 +275,33 @@ func setProhibited(c *gin.Context) {
 		} else {
 			util.DefaultOkResponse(c)
 		}
+	}
+}
+
+func setDba(c *gin.Context) {
+	var req SetDbaReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := usersrv.Outer.SetDba(c, usersrv.SetDbaReqDTO{
+			Account:  req.Account,
+			IsDba:    req.IsDba,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+		} else {
+			util.DefaultOkResponse(c)
+		}
+	}
+}
+
+func resetPassword(c *gin.Context) {
+	err := usersrv.Outer.ResetPassword(c, usersrv.ResetPasswordReqDTO{
+		Account:  c.Param("account"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+	} else {
+		util.DefaultOkResponse(c)
 	}
 }

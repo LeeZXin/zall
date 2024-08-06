@@ -1,6 +1,6 @@
 <template>
   <div style="padding:10px" class="container">
-    <div v-if="allowUserCreateTeam" style="text-align:right">
+    <div v-if="allowUserCreateTeam" class="flex-right" style="margin-bottom: 10px">
       <a-button type="primary" @click="toCreateTeam" :icon="h(PlusOutlined)">{{t("createTeamText")}}</a-button>
     </div>
     <div class="team-list">
@@ -60,7 +60,6 @@ getSysCfgRequest().then(res => {
 </script>
 <style scoped>
 .team-list {
-  margin-top: 10px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
 }

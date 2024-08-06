@@ -168,7 +168,8 @@ func (*outerImpl) Logout(ctx context.Context, reqDTO LogoutReqDTO) error {
 	return nil
 }
 
-func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (err error) {
+// CreateUser 管理员创建用户
+func (s *outerImpl) CreateUser(ctx context.Context, reqDTO CreateUserReqDTO) (err error) {
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
@@ -177,6 +178,17 @@ func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (er
 	// 不是企业管理员
 	if !reqDTO.Operator.IsAdmin {
 		err = util.UnauthorizedError()
+		return
+	}
+	var b bool
+	b, err = usermd.ExistByAccount(ctx, reqDTO.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if b {
+		err = util.AlreadyExistsError()
 		return
 	}
 	// 添加账号
@@ -190,8 +202,9 @@ func (s *outerImpl) InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) (er
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
+		return
 	}
-	return nil
+	return
 }
 
 // RegisterUser 注册用户
@@ -256,22 +269,17 @@ func (*outerImpl) DeleteUser(ctx context.Context, reqDTO DeleteUserReqDTO) (err 
 		err = util.UnauthorizedError()
 		return
 	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	_, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
+	// 不能自己删自己
+	if reqDTO.Operator.Account == reqDTO.Account {
 		err = util.InvalidArgsError()
 		return
 	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
 	// 数据库删除用户
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 用户表
-		_, err2 := usermd.DeleteUser(ctx, reqDTO.Operator.Account)
+		_, err2 := usermd.DeleteUser(ctx, reqDTO.Account)
 		if err2 != nil {
 			return err2
 		}
@@ -285,7 +293,10 @@ func (*outerImpl) DeleteUser(ctx context.Context, reqDTO DeleteUserReqDTO) (err 
 		return
 	}
 	// 删除用户登录状态
-	apisession.GetStore().DeleteByAccount(reqDTO.Operator.Account)
+	err2 := apisession.GetStore().DeleteByAccount(reqDTO.Account)
+	if err2 != nil {
+		logger.Logger.WithContext(ctx).Error(err2)
+	}
 	return
 }
 
@@ -300,16 +311,16 @@ func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	userList, err := usermd.ListUser(ctx, usermd.ListUserReqDTO{
-		Account: reqDTO.Account,
-		Cursor:  reqDTO.Cursor,
-		Limit:   reqDTO.Limit,
+	users, total, err := usermd.PageUser(ctx, usermd.PageUserReqDTO{
+		Account:  reqDTO.Account,
+		PageNum:  reqDTO.PageNum,
+		PageSize: 10,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(userList, func(t usermd.User) (UserDTO, error) {
+	data, _ := listutil.Map(users, func(t usermd.User) (UserDTO, error) {
 		return UserDTO{
 			Account:      t.Account,
 			Name:         t.Name,
@@ -318,42 +329,29 @@ func (*outerImpl) ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDT
 			IsProhibited: t.IsProhibited,
 			AvatarUrl:    t.AvatarUrl,
 			Created:      t.Created,
-			Updated:      t.Updated,
+			IsDba:        t.IsDba,
 		}, nil
 	})
-	var next int64 = 0
-	if len(userList) == reqDTO.Limit {
-		next = userList[len(userList)-1].Id
-	}
-	return data, next, nil
+	return data, total, nil
 }
 
+// UpdateUser 编辑用户
 func (*outerImpl) UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (err error) {
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
 	// 系统管理员或本人才能编辑user
-	if reqDTO.Account != reqDTO.Operator.Account {
+	if !reqDTO.Operator.IsAdmin && reqDTO.Account != reqDTO.Operator.Account {
 		err = util.UnauthorizedError()
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	// 账号不存在
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
 	if _, err = usermd.UpdateUser(ctx, usermd.UpdateUserReqDTO{
-		Account: reqDTO.Account,
-		Name:    reqDTO.Name,
-		Email:   reqDTO.Email,
+		Account:   reqDTO.Account,
+		Name:      reqDTO.Name,
+		Email:     reqDTO.Email,
+		AvatarUrl: reqDTO.AvatarUrl,
 	}); err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -361,7 +359,8 @@ func (*outerImpl) UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (err 
 	return
 }
 
-func (*outerImpl) UpdateAdmin(ctx context.Context, reqDTO UpdateAdminReqDTO) (err error) {
+// SetAdmin 设置系统管理员角色
+func (*outerImpl) SetAdmin(ctx context.Context, reqDTO SetAdminReqDTO) (err error) {
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
@@ -377,25 +376,46 @@ func (*outerImpl) UpdateAdmin(ctx context.Context, reqDTO UpdateAdminReqDTO) (er
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
+	var b bool
+	b, err = usermd.UpdateAdmin(ctx, usermd.UpdateAdminReqDTO{
+		Account: reqDTO.Account,
+		IsAdmin: reqDTO.IsAdmin,
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
-		return
 	}
-	// 账号不存在
 	if !b {
-		err = util.InvalidArgsError()
+		err = util.OperationFailedError()
 		return
-	}
-	if _, err = usermd.UpdateAdmin(ctx, usermd.UpdateAdminReqDTO{
-		Account: reqDTO.Account,
-		IsAdmin: reqDTO.IsAdmin,
-	}); err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
 	}
 	return
+}
+
+// SetDba 设置dba角色
+func (*outerImpl) SetDba(ctx context.Context, reqDTO SetDbaReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	// 只有系统管理员才能设置系统管理员
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	b, err := usermd.UpdateDba(ctx, usermd.UpdateDbaReqDTO{
+		Account: reqDTO.Account,
+		IsDba:   reqDTO.IsDba,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.OperationFailedError()
+	}
+	return nil
+
 }
 
 func (*outerImpl) UpdatePassword(ctx context.Context, reqDTO UpdatePasswordReqDTO) (err error) {
@@ -441,22 +461,25 @@ func (s *outerImpl) SetProhibited(ctx context.Context, reqDTO SetProhibitedReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
+	var b bool
+	b, err = usermd.UpdateProhibited(ctx, usermd.SetUserProhibitedReqDTO{
+		Account:      reqDTO.Account,
+		IsProhibited: reqDTO.IsProhibited,
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
+	}
+	if !b {
+		err = util.OperationFailedError()
 		return
 	}
-	// 账号不存在
-	if !b {
-		return util.InvalidArgsError()
-	}
-	if _, err = usermd.SetUserProhibited(ctx, usermd.SetUserProhibitedReqDTO{
-		Account:      reqDTO.Account,
-		IsProhibited: reqDTO.IsProhibited,
-	}); err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
+	// 禁用用户下线登录token
+	if reqDTO.IsProhibited {
+		err2 := apisession.GetStore().DeleteByAccount(reqDTO.Account)
+		if err2 != nil {
+			logger.Logger.WithContext(ctx).Error(err2)
+		}
 	}
 	return
 }
@@ -479,4 +502,26 @@ func (s *outerImpl) ListAllUser(ctx context.Context, reqDTO ListAllUserReqDTO) (
 			Name:    t.Name,
 		}, nil
 	})
+}
+
+// ResetPassword 重置密码
+func (s *outerImpl) ResetPassword(ctx context.Context, reqDTO ResetPasswordReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	// 只有系统管理员才能重置密码
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err := usermd.UpdatePassword(ctx, usermd.UpdatePasswordReqDTO{
+		Account:  reqDTO.Account,
+		Password: util.EncryptUserPassword("123456"),
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }

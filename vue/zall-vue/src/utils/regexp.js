@@ -1,6 +1,6 @@
 // 用户校验
 const accountRegexp = /^\w{4,32}$/;
-const passwordRegexp = /^.{6,}$/;
+const passwordRegexp = /^.{6,255}$/;
 const usernameRegexp = /^.{1,32}$/;
 const emailRegexp = /^(\w)+(\.\w+)*@(\w)+((\.\w+)+)$/;
 // 团队校验
@@ -60,6 +60,10 @@ const dbAccessBaseRegexp = /^.+$/;
 const dbAccessTablesRegexp = /^.+$/;
 const dbApplyReasonRegexp = /^.{1,255}$/;
 const dbDatUpdateCmdRegexp = /^.{1,10240}$/;
+// git repo server
+const gitRepoServerHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
+// env
+const envRegexp = /^[a-zA-Z]{1,16}$/
 export {
     accountRegexp,
     passwordRegexp,
@@ -105,4 +109,6 @@ export {
     dbAccessTablesRegexp,
     dbApplyReasonRegexp,
     dbDatUpdateCmdRegexp,
+    gitRepoServerHostRegexp,
+    envRegexp
 }

@@ -23,6 +23,9 @@ type UpdateGitCfgReqDTO struct {
 }
 
 func (r *UpdateGitCfgReqDTO) IsValid() error {
+	if !r.GitCfg.IsValid() {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -30,7 +33,7 @@ func (r *UpdateGitCfgReqDTO) IsValid() error {
 }
 
 type UpdateEnvCfgReqDTO struct {
-	Envs     []string            `json:"envs"`
+	EnvCfg
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -38,10 +41,8 @@ func (r *UpdateEnvCfgReqDTO) IsValid() error {
 	if len(r.Envs) == 0 {
 		return util.InvalidArgsError()
 	}
-	for _, env := range r.Envs {
-		if env == "" {
-			return util.InvalidArgsError()
-		}
+	if !r.EnvCfg.IsValid() {
+		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()

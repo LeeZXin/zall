@@ -6,16 +6,20 @@ import (
 	"regexp"
 )
 
-var (
-	validUserAccountPattern = regexp.MustCompile(`^\w{4,32}$`)
-)
-
 func IsAccountValid(account string) bool {
-	return validUserAccountPattern.MatchString(account)
+	return regexp.MustCompile(`^\w{4,32}$`).MatchString(account)
 }
 
 func IsUsernameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
+}
+
+func IsEmailValid(email string) bool {
+	return regexp.MustCompile(`^(\w)+(\.\w+)*@(\w)+((\.\w+)+)$`).MatchString(email)
+}
+
+func IsPasswordValid(password string) bool {
+	return regexp.MustCompile("\\S{6,255}").MatchString(password)
 }
 
 func InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) error {
@@ -47,6 +51,12 @@ func GetByAccount(ctx context.Context, account string) (User, bool, error) {
 	return ret, b, err
 }
 
+func ExistByAccount(ctx context.Context, account string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("account = ?", account).
+		Exist(new(User))
+}
+
 func ListUserByAccounts(ctx context.Context, accounts []string) ([]User, error) {
 	ret := make([]User, 0)
 	err := xormutil.MustGetXormSession(ctx).In("account", accounts).Find(&ret)
@@ -63,17 +73,17 @@ func CountAllUsers(ctx context.Context) (int64, error) {
 	return xormutil.MustGetXormSession(ctx).Count(new(User))
 }
 
-func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]User, error) {
+func PageUser(ctx context.Context, reqDTO PageUserReqDTO) ([]User, int64, error) {
 	ret := make([]User, 0)
-	session := xormutil.MustGetXormSession(ctx).Limit(reqDTO.Limit)
+	session := xormutil.MustGetXormSession(ctx)
 	if reqDTO.Account != "" {
-		session.And("account like ?", "%"+reqDTO.Account+"%")
+		session.And("account like ?", reqDTO.Account+"%")
 	}
-	if reqDTO.Cursor > 0 {
-		session.And("id > ?", reqDTO.Cursor)
-	}
-	err := session.Find(&ret)
-	return ret, err
+	total, err := session.
+		Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).
+		Desc("id").
+		FindAndCount(&ret)
+	return ret, total, err
 }
 
 func ListAllUser(ctx context.Context, cols []string) ([]User, error) {
@@ -85,11 +95,11 @@ func ListAllUser(ctx context.Context, cols []string) ([]User, error) {
 func UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("account = ?", reqDTO.Account).
-		Limit(1).
-		Cols("name", "email").
+		Cols("name", "email", "avatar_url").
 		Update(&User{
-			Name:  reqDTO.Name,
-			Email: reqDTO.Email,
+			Name:      reqDTO.Name,
+			Email:     reqDTO.Email,
+			AvatarUrl: reqDTO.AvatarUrl,
 		})
 	return rows == 1, err
 }
@@ -115,7 +125,17 @@ func UpdateAdmin(ctx context.Context, reqDTO UpdateAdminReqDTO) (bool, error) {
 	return rows == 1, err
 }
 
-func SetUserProhibited(ctx context.Context, reqDTO SetUserProhibitedReqDTO) (bool, error) {
+func UpdateDba(ctx context.Context, reqDTO UpdateDbaReqDTO) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("account = ?", reqDTO.Account).
+		Cols("is_dba").
+		Update(&User{
+			IsDba: reqDTO.IsDba,
+		})
+	return rows == 1, err
+}
+
+func UpdateProhibited(ctx context.Context, reqDTO SetUserProhibitedReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("account = ?", reqDTO.Account).
 		Cols("is_prohibited").

@@ -17,18 +17,23 @@ func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/sysCfg")
 		{
+			// 获取系统配置 无需鉴权
 			group.GET("/get", getSysCfg)
+			// 编辑系统配置
 			group.POST("/update", apisession.CheckLogin, updateSysCfg)
 		}
 		group = e.Group("/api/gitCfg", apisession.CheckLogin)
 		{
+			// 获取git配置
 			group.GET("/get", getGitCfg)
+			// 编辑git配置
 			group.POST("/update", updateGitCfg)
 		}
 		group = e.Group("/api/envCfg", apisession.CheckLogin)
 		{
 			// 获取环境列表
 			group.GET("/get", getEnvCfg)
+			// 编辑环境列表
 			group.POST("/update", updateEnvCfg)
 		}
 		group = e.Group("/api/gitRepoServerCfg", apisession.CheckLogin)
@@ -115,7 +120,7 @@ func updateEnvCfg(c *gin.Context) {
 	var req UpdateEnvCfgReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := cfgsrv.Outer.UpdateEnvCfg(c, cfgsrv.UpdateEnvCfgReqDTO{
-			Envs:     req.Envs,
+			EnvCfg:   req.EnvCfg,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {

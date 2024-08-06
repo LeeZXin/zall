@@ -740,14 +740,14 @@ func checkManagePropertySourcePermByAppId(ctx context.Context, operator apisessi
 //	if !b {
 //		return util.InvalidArgsError()
 //	}
-//	if operator.IsAdmin {
+//	if operator.IsDba {
 //		return nil
 //	}
 //	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 //	if !b {
 //		return util.UnauthorizedError()
 //	}
-//	if p.IsAdmin || p.PermDetail.GetAppPerm(ps.AppId).CanManagePropertySource {
+//	if p.IsDba || p.PermDetail.GetAppPerm(ps.AppId).CanManagePropertySource {
 //		return nil
 //	}
 //	return util.UnauthorizedError()

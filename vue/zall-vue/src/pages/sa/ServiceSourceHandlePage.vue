@@ -41,7 +41,7 @@
       <div class="section">
         <div class="section-title">Api Key</div>
         <div class="section-body">
-          <a-input v-model:value="formState.apiKey" />
+          <a-input-password v-model:value="formState.apiKey" />
           <div class="input-desc">接口鉴权使用</div>
         </div>
       </div>

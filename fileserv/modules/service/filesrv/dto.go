@@ -10,15 +10,11 @@ import (
 )
 
 type UploadAvatarReqDTO struct {
-	Name     string              `json:"name"`
 	Body     io.Reader           `json:"-"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *UploadAvatarReqDTO) IsValid() error {
-	if r.Name == "" {
-		return util.InvalidArgsError()
-	}
 	if r.Body == nil {
 		return util.InvalidArgsError()
 	}
@@ -29,13 +25,12 @@ func (r *UploadAvatarReqDTO) IsValid() error {
 }
 
 type GetAvatarReqDTO struct {
-	Id       string              `json:"id"`
 	Name     string              `json:"name"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *GetAvatarReqDTO) IsValid() error {
-	if r.Name == "" || len(r.Id) != 32 {
+	if r.Name == "" {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

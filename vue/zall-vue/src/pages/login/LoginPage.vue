@@ -18,7 +18,7 @@
     <div class="submit-btn">
       <a-button type="primary" style="width:100%" @click="login">{{t("login.loginBtnText")}}</a-button>
     </div>
-    <div class="sub-section">
+    <div class="sub-section" v-if="allowUserRegister">
       <span class="sub-text" @click="goToRegister">{{t("login.registerText")}}</span>
     </div>
   </div>
@@ -29,6 +29,7 @@ import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter, useRoute } from "vue-router";
 import { loginRequest } from "@/api/user/loginApi";
+import { getSysCfgRequest } from "@/api/cfg/cfgApi";
 import { message } from "ant-design-vue";
 import { useUserStore } from "@/pinia/userStore";
 import { accountRegexp, passwordRegexp } from "@/utils/regexp";
@@ -38,6 +39,7 @@ const password = ref("");
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const allowUserRegister = ref(false);
 // 跳转注册页面
 const goToRegister = () => router.push("/login/register");
 // 登录请求
@@ -71,6 +73,13 @@ const login = () => {
     }
   });
 };
+// 获取系统配置 检查是否允许用户注册
+const getSysCfg = () => {
+  getSysCfgRequest().then(res => {
+    allowUserRegister.value = !res.data.disableSelfRegisterUser;
+  });
+};
+getSysCfg();
 </script>
 <style scoped>
 .section {

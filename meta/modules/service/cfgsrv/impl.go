@@ -133,16 +133,8 @@ func (s *outerImpl) GetSysCfg(ctx context.Context) (SysCfg, error) {
 	return ret, nil
 }
 
+// UpdateSysCfg 编辑系统配置
 func (s *outerImpl) UpdateSysCfg(ctx context.Context, reqDTO UpdateSysCfgReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.CfgSrvKeysVO.UpdateSysCfg),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
@@ -230,6 +222,7 @@ func (s *outerImpl) GetEnvCfg(ctx context.Context, reqDTO GetEnvCfgReqDTO) ([]st
 	return ret, nil
 }
 
+// UpdateEnvCfg 编辑环境配置
 func (s *outerImpl) UpdateEnvCfg(ctx context.Context, reqDTO UpdateEnvCfgReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
@@ -239,10 +232,7 @@ func (s *outerImpl) UpdateEnvCfg(ctx context.Context, reqDTO UpdateEnvCfgReqDTO)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	cfg := EnvCfg{
-		Envs: reqDTO.Envs,
-	}
-	_, err := cfgmd.UpdateByKey(ctx, &cfg)
+	_, err := cfgmd.UpdateByKey(ctx, &reqDTO.EnvCfg)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)

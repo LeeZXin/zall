@@ -8,7 +8,11 @@ import (
 type MysqlQueryResult struct {
 	Columns []string
 	Data    [][]string
-	Err     error
+}
+
+type MysqlQueryResultWithErr struct {
+	MysqlQueryResult
+	Err error
 }
 
 func (r *MysqlQueryResult) ToMap() []map[string]string {
@@ -32,35 +36,35 @@ func MysqlQuery(datasourceName, cmd string) (MysqlQueryResult, error) {
 		return MysqlQueryResult{}, err
 	}
 	defer db.Close()
-	return query(db, cmd), nil
+	return query(db, cmd)
 }
 
-func MysqlQueries(datasourceName string, cmds ...string) ([]MysqlQueryResult, error) {
+func MysqlQueries(datasourceName string, cmds ...string) ([]MysqlQueryResultWithErr, error) {
 	db, err := sql.Open("mysql", datasourceName)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
-	ret := make([]MysqlQueryResult, 0, len(cmds))
+	ret := make([]MysqlQueryResultWithErr, 0, len(cmds))
 	for _, cmd := range cmds {
-		ret = append(ret, query(db, cmd))
+		result, err := query(db, cmd)
+		ret = append(ret, MysqlQueryResultWithErr{
+			MysqlQueryResult: result,
+			Err:              err,
+		})
 	}
 	return ret, nil
 }
 
-func query(db *sql.DB, cmd string) MysqlQueryResult {
+func query(db *sql.DB, cmd string) (MysqlQueryResult, error) {
 	rows, err := db.Query(cmd)
 	if err != nil {
-		return MysqlQueryResult{
-			Err: err,
-		}
+		return MysqlQueryResult{}, err
 	}
 	defer rows.Close()
 	columns, err := rows.Columns()
 	if err != nil {
-		return MysqlQueryResult{
-			Err: err,
-		}
+		return MysqlQueryResult{}, err
 	}
 	ret := make([][]string, 0)
 	values := make([][]byte, len(columns))
@@ -72,9 +76,7 @@ func query(db *sql.DB, cmd string) MysqlQueryResult {
 		row := make([]string, len(columns))
 		err = rows.Scan(scans...)
 		if err != nil {
-			return MysqlQueryResult{
-				Err: err,
-			}
+			return MysqlQueryResult{}, err
 		}
 		for i, v := range values {
 			row[i] = string(v)
@@ -84,8 +86,7 @@ func query(db *sql.DB, cmd string) MysqlQueryResult {
 	return MysqlQueryResult{
 		Columns: columns,
 		Data:    ret,
-		Err:     err,
-	}
+	}, err
 }
 
 type MysqlExecuteResult struct {

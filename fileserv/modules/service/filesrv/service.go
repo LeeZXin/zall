@@ -9,7 +9,9 @@ var (
 )
 
 type OuterService interface {
+	// UploadAvatar 上传头像
 	UploadAvatar(context.Context, UploadAvatarReqDTO) (string, error)
+	// GetAvatar 获取头像路径
 	GetAvatar(context.Context, GetAvatarReqDTO) (string, error)
 	// UploadProduct 上传制品
 	UploadProduct(context.Context, UploadProductReqDTO) (string, error)

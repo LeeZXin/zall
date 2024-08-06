@@ -25,9 +25,10 @@ type InsertUserReqDTO struct {
 }
 
 type UpdateUserReqDTO struct {
-	Account string
-	Name    string
-	Email   string
+	Account   string
+	Name      string
+	Email     string
+	AvatarUrl string
 }
 
 type UpdateAdminReqDTO struct {
@@ -35,15 +36,20 @@ type UpdateAdminReqDTO struct {
 	IsAdmin bool
 }
 
+type UpdateDbaReqDTO struct {
+	Account string
+	IsDba   bool
+}
+
 type UpdatePasswordReqDTO struct {
 	Account  string
 	Password string
 }
 
-type ListUserReqDTO struct {
-	Account string
-	Cursor  int64
-	Limit   int
+type PageUserReqDTO struct {
+	Account  string
+	PageNum  int
+	PageSize int
 }
 
 type SetUserProhibitedReqDTO struct {

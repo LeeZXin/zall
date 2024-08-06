@@ -13,9 +13,7 @@ import (
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
-	"io"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -30,8 +28,10 @@ func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/files/avatar", apisession.CheckLogin)
 		{
-			group.POST("/upload/:name", uploadAvatar)
-			group.GET("/get/:id/:name", getAvatar)
+			// 上传头像
+			group.POST("/upload", uploadAvatar)
+			// 获取头像
+			group.GET("/get/:name", getAvatar)
 		}
 		// 简单制品库
 		group = e.Group("/api/files/product", checkProductToken)
@@ -100,7 +100,7 @@ func checkProductToken(c *gin.Context) {
 }
 
 func uploadAvatar(c *gin.Context) {
-	body, b, err := getBody(c)
+	body, b, err := ginutil.GetFile(c)
 	if err != nil {
 		logger.Logger.WithContext(c).Error(err)
 		util.HandleApiErr(err, c)
@@ -110,25 +110,24 @@ func uploadAvatar(c *gin.Context) {
 		defer body.Close()
 	}
 	path, err := filesrv.Outer.UploadAvatar(c, filesrv.UploadAvatarReqDTO{
-		Name:     c.Param("name"),
 		Body:     body,
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
-		util.HandleApiErr(err, c)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"error": err.Error(),
+		})
 		return
 	}
-	c.JSON(http.StatusOK, ginutil.DataResp[string]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     path,
+	c.JSON(http.StatusOK, gin.H{
+		"success":  true,
+		"filePath": path,
 	})
 }
 
 func getAvatar(c *gin.Context) {
-	name := c.Param("name")
 	path, err := filesrv.Outer.GetAvatar(c, filesrv.GetAvatarReqDTO{
-		Id:       c.Param("id"),
-		Name:     name,
+		Name:     c.Param("name"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -136,21 +135,14 @@ func getAvatar(c *gin.Context) {
 		return
 	}
 	if path == "" {
-		c.JSON(http.StatusNotFound, ginutil.BaseResp{
-			Code:    apicode.DataNotExistsCode.Int(),
-			Message: "file not found",
-		})
+		c.String(http.StatusNotFound, "not found")
 		return
-	}
-	if c.Query("a") == "1" {
-		c.Header("Content-Disposition", "attachment; filename=\""+name+"\"")
-		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	}
 	c.File(path)
 }
 
 func uploadProduct(c *gin.Context) {
-	body, b, err := getBody(c)
+	body, b, err := ginutil.GetFile(c)
 	if err != nil {
 		logger.Logger.WithContext(c).Error(err)
 		util.HandleApiErr(err, c)
@@ -167,7 +159,7 @@ func uploadProduct(c *gin.Context) {
 		Body:    body,
 	})
 	if err != nil {
-		util.HandleApiErr(err, c)
+		c.JSON(http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, ginutil.DataResp[string]{
@@ -199,24 +191,4 @@ func getProduct(c *gin.Context) {
 		c.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	}
 	c.File(path)
-}
-
-func getBody(c *gin.Context) (io.ReadCloser, bool, error) {
-	contentType := strings.ToLower(c.GetHeader("Content-Type"))
-	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") || strings.HasPrefix(contentType, "multipart/form-data") {
-		if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
-			return nil, false, err
-		}
-		if c.Request.MultipartForm.File == nil {
-			return nil, false, http.ErrMissingFile
-		}
-		for _, files := range c.Request.MultipartForm.File {
-			if len(files) > 0 {
-				r, err := files[0].Open()
-				return r, true, err
-			}
-		}
-		return nil, false, http.ErrMissingFile
-	}
-	return c.Request.Body, false, nil
 }

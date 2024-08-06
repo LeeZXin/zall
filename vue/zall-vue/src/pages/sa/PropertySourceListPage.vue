@@ -79,15 +79,12 @@ const deletePropertySource = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deletePropertySourceRequest(item.id).then(() => {
         message.success("删除成功");
         listPropertySource();
       });
-    },
-    onCancel() {}
+    }
   });
 };
 

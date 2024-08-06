@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/LeeZXin/zall/pkg/typesniffer"
 	"github.com/LeeZXin/zsf-utils/sortutil"
+	"github.com/LeeZXin/zsf-utils/typesniffer"
 	"strconv"
 	"strings"
 )

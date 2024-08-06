@@ -1,22 +1,29 @@
 package filesrv
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/LeeZXin/zall/fileserv/modules/model/productmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
+	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/files"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/typesniffer"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"io"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -46,24 +53,47 @@ func InitStorage() {
 
 type outerImpl struct{}
 
+// UploadAvatar 上传头像
 func (*outerImpl) UploadAvatar(ctx context.Context, reqDTO UploadAvatarReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return "", err
 	}
-	id := idutil.RandomUuid()
-	_, err := avatarStorage.Save(ctx, filepath.Join(convertPointerPath(id), reqDTO.Name), reqDTO.Body)
+	file, err := io.ReadAll(reqDTO.Body)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
 	}
-	return domain + fmt.Sprintf("/api/files/avatar/get/%s/%s", id, reqDTO.Name), nil
+	sniffedType := typesniffer.DetectContentType(file)
+	if !sniffedType.IsImage() {
+		return "", util.NewBizErr(apicode.InvalidArgsCode, i18n.AvatarNotImageError)
+	}
+	id := idutil.RandomUuid()
+	ext := strings.TrimPrefix(sniffedType.GetMimeType(), "image/")
+	_, err = avatarStorage.Save(ctx,
+		convertPath(id)+"."+ext,
+		bytes.NewReader(file))
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	return domain + fmt.Sprintf("/api/files/avatar/get/%s", id+"."+ext), nil
 }
 
+func convertPath(id string) string {
+	return filepath.Join(id[:8], id[8:16], id[16:24], id[24:])
+}
+
+// GetAvatar 获取头像路径
 func (*outerImpl) GetAvatar(ctx context.Context, reqDTO GetAvatarReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return "", err
 	}
-	avatarPath := filepath.Join(convertPointerPath(reqDTO.Id), reqDTO.Name)
+	ext := path.Ext(reqDTO.Name)
+	id := strings.TrimSuffix(reqDTO.Name, ext)
+	if len(id) != 32 {
+		return "", util.InvalidArgsError()
+	}
+	avatarPath := convertPath(id) + ext
 	b, err := avatarStorage.Exists(ctx, avatarPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -221,8 +251,4 @@ func checkAppDevelopPermByProductId(ctx context.Context, productId int64, operat
 		return productmd.Product{}, util.InvalidArgsError()
 	}
 	return product, checkAppDevelopPermByAppId(ctx, product.AppId, operator)
-}
-
-func convertPointerPath(id string) string {
-	return filepath.Join(id[0:8], id[8:16], id[16:24], id[24:])
 }

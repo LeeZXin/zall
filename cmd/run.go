@@ -25,6 +25,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
+	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/promagent/agent"
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
@@ -46,6 +47,10 @@ var Run = &cli.Command{
 }
 
 func runZall(*cli.Context) error {
+	// for apisession
+	{
+		apisession.Init()
+	}
 	// for envs
 	{
 		cfgsrv.Init()

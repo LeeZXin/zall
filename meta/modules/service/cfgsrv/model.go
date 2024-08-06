@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
+	"net/url"
+	"regexp"
 	"time"
 )
 
@@ -57,6 +59,30 @@ type GitCfg struct {
 	lfsJwtSecretBytes []byte
 }
 
+func (c *GitCfg) IsValid() bool {
+	httpUrl, err := url.Parse(c.HttpUrl)
+	if err != nil {
+		return false
+	}
+	if httpUrl.Scheme != "http" && httpUrl.Scheme != "https" {
+		return false
+	}
+	sshUrl, err := url.Parse(c.SshUrl)
+	if err != nil {
+		return false
+	}
+	if sshUrl.Scheme != "ssh" && sshUrl.User.Username() != "git" {
+		return false
+	}
+	if c.LfsJwtExpiry <= 0 {
+		return false
+	}
+	if c.LfsJwtSecret == "" || len(c.LfsJwtSecret) > 1024 {
+		return false
+	}
+	return true
+}
+
 func (c *GitCfg) GetLfsJwtExpiry() time.Duration {
 	return time.Duration(c.LfsJwtExpiry) * time.Second
 }
@@ -80,7 +106,7 @@ func (c *GitCfg) FromStore(val string) error {
 		return err
 	}
 	if c.LfsJwtExpiry == 0 {
-		c.LfsJwtExpiry = 3600
+		c.LfsJwtExpiry = 600
 	}
 	c.lfsJwtSecretBytes = make([]byte, 32)
 	n, err := base64.RawURLEncoding.Decode(c.lfsJwtSecretBytes, []byte(c.LfsJwtSecret))
@@ -104,6 +130,19 @@ func (c *EnvCfg) Key() string {
 func (c *EnvCfg) Val() string {
 	ret, _ := json.Marshal(c)
 	return string(ret)
+}
+
+func (c *EnvCfg) IsValid() bool {
+	if len(c.Envs) == 0 {
+		return false
+	}
+	pattern := regexp.MustCompile(`^[a-zA-Z]{1,16}$`)
+	for _, env := range c.Envs {
+		if !pattern.MatchString(env) {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *EnvCfg) FromStore(val string) error {

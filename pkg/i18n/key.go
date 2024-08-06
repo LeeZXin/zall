@@ -71,6 +71,13 @@ var (
 )
 
 var (
+	AvatarNotImageError = KeyItem{
+		Id:         "avatar.notImage",
+		DefaultRet: "不是图片",
+	}
+)
+
+var (
 	SshKeyFormatError = KeyItem{
 		Id:         "sshKey.formatError",
 		DefaultRet: "ssh公钥格式错误",

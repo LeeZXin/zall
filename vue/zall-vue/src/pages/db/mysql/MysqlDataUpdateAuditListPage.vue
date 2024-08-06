@@ -94,7 +94,7 @@
         :disabled="true"
       />
     </a-modal>
-    <a-modal v-model:open="explainModal.open" title="执行计划" :footer="null">
+    <a-modal v-model:open="explainModal.open" title="执行计划" :footer="null" :width="800">
       <Codemirror
         v-model="explainModal.content"
         style="height:280px;width:100%"

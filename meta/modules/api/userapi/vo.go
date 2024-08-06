@@ -21,13 +21,12 @@ type RefreshRespVO struct {
 	ExpireAt  int64  `json:"expireAt"`
 }
 
-type InsertUserReqVO struct {
+type CreateUserReqVO struct {
 	Account   string `json:"account"`
 	Name      string `json:"name"`
 	Email     string `json:"email"`
 	Password  string `json:"password"`
 	AvatarUrl string `json:"avatarUrl"`
-	IsAdmin   bool   `json:"isAdmin"`
 }
 
 type RegisterUserReqVO struct {
@@ -45,22 +44,22 @@ type UserVO struct {
 	IsProhibited bool   `json:"isProhibited"`
 	AvatarUrl    string `json:"avatarUrl"`
 	Created      string `json:"created"`
-	Updated      string `json:"updated"`
+	IsDba        bool   `json:"isDba"`
 }
 
 type ListUserReqVO struct {
 	Account string `json:"account"`
-	Cursor  int64  `json:"cursor"`
-	Limit   int    `json:"limit"`
+	PageNum int    `json:"pageNum"`
 }
 
 type UpdateUserReqVO struct {
-	Account string `json:"account"`
-	Name    string `json:"name"`
-	Email   string `json:"email"`
+	Account   string `json:"account"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarUrl string `json:"avatarUrl"`
 }
 
-type UpdateAdminReqVO struct {
+type SetAdminReqVO struct {
 	Account string `json:"account"`
 	IsAdmin bool   `json:"isAdmin"`
 }
@@ -69,13 +68,14 @@ type UpdatePasswordReqVO struct {
 	Password string `json:"password"`
 }
 
-type DeleteUserReqVO struct {
-	Account string `json:"account"`
-}
-
 type SetProhibitedReqVO struct {
 	Account      string `json:"account"`
 	IsProhibited bool   `json:"isProhibited"`
+}
+
+type SetDbaReqVO struct {
+	Account string `json:"account"`
+	IsDba   bool   `json:"isDba"`
 }
 
 type SimpleUserVO struct {

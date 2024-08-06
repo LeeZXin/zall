@@ -1,30 +1,13 @@
 import request from '@/utils/request.js'
 
 // 登录
-const loginRequest = (data) => request({
-    url: "/api/login/login",
-    method: "POST",
-    data: data
-});
-
+const loginRequest = (data) => request.post("/api/login/login", data);
 // 注册
-const registerRequest = (data) => request({
-    url: "/api/login/register",
-    method: "POST",
-    data: data
-});
-
+const registerRequest = (data) => request.post("/api/login/register", data);
 // 退出登录
-const logoutRequest = () => request({
-    url: "/api/login/logout",
-    method: "GET",
-});
-
+const logoutRequest = () => request.get("/api/login/logout");
 // 获取登录信息
-const getUserInfoRequest = () => request({
-    url: "/api/login/userInfo",
-    method: "GET",
-})
+const getUserInfoRequest = () => request.get("/api/login/userInfo");
 
 export {
     loginRequest,

@@ -4,39 +4,38 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
-	"regexp"
+	"net/url"
+	"strings"
 	"time"
 )
 
-var (
-	validPasswordPattern     = regexp.MustCompile("\\S{6,}")
-	validUserEmailRegPattern = regexp.MustCompile(`^(\w)+(\.\w+)*@(\w)+((\.\w+)+)$`)
-)
-
-type InsertUserReqDTO struct {
+type CreateUserReqDTO struct {
 	Account   string              `json:"account"`
 	Name      string              `json:"name"`
 	Email     string              `json:"email"`
 	Password  string              `json:"password"`
 	AvatarUrl string              `json:"avatarUrl"`
-	IsAdmin   bool                `json:"isAdmin"`
 	Operator  apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertUserReqDTO) IsValid() error {
+func (r *CreateUserReqDTO) IsValid() error {
 	if !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
-	if !validateUserEmail(r.Email) {
+	if !usermd.IsEmailValid(r.Email) {
 		return util.InvalidArgsError()
 	}
-	if !validatePassword(r.Password) {
+	if !usermd.IsPasswordValid(r.Password) {
 		return util.InvalidArgsError()
 	}
-	if len(r.Name) > 32 || len(r.Name) == 0 {
+	if !usermd.IsUsernameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	parsedUrl, err := url.Parse(r.AvatarUrl)
+	if err != nil || strings.HasPrefix(parsedUrl.Scheme, "http") {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -53,10 +52,10 @@ func (r *RegisterUserReqDTO) IsValid() error {
 	if !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
-	if !validateUserEmail(r.Email) {
+	if !usermd.IsEmailValid(r.Email) {
 		return util.InvalidArgsError()
 	}
-	if !validatePassword(r.Password) {
+	if !usermd.IsPasswordValid(r.Password) {
 		return util.InvalidArgsError()
 	}
 	if !usermd.IsUsernameValid(r.Name) {
@@ -74,7 +73,7 @@ func (r *LoginReqDTO) IsValid() error {
 	if !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
-	if !validatePassword(r.Password) {
+	if !usermd.IsPasswordValid(r.Password) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -139,19 +138,15 @@ func (r *DeleteUserReqDTO) IsValid() error {
 
 type ListUserReqDTO struct {
 	Account  string              `json:"account"`
-	Cursor   int64               `json:"cursor"`
-	Limit    int                 `json:"limit"`
+	PageNum  int                 `json:"pageNum"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListUserReqDTO) IsValid() error {
-	if r.Cursor < 0 {
+	if r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
-	if r.Limit <= 0 || r.Limit > 1000 {
-		return util.InvalidArgsError()
-	}
-	if r.Account != "" && !usermd.IsAccountValid(r.Account) {
+	if r.Account != "" && len(r.Account) > 32 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -168,14 +163,15 @@ type UserDTO struct {
 	IsProhibited bool      `json:"isProhibited"`
 	AvatarUrl    string    `json:"avatarUrl"`
 	Created      time.Time `json:"created"`
-	Updated      time.Time `json:"updated"`
+	IsDba        bool      `json:"isDba"`
 }
 
 type UpdateUserReqDTO struct {
-	Account  string              `json:"account"`
-	Name     string              `json:"name"`
-	Email    string              `json:"email"`
-	Operator apisession.UserInfo `json:"operator"`
+	Account   string              `json:"account"`
+	Name      string              `json:"name"`
+	Email     string              `json:"email"`
+	AvatarUrl string              `json:"avatarUrl"`
+	Operator  apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdateUserReqDTO) IsValid() error {
@@ -188,19 +184,54 @@ func (r *UpdateUserReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !validateUserEmail(r.Email) {
+	if !usermd.IsEmailValid(r.Email) {
+		return util.InvalidArgsError()
+	}
+	parsedUrl, err := url.Parse(r.AvatarUrl)
+	if err != nil || strings.HasPrefix(parsedUrl.Scheme, "http") {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type UpdateAdminReqDTO struct {
+type SetAdminReqDTO struct {
 	Account  string              `json:"account"`
 	IsAdmin  bool                `json:"isAdmin"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpdateAdminReqDTO) IsValid() error {
+func (r *SetAdminReqDTO) IsValid() error {
+	if !usermd.IsAccountValid(r.Account) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type SetDbaReqDTO struct {
+	Account  string              `json:"account"`
+	IsDba    bool                `json:"isDba"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *SetDbaReqDTO) IsValid() error {
+	if !usermd.IsAccountValid(r.Account) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ResetPasswordReqDTO struct {
+	Account  string              `json:"account"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ResetPasswordReqDTO) IsValid() error {
 	if !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
@@ -216,7 +247,7 @@ type UpdatePasswordReqDTO struct {
 }
 
 func (r *UpdatePasswordReqDTO) IsValid() error {
-	if !validatePassword(r.Password) {
+	if !usermd.IsPasswordValid(r.Password) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -264,18 +295,10 @@ func (r *CheckAccountAndPasswordReqDTO) IsValid() error {
 	if !usermd.IsAccountValid(r.Account) {
 		return util.InvalidArgsError()
 	}
-	if !validatePassword(r.Password) {
+	if !usermd.IsPasswordValid(r.Password) {
 		return util.InvalidArgsError()
 	}
 	return nil
-}
-
-func validateUserEmail(email string) bool {
-	return validUserEmailRegPattern.MatchString(email)
-}
-
-func validatePassword(password string) bool {
-	return validPasswordPattern.MatchString(password)
 }
 
 type ListAllUserReqDTO struct {

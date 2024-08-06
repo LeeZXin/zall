@@ -60,15 +60,17 @@
         <div v-show="showSearchResult">
           <ZTable :columns="searchColumns" :dataSource="searchDataSource" />
           <div class="flex-between" style="margin-top:10px">
-            <a-pagination
-              v-model:current="searchCurrPage"
-              :total="searchTotalCount"
-              show-less-items
-              :pageSize="10"
-              :hideOnSinglePage="true"
-              :showSizeChanger="false"
-              @change="()=>changeSearchPage()"
-            />
+            <div>
+              <a-pagination
+                v-model:current="searchCurrPage"
+                :total="searchTotalCount"
+                show-less-items
+                :pageSize="10"
+                :hideOnSinglePage="true"
+                :showSizeChanger="false"
+                @change="()=>changeSearchPage()"
+              />
+            </div>
             <a-button
               type="primary"
               :icon="h(ExportOutlined)"
