@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:10px;height:100%" v-show="!showStatusList">
+  <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px;" class="flex-end">
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>

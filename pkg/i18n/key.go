@@ -56,6 +56,10 @@ var (
 		Id:         "user.wrongPassword",
 		DefaultRet: "密码不正确",
 	}
+	UserWrongOriginPassword = KeyItem{
+		Id:         "user.wrongOriginPassword",
+		DefaultRet: "原密码不正确",
+	}
 	UserAlreadyExists = KeyItem{
 		Id:         "user.alreadyExists",
 		DefaultRet: "用户已存在",

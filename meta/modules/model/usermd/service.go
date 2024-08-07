@@ -107,7 +107,6 @@ func UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (bool, error) {
 func UpdatePassword(ctx context.Context, reqDTO UpdatePasswordReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("account = ?", reqDTO.Account).
-		Limit(1).
 		Cols("password").
 		Update(&User{
 			Password: reqDTO.Password,

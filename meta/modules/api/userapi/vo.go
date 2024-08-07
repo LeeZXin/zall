@@ -65,6 +65,7 @@ type SetAdminReqVO struct {
 }
 
 type UpdatePasswordReqVO struct {
+	Origin   string `json:"origin"`
 	Password string `json:"password"`
 }
 

@@ -242,11 +242,15 @@ func (r *ResetPasswordReqDTO) IsValid() error {
 }
 
 type UpdatePasswordReqDTO struct {
+	Origin   string              `json:"-"`
 	Password string              `json:"-"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdatePasswordReqDTO) IsValid() error {
+	if !usermd.IsPasswordValid(r.Origin) {
+		return util.InvalidArgsError()
+	}
 	if !usermd.IsPasswordValid(r.Password) {
 		return util.InvalidArgsError()
 	}

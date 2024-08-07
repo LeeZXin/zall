@@ -45,7 +45,9 @@ func (m *mysqlStore) GetBySessionId(sessionId string) (Session, bool, error) {
 	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	ret := SessionModel{}
-	b, err := xsess.Where("session_id = ?", sessionId).And("expire_at > ?", time.Now().UnixMilli()).Get(&ret)
+	b, err := xsess.Where("session_id = ?", sessionId).
+		And("expire_at > ?", time.Now().UnixMilli()).
+		Get(&ret)
 	if err != nil || !b {
 		return Session{}, b, err
 	}
@@ -56,19 +58,35 @@ func (m *mysqlStore) GetByAccount(account string) (Session, bool, error) {
 	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
 	ret := SessionModel{}
-	b, err := xsess.Where("account = ?", account).And("expire_at > ?", time.Now().UnixMilli()).Get(&ret)
+	b, err := xsess.Where("account = ?", account).
+		And("expire_at > ?", time.Now().UnixMilli()).
+		Get(&ret)
 	return ret.ToSession(), b, err
 }
 
 func (m *mysqlStore) PutSession(session Session) error {
 	xsess := xormstore.NewXormSession(context.Background())
 	defer xsess.Close()
-	_, err := xsess.Insert(&SessionModel{
-		SessionId: session.SessionId,
-		Account:   session.UserInfo.Account,
-		UserInfo:  &session.UserInfo,
-		ExpireAt:  session.ExpireAt,
-	})
+	var existModel SessionModel
+	b, err := xsess.Where("session_id = ?", session.SessionId).Get(&existModel)
+	if err != nil {
+		return err
+	}
+	if !b {
+		_, err = xsess.Insert(&SessionModel{
+			SessionId: session.SessionId,
+			Account:   session.UserInfo.Account,
+			UserInfo:  &session.UserInfo,
+			ExpireAt:  session.ExpireAt,
+		})
+	} else {
+		_, err = xsess.Where("session_id = ?", session.SessionId).
+			Cols("user_info", "expire_at").
+			Update(&SessionModel{
+				UserInfo: &session.UserInfo,
+				ExpireAt: session.ExpireAt,
+			})
+	}
 	return err
 }
 

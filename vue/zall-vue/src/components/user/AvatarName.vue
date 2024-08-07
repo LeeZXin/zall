@@ -4,26 +4,12 @@
     <div v-else class="avatar-fake">{{user.name?.substring(0,1)}}</div>
     <span>{{user.name}}</span>
   </div>
-  <a-drawer
-    :title="user.name"
-    :closable="false"
-    :open="visible"
-    :bodyStyle="bodyStyle"
-    @close="closeDrawer"
-  >
-    <div class="drawer-item">
-      <KeyOutlined style="font-size:18px" />
-      <span>{{t("settings.sshAndGpg")}}</span>
+  <a-drawer :title="user.name" :closable="false" :open="visible" @close="closeDrawer">
+    <div class="drawer-item no-wrap" @click="goto('/personalSetting/profile/info')">
+      <SettingOutlined style="font-size:18px" />
+      <span>个人设置</span>
     </div>
-    <div class="drawer-item">
-      <LockOutlined style="font-size:18px" />
-      <span>修改密码</span>
-    </div>
-    <div class="drawer-item">
-      <EditOutlined style="font-size:18px" />
-      <span>修改个人信息</span>
-    </div>
-    <div class="drawer-item" @click="goto('/sa/cfg/list')" v-if="user.isAdmin">
+    <div class="drawer-item no-wrap" @click="goto('/sa/cfg/list')" v-if="user.isAdmin">
       <UserOutlined style="font-size:18px" />
       <span>超级管理员</span>
     </div>
@@ -37,12 +23,9 @@
 import { useUserStore } from "@/pinia/userStore";
 import { defineProps, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { UserOutlined, KeyOutlined, LockOutlined, EditOutlined } from "@ant-design/icons-vue";
+import { UserOutlined, SettingOutlined } from "@ant-design/icons-vue";
 import { useRouter } from "vue-router";
 import { logoutRequest } from "@/api/user/loginApi";
-const bodyStyle = {
-  Padding: "10px 20px"
-};
 const router = useRouter();
 const { t } = useI18n();
 const user = useUserStore();
@@ -69,6 +52,7 @@ const goto = url => {
   height: 42px;
   border-radius: 50%;
   margin-right: 8px;
+  object-fit: contain;
 }
 .avatar-name {
   display: flex;
@@ -89,15 +73,6 @@ const goto = url => {
   border-radius: 50%;
   margin-right: 8px;
 }
-.select-item {
-  line-height: 28px;
-  width: 80px;
-  text-align: center;
-  cursor: pointer;
-}
-.select-item:hover {
-  background-color: #f0f0f0;
-}
 .drawer-item {
   display: flex;
   align-items: center;
@@ -105,9 +80,10 @@ const goto = url => {
   overflow: hidden;
   font-size: 16px;
   cursor: pointer;
-  height: 32px;
-  line-height: 32px;
+  height: 42px;
+  line-height: 42px;
   border-radius: 4px;
+  padding: 0 10px;
 }
 .drawer-item:hover {
   background-color: #f0f0f0;

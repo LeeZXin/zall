@@ -2,29 +2,17 @@
   <div style="padding:10px">
     <div class="container">
       <div class="title">
-        <span v-if="mode === 'create'">创建用户</span>
-        <span v-else-if="mode === 'update'">编辑用户</span>
+        <span>个人信息</span>
       </div>
       <div class="section">
         <div class="section-title">帐号</div>
-        <div class="section-body" v-if="mode === 'create'">
-          <a-input v-model:value="formState.account" />
-          <div class="input-desc">用户唯一标识, 长度为4-32</div>
-        </div>
-        <div class="section-body" v-else>{{formState.account}}</div>
+        <div class="section-body">{{formState.account}}</div>
       </div>
       <div class="section">
         <div class="section-title">名称</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
           <div class="input-desc">用户名称, 长度为1-32</div>
-        </div>
-      </div>
-      <div class="section" v-if="mode === 'create'">
-        <div class="section-title">密码</div>
-        <div class="section-body">
-          <a-input-password v-model:value="formState.password" />
-          <div class="input-desc">帐号密码, 长度为6-255</div>
         </div>
       </div>
       <div class="section">
@@ -50,7 +38,7 @@
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateUser">立即保存</a-button>
+        <a-button type="primary" @click="saveProfile">立即修改</a-button>
       </div>
     </div>
     <a-modal
@@ -83,35 +71,20 @@
 <script setup>
 import "vue-cropper/dist/index.css";
 import { VueCropper } from "vue-cropper";
-import { useRoute, useRouter } from "vue-router";
 import { reactive, h, ref } from "vue";
 import { UploadOutlined } from "@ant-design/icons-vue";
 import { message } from "ant-design-vue";
-import { createUserRequest, updateUserRequest } from "@/api/user/userApi";
-import {
-  usernameRegexp,
-  accountRegexp,
-  passwordRegexp,
-  emailRegexp
-} from "@/utils/regexp";
-import { useUserManageStore } from "@/pinia/userManageStore";
+import { updateUserRequest } from "@/api/user/userApi";
+import { usernameRegexp, accountRegexp, emailRegexp } from "@/utils/regexp";
 import { useUserStore } from "@/pinia/userStore";
-const cropper = ref(null);
-const userStore = useUserStore();
-const userManageStore = useUserManageStore();
+import { useRouter } from "vue-router";
 const router = useRouter();
-const route = useRoute();
-const getMode = () => {
-  let s = route.path.split("/");
-  return s[s.length - 1];
-};
-// 模式
-const mode = getMode();
+const userStore = useUserStore();
+const cropper = ref(null);
 // 表单数据
 const formState = reactive({
   account: "",
   name: "",
-  password: "",
   email: "",
   avatar: [],
   oldAvatar: []
@@ -178,7 +151,7 @@ const beforeUpload = file => {
   });
 };
 // 创建或编辑用户
-const saveOrUpdateUser = () => {
+const saveProfile = () => {
   if (!accountRegexp.test(formState.account)) {
     message.warn("帐号格式错误");
     return;
@@ -195,60 +168,35 @@ const saveOrUpdateUser = () => {
     message.warn("请上传头像");
     return;
   }
-  if (mode === "create") {
-    if (!passwordRegexp.test(formState.password)) {
-      message.warn("密码格式错误");
-      return;
-    }
-    createUserRequest({
-      account: formState.account,
-      name: formState.name,
-      password: formState.password,
-      email: formState.email,
-      avatarUrl: formState.avatar[0].url
-    }).then(() => {
-      message.success("创建成功");
-      router.push("/sa/user/list");
-    });
-  } else {
-    updateUserRequest({
-      account: formState.account,
-      name: formState.name,
-      email: formState.email,
-      avatarUrl: formState.avatar[0].url
-    }).then(() => {
-      if (formState.account === userStore.account) {
-        message.info("你已编辑自己的信息, 将重新登录");
-        setTimeout(() => {
-          router.push("/login/login");
-        }, 1000);
-      } else {
-        message.success("编辑成功");
-        router.push("/sa/user/list");
+  updateUserRequest({
+    account: formState.account,
+    name: formState.name,
+    email: formState.email,
+    avatarUrl: formState.avatar[0].url
+  }).then(() => {
+    message.info("你已编辑自己的信息, 将重新登录");
+    setTimeout(() => {
+      router.push("/login/login");
+    }, 1000);
+  });
+};
+const init = () => {
+  formState.account = userStore.account;
+  formState.name = userStore.name;
+  formState.email = userStore.email;
+  if (userStore.avatarUrl) {
+    formState.avatar = [
+      {
+        uid: "1",
+        name: userStore.account,
+        status: "done",
+        url: userStore.avatarUrl,
+        thumbUrl: userStore.avatarUrl
       }
-    });
+    ];
   }
 };
-if (mode === "update") {
-  if (userManageStore.account === "") {
-    router.push("/sa/user/list");
-  } else {
-    formState.account = userManageStore.account;
-    formState.name = userManageStore.name;
-    formState.email = userManageStore.email;
-    if (userManageStore.avatarUrl) {
-      formState.avatar = [
-        {
-          uid: "1",
-          name: userManageStore.account,
-          status: "done",
-          url: userManageStore.avatarUrl,
-          thumbUrl: userManageStore.avatarUrl
-        }
-      ];
-    }
-  }
-}
+init();
 </script>
 
 <style scoped>

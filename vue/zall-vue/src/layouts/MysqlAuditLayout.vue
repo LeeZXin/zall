@@ -9,7 +9,7 @@
     <a-layout>
       <a-layout-sider collapsible>
         <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
-          <a-menu-item key="/mysqlDb/list">
+          <a-menu-item key="/mysqlDb/list" v-if="userStore.isDba">
             <DatabaseOutlined />
             <span>数据源</span>
           </a-menu-item>

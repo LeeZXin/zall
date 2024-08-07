@@ -1,6 +1,7 @@
 package fileapi
 
 import (
+	"fmt"
 	"github.com/LeeZXin/zall/fileserv/modules/service/filesrv"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
@@ -138,6 +139,12 @@ func getAvatar(c *gin.Context) {
 		c.String(http.StatusNotFound, "not found")
 		return
 	}
+	// 设置浏览器缓存策略
+	now := time.Now().Unix()
+	expires := now + 31536000
+	c.Header("Date", fmt.Sprintf("%d", now))
+	c.Header("Expires", fmt.Sprintf("%d", expires))
+	c.Header("Cache-Control", "public, max-age=31536000")
 	c.File(path)
 }
 

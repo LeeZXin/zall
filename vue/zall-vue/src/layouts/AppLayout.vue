@@ -106,6 +106,7 @@ const pagesMap = {
   "/serviceStatus": "/serviceStatus/list",
   "/discoveryService": "/discoveryService/list",
   "/settings": "/settings",
+  "/product": "/product/list",
   "/promScrape": "/promScrape/list"
 };
 watch(

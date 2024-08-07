@@ -347,14 +347,21 @@ func (*outerImpl) UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (err 
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, err = usermd.UpdateUser(ctx, usermd.UpdateUserReqDTO{
+	_, err = usermd.UpdateUser(ctx, usermd.UpdateUserReqDTO{
 		Account:   reqDTO.Account,
 		Name:      reqDTO.Name,
 		Email:     reqDTO.Email,
 		AvatarUrl: reqDTO.AvatarUrl,
-	}); err != nil {
+	})
+	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
+	} else {
+		// 修改信息后 需重新登录 登录session里有旧信息
+		err2 := apisession.GetStore().DeleteByAccount(reqDTO.Account)
+		if err2 != nil {
+			logger.Logger.WithContext(ctx).Error(err2)
+		}
 	}
 	return
 }
@@ -418,13 +425,14 @@ func (*outerImpl) SetDba(ctx context.Context, reqDTO SetDbaReqDTO) error {
 
 }
 
+// UpdatePassword 修改密码
 func (*outerImpl) UpdatePassword(ctx context.Context, reqDTO UpdatePasswordReqDTO) (err error) {
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, b, err := usermd.GetByAccount(ctx, reqDTO.Operator.Account)
+	user, b, err := usermd.GetByAccount(ctx, reqDTO.Operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
@@ -432,13 +440,19 @@ func (*outerImpl) UpdatePassword(ctx context.Context, reqDTO UpdatePasswordReqDT
 	}
 	// 账号不存在
 	if !b {
-		err = util.InvalidArgsError()
+		err = util.ThereHasBugErr()
 		return
 	}
-	if _, err = usermd.UpdatePassword(ctx, usermd.UpdatePasswordReqDTO{
+	// 原密码不正确
+	if user.Password != util.EncryptUserPassword(reqDTO.Origin) {
+		err = util.NewBizErr(apicode.OperationFailedErrCode, i18n.UserWrongOriginPassword)
+		return
+	}
+	_, err = usermd.UpdatePassword(ctx, usermd.UpdatePasswordReqDTO{
 		Account:  reqDTO.Operator.Account,
-		Password: reqDTO.Password,
-	}); err != nil {
+		Password: util.EncryptUserPassword(reqDTO.Password),
+	})
+	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		err = util.InternalError(err)
 	}

@@ -94,6 +94,21 @@ const router = createRouter({
             }]
         },
         {
+            path: "/personalSetting",
+            redirect: "/personalSetting/profile/info",
+            component: () =>
+                import ("../layouts/PersonalSettingLayout"),
+            children: [{
+                path: "/personalSetting/profile/info",
+                component: () =>
+                    import ("../pages/personalSetting/ProfilePage")
+            }, {
+                path: "/personalSetting/updatePassword",
+                component: () =>
+                    import ("../pages/personalSetting/UpdatePasswordPage")
+            }]
+        },
+        {
             path: "/db",
             redirect: "/db/mysqlDb/list",
             component: () =>

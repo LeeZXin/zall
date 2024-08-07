@@ -1,5 +1,5 @@
 <template>
-  <div style="padding:10px;height:100%" v-show="!showStatusList">
+  <div style="padding:10px;height:100%" v-if="!showStatusList">
     <div style="margin-bottom:10px;" class="flex-between">
       <div>
         <a-button
@@ -18,7 +18,7 @@
       </template>
     </ZTable>
   </div>
-  <div style="padding:10px;height:100%" v-show="showStatusList">
+  <div style="padding:10px;height:100%" v-if="showStatusList">
     <div style="margin-bottom:10px;">
       <span class="check-btn" @click="backToSource">返回集群选择</span>
     </div>

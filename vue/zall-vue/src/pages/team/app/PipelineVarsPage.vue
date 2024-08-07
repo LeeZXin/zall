@@ -4,7 +4,7 @@
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加变量</a-button>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
-    <ul class="vars-list">
+    <ul class="vars-list" v-if="varsList.length > 0">
       <li v-for="item in varsList" v-bind:key="item.id">
         <div class="vars-pattern no-wrap">{{item.name}}</div>
         <ul class="op-btns">
@@ -13,9 +13,11 @@
         </ul>
       </li>
     </ul>
+    <ZNoData v-else />
   </div>
 </template>
 <script setup>
+import ZNoData from "@/components/common/ZNoData";
 import EnvSelector from "@/components/app/EnvSelector";
 import { ref, createVNode, h } from "vue";
 import { useRouter, useRoute } from "vue-router";
@@ -42,8 +44,6 @@ const deleteVars = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deletePipelineVarsRequest(item.id).then(() => {
         message.success("删除成功");

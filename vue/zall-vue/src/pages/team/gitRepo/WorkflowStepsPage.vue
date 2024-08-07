@@ -29,6 +29,7 @@
           <PrIdTag
             :prId="taskStore.prId"
             :repoId="route.params.repoId"
+            :teamId="route.params.teamId"
             v-if="taskStore.prId && taskStore.prId > 0"
           />
         </div>
@@ -120,11 +121,11 @@
     </div>
     <a-modal v-model:open="yamlModalOpen" title="工作流配置" okText="确定" :footer="null">
       <Codemirror
-          v-model="taskStore.yamlContent"
-          :style="codemirrorStyle"
-          :extensions="extensions"
-          :disabled="true"
-        />
+        v-model="taskStore.yamlContent"
+        :style="codemirrorStyle"
+        :extensions="extensions"
+        :disabled="true"
+      />
     </a-modal>
   </div>
 </template>

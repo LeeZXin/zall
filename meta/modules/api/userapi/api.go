@@ -218,6 +218,7 @@ func updatePassword(c *gin.Context) {
 	var req UpdatePasswordReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := usersrv.Outer.UpdatePassword(c, usersrv.UpdatePasswordReqDTO{
+			Origin:   req.Origin,
 			Password: req.Password,
 			Operator: apisession.MustGetLoginUser(c),
 		})

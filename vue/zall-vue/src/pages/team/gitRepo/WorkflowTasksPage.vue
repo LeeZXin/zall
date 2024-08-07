@@ -6,7 +6,14 @@
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex === 'created'">{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
         <span v-else-if="dataIndex === 'triggerType'">{{triggerTypeMap[dataItem[dataIndex]]}}</span>
-        <PrIdRender v-else-if="dataIndex === 'prId'" :prId="dataItem[dataIndex]" />
+        <template v-else-if="dataIndex === 'prId'">
+          <PrIdTag
+            v-if="dataItem[dataIndex]"
+            :repoId="route.params.repoId"
+            :prId="dataItem[dataIndex]"
+            :teamId="route.params.teamId"
+          />
+        </template>
         <TaskStatusTag :status="dataItem[dataIndex]" v-else-if="dataIndex === 'taskStatus'" />
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
@@ -56,7 +63,7 @@ import {
   EllipsisOutlined,
   ExclamationCircleOutlined
 } from "@ant-design/icons-vue";
-import { ref, createVNode, h, onUnmounted } from "vue";
+import { ref, createVNode, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { readableTimeComparingNow } from "@/utils/time";
 import { Modal, message } from "ant-design-vue";
@@ -73,14 +80,6 @@ const taskList = ref([]);
 const triggerTypeMap = {
   1: "自动触发",
   2: "手动触发"
-};
-const PrIdRender = params => {
-  return params.prId > 0
-    ? h(PrIdTag, {
-        repoId: route.params.repoId,
-        prId: params.prId
-      })
-    : h("span");
 };
 const listInterval = ref(null);
 const columns = [

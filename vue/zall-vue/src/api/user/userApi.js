@@ -17,6 +17,8 @@ const updateUserRequest = (data) => request.post("/api/user/update", data);
 const resetPasswordRequest = (account) => request.put("/api/user/resetPassword/" + account);
 // 删除用户
 const deleteUserRequest = (account) => request.delete("/api/user/delete/" + account);
+// 修改密码
+const updatePasswordRequest = (data) => request.post("/api/user/updatePassword", data);
 export {
     listAllUserRequest,
     listUserByAdminRequest,
@@ -26,5 +28,6 @@ export {
     createUserRequest,
     updateUserRequest,
     resetPasswordRequest,
-    deleteUserRequest
+    deleteUserRequest,
+    updatePasswordRequest
 }

@@ -157,7 +157,7 @@ func (*outerImpl) GetTeam(ctx context.Context, reqDTO GetTeamReqDTO) (TeamWithPe
 	return TeamWithPermDTO{
 		Id:      team.Id,
 		Name:    team.Name,
-		IsAdmin: reqDTO.Operator.IsAdmin || userPerm.IsAdmin,
+		IsAdmin: userPerm.IsAdmin,
 		Perm:    userPerm.PermDetail.TeamPerm,
 	}, nil
 }

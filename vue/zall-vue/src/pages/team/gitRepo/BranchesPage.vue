@@ -4,7 +4,7 @@
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'pullRequest'">
           <template v-if="dataItem[dataIndex]">
-            <PrIdTag :repoId="route.params.repoId" :prId="dataItem[dataIndex].id" />
+            <PrIdTag :repoId="route.params.repoId" :prId="dataItem[dataIndex].id" :teamId="route.params.teamId"/>
             <PrStatusTag :status="dataItem[dataIndex].prStatus" />
           </template>
         </template>

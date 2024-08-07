@@ -43,6 +43,7 @@ type OuterService interface {
 	UpdateUser(context.Context, UpdateUserReqDTO) error
 	// SetProhibited 禁用用户
 	SetProhibited(context.Context, SetProhibitedReqDTO) error
+	// UpdatePassword 修改密码
 	UpdatePassword(context.Context, UpdatePasswordReqDTO) error
 	// SetAdmin 变更管理员
 	SetAdmin(context.Context, SetAdminReqDTO) error
