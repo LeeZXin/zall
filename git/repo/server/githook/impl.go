@@ -2,6 +2,7 @@ package githook
 
 import (
 	"context"
+	"fmt"
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
@@ -133,11 +134,14 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 		RepoPath: repo.Path,
 	})
 	if err == nil {
+		fmt.Println(gitSize, lfsSize)
 		// 更新仓库大小
 		err = repomd.UpdateGitSizeAndLfsSize(ctx, opts.RepoId, gitSize, lfsSize)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 		}
+	} else {
+		logger.Logger.WithContext(ctx).Error(err)
 	}
 	// 查找webhook
 	webhookList, err := webhookmd.ListWebhook(ctx, repo.Id)
