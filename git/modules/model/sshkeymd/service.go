@@ -23,7 +23,7 @@ func GetAccountAndIdByFingerprint(ctx context.Context, fingerprint string) (stri
 	var ret SshKey
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("fingerprint = ?", fingerprint).
-		Cols("account").
+		Cols("account", "id").
 		Get(&ret)
 	return ret.Account, ret.Id, b, err
 }
@@ -45,10 +45,11 @@ func DeleteById(ctx context.Context, id int64) (bool, error) {
 
 func InsertSshKey(ctx context.Context, reqDTO InsertSshKeyReqDTO) (SshKey, error) {
 	ret := SshKey{
-		Account:     reqDTO.Account,
-		Name:        reqDTO.Name,
-		Fingerprint: reqDTO.Fingerprint,
-		Content:     reqDTO.Content,
+		Account:      reqDTO.Account,
+		Name:         reqDTO.Name,
+		Fingerprint:  reqDTO.Fingerprint,
+		Content:      reqDTO.Content,
+		LastOperated: reqDTO.LastOperated,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err

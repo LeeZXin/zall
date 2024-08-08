@@ -12,7 +12,7 @@
             <div style="padding-left:10px;width:90%">
               <div class="key-name no-wrap">{{item.name}}</div>
               <div class="key-sha no-wrap">{{item.fingerprint}}</div>
-              <div class="key-extra">添加于 {{item.created}}</div>
+              <div class="key-extra">新增于 {{item.created}}</div>
               <div class="key-extra">最近使用于 {{item.lastOperated}}</div>
             </div>
             <div class="key-right">

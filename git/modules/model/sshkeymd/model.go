@@ -14,7 +14,7 @@ type SshKey struct {
 	Name         string    `json:"name"`
 	Fingerprint  string    `json:"fingerprint"`
 	Content      string    `json:"content"`
-	LastOperated time.Time `json:"lastOperated" xorm:"created"`
+	LastOperated time.Time `json:"lastOperated"`
 	Created      time.Time `json:"created" xorm:"created"`
 }
 

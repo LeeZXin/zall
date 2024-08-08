@@ -1,10 +1,13 @@
 package sshkeymd
 
+import "time"
+
 type InsertSshKeyReqDTO struct {
-	Account     string
-	Name        string
-	Fingerprint string
-	Content     string
+	Account      string
+	Name         string
+	Fingerprint  string
+	Content      string
+	LastOperated time.Time
 }
 
 type UpdateVerifiedVarReqDTO struct {

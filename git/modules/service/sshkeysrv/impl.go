@@ -11,6 +11,7 @@ import (
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	gossh "golang.org/x/crypto/ssh"
 	"strings"
+	"time"
 )
 
 type innerImpl struct {
@@ -78,10 +79,11 @@ func (s *outerImpl) CreateSshKey(ctx context.Context, reqDTO CreateSshKeyReqDTO)
 		return util.NewBizErr(apicode.InvalidArgsCode, i18n.SshKeyAlreadyExists)
 	}
 	_, err = sshkeymd.InsertSshKey(ctx, sshkeymd.InsertSshKeyReqDTO{
-		Account:     reqDTO.Operator.Account,
-		Name:        reqDTO.Name,
-		Fingerprint: fingerprint,
-		Content:     strings.TrimSpace(reqDTO.PubKeyContent),
+		Account:      reqDTO.Operator.Account,
+		Name:         reqDTO.Name,
+		Fingerprint:  fingerprint,
+		Content:      strings.TrimSpace(reqDTO.PubKeyContent),
+		LastOperated: time.Now(),
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
