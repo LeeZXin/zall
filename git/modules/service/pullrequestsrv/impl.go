@@ -9,8 +9,8 @@ import (
 	"github.com/LeeZXin/zall/git/modules/service/oplogsrv"
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/branch"
@@ -794,7 +794,11 @@ func checkPrPermByRepoId(ctx context.Context, repoId int64, operator apisession.
 	if operator.IsAdmin {
 		return repo, nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repo, util.InternalError(err)
+	}
 	if !b {
 		return repo, util.UnauthorizedError()
 	}

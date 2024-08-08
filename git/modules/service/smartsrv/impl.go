@@ -6,10 +6,10 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/logger"
@@ -112,7 +112,11 @@ func getPerm(ctx context.Context, repo repomd.Repo, operator usermd.UserInfo, pe
 		return nil
 	}
 	// 获取权限
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.UnauthorizedError()
 	}

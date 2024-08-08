@@ -2,7 +2,7 @@ package tasksrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -265,7 +265,11 @@ func checkPerm(ctx context.Context, operator apisession.UserInfo, teamId int64) 
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, teamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.UnauthorizedError()
 	}
@@ -287,7 +291,11 @@ func checkPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId
 	if operator.IsAdmin {
 		return task, nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, task.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, task.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return taskmd.Task{}, util.InternalError(err)
+	}
 	if !b {
 		return task, util.UnauthorizedError()
 	}

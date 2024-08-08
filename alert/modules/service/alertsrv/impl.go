@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/alert/modules/model/alertmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/util"
@@ -180,7 +180,11 @@ func checkPermByAppId(ctx context.Context, appId string, operator apisession.Use
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.UnauthorizedError()
 	}

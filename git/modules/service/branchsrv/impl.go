@@ -5,7 +5,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/service/oplogsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/eventbus"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -201,7 +201,10 @@ func checkAdminPerm(ctx context.Context, repoId int64, operator apisession.UserI
 		return repo, nil
 	}
 	// 如果不是 检查用户组权限
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if err != nil {
+		return repo, util.InternalError(err)
+	}
 	if !b || !p.IsAdmin {
 		return repo, util.UnauthorizedError()
 	}
@@ -222,7 +225,10 @@ func checkTeamPerm(ctx context.Context, repoId int64, operator apisession.UserIn
 	if operator.IsAdmin {
 		return nil
 	}
-	_, b = teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	_, b, err = teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if err != nil {
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.UnauthorizedError()
 	}

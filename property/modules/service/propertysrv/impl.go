@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/property/modules/model/propertymd"
 	"github.com/LeeZXin/zall/util"
@@ -691,7 +691,11 @@ func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInf
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.UnauthorizedError()
 	}
@@ -713,7 +717,11 @@ func checkManagePropertySourcePermByAppId(ctx context.Context, operator apisessi
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.UnauthorizedError()
 	}
@@ -722,33 +730,3 @@ func checkManagePropertySourcePermByAppId(ctx context.Context, operator apisessi
 	}
 	return util.UnauthorizedError()
 }
-
-//func checkManagePropertySourcePermBySourceId(ctx context.Context, operator apisession.UserInfo, sourceId int64) error {
-//	ps, b, err := propertymd.GetEtcdNodeById(ctx, sourceId)
-//	if err != nil {
-//		logger.Logger.WithContext(ctx).Error(err)
-//		return util.InternalError(err)
-//	}
-//	if !b {
-//		return util.InvalidArgsError()
-//	}
-//	app, b, err := appmd.GetByAppId(ctx, ps.AppId)
-//	if err != nil {
-//		logger.Logger.WithContext(ctx).Error(err)
-//		return util.InternalError(err)
-//	}
-//	if !b {
-//		return util.InvalidArgsError()
-//	}
-//	if operator.IsDba {
-//		return nil
-//	}
-//	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
-//	if !b {
-//		return util.UnauthorizedError()
-//	}
-//	if p.IsDba || p.PermDetail.GetAppPerm(ps.AppId).CanManagePropertySource {
-//		return nil
-//	}
-//	return util.UnauthorizedError()
-//}

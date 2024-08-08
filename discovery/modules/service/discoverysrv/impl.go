@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/LeeZXin/zall/discovery/modules/model/discoverymd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -465,7 +465,11 @@ func checkManageDiscoverySourcePermByAppId(ctx context.Context, operator apisess
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.UnauthorizedError()
 	}
@@ -490,7 +494,11 @@ func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInf
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.UnauthorizedError()
 	}

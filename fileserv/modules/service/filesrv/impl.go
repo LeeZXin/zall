@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/LeeZXin/zall/fileserv/modules/model/productmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/files"
@@ -228,7 +228,10 @@ func checkAppDevelopPermByAppId(ctx context.Context, appId string, operator apis
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		return util.InternalError(err)
+	}
 	if !b {
 		return util.UnauthorizedError()
 	}

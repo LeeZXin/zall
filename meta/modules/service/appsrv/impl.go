@@ -6,7 +6,6 @@ import (
 	"github.com/LeeZXin/zall/discovery/modules/model/discoverymd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
-	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/property/modules/model/propertymd"
@@ -260,7 +259,10 @@ func checkAppList(ctx context.Context, operator apisession.UserInfo, teamId int6
 	if operator.IsAdmin {
 		return perm.Detail{}, true, nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, teamId, operator.Account)
+	if err != nil {
+		return perm.Detail{}, false, util.InternalError(err)
+	}
 	if !b {
 		return perm.Detail{}, false, util.UnauthorizedError()
 	}
@@ -348,7 +350,11 @@ func checkAdminPermByAppId(ctx context.Context, operator apisession.UserInfo, ap
 	if operator.IsAdmin {
 		return app, nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return app, util.InternalError(err)
+	}
 	if !b || !p.IsAdmin {
 		return app, util.UnauthorizedError()
 	}
@@ -359,7 +365,11 @@ func checkAdminPermByTeamId(ctx context.Context, operator apisession.UserInfo, t
 	if operator.IsAdmin {
 		return nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, teamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, teamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
 	if !b || !p.IsAdmin {
 		return util.UnauthorizedError()
 	}
@@ -378,7 +388,11 @@ func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInf
 	if operator.IsAdmin {
 		return perm.DefaultAppPerm, app, nil
 	}
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return perm.AppPerm{}, appmd.App{}, util.InternalError(err)
+	}
 	if !b || (!p.IsAdmin && !p.PermDetail.GetAppPerm(appId).CanDevelop) {
 		return perm.AppPerm{}, app, util.UnauthorizedError()
 	}
