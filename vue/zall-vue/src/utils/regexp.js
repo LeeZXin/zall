@@ -64,6 +64,8 @@ const dbDatUpdateCmdRegexp = /^.{1,10240}$/;
 const gitRepoServerHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
 // env
 const envRegexp = /^[a-zA-Z]{1,16}$/
+    // ssh key
+const sshKeyNameRegexp = /^.{1,128}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -110,5 +112,6 @@ export {
     dbApplyReasonRegexp,
     dbDatUpdateCmdRegexp,
     gitRepoServerHostRegexp,
-    envRegexp
+    envRegexp,
+    sshKeyNameRegexp
 }

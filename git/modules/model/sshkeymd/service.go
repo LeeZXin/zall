@@ -3,7 +3,12 @@ package sshkeymd
 import (
 	"context"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
+	"time"
 )
+
+func IsSshKeyNameValid(name string) bool {
+	return len(name) > 0 && len(name) <= 128
+}
 
 func GetAccountByFingerprint(ctx context.Context, fingerprint string) (string, bool, error) {
 	var ret SshKey
@@ -40,17 +45,24 @@ func InsertSshKey(ctx context.Context, reqDTO InsertSshKeyReqDTO) (SshKey, error
 	return ret, err
 }
 
-func GetByAccount(ctx context.Context, account string) ([]SshKey, error) {
+func ListAllKeyByAccount(ctx context.Context, account string, cols []string) ([]SshKey, error) {
 	ret := make([]SshKey, 0)
-	err := xormutil.MustGetXormSession(ctx).Where("account = ?", account).Find(&ret)
+	session := xormutil.MustGetXormSession(ctx).
+		Where("account = ?", account)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.
+		Find(&ret)
 	return ret, err
 }
 
-func GetVerifiedByAccount(ctx context.Context, account string) ([]SshKey, error) {
-	ret := make([]SshKey, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		Where("account = ?", account).
-		And("verified = 1").
-		Find(&ret)
-	return ret, err
+func UpdateLastOperated(ctx context.Context, id int64, lastOperated time.Time) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Cols("last_operated").
+		Update(&SshKey{
+			LastOperated: lastOperated,
+		})
+	return rows == 1, err
 }

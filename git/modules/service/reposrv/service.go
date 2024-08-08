@@ -14,7 +14,7 @@ var (
 func Init() {
 	if Inner == nil {
 		Inner = new(innerImpl)
-		Outer = newOuterImpl()
+		Outer = newOuterService()
 	}
 }
 

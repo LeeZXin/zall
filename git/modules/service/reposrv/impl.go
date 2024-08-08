@@ -58,11 +58,12 @@ type outerImpl struct {
 	CreateArchiveLimiter limiter.Limiter
 }
 
-func newOuterImpl() OuterService {
+func newOuterService() OuterService {
 	limit := static.GetInt64("createArchiveLimit")
 	if limit <= 0 {
 		limit = 10
 	}
+	sshkeysrv.InitInner()
 	return &outerImpl{
 		CreateArchiveLimiter: limiter.NewCountLimiter(limit),
 	}
@@ -1053,12 +1054,12 @@ func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReq
 			if sig.IsSSHSig() {
 				sshKeys, b := sshMap[t.Committer.Account]
 				if !b {
-					verified, err := sshkeysrv.Inner.GetVerifiedByAccount(ctx, t.Committer.Account)
+					pubs, err := sshkeysrv.Inner.ListAllPubKeyByAccount(ctx, t.Committer.Account)
 					if err != nil {
-						verified = []string{}
-						sshMap[t.Committer.Account] = verified
+						pubs = []string{}
+						sshMap[t.Committer.Account] = pubs
 					}
-					sshKeys = verified
+					sshKeys = pubs
 				}
 				for _, key := range sshKeys {
 					if e := signature.VerifySshSignature(t.CommitSig, t.Payload, key); e == nil {

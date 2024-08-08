@@ -2,25 +2,39 @@ package sshkeysrv
 
 import (
 	"context"
-	"github.com/LeeZXin/zall/git/modules/model/sshkeymd"
-	"github.com/LeeZXin/zall/util"
 )
 
 var (
-	Inner InnerService = &innerImpl{
-		sshKeyCache: util.NewGoCache(),
-	}
-	Outer OuterService = new(outerImpl)
+	Inner InnerService
+	Outer OuterService
 )
 
+func InitInner() {
+	if Inner == nil {
+		Inner = new(innerImpl)
+	}
+}
+
+func InitOuter() {
+	if Outer == nil {
+		Outer = new(outerImpl)
+	}
+}
+
+func Init() {
+	InitInner()
+	InitOuter()
+}
+
 type InnerService interface {
-	GetAccountByFingerprint(context.Context, string) (string, bool, error)
-	GetVerifiedByAccount(context.Context, string) ([]string, error)
+	ListAllPubKeyByAccount(context.Context, string) ([]string, error)
 }
 
 type OuterService interface {
+	// DeleteSshKey 删除ssh密钥
 	DeleteSshKey(context.Context, DeleteSshKeyReqDTO) error
-	InsertSshKey(context.Context, InsertSshKeyReqDTO) error
-	ListSshKey(context.Context, ListSshKeyReqDTO) ([]sshkeymd.SshKey, error)
-	GetToken(context.Context, GetTokenReqDTO) (string, []string, error)
+	// CreateSshKey 创建ssh密钥
+	CreateSshKey(context.Context, CreateSshKeyReqDTO) error
+	// ListSshKey 展示ssh密钥
+	ListSshKey(context.Context, ListSshKeyReqDTO) ([]SshKeyDTO, error)
 }

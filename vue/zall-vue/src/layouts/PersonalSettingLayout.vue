@@ -17,7 +17,7 @@
             <LockOutlined />
             <span>修改密码</span>
           </a-menu-item>
-          <a-menu-item key="/propertySource/list">
+          <a-menu-item key="/sshAndGpg/list">
             <KeyOutlined />
             <span>SSH和GPG密钥</span>
           </a-menu-item>
@@ -63,7 +63,8 @@ const changeSelectedKey = path => {
 // 为了子页面能体现在导航栏
 const pagesMap = {
   "/profile": "/profile/info",
-  "/updatePassword": "/updatePassword"
+  "/updatePassword": "/updatePassword",
+  "/sshAndGpg": "/sshAndGpg/list"
 };
 changeSelectedKey(route.path);
 watch(

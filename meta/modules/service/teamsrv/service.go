@@ -3,7 +3,6 @@ package teamsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
-	"github.com/LeeZXin/zall/util"
 )
 
 var (
@@ -13,9 +12,7 @@ var (
 
 func Init() {
 	Outer = new(outerImpl)
-	Inner = &innerImpl{
-		permCache: util.NewGoCache(),
-	}
+	Inner = new(innerImpl)
 }
 
 type InnerService interface {

@@ -17,32 +17,17 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"github.com/patrickmn/go-cache"
-	"strconv"
-	"time"
 )
 
 type innerImpl struct {
-	permCache *cache.Cache
 }
 
 func (s *innerImpl) GetUserPermDetail(ctx context.Context, teamId int64, account string) (teammd.UserPermDetailDTO, bool) {
-	key := strconv.FormatInt(teamId, 10) + "_" + account
-	v, b := s.permCache.Get(key)
-	if b {
-		r := v.(teammd.UserPermDetailDTO)
-		return r, r.RoleId != 0
-	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	r, b, err := teammd.GetUserPermDetail(ctx, teamId, account)
-	if err != nil || !b {
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-		}
-		s.permCache.Set(key, r, time.Second)
-	} else {
-		s.permCache.Set(key, r, time.Minute)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
 	}
 	return r, b
 }

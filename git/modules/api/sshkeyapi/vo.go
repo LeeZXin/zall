@@ -1,27 +1,16 @@
 package sshkeyapi
 
-type InsertSshKeyReqVO struct {
+type CreateSshKeyReqVO struct {
 	Name          string `json:"name"`
 	PubKeyContent string `json:"pubKeyContent"`
 }
 
-type DeleteSshKeyReqVO struct {
-	Id int64 `json:"id"`
-}
-
 type SshKeyVO struct {
-	Id          int64  `json:"id"`
-	Name        string `json:"name"`
-	Fingerprint string `json:"fingerprint"`
-}
-
-type GetTokenReqVO struct {
-	KeyId string `json:"keyId"`
-}
-
-type TokenVO struct {
-	Token  string   `json:"token"`
-	Guides []string `json:"guides"`
+	Id           int64  `json:"id"`
+	Name         string `json:"name"`
+	Fingerprint  string `json:"fingerprint"`
+	Created      string `json:"created"`
+	LastOperated string `json:"lastOperated"`
 }
 
 type VerifyTokenReqVO struct {

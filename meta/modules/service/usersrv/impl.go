@@ -12,7 +12,6 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"github.com/patrickmn/go-cache"
 	"time"
 )
 
@@ -21,7 +20,6 @@ const (
 )
 
 type innerImpl struct {
-	userCache *cache.Cache
 }
 
 func (s *innerImpl) GetByAccount(ctx context.Context, account string) (usermd.UserInfo, bool) {
@@ -30,21 +28,11 @@ func (s *innerImpl) GetByAccount(ctx context.Context, account string) (usermd.Us
 }
 
 func (s *innerImpl) getByAccount(ctx context.Context, account string) (usermd.User, bool) {
-	v, b := s.userCache.Get(account)
-	if b {
-		u := v.(usermd.User)
-		return u, u.Account != ""
-	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	user, b, err := usermd.GetByAccount(ctx, account)
-	if err != nil || !b {
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-		}
-		s.userCache.Set(account, user, time.Second)
-	} else {
-		s.userCache.Set(account, user, time.Minute)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
 	}
 	return user, b
 }

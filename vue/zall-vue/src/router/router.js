@@ -106,6 +106,14 @@ const router = createRouter({
                 path: "/personalSetting/updatePassword",
                 component: () =>
                     import ("../pages/personalSetting/UpdatePasswordPage")
+            }, {
+                path: "/personalSetting/sshAndGpg/list",
+                component: () =>
+                    import ("../pages/personalSetting/SshAndGpgPage")
+            }, {
+                path: "/personalSetting/sshAndGpg/createSshKey",
+                component: () =>
+                    import ("../pages/personalSetting/SshKeyCreatePage")
             }]
         },
         {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/util"
 )
 
 var (
@@ -13,10 +12,18 @@ var (
 )
 
 func Init() {
+	InitInner()
+	InitOuter()
+}
+
+func InitInner() {
 	if Inner == nil {
-		Inner = &innerImpl{
-			userCache: util.NewGoCache(),
-		}
+		Inner = new(innerImpl)
+	}
+}
+
+func InitOuter() {
+	if Outer == nil {
 		Outer = newOuterService()
 	}
 }

@@ -1,22 +1,23 @@
 package sshkeysrv
 
 import (
+	"github.com/LeeZXin/zall/git/modules/model/sshkeymd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
+	"time"
 )
 
-type InsertSshKeyReqDTO struct {
+type CreateSshKeyReqDTO struct {
 	Name          string              `json:"name"`
 	PubKeyContent string              `json:"-"`
-	Signature     string              `json:"-"`
 	Operator      apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertSshKeyReqDTO) IsValid() error {
-	if len(r.Name) == 0 || len(r.Name) > 128 {
+func (r *CreateSshKeyReqDTO) IsValid() error {
+	if !sshkeymd.IsSshKeyNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if r.PubKeyContent == "" || r.Signature == "" {
+	if r.PubKeyContent == "" {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -31,6 +32,9 @@ type DeleteSshKeyReqDTO struct {
 }
 
 func (r *DeleteSshKeyReqDTO) IsValid() error {
+	if r.Id <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
@@ -48,13 +52,10 @@ func (r *ListSshKeyReqDTO) IsValid() error {
 	return nil
 }
 
-type GetTokenReqDTO struct {
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *GetTokenReqDTO) IsValid() error {
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
+type SshKeyDTO struct {
+	Id           int64
+	Name         string
+	Fingerprint  string
+	Created      time.Time
+	LastOperated time.Time
 }

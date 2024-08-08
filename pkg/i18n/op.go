@@ -85,7 +85,7 @@ var (
 			DefaultRet: "删除ssh key",
 		},
 		InsertSshKey: KeyItem{
-			Id:         "sshKeySrv.InsertSshKey",
+			Id:         "sshKeySrv.CreateSshKey",
 			DefaultRet: "添加ssh key",
 		},
 	}

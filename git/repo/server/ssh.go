@@ -12,7 +12,6 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/git/gitenv"
 	"github.com/LeeZXin/zall/pkg/git/lfs"
@@ -71,8 +70,18 @@ func InitSshServer() zsf.LifeCycle {
 			envs := util.CutEnv(session.Environ())
 			// 检查proxy的fingerprint
 			fingerprint := envs["ZGIT_SRC_FINGERPRINT"]
-			user := getUserByFingerprint(session.Context(), fingerprint)
-			if user == nil {
+			if fingerprint == "" {
+				// 找不到用户信息
+				util.ExitWithErrMsg(session, "user not found")
+				return
+			}
+			user, b, err := getUserByFingerprint(session.Context(), fingerprint)
+			if err != nil {
+				// 系统错误
+				util.ExitWithErrMsg(session, err.Error())
+				return
+			}
+			if !b {
 				// 找不到用户信息
 				util.ExitWithErrMsg(session, "user not found")
 				return
@@ -90,7 +99,7 @@ func InitSshServer() zsf.LifeCycle {
 	return ret
 }
 
-func handleGitCommand(user *usermd.UserInfo, session ssh.Session) error {
+func handleGitCommand(user usermd.UserInfo, session ssh.Session) error {
 	ctx := session.Context()
 	gitCfg, err := cfgsrv.Inner.GetGitCfg()
 	if err != nil {
@@ -142,7 +151,7 @@ func handleGitCommand(user *usermd.UserInfo, session ssh.Session) error {
 			return errors.New(i18n.GetByKey(i18n.SshCmdNotSupported))
 		}
 	}
-	repo, err := checkAccessMode(ctx, user.Account, repoPath, accessMode)
+	repo, err := checkAccessMode(ctx, user, repoPath, accessMode)
 	if err != nil {
 		return err
 	}
@@ -224,13 +233,17 @@ func handleGitCommand(user *usermd.UserInfo, session ssh.Session) error {
 	return gitCmd.Run()
 }
 
-func checkAccessMode(ctx context.Context, account, repoPath string, permCode int) (repomd.Repo, error) {
+func checkAccessMode(ctx context.Context, user usermd.UserInfo, repoPath string, permCode int) (repomd.Repo, error) {
 	repo, b := reposrv.Inner.GetByRepoPath(ctx, repoPath)
 	if !b {
 		return repomd.Repo{}, util.InvalidArgsError()
 	}
+	// 系统管理员权限
+	if user.IsAdmin {
+		return repo, nil
+	}
 	// 获取权限
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, account)
+	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, user.Account)
 	if !b {
 		return repomd.Repo{}, util.UnauthorizedError()
 	}
@@ -249,21 +262,25 @@ func checkAccessMode(ctx context.Context, account, repoPath string, permCode int
 	return repo, nil
 }
 
-func getUserByFingerprint(ctx context.Context, fingerprint string) *usermd.UserInfo {
+func getUserByFingerprint(ctx context.Context, fingerprint string) (usermd.UserInfo, bool, error) {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	account, b, err := sshkeymd.GetAccountByFingerprint(ctx, fingerprint)
 	if err != nil {
 		logger.Logger.Error(err)
-		return nil
+		return usermd.UserInfo{}, false, util.InternalError(err)
 	}
 	if !b {
-		return nil
+		return usermd.UserInfo{}, false, nil
 	}
-	user, b := usersrv.Inner.GetByAccount(ctx, account)
+	user, b, err := usermd.GetByAccount(ctx, account)
+	if err != nil {
+		logger.Logger.Error(err)
+		return usermd.UserInfo{}, false, util.InternalError(err)
+	}
 	// 账号不存在或被禁用
 	if !b || user.IsProhibited {
-		return nil
+		return usermd.UserInfo{}, false, nil
 	}
-	return &user
+	return user.ToUserInfo(), true, nil
 }
