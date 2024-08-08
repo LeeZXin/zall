@@ -265,13 +265,18 @@ func checkAccessMode(ctx context.Context, user usermd.UserInfo, repoPath string,
 func getUserByFingerprint(ctx context.Context, fingerprint string) (usermd.UserInfo, bool, error) {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	account, b, err := sshkeymd.GetAccountByFingerprint(ctx, fingerprint)
+	account, keyId, b, err := sshkeymd.GetAccountAndIdByFingerprint(ctx, fingerprint)
 	if err != nil {
 		logger.Logger.Error(err)
 		return usermd.UserInfo{}, false, util.InternalError(err)
 	}
 	if !b {
 		return usermd.UserInfo{}, false, nil
+	}
+	_, err = sshkeymd.UpdateLastOperated(ctx, keyId, time.Now())
+	if err != nil {
+		logger.Logger.Error(err)
+		return usermd.UserInfo{}, false, util.InternalError(err)
 	}
 	user, b, err := usermd.GetByAccount(ctx, account)
 	if err != nil {
@@ -282,5 +287,6 @@ func getUserByFingerprint(ctx context.Context, fingerprint string) (usermd.UserI
 	if !b || user.IsProhibited {
 		return usermd.UserInfo{}, false, nil
 	}
+
 	return user.ToUserInfo(), true, nil
 }

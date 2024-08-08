@@ -19,6 +19,15 @@ func GetAccountByFingerprint(ctx context.Context, fingerprint string) (string, b
 	return ret.Account, b, err
 }
 
+func GetAccountAndIdByFingerprint(ctx context.Context, fingerprint string) (string, int64, bool, error) {
+	var ret SshKey
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("fingerprint = ?", fingerprint).
+		Cols("account").
+		Get(&ret)
+	return ret.Account, ret.Id, b, err
+}
+
 func GetById(ctx context.Context, id int64) (SshKey, bool, error) {
 	var ret SshKey
 	b, err := xormutil.MustGetXormSession(ctx).
