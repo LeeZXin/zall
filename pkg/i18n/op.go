@@ -263,7 +263,7 @@ var (
 
 	GpgSrvKeysVO = GpgSrvKeys{
 		InsertGpgKey: KeyItem{
-			Id:         "gpgSrv.InsertGpgKey",
+			Id:         "gpgSrv.CreateGpgKey",
 			DefaultRet: "新增gpg公钥",
 		},
 		DeleteGpgKey: KeyItem{

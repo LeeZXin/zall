@@ -8,49 +8,33 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/cast"
 	"net/http"
 	"time"
 )
 
 func InitApi() {
+	gpgkeysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/gpgKey", apisession.CheckLogin)
 		{
+			// gpg密钥列表
 			group.GET("/list", listGpgKey)
-			group.POST("/getToken", getToken)
-			group.POST("/insert", insertGpgKey)
-			group.POST("/delete", deleteGpgKey)
+			// 新增gpg密钥
+			group.POST("/create", createGpgKey)
+			// 删除gpg密钥
+			group.DELETE("/delete/:keyId", deleteGpgKey)
 		}
 	})
 }
 
-func getToken(c *gin.Context) {
-	var req GetTokenReqVO
+func createGpgKey(c *gin.Context) {
+	var req CreateGpgKeyReqVO
 	if util.ShouldBindJSON(&req, c) {
-		token, guides, err := gpgkeysrv.Outer.GetToken(c, gpgkeysrv.GetTokenReqDTO{
+		err := gpgkeysrv.Outer.CreateGpgKey(c, gpgkeysrv.CreateGpgKeyReqDTO{
+			Name:     req.Name,
 			Content:  req.Content,
 			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		c.JSON(http.StatusOK, GetTokenRespVO{
-			BaseResp: ginutil.DefaultSuccessResp,
-			Token:    token,
-			Guides:   guides,
-		})
-	}
-}
-
-func insertGpgKey(c *gin.Context) {
-	var req InsertGpgKeyReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := gpgkeysrv.Outer.InsertGpgKey(c, gpgkeysrv.InsertGpgKeyReqDTO{
-			Name:      req.Name,
-			Content:   req.Content,
-			Signature: req.Signature,
-			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -61,35 +45,34 @@ func insertGpgKey(c *gin.Context) {
 }
 
 func deleteGpgKey(c *gin.Context) {
-	var req DeleteGpgKeyReqVO
-	if util.ShouldBindJSON(&req, c) {
-		err := gpgkeysrv.Outer.DeleteGpgKey(c, gpgkeysrv.DeleteGpgKeyReqDTO{
-			Id:       req.Id,
-			Operator: apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func listGpgKey(c *gin.Context) {
-	dtoList, err := gpgkeysrv.Outer.ListGpgKey(c, gpgkeysrv.ListGpgKeyReqDTO{
+	err := gpgkeysrv.Outer.DeleteGpgKey(c, gpgkeysrv.DeleteGpgKeyReqDTO{
+		Id:       cast.ToInt64(c.Param("keyId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(dtoList, func(t gpgkeysrv.GpgKeyDTO) (GpgKeyVO, error) {
+	util.DefaultOkResponse(c)
+}
+
+func listGpgKey(c *gin.Context) {
+	keys, err := gpgkeysrv.Outer.ListGpgKey(c, gpgkeysrv.ListGpgKeyReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(keys, func(t gpgkeysrv.GpgKeyDTO) (GpgKeyVO, error) {
 		return GpgKeyVO{
-			Id:         t.Id,
-			Name:       t.Name,
-			PubKeyId:   t.PubKeyId,
-			ExpireTime: t.ExpireTime.Format(time.DateTime),
-			EmailList:  t.EmailList,
+			Id:      t.Id,
+			Name:    t.Name,
+			KeyId:   t.KeyId,
+			Expired: t.Expired.Format(time.DateOnly),
+			Created: t.Created.Format(time.DateOnly),
+			Email:   t.Email,
+			SubKeys: t.SubKeys,
 		}, nil
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]GpgKeyVO]{

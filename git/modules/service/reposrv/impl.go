@@ -2,7 +2,9 @@ package reposrv
 
 import (
 	"context"
+	"fmt"
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
+	"github.com/LeeZXin/zall/git/modules/model/gpgkeymd"
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
@@ -27,7 +29,7 @@ import (
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"github.com/keybase/go-crypto/openpgp"
+	"github.com/keybase/go-crypto/openpgp/packet"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -63,6 +65,7 @@ func newOuterService() OuterService {
 		limit = 10
 	}
 	sshkeysrv.InitInner()
+	gpgkeysrv.InitInner()
 	return &outerImpl{
 		CreateArchiveLimiter: limiter.NewCountLimiter(limit),
 	}
@@ -1045,7 +1048,8 @@ func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReq
 		return HistoryCommitsRespDTO{}, err
 	}
 	// 缓存 用于校验签名
-	gpgMap := make(map[string][]openpgp.EntityList)
+	gpgMap := make(map[string][]gpgkeymd.GpgKey)
+	gpgIdMap := make(map[string]gpgkeymd.GpgKey)
 	sshMap := make(map[string][]string)
 	ret := HistoryCommitsRespDTO{
 		Cursor: resp.Cursor,
@@ -1055,42 +1059,105 @@ func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReq
 		if t.CommitSig != "" {
 			sig := signature.CommitSig(t.CommitSig)
 			if sig.IsSSHSig() {
-				sshKeys, b := sshMap[t.Committer.Account]
-				if !b {
-					pubs, err := sshkeysrv.Inner.ListAllPubKeyByAccount(ctx, t.Committer.Account)
-					if err != nil {
-						pubs = []string{}
-						sshMap[t.Committer.Account] = pubs
-					}
-					sshKeys = pubs
-				}
-				for _, key := range sshKeys {
-					if e := signature.VerifySshSignature(t.CommitSig, t.Payload, key); e == nil {
-						r.Verified = true
-						break
-					}
-				}
+				r.Verified = verifyCommitWithSshKeys(ctx, &t, sshMap)
 			} else if sig.IsGPGSig() {
-				gpgKeys, b := gpgMap[t.Committer.Account]
-				if !b {
-					verified, err := gpgkeysrv.Inner.GetVerifiedByAccount(ctx, t.Committer.Account)
-					if err != nil {
-						verified = []openpgp.EntityList{}
-						gpgMap[t.Committer.Account] = verified
-					}
-					gpgKeys = verified
-				}
-				for _, keys := range gpgKeys {
-					if _, err := signature.CheckArmoredDetachedSignature(keys, t.Payload, t.CommitSig); err == nil {
-						r.Verified = true
-						break
-					}
-				}
+				r.Verified = verifyCommitWithGpgKeys(ctx, &t, gpgMap, gpgIdMap)
 			}
 		}
 		return r, nil
 	})
 	return ret, nil
+}
+
+func verifyCommitWithSshKeys(ctx context.Context, commit *reqvo.CommitVO, sshMap map[string][]string) bool {
+	account := commit.Committer.Account
+	keys, b := sshMap[account]
+	if !b {
+		keys = sshkeysrv.Inner.ListAllPubKeyByAccount(ctx, account)
+		sshMap[account] = keys
+	}
+	for _, key := range keys {
+		err := signature.VerifySshSignature(commit.CommitSig, commit.Payload, key)
+		if err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+func verifyCommitWithGpgKeys(ctx context.Context, commit *reqvo.CommitVO, gpgKeysMap map[string][]gpgkeymd.GpgKey, gpgKeyIdMap map[string]gpgkeymd.GpgKey) bool {
+	sig, err := signature.ExtractGpgSignature(commit.CommitSig)
+	if err != nil {
+		return false
+	}
+	// 从gpgKeys匹配keyId
+	{
+		keyId := ""
+		if sig.IssuerKeyId != nil && (*sig.IssuerKeyId) != 0 {
+			keyId = fmt.Sprintf("%X", *sig.IssuerKeyId)
+		}
+		if keyId == "" && sig.IssuerFingerprint != nil && len(sig.IssuerFingerprint) > 0 {
+			keyId = fmt.Sprintf("%X", sig.IssuerFingerprint[12:20])
+		}
+		if keyId != "" {
+			key, b := gpgKeyIdMap[keyId]
+			if !b {
+				key, _ = gpgkeysrv.Inner.GetByKeyId(ctx, keyId)
+				gpgKeyIdMap[keyId] = key
+			}
+			return verifyCommitWithGpgKey(&key, sig, commit)
+		}
+	}
+	// 匹配committer
+	{
+		account := commit.Committer.Account
+		if account != "" {
+			keys, b := gpgKeysMap[account]
+			if !b {
+				keys = gpgkeysrv.Inner.ListValidByAccount(ctx, account)
+				gpgKeysMap[account] = keys
+			}
+			for _, key := range keys {
+				if verifyCommitWithGpgKey(&key, sig, commit) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func verifyCommitWithGpgKey(gpgKey *gpgkeymd.GpgKey, sig *packet.Signature, commit *reqvo.CommitVO) bool {
+	if gpgKey.KeyId == "" {
+		return false
+	}
+	pk, err := signature.Base64DecGPGPubKey(gpgKey.Content)
+	if err == nil && pk.CanSign() {
+		hash := sig.Hash.New()
+		_, err = hash.Write([]byte(commit.Payload))
+		if err != nil {
+			return false
+		}
+		err = pk.VerifySignature(hash, sig)
+		if err == nil {
+			return true
+		}
+	}
+	for _, subKey := range gpgKey.SubKeys {
+		pk, err = signature.Base64DecGPGPubKey(subKey.Content)
+		if err == nil && pk.CanSign() {
+			hash := sig.Hash.New()
+			_, err = hash.Write([]byte(commit.Payload))
+			if err != nil {
+				return false
+			}
+			err = pk.VerifySignature(hash, sig)
+			if err == nil {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func checkTeamAdmin(ctx context.Context, teamId int64, operator apisession.UserInfo) error {

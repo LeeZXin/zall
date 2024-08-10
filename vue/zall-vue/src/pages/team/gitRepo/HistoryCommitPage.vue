@@ -14,6 +14,7 @@
           <div style="width:70%">
             <div class="commit-msg no-wrap">
               <span class="commit-msg-text" @click="treeCommit(item)">{{item.commitMsg}}</span>
+              <a-tag color="green" v-if="item.verified">已验证</a-tag>
             </div>
             <div class="commit-desc no-wrap">
               <span>{{item.committer.account}}</span>

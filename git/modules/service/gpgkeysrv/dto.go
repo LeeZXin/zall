@@ -7,18 +7,17 @@ import (
 	"time"
 )
 
-type InsertGpgKeyReqDTO struct {
-	Name      string              `json:"name"`
-	Content   string              `json:"-"`
-	Signature string              `json:"-"`
-	Operator  apisession.UserInfo `json:"operator"`
+type CreateGpgKeyReqDTO struct {
+	Name     string              `json:"name"`
+	Content  string              `json:"-"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *InsertGpgKeyReqDTO) IsValid() error {
+func (r *CreateGpgKeyReqDTO) IsValid() error {
 	if !gpgkeymd.IsKeyNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if r.Signature == "" || r.Content == "" {
+	if r.Content == "" {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -39,21 +38,6 @@ func (r *DeleteGpgKeyReqDTO) IsValid() error {
 	return nil
 }
 
-type GetTokenReqDTO struct {
-	Content  string              `json:"content"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *GetTokenReqDTO) IsValid() error {
-	if r.Content == "" {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
 type ListGpgKeyReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
@@ -66,9 +50,11 @@ func (r *ListGpgKeyReqDTO) IsValid() error {
 }
 
 type GpgKeyDTO struct {
-	Id         int64     `json:"keyId"`
-	Name       string    `json:"name"`
-	PubKeyId   string    `json:"pubKeyId"`
-	EmailList  []string  `json:"emailList"`
-	ExpireTime time.Time `json:"expireTime"`
+	Id      int64
+	Name    string
+	KeyId   string
+	Email   string
+	Created time.Time
+	Expired time.Time
+	SubKeys string
 }

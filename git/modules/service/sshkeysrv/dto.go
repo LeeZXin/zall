@@ -8,16 +8,16 @@ import (
 )
 
 type CreateSshKeyReqDTO struct {
-	Name          string              `json:"name"`
-	PubKeyContent string              `json:"-"`
-	Operator      apisession.UserInfo `json:"operator"`
+	Name     string              `json:"name"`
+	Content  string              `json:"-"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *CreateSshKeyReqDTO) IsValid() error {
 	if !sshkeymd.IsSshKeyNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if r.PubKeyContent == "" {
+	if r.Content == "" {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

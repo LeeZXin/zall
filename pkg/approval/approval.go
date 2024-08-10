@@ -81,7 +81,7 @@ type Kvs []Kv
 
 func (k *Kvs) FromDB(content []byte) error {
 	if k == nil {
-		*k = make([]Kv, 0)
+		*k = make(Kvs, 0)
 	}
 	return json.Unmarshal(content, k)
 }

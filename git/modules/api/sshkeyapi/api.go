@@ -32,9 +32,9 @@ func createSshKey(c *gin.Context) {
 	var req CreateSshKeyReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := sshkeysrv.Outer.CreateSshKey(c, sshkeysrv.CreateSshKeyReqDTO{
-			Name:          req.Name,
-			PubKeyContent: req.PubKeyContent,
-			Operator:      apisession.MustGetLoginUser(c),
+			Name:     req.Name,
+			Content:  req.Content,
+			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)

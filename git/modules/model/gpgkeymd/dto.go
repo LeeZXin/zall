@@ -1,18 +1,18 @@
 package gpgkeymd
 
+import "time"
+
 type InsertGpgKeyReqDTO struct {
-	Name      string
-	Account   string
-	PubKeyId  string
-	Content   string
-	EmailList []string
-	Expiry    int64
+	Name    string
+	Account string
+	KeyId   string
+	Content string
+	SubKeys []InsertGpgSubKeyReqDTO
+	Email   string
+	Expired time.Time
 }
 
-type SimpleGpgKeyDTO struct {
-	Id        int64    `json:"id"`
-	Name      string   `json:"name"`
-	PubKeyId  string   `json:"pubKeyId"`
-	Expiry    int64    `json:"expiry"`
-	EmailList []string `json:"emailList"`
+type InsertGpgSubKeyReqDTO struct {
+	KeyId   string
+	Content string
 }

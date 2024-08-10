@@ -27,7 +27,7 @@ func Init() {
 }
 
 type InnerService interface {
-	ListAllPubKeyByAccount(context.Context, string) ([]string, error)
+	ListAllPubKeyByAccount(context.Context, string) []string
 }
 
 type OuterService interface {

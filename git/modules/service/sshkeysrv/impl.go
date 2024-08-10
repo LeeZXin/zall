@@ -17,17 +17,18 @@ import (
 type innerImpl struct {
 }
 
-func (s *innerImpl) ListAllPubKeyByAccount(ctx context.Context, account string) ([]string, error) {
+func (s *innerImpl) ListAllPubKeyByAccount(ctx context.Context, account string) []string {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	keys, err := sshkeymd.ListAllKeyByAccount(ctx, account, []string{"content"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
+		return []string{}
 	}
-	return listutil.Map(keys, func(t sshkeymd.SshKey) (string, error) {
-		return t.Content, err
+	ret, _ := listutil.Map(keys, func(t sshkeymd.SshKey) (string, error) {
+		return t.Content, nil
 	})
+	return ret
 }
 
 type outerImpl struct{}
@@ -63,7 +64,7 @@ func (s *outerImpl) CreateSshKey(ctx context.Context, reqDTO CreateSshKeyReqDTO)
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	publicKey, _, _, _, err := gossh.ParseAuthorizedKey([]byte(reqDTO.PubKeyContent))
+	publicKey, _, _, _, err := gossh.ParseAuthorizedKey([]byte(reqDTO.Content))
 	if err != nil {
 		return util.NewBizErr(apicode.InvalidArgsCode, i18n.SshKeyFormatError)
 	}
@@ -82,7 +83,7 @@ func (s *outerImpl) CreateSshKey(ctx context.Context, reqDTO CreateSshKeyReqDTO)
 		Account:      reqDTO.Operator.Account,
 		Name:         reqDTO.Name,
 		Fingerprint:  fingerprint,
-		Content:      strings.TrimSpace(reqDTO.PubKeyContent),
+		Content:      strings.TrimSpace(reqDTO.Content),
 		LastOperated: time.Now(),
 	})
 	if err != nil {

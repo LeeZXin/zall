@@ -4,37 +4,46 @@ import (
 	"context"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
-	"strings"
 	"time"
 )
 
 func IsKeyNameValid(name string) bool {
-	return len(name) > 0 && len(name) < 32
+	return len(name) > 0 && len(name) <= 128
 }
 
-func GetValidByAccount(ctx context.Context, account string) ([]GpgKey, error) {
+func ListValidByAccount(ctx context.Context, account string) ([]GpgKey, error) {
 	ret := make([]GpgKey, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("account = ?", account).
-		And("expiry >= ?", time.Now().UnixMilli()).
+		And("expired > ?", time.Now().Format(time.DateTime)).
 		Find(&ret)
 	return ret, err
 }
 
-func InsertGpgKeys(ctx context.Context, reqDTO InsertGpgKeyReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).Insert(GpgKey{
-		Account:   reqDTO.Account,
-		Name:      reqDTO.Name,
-		PubKeyId:  reqDTO.PubKeyId,
-		Content:   reqDTO.Content,
-		Expiry:    reqDTO.Expiry,
-		EmailList: strings.Join(reqDTO.EmailList, ";"),
+func BatchInsertGpgKeys(ctx context.Context, reqDTOs []InsertGpgKeyReqDTO) error {
+	keys, _ := listutil.Map(reqDTOs, func(reqDTO InsertGpgKeyReqDTO) (GpgKey, error) {
+		subKeys, _ := listutil.Map(reqDTO.SubKeys, func(t InsertGpgSubKeyReqDTO) (GpgSubKey, error) {
+			return GpgSubKey{
+				KeyId:   t.KeyId,
+				Content: t.Content,
+			}, nil
+		})
+		return GpgKey{
+			Account: reqDTO.Account,
+			Name:    reqDTO.Name,
+			KeyId:   reqDTO.KeyId,
+			Content: reqDTO.Content,
+			Expired: reqDTO.Expired,
+			Email:   reqDTO.Email,
+			SubKeys: subKeys,
+		}, nil
 	})
+	_, err := xormutil.MustGetXormSession(ctx).Insert(keys)
 	return err
 }
 
-func ExistsByPubKeyId(ctx context.Context, pubKeyId string) (bool, error) {
-	return xormutil.MustGetXormSession(ctx).Where("pub_key_id = ?", pubKeyId).Exist(new(GpgKey))
+func CountByKeyIds(ctx context.Context, keyIds []string) (int64, error) {
+	return xormutil.MustGetXormSession(ctx).In("key_id", keyIds).Count(new(GpgKey))
 }
 
 func GetById(ctx context.Context, id int64) (GpgKey, bool, error) {
@@ -43,26 +52,24 @@ func GetById(ctx context.Context, id int64) (GpgKey, bool, error) {
 	return ret, b, err
 }
 
+func GetByKeyId(ctx context.Context, keyId string) (GpgKey, bool, error) {
+	var ret GpgKey
+	b, err := xormutil.MustGetXormSession(ctx).Where("key_id = ?", keyId).Get(&ret)
+	return ret, b, err
+}
+
 func DeleteById(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Delete(new(GpgKey))
 	return rows == 1, err
 }
 
-func GetAllSimpleByAccount(ctx context.Context, account string) ([]SimpleGpgKeyDTO, error) {
-	ret := make([]SimpleGpgKey, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		Where("account = ?", account).
-		Find(&ret)
-	if err != nil {
-		return nil, err
+func ListAllByAccount(ctx context.Context, account string, cols []string) ([]GpgKey, error) {
+	ret := make([]GpgKey, 0)
+	session := xormutil.MustGetXormSession(ctx).
+		Where("account = ?", account)
+	if len(cols) > 0 {
+		session.Cols(cols...)
 	}
-	return listutil.Map(ret, func(t SimpleGpgKey) (SimpleGpgKeyDTO, error) {
-		return SimpleGpgKeyDTO{
-			Id:        t.Id,
-			Name:      t.Name,
-			PubKeyId:  t.PubKeyId,
-			Expiry:    t.Expiry,
-			EmailList: strings.Split(t.EmailList, ";"),
-		}, nil
-	})
+	err := session.Find(&ret)
+	return ret, err
 }

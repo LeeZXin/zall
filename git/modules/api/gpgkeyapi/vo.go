@@ -1,33 +1,16 @@
 package gpgkeyapi
 
-import (
-	"github.com/LeeZXin/zsf-utils/ginutil"
-)
-
-type GetTokenReqVO struct {
+type CreateGpgKeyReqVO struct {
+	Name    string `json:"name"`
 	Content string `json:"content"`
 }
 
-type InsertGpgKeyReqVO struct {
-	Name      string `json:"name"`
-	Signature string `json:"signature"`
-	Content   string `json:"content"`
-}
-
-type DeleteGpgKeyReqVO struct {
-	Id int64 `json:"id"`
-}
-
-type GetTokenRespVO struct {
-	ginutil.BaseResp
-	Token  string
-	Guides []string
-}
-
 type GpgKeyVO struct {
-	Id         int64    `json:"id"`
-	Name       string   `json:"name"`
-	PubKeyId   string   `json:"pubKeyId"`
-	ExpireTime string   `json:"expireTime"`
-	EmailList  []string `json:"emailList"`
+	Id      int64  `json:"id"`
+	Name    string `json:"name"`
+	KeyId   string `json:"keyId"`
+	Expired string `json:"expired"`
+	Created string `json:"created"`
+	Email   string `json:"email"`
+	SubKeys string `json:"subKeys"`
 }

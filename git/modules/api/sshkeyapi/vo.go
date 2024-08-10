@@ -1,8 +1,8 @@
 package sshkeyapi
 
 type CreateSshKeyReqVO struct {
-	Name          string `json:"name"`
-	PubKeyContent string `json:"pubKeyContent"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
 }
 
 type SshKeyVO struct {
