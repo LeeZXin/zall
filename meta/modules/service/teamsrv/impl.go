@@ -154,13 +154,15 @@ func (*outerImpl) ListUserByTeamId(ctx context.Context, reqDTO ListUserByTeamIdR
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, b, err := teammd.GetUserPermDetail(ctx, reqDTO.TeamId, reqDTO.Operator.Account)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, err
-	}
-	if !b {
-		return nil, nil
+	if !reqDTO.Operator.IsAdmin {
+		p, b, err := teammd.GetUserPermDetail(ctx, reqDTO.TeamId, reqDTO.Operator.Account)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, err
+		}
+		if !b && !p.IsAdmin {
+			return nil, nil
+		}
 	}
 	accounts, err := teammd.ListUserAccountByTeamId(ctx, reqDTO.TeamId)
 	if err != nil {
