@@ -13,6 +13,7 @@ import (
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
@@ -1016,6 +1017,7 @@ func commit2Dto(c reqvo.CommitVO) CommitDTO {
 	}
 }
 
+// HistoryCommits 获取提交历史
 func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReqDTO) (HistoryCommitsRespDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return HistoryCommitsRespDTO{}, err
@@ -1050,7 +1052,7 @@ func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReq
 	// 缓存 用于校验签名
 	gpgMap := make(map[string][]gpgkeymd.GpgKey)
 	gpgIdMap := make(map[string]gpgkeymd.GpgKey)
-	sshMap := make(map[string][]string)
+	sshMap := make(map[string][]sshkeysrv.InnerSshKeyDTO)
 	ret := HistoryCommitsRespDTO{
 		Cursor: resp.Cursor,
 	}
@@ -1059,17 +1061,40 @@ func (s *outerImpl) HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReq
 		if t.CommitSig != "" {
 			sig := signature.CommitSig(t.CommitSig)
 			if sig.IsSSHSig() {
-				r.Verified = verifyCommitWithSshKeys(ctx, &t, sshMap)
+				r.Verified, r.Signer.Account, r.Signer.Key, r.Signer.Type = verifyCommitWithSshKeys(ctx, &t, sshMap)
 			} else if sig.IsGPGSig() {
-				r.Verified = verifyCommitWithGpgKeys(ctx, &t, gpgMap, gpgIdMap)
+				r.Verified, r.Signer.Account, r.Signer.Key, r.Signer.Type = verifyCommitWithGpgKeys(ctx, &t, gpgMap, gpgIdMap)
 			}
 		}
 		return r, nil
 	})
+	// 查找头像和姓名
+	accountList := make([]string, 0)
+	for _, commit := range ret.Data {
+		if commit.Signer.Account != "" {
+			accountList = append(accountList, commit.Signer.Account)
+		}
+	}
+	users, err := usermd.ListUserByAccounts(ctx, listutil.Distinct(accountList...), []string{"account", "avatar_url", "name"})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return HistoryCommitsRespDTO{}, util.InternalError(err)
+	}
+	avatarMap := make(map[string]usermd.User, len(users))
+	for _, user := range users {
+		avatarMap[user.Account] = user
+	}
+	for i := range ret.Data {
+		if ret.Data[i].Signer.Account != "" {
+			user := avatarMap[ret.Data[i].Signer.Account]
+			ret.Data[i].Signer.Name = user.Name
+			ret.Data[i].Signer.AvatarUrl = user.AvatarUrl
+		}
+	}
 	return ret, nil
 }
 
-func verifyCommitWithSshKeys(ctx context.Context, commit *reqvo.CommitVO, sshMap map[string][]string) bool {
+func verifyCommitWithSshKeys(ctx context.Context, commit *reqvo.CommitVO, sshMap map[string][]sshkeysrv.InnerSshKeyDTO) (bool, string, string, string) {
 	account := commit.Committer.Account
 	keys, b := sshMap[account]
 	if !b {
@@ -1077,18 +1102,18 @@ func verifyCommitWithSshKeys(ctx context.Context, commit *reqvo.CommitVO, sshMap
 		sshMap[account] = keys
 	}
 	for _, key := range keys {
-		err := signature.VerifySshSignature(commit.CommitSig, commit.Payload, key)
+		err := signature.VerifySshSignature(commit.CommitSig, commit.Payload, key.Content)
 		if err == nil {
-			return true
+			return true, account, key.Fingerprint, "SSH"
 		}
 	}
-	return false
+	return false, "", "", ""
 }
 
-func verifyCommitWithGpgKeys(ctx context.Context, commit *reqvo.CommitVO, gpgKeysMap map[string][]gpgkeymd.GpgKey, gpgKeyIdMap map[string]gpgkeymd.GpgKey) bool {
+func verifyCommitWithGpgKeys(ctx context.Context, commit *reqvo.CommitVO, gpgKeysMap map[string][]gpgkeymd.GpgKey, gpgKeyIdMap map[string]gpgkeymd.GpgKey) (bool, string, string, string) {
 	sig, err := signature.ExtractGpgSignature(commit.CommitSig)
 	if err != nil {
-		return false
+		return false, "", "", ""
 	}
 	// 从gpgKeys匹配keyId
 	{
@@ -1105,7 +1130,7 @@ func verifyCommitWithGpgKeys(ctx context.Context, commit *reqvo.CommitVO, gpgKey
 				key, _ = gpgkeysrv.Inner.GetByKeyId(ctx, keyId)
 				gpgKeyIdMap[keyId] = key
 			}
-			return verifyCommitWithGpgKey(&key, sig, commit)
+			return verifyCommitWithGpgKey(&key, sig, commit), key.Account, key.KeyId, "GPG"
 		}
 	}
 	// 匹配committer
@@ -1119,12 +1144,12 @@ func verifyCommitWithGpgKeys(ctx context.Context, commit *reqvo.CommitVO, gpgKey
 			}
 			for _, key := range keys {
 				if verifyCommitWithGpgKey(&key, sig, commit) {
-					return true
+					return true, key.Account, key.KeyId, "GPG"
 				}
 			}
 		}
 	}
-	return false
+	return false, "", "", ""
 }
 
 func verifyCommitWithGpgKey(gpgKey *gpgkeymd.GpgKey, sig *packet.Signature, commit *reqvo.CommitVO) bool {

@@ -57,9 +57,13 @@ func ExistByAccount(ctx context.Context, account string) (bool, error) {
 		Exist(new(User))
 }
 
-func ListUserByAccounts(ctx context.Context, accounts []string) ([]User, error) {
+func ListUserByAccounts(ctx context.Context, accounts, cols []string) ([]User, error) {
 	ret := make([]User, 0)
-	err := xormutil.MustGetXormSession(ctx).In("account", accounts).Find(&ret)
+	session := xormutil.MustGetXormSession(ctx).In("account", accounts)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Find(&ret)
 	return ret, err
 }
 

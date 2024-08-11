@@ -161,12 +161,6 @@ const beforeUpload = file => {
       reject();
       return;
     }
-    const isLt2M = file.size / 1024 / 1024 < 2;
-    if (!isLt2M) {
-      message.error("超过2MB");
-      reject();
-      return;
-    }
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {

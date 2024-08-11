@@ -59,3 +59,8 @@ type SshKeyDTO struct {
 	Created      time.Time
 	LastOperated time.Time
 }
+
+type InnerSshKeyDTO struct {
+	Fingerprint string
+	Content     string
+}

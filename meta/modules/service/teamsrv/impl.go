@@ -169,7 +169,7 @@ func (*outerImpl) ListUserByTeamId(ctx context.Context, reqDTO ListUserByTeamIdR
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	users, err := usermd.ListUserByAccounts(ctx, accounts)
+	users, err := usermd.ListUserByAccounts(ctx, accounts, []string{"account", "name"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -215,7 +215,7 @@ func (*outerImpl) ListRoleUser(ctx context.Context, reqDTO ListRoleUserReqDTO) (
 	accounts, _ := listutil.Map(teamUsers, func(t teammd.User) (string, error) {
 		return t.Account, nil
 	})
-	users, err := usermd.ListUserByAccounts(ctx, accounts)
+	users, err := usermd.ListUserByAccounts(ctx, accounts, []string{"account", "name"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)

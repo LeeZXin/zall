@@ -62,8 +62,7 @@ func ListAllKeyByAccount(ctx context.Context, account string, cols []string) ([]
 	if len(cols) > 0 {
 		session.Cols(cols...)
 	}
-	err := session.
-		Find(&ret)
+	err := session.Find(&ret)
 	return ret, err
 }
 

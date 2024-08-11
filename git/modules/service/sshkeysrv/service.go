@@ -27,7 +27,7 @@ func Init() {
 }
 
 type InnerService interface {
-	ListAllPubKeyByAccount(context.Context, string) []string
+	ListAllPubKeyByAccount(context.Context, string) []InnerSshKeyDTO
 }
 
 type OuterService interface {

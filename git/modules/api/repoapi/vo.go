@@ -35,19 +35,28 @@ type UserVO struct {
 }
 
 type CommitVO struct {
-	Parent        []string `json:"parent"`
-	Author        UserVO   `json:"author"`
-	Committer     UserVO   `json:"committer"`
-	AuthoredTime  string   `json:"authoredTime"`
-	CommittedTime string   `json:"committedTime"`
-	CommitMsg     string   `json:"commitMsg"`
-	CommitId      string   `json:"commitId"`
-	ShortId       string   `json:"shortId"`
-	Verified      bool     `json:"verified"`
-	Tagger        *UserVO  `json:"tagger,omitempty"`
-	TaggerTime    *string  `json:"taggerTime,omitempty"`
-	ShortTagId    *string  `json:"shortTagId,omitempty"`
-	TagCommitMsg  *string  `json:"tagCommitMsg,omitempty"`
+	Parent        []string  `json:"parent"`
+	Author        UserVO    `json:"author"`
+	Committer     UserVO    `json:"committer"`
+	AuthoredTime  string    `json:"authoredTime"`
+	CommittedTime string    `json:"committedTime"`
+	CommitMsg     string    `json:"commitMsg"`
+	CommitId      string    `json:"commitId"`
+	ShortId       string    `json:"shortId"`
+	Verified      bool      `json:"verified"`
+	Tagger        *UserVO   `json:"tagger,omitempty"`
+	TaggerTime    *string   `json:"taggerTime,omitempty"`
+	ShortTagId    *string   `json:"shortTagId,omitempty"`
+	TagCommitMsg  *string   `json:"tagCommitMsg,omitempty"`
+	Signer        *SignerVO `json:"signer,omitempty"`
+}
+
+type SignerVO struct {
+	Account   string `json:"account"`
+	Name      string `json:"name"`
+	AvatarUrl string `json:"avatarUrl"`
+	Key       string `json:"key"`
+	Type      string `json:"type"`
 }
 
 type FileVO struct {

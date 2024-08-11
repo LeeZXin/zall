@@ -1,8 +1,7 @@
 <template>
   <div class="avatar-name" :style="props.style" @click="showDrawer">
-    <img v-if="user.avatarUrl" :src="user.avatarUrl" class="avatar" />
-    <div v-else class="avatar-fake">{{user.name?.substring(0,1)}}</div>
-    <span>{{user.name}}</span>
+    <ZAvatar :url="user.avatarUrl" :name="user.name" size="medium" />
+    <span style="margin-left: 8px">{{user.name}}</span>
   </div>
   <a-drawer :title="user.name" :closable="false" :open="visible" @close="closeDrawer">
     <div class="drawer-item no-wrap" @click="goto('/personalSetting/profile/info')">
@@ -20,6 +19,7 @@
   </a-drawer>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import { useUserStore } from "@/pinia/userStore";
 import { defineProps, ref } from "vue";
 import { useI18n } from "vue-i18n";
@@ -47,13 +47,6 @@ const goto = url => {
 };
 </script>
 <style scoped>
-.avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  margin-right: 8px;
-  object-fit: contain;
-}
 .avatar-name {
   display: flex;
   align-items: center;
@@ -61,17 +54,6 @@ const goto = url => {
   color: white;
   cursor: pointer;
   height: 64px;
-}
-.avatar-fake {
-  width: 42px;
-  height: 42px;
-  text-align: center;
-  background-color: purple;
-  color: white;
-  font-size: 18px;
-  line-height: 42px;
-  border-radius: 50%;
-  margin-right: 8px;
 }
 .drawer-item {
   display: flex;

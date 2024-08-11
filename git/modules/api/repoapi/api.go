@@ -445,6 +445,15 @@ func commitDto2Vo(d reposrv.CommitDTO) CommitVO {
 		ret.ShortTagId = &d.ShortTagId
 		ret.TagCommitMsg = &d.TagCommitMsg
 	}
+	if d.Signer.Account != "" {
+		ret.Signer = &SignerVO{
+			Account:   d.Signer.Account,
+			AvatarUrl: d.Signer.AvatarUrl,
+			Name:      d.Signer.Name,
+			Key:       d.Signer.Key,
+			Type:      d.Signer.Type,
+		}
+	}
 	return ret
 }
 

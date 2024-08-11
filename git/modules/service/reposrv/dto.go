@@ -230,19 +230,28 @@ type UserDTO struct {
 }
 
 type CommitDTO struct {
-	Parent        []string `json:"parent"`
-	Author        UserDTO  `json:"author"`
-	Committer     UserDTO  `json:"committer"`
-	AuthoredTime  int64    `json:"authoredTime"`
-	CommittedTime int64    `json:"committedTime"`
-	CommitMsg     string   `json:"commitMsg"`
-	CommitId      string   `json:"commitId"`
-	ShortId       string   `json:"shortId"`
-	Tagger        UserDTO  `json:"tagger"`
-	TaggerTime    int64    `json:"taggerTime"`
-	ShortTagId    string   `json:"shortTagId"`
-	TagCommitMsg  string   `json:"tagCommitMsg"`
-	Verified      bool     `json:"verified"`
+	Parent        []string  `json:"parent"`
+	Author        UserDTO   `json:"author"`
+	Committer     UserDTO   `json:"committer"`
+	AuthoredTime  int64     `json:"authoredTime"`
+	CommittedTime int64     `json:"committedTime"`
+	CommitMsg     string    `json:"commitMsg"`
+	CommitId      string    `json:"commitId"`
+	ShortId       string    `json:"shortId"`
+	Tagger        UserDTO   `json:"tagger"`
+	TaggerTime    int64     `json:"taggerTime"`
+	ShortTagId    string    `json:"shortTagId"`
+	TagCommitMsg  string    `json:"tagCommitMsg"`
+	Verified      bool      `json:"verified"`
+	Signer        SignerDTO `json:"signer"`
+}
+
+type SignerDTO struct {
+	Account   string
+	Name      string
+	AvatarUrl string
+	Key       string
+	Type      string
 }
 
 type FileDTO struct {

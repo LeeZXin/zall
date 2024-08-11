@@ -298,14 +298,19 @@ const appPermList = [
     desc: "拥有该权限,则可以管理应用部署流水线"
   },
   {
+    checkbox: "管理注册中心来源",
+    key: "canManageDiscoverySource",
+    desc: "拥有该权限,则可以管理注册中心来源与应用服务的绑定"
+  },
+  {
     checkbox: "管理配置中心来源",
     key: "canManagePropertySource",
     desc: "拥有该权限,则可以管理配置中心来源与应用服务的绑定"
   },
   {
-    checkbox: "管理注册中心来源",
-    key: "canManageDiscoverySource",
-    desc: "拥有该权限,则可以管理注册中心来源与应用服务的绑定"
+    checkbox: "管理配置发布审批人",
+    key: "canManagePropertyDeployAuditor",
+    desc: "拥有该权限,则可以管理配置发布审批人"
   },
   {
     checkbox: "管理服务状态来源",
@@ -342,7 +347,8 @@ const appPermKeys = [
   "canManagePropertySource",
   "canManageServiceSource",
   "canManageDiscoverySource",
-  "canManagePromAgent"
+  "canManagePromAgent",
+  "canManagePropertyDeployAuditor"
 ];
 const repoPermList = [
   {

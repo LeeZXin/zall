@@ -17,16 +17,19 @@ import (
 type innerImpl struct {
 }
 
-func (s *innerImpl) ListAllPubKeyByAccount(ctx context.Context, account string) []string {
+func (s *innerImpl) ListAllPubKeyByAccount(ctx context.Context, account string) []InnerSshKeyDTO {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	keys, err := sshkeymd.ListAllKeyByAccount(ctx, account, []string{"content"})
+	keys, err := sshkeymd.ListAllKeyByAccount(ctx, account, []string{"content", "fingerprint"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return []string{}
+		return []InnerSshKeyDTO{}
 	}
-	ret, _ := listutil.Map(keys, func(t sshkeymd.SshKey) (string, error) {
-		return t.Content, nil
+	ret, _ := listutil.Map(keys, func(t sshkeymd.SshKey) (InnerSshKeyDTO, error) {
+		return InnerSshKeyDTO{
+			Fingerprint: t.Fingerprint,
+			Content:     t.Content,
+		}, nil
 	})
 	return ret
 }
