@@ -478,7 +478,7 @@ func (s *storeImpl) IndexRepo(ctx context.Context, req reqvo.IndexRepoReq) (reqv
 		ReadmeText:   readme,
 		HasReadme:    hasReadme,
 		LatestCommit: commit2Vo(latestCommit),
-		Tree:         lsRet2TreeVO(commits),
+		Tree:         lsRet2TreeVo(commits),
 	}, nil
 }
 
@@ -717,27 +717,13 @@ func packetWrite(str string) []byte {
 	return []byte(s + str)
 }
 
-func lsRet2TreeVO(commits []git.FileCommit) reqvo.TreeVO {
+func lsRet2TreeVo(commits []git.FileCommit) reqvo.TreeVO {
 	files, _ := listutil.Map(commits, func(t git.FileCommit) (reqvo.FileVO, error) {
 		ret := reqvo.FileVO{
 			Mode:    t.Mode.Readable(),
 			RawPath: t.Path,
 			Path:    path.Base(t.Path),
-			Commit: reqvo.CommitVO{
-				Author: reqvo.UserVO{
-					Account: t.Author.Account,
-					Email:   t.Author.Email,
-				},
-				Committer: reqvo.UserVO{
-					Account: t.Committer.Account,
-					Email:   t.Committer.Email,
-				},
-				AuthoredTime:  t.AuthorSigTime.UnixMilli(),
-				CommittedTime: t.CommitSigTime.UnixMilli(),
-				CommitMsg:     t.CommitMsg,
-				CommitId:      t.Blob,
-				ShortId:       util.LongCommitId2ShortId(t.Blob),
-			},
+			Commit:  commit2Vo(t.Commit),
 		}
 		return ret, nil
 	})

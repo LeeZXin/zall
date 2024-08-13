@@ -66,8 +66,6 @@
 import { reactive, ref } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { StreamLanguage } from "@codemirror/language";
-import { properties } from "@codemirror/legacy-modes/mode/properties";
 import { message } from "ant-design-vue";
 import {
   getHistoryByVersionRequest,
@@ -77,12 +75,14 @@ import {
 import { CodeDiff } from "v-code-diff";
 import { useRoute, useRouter } from "vue-router";
 import { usePropertyHistoryStore } from "@/pinia/propertyHistoryStore";
+// 透传的配置版本历史
 const propertyHistoryStore = usePropertyHistoryStore();
+// 对比modal是否展开
 const diffModalOpen = ref(false);
 const route = useRoute();
 const router = useRouter();
-const propertiesLang = StreamLanguage.define(properties);
-const extensions = ref([propertiesLang, oneDark]);
+const extensions = ref([oneDark]);
+// 表单数据
 const formState = reactive({
   name: "",
   content: "",
@@ -92,11 +92,13 @@ const formState = reactive({
   version: "",
   nodeList: []
 });
+// 发布节点列表
 const nodeList = ref([]);
+// 展开对比modal
 const showDiffModal = () => {
   diffModalOpen.value = true;
 };
-
+// 发布配置
 const publishFile = () => {
   if (formState.nodeList.length === 0) {
     message.warn("请选择节点");
@@ -112,7 +114,6 @@ const publishFile = () => {
     );
   });
 };
-
 if (propertyHistoryStore.id === 0) {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/list`
@@ -144,5 +145,17 @@ if (propertyHistoryStore.id === 0) {
 .node-ul > li + li {
   margin-top: 10px;
   font-size: 14px;
+}
+.auditor-ul > li {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.auditor-ul > li + li {
+  margin-top: 8px;
 }
 </style>

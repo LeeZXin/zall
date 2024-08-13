@@ -38,7 +38,7 @@ func InitApi() {
 			group.POST("/create", createTeamUser)
 			// 展示团队角色列表
 			group.GET("/listRoleUser/:teamId", listRoleUser)
-			// 获取团队成员名称
+			// 获取团队成员
 			group.GET("/listByTeamId/:teamId", listUserByTeamId)
 			// 删除成员团队绑定关系
 			group.DELETE("/delete/:relationId", deleteTeamUser)

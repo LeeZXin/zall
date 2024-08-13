@@ -79,6 +79,7 @@ import { Modal, message } from "ant-design-vue";
 import { useAppStore } from "@/pinia/appStore";
 const appStore = useAppStore();
 const propertyFileStore = usePropertyFileStore();
+// 来源绑定modal
 const bindModal = reactive({
   open: false,
   selectIdList: [],

@@ -63,6 +63,15 @@ func (*History) TableName() string {
 	return PropertyHistoryTableName
 }
 
+type ApplyStatus int
+
+const (
+	AuditingApplyStatus ApplyStatus = iota + 1
+	AgreeApplyStatus
+	DisagreeApplyStatus
+	CancelApplyStatus
+)
+
 type Deploy struct {
 	Id        int64 `json:"id" xorm:"pk autoincr"`
 	HistoryId int64 `json:"historyId"`

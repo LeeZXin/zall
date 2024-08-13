@@ -217,8 +217,7 @@ const copy = type => {
 // 跳转代码详情页
 const toRepoTree = path => {
   router.push(
-    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/tree/${selectedRef.refType}/${selectedRef.ref}/` +
-      path
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/tree/${selectedRef.refType}/${selectedRef.ref}/${path}`
   );
 };
 const downloadZip = () => {

@@ -137,7 +137,7 @@ const lsTree = treeNode => {
             return {
               title: item.path,
               key: item.rawPath,
-              isLeaf: item.mode !== "directory"
+              isLeaf: item.mode !== "directory" && item.mode !== "subModule"
             };
           });
           treeData.value = [...treeData.value];
@@ -149,6 +149,7 @@ const lsTree = treeNode => {
       });
   });
 };
+// 代码和blame隐藏和展开
 const codeOrBlameChange = () => {
   if (codeOrBlame.value === "code") {
     showBlame.value = false;
@@ -197,7 +198,7 @@ getFiles("").then(res => {
       return {
         title: item.rawPath,
         key: item.rawPath,
-        isLeaf: item.mode !== "directory"
+        isLeaf: item.mode !== 'directory'
       };
     });
   }
@@ -221,37 +222,53 @@ const selectNode = (node, e) => {
 // 获取文件详细内容
 const getAndCatFile = (filePath, init) => {
   getFiles(filePath).then(res => {
-    if (res.data && res.data.length === 1) {
-      if (res.data[0].mode !== "directory") {
-        catFile(filePath).then(res => {
-          fileContent.value = res.data.content;
-          fileSize.value = res.data.size;
-          let commit = res.data.commit;
-          if (commit) {
-            latestCommit.committer = commit.committer.account;
-            latestCommit.commitMsg = commit.commitMsg;
-            latestCommit.shortCommitId = commit.shortId;
-            latestCommit.committedTime = commit.committedTime;
-          }
-        });
-        if (init) {
-          let keys = [];
-          let filesVal = files.value;
-          for (let i = 1; i < filesVal.length; i++) {
-            keys.push(filesVal.slice(0, i).join("/"));
-          }
-          expandedKeys.value = keys;
+    if (!res.data) {
+      return;
+    }
+    if (
+      res.data.length === 1 &&
+      (res.data[0].mode !== 'directory')
+    ) {
+      catFile(filePath).then(res => {
+        fileContent.value = res.data.content;
+        fileSize.value = res.data.size;
+        let commit = res.data.commit;
+        if (commit) {
+          latestCommit.committer = commit.committer.account;
+          latestCommit.commitMsg = commit.commitMsg;
+          latestCommit.shortCommitId = commit.shortId;
+          latestCommit.committedTime = commit.committedTime;
         }
-        showRight.value = true;
-      } else {
-        expandedKeys.value = [filePath];
+      });
+      if (init) {
+        let keys = [];
+        let filesVal = files.value;
+        for (let i = 1; i < filesVal.length; i++) {
+          keys.push(filesVal.slice(0, i).join("/"));
+        }
+        expandedKeys.value = keys;
       }
-    } else if (!res.data || res.data.length === 0) {
+      showRight.value = true;
+    } else if (res.data.length > 0) {
+      let split = filePath.split("/");
+      let path = "";
+      let keys = [];
+      split.forEach(str => {
+        if (path === "") {
+          path = str;
+        } else {
+          path = path + "/" + str;
+        }
+        keys.push(path);
+      });
+      expandedKeys.value = keys;
+    } else {
       files.value = [];
       showRight.value = false;
     }
   });
 };
+// 获取文件内容
 const catFile = filePath => {
   return catFileRequest({
     repoId: parseInt(route.params.repoId),

@@ -26,7 +26,7 @@
                     <code-outlined />
                     <span style="margin-left:4px">对比跟随版本</span>
                   </li>
-                  <li @click="gotoPubPage(dataItem)">
+                  <li @click="gotoPubPage(dataItem)" v-if="appStore.perm?.canDeployProperty">
                     <cloud-upload-outlined />
                     <span style="margin-left:4px">发布此版本</span>
                   </li>
@@ -44,10 +44,10 @@
         </template>
       </ZTable>
       <a-pagination
-        v-model:current="currPage"
-        :total="totalCount"
+        v-model:current="dataPage.current"
+        :total="dataPage.totalCount"
         show-less-items
-        :pageSize="pageSize"
+        :pageSize="dataPage.pageSize"
         style="margin-top:10px"
         :hideOnSinglePage="true"
         :showSizeChanger="false"
@@ -65,7 +65,12 @@
           style="max-height:400px;overflow:scroll"
         />
       </a-modal>
-      <a-modal :title="deployModalTitle" :footer="null" v-model:open="deployModalOpen" :width="800">
+      <a-modal
+        :title="deployModal.title"
+        :footer="null"
+        v-model:open="deployModal.open"
+        :width="800"
+      >
         <div style="max-height:600px;overflow:scroll">
           <ZTable :columns="deployColumns" :dataSource="deployDataSource" />
         </div>
@@ -84,6 +89,7 @@ import {
 import ZTable from "@/components/common/ZTable";
 import { ref, reactive } from "vue";
 import { usePropertyFileStore } from "@/pinia/propertyFileStore";
+import { useAppStore } from "@/pinia/appStore";
 import { usePropertyHistoryStore } from "@/pinia/propertyHistoryStore";
 import { useRouter, useRoute } from "vue-router";
 import {
@@ -93,8 +99,13 @@ import {
 } from "@/api/app/propertyApi";
 import { message } from "ant-design-vue";
 import { CodeDiff } from "v-code-diff";
-const deployModalOpen = ref(false);
-const deployModalTitle = ref("");
+const appStore = useAppStore();
+// 发布记录modal数据
+const deployModal = reactive({
+  open: false,
+  title: ""
+});
+// 发布记录表项
 const deployColumns = [
   {
     title: "发布节点",
@@ -117,32 +128,40 @@ const deployColumns = [
     key: "creator"
   }
 ];
+// 发布记录列表
 const deployDataSource = ref([]);
+// 对比modal是否展示
 const diffModalOpen = ref(false);
 const route = useRoute();
 const router = useRouter();
 const propertyFileStore = usePropertyFileStore();
 const propertyHistoryStore = usePropertyHistoryStore();
+// 版本数据
 const dataSource = ref([]);
-const currPage = ref(1);
-const pageSize = 10;
-const totalCount = ref(0);
+// 分页数据
+const dataPage = reactive({
+  current: 1,
+  pageSize: 10,
+  totalCount: 0
+});
+// 对比数据
 const diffState = reactive({
   newContent: "",
   newVersion: "",
   oldCotent: "",
   oldVersion: ""
 });
+// 版本数据表项
 const columns = [
-  {
-    title: "跟随版本号",
-    dataIndex: "lastVersion",
-    key: "lastVersion"
-  },
   {
     title: "版本号",
     dataIndex: "version",
     key: "version"
+  },
+  {
+    title: "跟随版本号",
+    dataIndex: "lastVersion",
+    key: "lastVersion"
   },
   {
     title: "创建时间",
@@ -160,13 +179,13 @@ const columns = [
     key: "operation"
   }
 ];
-
+// 获取版本历史
 const listHistory = () => {
   listHistoryRequest({
     fileId: propertyFileStore.id,
-    pageNum: currPage.value
+    pageNum: dataPage.current
   }).then(res => {
-    totalCount.value = res.totalCount;
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -175,7 +194,7 @@ const listHistory = () => {
     });
   });
 };
-
+// 展示对比modal
 const showDiffModal = item => {
   if (item.lastVersion) {
     getHistoryByVersionRequest({
@@ -208,13 +227,13 @@ if (propertyFileStore.id === 0) {
 } else {
   listHistory();
 }
-
+// 跳转新增版本页面
 const gotoNewPage = item => {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${propertyFileStore.id}/new?from=${item.version}`
   );
 };
-
+// 跳转发布页面
 const gotoPubPage = item => {
   propertyHistoryStore.id = item.id;
   propertyHistoryStore.fileName = item.fileName;
@@ -229,9 +248,9 @@ const gotoPubPage = item => {
     `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${propertyFileStore.id}/publish/${item.version}`
   );
 };
-
+// 展示发布记录modal
 const showDeployModal = item => {
-  deployModalTitle.value = `${item.fileName}_${item.version}`;
+  deployModal.title = `${item.fileName} ${item.version}`;
   listDeployRequest(item.id).then(res => {
     deployDataSource.value = res.data.map((item, index) => {
       return {
@@ -239,7 +258,7 @@ const showDeployModal = item => {
         ...item
       };
     });
-    deployModalOpen.value = true;
+    deployModal.open = true;
   });
 };
 </script>

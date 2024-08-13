@@ -365,14 +365,14 @@ func (*outerImpl) DeleteFile(ctx context.Context, reqDTO DeleteFileReqDTO) (err 
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 删除配置文件
-		_, err := propertymd.DeleteFileById(ctx, reqDTO.FileId)
-		if err != nil {
-			return err
+		_, err2 := propertymd.DeleteFileById(ctx, reqDTO.FileId)
+		if err2 != nil {
+			return err2
 		}
 		// 删除配置历史
-		err = propertymd.DeleteHistoryByFileId(ctx, reqDTO.FileId)
-		if err != nil {
-			return err
+		err2 = propertymd.DeleteHistoryByFileId(ctx, reqDTO.FileId)
+		if err2 != nil {
+			return err2
 		}
 		// 删除部署记录
 		return propertymd.DeleteDeployByFileId(ctx, reqDTO.FileId)
@@ -454,7 +454,8 @@ func (*outerImpl) DeployHistory(ctx context.Context, reqDTO DeployHistoryReqDTO)
 		file    propertymd.File
 		history propertymd.History
 	)
-	history, file, err = checkAppDevelopPermByHistoryId(ctx, reqDTO.Operator, reqDTO.HistoryId)
+	// 检查权限
+	history, file, err = checkPropertyDeployPermByHistoryId(ctx, reqDTO.Operator, reqDTO.HistoryId)
 	if err != nil {
 		return
 	}
@@ -479,19 +480,21 @@ func (*outerImpl) DeployHistory(ctx context.Context, reqDTO DeployHistoryReqDTO)
 		return
 	}
 	if len(nodes) == 0 {
-		return util.InvalidArgsError()
+		err = util.InvalidArgsError()
+		return
 	}
 	for _, node := range nodes {
 		if node.Env != file.Env {
-			return util.InvalidArgsError()
+			err = util.InvalidArgsError()
+			return
 		}
 	}
 	go func() {
 		for _, source := range nodes {
-			deployToEtcd(file, history, source, reqDTO.Operator)
+			deployToEtcd(file, history, source, reqDTO.Operator.Account)
 		}
 	}()
-	return nil
+	return
 }
 
 func (*outerImpl) PageHistory(ctx context.Context, reqDTO PageHistoryReqDTO) ([]HistoryDTO, int64, error) {
@@ -591,7 +594,7 @@ type contentVal struct {
 	Content string `json:"content"`
 }
 
-func deployToEtcd(file propertymd.File, history propertymd.History, node propertymd.EtcdNode, operator apisession.UserInfo) {
+func deployToEtcd(file propertymd.File, history propertymd.History, node propertymd.EtcdNode, creator string) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFunc()
 	ctx, closer := xormstore.Context(ctx)
@@ -604,7 +607,18 @@ func deployToEtcd(file propertymd.File, history propertymd.History, node propert
 	defer etcdClient.Close()
 	kv := clientv3.NewKV(etcdClient)
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		err2 := propertymd.InsertDeploy(ctx, propertymd.InsertDeployReqDTO{
+		jsonBytes, _ := json.Marshal(contentVal{
+			Version: history.Version,
+			Content: history.Content,
+		})
+		_, err2 := kv.Put(ctx,
+			common.PropertyPrefix+file.AppId+"/"+file.Name,
+			string(jsonBytes),
+		)
+		if err2 != nil {
+			return err
+		}
+		return propertymd.InsertDeploy(ctx, propertymd.InsertDeployReqDTO{
 			HistoryId: history.Id,
 			NodeName:  node.Name,
 			FileId:    file.Id,
@@ -612,20 +626,8 @@ func deployToEtcd(file propertymd.File, history propertymd.History, node propert
 			Endpoints: node.Endpoints,
 			Username:  node.Username,
 			Password:  node.Password,
-			Creator:   operator.Account,
+			Creator:   creator,
 		})
-		if err2 != nil {
-			return err
-		}
-		jsonBytes, _ := json.Marshal(contentVal{
-			Version: history.Version,
-			Content: history.Content,
-		})
-		_, err2 = kv.Put(ctx,
-			common.PropertyPrefix+file.AppId+"/"+file.Name,
-			string(jsonBytes),
-		)
-		return err2
 	})
 	if err != nil {
 		logger.Logger.Errorf("deploy history: %v app: %v failed with err: %v", history.Id, file.AppId, err)
@@ -729,4 +731,46 @@ func checkManagePropertySourcePermByAppId(ctx context.Context, operator apisessi
 		return nil
 	}
 	return util.UnauthorizedError()
+}
+
+func checkPropertyDeployPermByHistoryId(ctx context.Context, operator apisession.UserInfo, historyId int64) (propertymd.History, propertymd.File, error) {
+	history, b, err := propertymd.GetHistoryById(ctx, historyId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return propertymd.History{}, propertymd.File{}, util.InternalError(err)
+	}
+	if !b {
+		return propertymd.History{}, propertymd.File{}, util.InvalidArgsError()
+	}
+	file, b, err := propertymd.GetFileById(ctx, history.FileId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return propertymd.History{}, propertymd.File{}, util.InternalError(err)
+	}
+	if !b {
+		return propertymd.History{}, propertymd.File{}, util.ThereHasBugErr()
+	}
+	app, b, err := appmd.GetByAppId(ctx, file.AppId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return propertymd.History{}, propertymd.File{}, util.InternalError(err)
+	}
+	if !b {
+		return propertymd.History{}, propertymd.File{}, util.ThereHasBugErr()
+	}
+	if operator.IsAdmin {
+		return history, file, nil
+	}
+	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return propertymd.History{}, propertymd.File{}, util.InternalError(err)
+	}
+	if !b {
+		return propertymd.History{}, propertymd.File{}, util.UnauthorizedError()
+	}
+	if p.IsAdmin || p.PermDetail.GetAppPerm(file.AppId).CanDeployProperty {
+		return history, file, nil
+	}
+	return propertymd.History{}, propertymd.File{}, util.UnauthorizedError()
 }

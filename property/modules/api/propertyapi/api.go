@@ -215,7 +215,7 @@ func bindAppAndPropertySource(c *gin.Context) {
 }
 
 func listPropertySourceByFileId(c *gin.Context) {
-	nodes, err := propertysrv.Outer.ListPropertySourceByFileId(c, propertysrv.ListPropertySourceByFileIdReqDTO{
+	sources, err := propertysrv.Outer.ListPropertySourceByFileId(c, propertysrv.ListPropertySourceByFileIdReqDTO{
 		FileId:   cast.ToInt64(c.Param("fileId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -225,7 +225,7 @@ func listPropertySourceByFileId(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimplePropertySourceVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     sourceDto2SimpleVo(nodes),
+		Data:     sourceDto2SimpleVo(sources),
 	})
 }
 

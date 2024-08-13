@@ -6,13 +6,10 @@
           <span>应用名称</span>
         </div>
         <div class="section-body">
-          <div class="input-item">
+          <div class="input-item" style="margin-bottom:10px">
             <a-input v-model:value="appName" />
-            <div class="input-desc">简单描述应用的作用</div>
           </div>
-          <div class="input-item">
-            <a-button type="primary" @click="updateApp">保存名称</a-button>
-          </div>
+          <a-button type="primary" @click="updateApp">保存名称</a-button>
         </div>
       </div>
       <div class="section">
@@ -60,17 +57,19 @@ const userStore = useUserStore();
 const appName = ref("");
 const route = useRoute();
 const router = useRouter();
+// 迁移modal
 const transferModal = reactive({
   open: false,
   teamId: null
 });
 const teamList = ref([]);
+// 获取应用服务名称
 const getApp = () => {
   getAppRequest(route.params.appId).then(res => {
     appName.value = res.data.name;
   });
 };
-
+// 编辑应用服务名称
 const updateApp = () => {
   if (!appNameRegexp.test(appName.value)) {
     message.warn("名称格式错误");
@@ -83,7 +82,7 @@ const updateApp = () => {
     message.success("编辑成功");
   });
 };
-
+// 删除应用服务
 const deleteApp = () => {
   Modal.confirm({
     title: `你确定要删除该应用吗?`,
@@ -97,14 +96,14 @@ const deleteApp = () => {
     onCancel() {}
   });
 };
-
+// 展示迁移modal
 const showTransferModal = () => {
   if (teamList.value.length === 0) {
     listAllTeam();
   }
   transferModal.open = true;
 };
-
+// 获取所有团队
 const listAllTeam = () => {
   listAllByAdminRequest().then(res => {
     let t = res.data.map(item => {
@@ -121,11 +120,11 @@ const listAllTeam = () => {
     }
   });
 };
-
+// 下拉框过滤
 const filterTeamListOption = (input, option) => {
   return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
-
+// 迁移团队点击“确定”
 const handleTransferModalOk = () => {
   if (!transferModal.teamId) {
     message.warn("请选择团队");

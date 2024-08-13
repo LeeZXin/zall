@@ -7,14 +7,14 @@ import (
 
 var (
 	DefaultAppPerm = AppPerm{
-		CanDevelop:                     true,
-		CanManagePipeline:              true,
-		CanManageServiceSource:         true,
-		CanManagePropertySource:        true,
-		CanManagePropertyDeployAuditor: true,
-		CanManageDiscoverySource:       true,
-		CanManagePromAgent:             true,
-		CanCreateDeployPlan:            true,
+		CanDevelop:               true,
+		CanManagePipeline:        true,
+		CanManageServiceSource:   true,
+		CanManagePropertySource:  true,
+		CanDeployProperty:        true,
+		CanManageDiscoverySource: true,
+		CanManagePromAgent:       true,
+		CanCreateDeployPlan:      true,
 	}
 	DefaultTeamPerm = TeamPerm{
 		CanManageTimer: true,
@@ -153,8 +153,8 @@ type AppPerm struct {
 	CanManageServiceSource bool `json:"canManageServiceSource"`
 	// 是否可管理配置来源
 	CanManagePropertySource bool `json:"canManagePropertySource"`
-	// 是否可管理配置发布审批人
-	CanManagePropertyDeployAuditor bool `json:"canManagePropertyDeployAuditor"`
+	// 是否可发布配置
+	CanDeployProperty bool `json:"canDeployProperty"`
 	// 是否可管理注册中心来源
 	CanManageDiscoverySource bool `json:"canManageDiscoverySource"`
 	// 是否可管理监控告警
