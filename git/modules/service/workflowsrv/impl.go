@@ -8,7 +8,6 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
-	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
@@ -28,14 +27,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-)
-
-const (
-	updateWorkflow = iota
-	accessWorkflow
-	triggerWorkflow
-	accessVars
-	updateVars
 )
 
 type innerImpl struct{}
@@ -239,22 +230,15 @@ func newOuterService() OuterService {
 	return new(outerImpl)
 }
 
+// CreateWorkflow 创建工作流
 func (*outerImpl) CreateWorkflow(ctx context.Context, reqDTO CreateWorkflowReqDTO) (err error) {
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.WorkflowSrvKeysVO.CreateWorkflow),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err = checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, updateWorkflow)
+	_, err = checkManageWorkflowPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return
 	}
@@ -281,33 +265,14 @@ func (*outerImpl) CreateWorkflow(ctx context.Context, reqDTO CreateWorkflowReqDT
 	return
 }
 
+// DeleteWorkflow 删除工作流
 func (*outerImpl) DeleteWorkflow(ctx context.Context, reqDTO DeleteWorkflowReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.WorkflowSrvKeysVO.DeleteWorkflow),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	wf, b, err := workflowmd.GetWorkflowById(ctx, reqDTO.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	// 校验权限
-	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, updateWorkflow)
+	err = checkManageWorkflowPermByWorkflowId(ctx, reqDTO.WorkflowId, reqDTO.Operator)
 	if err != nil {
 		return
 	}
@@ -326,6 +291,7 @@ func (*outerImpl) DeleteWorkflow(ctx context.Context, reqDTO DeleteWorkflowReqDT
 	return
 }
 
+// ListWorkflowWithLastTask 工作流列表 + 最近执行任务
 func (*outerImpl) ListWorkflowWithLastTask(ctx context.Context, reqDTO ListWorkflowWithLastTaskReqDTO) ([]WorkflowWithLastTaskDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
@@ -333,7 +299,7 @@ func (*outerImpl) ListWorkflowWithLastTask(ctx context.Context, reqDTO ListWorkf
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, accessWorkflow)
+	_, err := checkAccessRepoPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -369,33 +335,15 @@ func (*outerImpl) ListWorkflowWithLastTask(ctx context.Context, reqDTO ListWorkf
 	})
 }
 
+// UpdateWorkflow 编辑工作流
 func (*outerImpl) UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDTO) (err error) {
-	// 插入日志
-	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    reqDTO.Operator.Account,
-			OpDesc:     i18n.GetByKey(i18n.WorkflowSrvKeysVO.UpdateWorkflow),
-			ReqContent: reqDTO,
-			Err:        err,
-		})
-	}()
 	if err = reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	wf, b, err := workflowmd.GetWorkflowById(ctx, reqDTO.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
 	// 校验权限
-	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, updateWorkflow)
+	err = checkManageWorkflowPermByWorkflowId(ctx, reqDTO.WorkflowId, reqDTO.Operator)
 	if err != nil {
 		return
 	}
@@ -422,22 +370,15 @@ func (*outerImpl) UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDT
 	return
 }
 
+// TriggerWorkflow 手动触发工作流
 func (*outerImpl) TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	wf, b, err := workflowmd.GetWorkflowById(ctx, reqDTO.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
 	// 校验权限
-	repo, err := checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, triggerWorkflow)
+	wf, repo, err := checkTriggerWorkflowPermByWorkflowId(ctx, reqDTO.WorkflowId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -457,7 +398,20 @@ func (*outerImpl) TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReq
 	return nil
 }
 
-func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo, permCode int) (repomd.Repo, error) {
+func checkManageWorkflowPermByWorkflowId(ctx context.Context, wfId int64, operator apisession.UserInfo) error {
+	wf, b, err := workflowmd.GetWorkflowById(ctx, wfId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	_, err = checkManageWorkflowPermByRepoId(ctx, wf.RepoId, operator)
+	return err
+}
+
+func checkManageWorkflowPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
 	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -474,46 +428,131 @@ func checkPermByRepoId(ctx context.Context, repoId int64, operator apisession.Us
 		logger.Logger.WithContext(ctx).Error(err)
 		return repo, util.InternalError(err)
 	}
-	if !b {
-		return repo, util.UnauthorizedError()
-	}
-	if p.IsAdmin {
-		return repo, nil
-	}
-	var pass bool
-	switch permCode {
-	case accessWorkflow:
-		pass = p.PermDetail.GetRepoPerm(repoId).CanManageWorkflow ||
-			p.PermDetail.GetRepoPerm(repoId).CanTriggerWorkflow
-	case updateWorkflow:
-		pass = p.PermDetail.GetRepoPerm(repoId).CanManageWorkflow
-	case triggerWorkflow:
-		pass = p.PermDetail.GetRepoPerm(repoId).CanTriggerWorkflow
-	default:
-		return repo, util.UnauthorizedError()
-	}
-	if pass {
+	if b && (p.IsAdmin || p.PermDetail.GetRepoPerm(repoId).CanManageWorkflow) {
 		return repo, nil
 	}
 	return repo, util.UnauthorizedError()
 }
 
+func checkManageWorkflowPermByVarId(ctx context.Context, varsId int64, operator apisession.UserInfo) (workflowmd.Vars, repomd.Repo, error) {
+	vars, b, err := workflowmd.GetVarsById(ctx, varsId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return workflowmd.Vars{}, repomd.Repo{}, util.InternalError(err)
+	}
+	if !b {
+		return workflowmd.Vars{}, repomd.Repo{}, util.InvalidArgsError()
+	}
+	repo, err := checkManageWorkflowPermByRepoId(ctx, vars.RepoId, operator)
+	return vars, repo, err
+}
+
+func checkAccessRepoPermByPrId(ctx context.Context, prId int64, operator apisession.UserInfo) (repomd.Repo, error) {
+	pr, b, err := pullrequestmd.GetPullRequestById(ctx, prId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repomd.Repo{}, util.InternalError(err)
+	}
+	if !b {
+		return repomd.Repo{}, util.InvalidArgsError()
+	}
+	return checkAccessRepoPermByRepoId(ctx, pr.RepoId, operator)
+}
+
+func checkAccessRepoPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
+	repo, b, err := repomd.GetByRepoId(ctx, repoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repo, util.InternalError(err)
+	}
+	if !b {
+		return repo, util.InvalidArgsError()
+	}
+	if operator.IsAdmin {
+		return repo, nil
+	}
+	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repo, util.InternalError(err)
+	}
+	if b && (p.IsAdmin || p.PermDetail.GetRepoPerm(repoId).CanAccessRepo) {
+		return repo, nil
+	}
+	return repo, util.UnauthorizedError()
+}
+
+func checkAccessRepoPermByWorkflowId(ctx context.Context, wfId int64, operator apisession.UserInfo) (workflowmd.Workflow, repomd.Repo, error) {
+	wf, b, err := workflowmd.GetWorkflowById(ctx, wfId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return wf, repomd.Repo{}, util.InternalError(err)
+	}
+	if !b {
+		return wf, repomd.Repo{}, util.InvalidArgsError()
+	}
+	repo, err := checkAccessRepoPermByRepoId(ctx, wf.RepoId, operator)
+	return wf, repo, err
+}
+
+func checkAccessRepoPermByTaskId(ctx context.Context, taskId int64, operator apisession.UserInfo) (workflowmd.Task, workflowmd.Workflow, repomd.Repo, error) {
+	task, b, err := workflowmd.GetTaskById(ctx, taskId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return workflowmd.Task{}, workflowmd.Workflow{}, repomd.Repo{}, util.InternalError(err)
+	}
+	if !b {
+		return workflowmd.Task{}, workflowmd.Workflow{}, repomd.Repo{}, util.InvalidArgsError()
+	}
+	wf, repo, err := checkAccessRepoPermByWorkflowId(ctx, task.WorkflowId, operator)
+	return task, wf, repo, err
+}
+
+func checkTriggerWorkflowPermByWorkflowId(ctx context.Context, wfId int64, operator apisession.UserInfo) (workflowmd.Workflow, repomd.Repo, error) {
+	wf, b, err := workflowmd.GetWorkflowById(ctx, wfId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return workflowmd.Workflow{}, repomd.Repo{}, util.InternalError(err)
+	}
+	if !b {
+		return workflowmd.Workflow{}, repomd.Repo{}, util.InvalidArgsError()
+	}
+	repo, err := checkTriggerWorkflowPermByRepoId(ctx, wf.RepoId, operator)
+	return wf, repo, err
+}
+
+func checkTriggerWorkflowPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
+	repo, b, err := repomd.GetByRepoId(ctx, repoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repo, util.InternalError(err)
+	}
+	if !b {
+		return repo, util.InvalidArgsError()
+	}
+	if operator.IsAdmin {
+		return repo, nil
+	}
+	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repo, util.InternalError(err)
+	}
+	if b && (p.IsAdmin || p.PermDetail.GetRepoPerm(repoId).CanTriggerWorkflow) {
+		return repo, nil
+	}
+	return repo, util.UnauthorizedError()
+}
+
+// ListTask 工作流任务列表
 func (*outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]TaskWithoutYamlContentDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	wf, b, err := workflowmd.GetWorkflowById(ctx, reqDTO.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, 0, util.InternalError(err)
-	}
-	if !b {
-		return nil, 0, util.InvalidArgsError()
-	}
 	// 校验权限
-	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	_, _, err := checkAccessRepoPermByWorkflowId(ctx, reqDTO.WorkflowId, reqDTO.Operator)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -539,16 +578,8 @@ func (*outerImpl) ListTaskByPrId(ctx context.Context, reqDTO ListTaskByPrIdReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	pr, b, err := pullrequestmd.GetPullRequestById(ctx, reqDTO.PrId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	if !b {
-		return nil, util.InvalidArgsError()
-	}
 	// 校验权限
-	_, err = checkPermByRepoId(ctx, pr.RepoId, reqDTO.Operator, accessWorkflow)
+	_, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -593,16 +624,8 @@ func (*outerImpl) GetWorkflowDetail(ctx context.Context, reqDTO GetWorkflowDetai
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	wf, b, err := workflowmd.GetWorkflowById(ctx, reqDTO.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return WorkflowDTO{}, util.InternalError(err)
-	}
-	if !b {
-		return WorkflowDTO{}, util.InvalidArgsError()
-	}
 	// 校验权限
-	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, updateWorkflow)
+	wf, _, err := checkAccessRepoPermByWorkflowId(ctx, reqDTO.WorkflowId, reqDTO.Operator)
 	if err != nil {
 		return WorkflowDTO{}, err
 	}
@@ -629,16 +652,8 @@ func (*outerImpl) KillWorkflowTask(ctx context.Context, reqDTO KillWorkflowTaskR
 			task.TaskStatus != sshagent.QueueStatus) {
 		return util.InvalidArgsError()
 	}
-	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.ThereHasBugErr()
-	}
 	// 校验权限
-	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, triggerWorkflow)
+	_, _, err = checkTriggerWorkflowPermByWorkflowId(ctx, task.WorkflowId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -656,24 +671,8 @@ func (*outerImpl) GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	task, b, err := workflowmd.GetTaskById(ctx, reqDTO.TaskId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return sshagent.TaskStatus{}, util.InternalError(err)
-	}
-	if !b {
-		return sshagent.TaskStatus{}, util.InvalidArgsError()
-	}
-	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return sshagent.TaskStatus{}, util.InternalError(err)
-	}
-	if !b {
-		return sshagent.TaskStatus{}, util.ThereHasBugErr()
-	}
 	// 校验权限
-	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	task, _, _, err := checkAccessRepoPermByTaskId(ctx, reqDTO.TaskId, reqDTO.Operator)
 	if err != nil {
 		return sshagent.TaskStatus{}, err
 	}
@@ -711,24 +710,7 @@ func (*outerImpl) GetLogContent(ctx context.Context, reqDTO GetLogContentReqDTO)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	task, b, err := workflowmd.GetTaskById(ctx, reqDTO.TaskId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	if !b {
-		return nil, util.InvalidArgsError()
-	}
-	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	if !b {
-		return nil, util.ThereHasBugErr()
-	}
-	// 校验权限
-	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	task, _, _, err := checkAccessRepoPermByTaskId(ctx, reqDTO.TaskId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -749,24 +731,7 @@ func (*outerImpl) GetTaskDetail(ctx context.Context, reqDTO GetTaskDetailReqDTO)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	task, b, err := workflowmd.GetTaskById(ctx, reqDTO.TaskId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return TaskDTO{}, util.InternalError(err)
-	}
-	if !b {
-		return TaskDTO{}, util.InvalidArgsError()
-	}
-	wf, b, err := workflowmd.GetWorkflowById(ctx, task.WorkflowId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return TaskDTO{}, util.InternalError(err)
-	}
-	if !b {
-		return TaskDTO{}, util.ThereHasBugErr()
-	}
-	// 校验权限
-	_, err = checkPermByRepoId(ctx, wf.RepoId, reqDTO.Operator, accessWorkflow)
+	task, _, _, err := checkAccessRepoPermByTaskId(ctx, reqDTO.TaskId, reqDTO.Operator)
 	if err != nil {
 		return TaskDTO{}, err
 	}
@@ -781,7 +746,7 @@ func (*outerImpl) ListVars(ctx context.Context, reqDTO ListVarsReqDTO) ([]VarsWi
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, accessVars)
+	_, err := checkManageWorkflowPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -806,7 +771,7 @@ func (*outerImpl) CreateVars(ctx context.Context, reqDTO CreateVarsReqDTO) error
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err := checkPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator, updateVars)
+	_, err := checkManageWorkflowPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -840,16 +805,8 @@ func (*outerImpl) UpdateVars(ctx context.Context, reqDTO UpdateVarsReqDTO) error
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	vars, b, err := workflowmd.GetVarsById(ctx, reqDTO.VarsId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
 	// 校验权限
-	_, err = checkPermByRepoId(ctx, vars.RepoId, reqDTO.Operator, updateVars)
+	_, _, err := checkManageWorkflowPermByVarId(ctx, reqDTO.VarsId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -871,16 +828,8 @@ func (*outerImpl) DeleteVars(ctx context.Context, reqDTO DeleteVarsReqDTO) error
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	vars, b, err := workflowmd.GetVarsById(ctx, reqDTO.VarsId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
 	// 校验权限
-	_, err = checkPermByRepoId(ctx, vars.RepoId, reqDTO.Operator, updateVars)
+	_, _, err := checkManageWorkflowPermByVarId(ctx, reqDTO.VarsId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -902,16 +851,7 @@ func (*outerImpl) GetVarsContent(ctx context.Context, reqDTO GetVarsContentReqDT
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	vars, b, err := workflowmd.GetVarsById(ctx, reqDTO.VarsId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return VarsDTO{}, util.InternalError(err)
-	}
-	if !b {
-		return VarsDTO{}, util.InvalidArgsError()
-	}
-	// 校验权限
-	_, err = checkPermByRepoId(ctx, vars.RepoId, reqDTO.Operator, updateVars)
+	vars, _, err := checkManageWorkflowPermByVarId(ctx, reqDTO.VarsId, reqDTO.Operator)
 	if err != nil {
 		return VarsDTO{}, err
 	}

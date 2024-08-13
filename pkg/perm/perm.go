@@ -23,11 +23,11 @@ var (
 		CanAccessRepo:              true,
 		CanPushRepo:                true,
 		CanSubmitPullRequest:       true,
-		CanReviewPullRequest:       true,
 		CanAddCommentInPullRequest: true,
 		CanManageWebhook:           true,
 		CanManageWorkflow:          true,
 		CanTriggerWorkflow:         true,
+		CanManageProtectedBranch:   true,
 	}
 	DefaultPermDetail = Detail{
 		TeamPerm:        DefaultTeamPerm,
@@ -127,8 +127,6 @@ type RepoPerm struct {
 	CanPushRepo bool `json:"canPushRepo"`
 	// 是否可提交合并请求
 	CanSubmitPullRequest bool `json:"canSubmitPullRequest"`
-	// 是否可评审合并请求
-	CanReviewPullRequest bool `json:"canReviewPullRequest"`
 	// 合并请求是否可以评论
 	CanAddCommentInPullRequest bool `json:"canAddCommentInPullRequest"`
 	// 是否可配置webhook
@@ -137,6 +135,8 @@ type RepoPerm struct {
 	CanManageWorkflow bool `json:"canManageWorkflow"`
 	// 触发工作流
 	CanTriggerWorkflow bool `json:"canTriggerWorkflow"`
+	// 管理保护分支
+	CanManageProtectedBranch bool `json:"canManageProtectedBranch"`
 }
 
 type TeamPerm struct {

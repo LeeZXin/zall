@@ -29,14 +29,11 @@
             <cloud-upload-outlined />
             <span>提交历史</span>
           </a-menu-item>
-          <a-menu-item
-            key="/workflow/list"
-            v-if="repo.perm?.canManageWorkflow ||  repo.perm?.canTriggerWorkflow"
-          >
+          <a-menu-item key="/workflow/list">
             <node-index-outlined />
             <span>工作流</span>
           </a-menu-item>
-          <a-menu-item key="/protectedBranch/list" v-if="teamStore.isAdmin">
+          <a-menu-item key="/protectedBranch/list" v-if="repo.perm?.canManageProtectedBranch">
             <branches-outlined />
             <span>保护分支</span>
           </a-menu-item>

@@ -1,6 +1,9 @@
 package branch
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"github.com/LeeZXin/zsf-utils/listutil"
+)
 
 type PushOption int
 
@@ -44,6 +47,10 @@ type ProtectedBranchCfg struct {
 }
 
 func (c *ProtectedBranchCfg) IsValid() bool {
+	// 重复
+	if len(c.ReviewerList) > 0 && len(listutil.Distinct([]string(c.ReviewerList)...)) != len(c.ReviewerList) {
+		return false
+	}
 	// 如果限制了白名单 白名单数量肯定大于等于审核数量
 	if len(c.ReviewerList) > 0 && c.ReviewCountWhenCreatePr > len(c.ReviewerList) {
 		return false

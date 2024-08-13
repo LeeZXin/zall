@@ -32,13 +32,18 @@
                   <div class="card-content" v-if="canMergeDetectLoaded">
                     <div
                       v-if="canMergeDetect.isProtectedBranch === true"
-                      style="font-size:14px;color:green;margin-bottom:10px"
+                      style="font-size:14px;color:green;"
                     >
                       <FileProtectOutlined />
                       <span style="margin-left:4px">受保护分支规则保护</span>
                     </div>
                     <div v-if="canMergeDetect.canMerge === true">
-                      <a-button @click="mergePr" type="primary">
+                      <a-button
+                        @click="mergePr"
+                        type="primary"
+                        style="margin-top:10px"
+                        v-if="repoStore.perm?.canSubmitPullRequest"
+                      >
                         <LoadingOutlined v-if="merging" />
                         <span>提交合并请求</span>
                       </a-button>
@@ -143,7 +148,9 @@
                   </ul>
                 </div>
               </a-timeline-item>
-              <a-timeline-item v-if="prStore.prStatus === 1">
+              <a-timeline-item
+                v-if="prStore.prStatus === 1 && repoStore.perm?.canAddCommentInPullRequest"
+              >
                 <div class="message-card">
                   <div class="card-title">
                     <EditOutlined />
@@ -190,7 +197,7 @@
                 </ul>
                 <div class="no-reviewer-msg" v-else>未指定任何评审人</div>
               </div>
-              <div style="margin-top:6px">
+              <div style="margin-top:6px" v-if="repoStore.perm?.canSubmitPullRequest">
                 <a-button danger @click="closePr" style="width:100%" type="primary">关闭合并请求</a-button>
               </div>
             </div>
@@ -256,6 +263,7 @@ import CommitList from "@/components/git/CommitList";
 import ConflictFiles from "@/components/git/ConflictFiles";
 import { ref, reactive, createVNode, nextTick, inject, onUnmounted } from "vue";
 import { useUserStore } from "@/pinia/userStore";
+import { useRepoStore } from "@/pinia/repoStore";
 import {
   getPullRequestRequest,
   closePullRequestRequest,
@@ -323,6 +331,7 @@ const cannotMergeReason = ref("");
 const canReviewMsg = ref("");
 const workflowTaskList = ref([]);
 const workflowTaskInterval = ref(null);
+const repoStore = useRepoStore();
 // 冲突文件
 const conflictFiles = ref([]);
 // 提交列表
@@ -342,18 +351,18 @@ const canReviewLoaded = ref(false);
 const selectTab = key => {
   switch (key) {
     case "diff":
-      if (prStore.value.prStatus === 1 || prStore.value.prStatus === 3) {
+      if (prStore.prStatus === 1 || prStore.prStatus === 3) {
         diffRefs();
       }
       break;
     case "review":
-      if (prStore.value.prStatus === 1) {
+      if (prStore.prStatus === 1) {
         canReview();
       }
       listReview();
       break;
     case "timeline":
-      if (prStore.value.prStatus === 1) {
+      if (prStore.prStatus === 1) {
         detectCanMerge();
       }
       listTimeline();
@@ -387,7 +396,21 @@ const canMerge = ref(false);
 const canMergeDetectLoaded = ref(false);
 const canMergeDetect = ref({});
 const route = useRoute();
-const prStore = ref({});
+const prStore = reactive({
+  commentCount: 0,
+  createBy: "",
+  created: "",
+  head: "",
+  headCommitId: "",
+  headType: "",
+  id: 0,
+  prStatus: 0,
+  prTitle: "",
+  repoId: 0,
+  target: "",
+  targetCommitId: "",
+  targetType: ""
+});
 const repoId = parseInt(route.params.repoId);
 const timelines = ref([]);
 const commentInput = ref(null);
@@ -398,14 +421,14 @@ const replyItem = reactive({
   replyComment: ""
 });
 const listTimeline = () => {
-  listTimelineRequest(prStore.value.id).then(res => {
+  listTimelineRequest(prStore.id).then(res => {
     timelines.value = res.data;
   });
 };
 const detectCanMerge = () => {
   canMergeDetectLoaded.value = false;
   nextTick(() => {
-    canMergeRequest(prStore.value.id).then(res => {
+    canMergeRequest(prStore.id).then(res => {
       if (res.data.statusChange) {
         reload();
         return;
@@ -439,42 +462,41 @@ const clearGetWorkflowTaskInterval = () => {
 };
 const getPullRequest = () => {
   getPullRequestRequest(route.params.prId).then(res => {
-    prStore.value.commentCount = res.data.commentCount;
-    prStore.value.createBy = res.data.createBy;
-    prStore.value.created = res.data.created;
-    prStore.value.head = res.data.head;
-    prStore.value.headCommitId = res.data.headCommitId;
-    prStore.value.headType = res.data.headType;
-    prStore.value.id = res.data.id;
-    prStore.value.prComment = res.data.prComment;
-    prStore.value.prStatus = res.data.prStatus;
-    prStore.value.prTitle = res.data.prTitle;
-    prStore.value.repoId = res.data.repoId;
-    prStore.value.target = res.data.target;
-    prStore.value.targetCommitId = res.data.targetCommitId;
-    prStore.value.targetType = res.data.targetType;
+    prStore.commentCount = res.data.commentCount;
+    prStore.createBy = res.data.createBy;
+    prStore.created = res.data.created;
+    prStore.head = res.data.head;
+    prStore.headCommitId = res.data.headCommitId;
+    prStore.headType = res.data.headType;
+    prStore.id = res.data.id;
+    prStore.prStatus = res.data.prStatus;
+    prStore.prTitle = res.data.prTitle;
+    prStore.repoId = res.data.repoId;
+    prStore.target = res.data.target;
+    prStore.targetCommitId = res.data.targetCommitId;
+    prStore.targetType = res.data.targetType;
     listTimeline();
-    if (prStore.value.prStatus === 1) {
+    if (prStore.prStatus === 1) {
       detectCanMerge();
     }
     initGetWorkflowTaskInterval();
   });
 };
 const diffRefs = () => {
-  if (prStore.value.id === 0) {
+  if (prStore.id === 0) {
     return;
   }
   let req = {
     repoId,
-    targetType: prStore.value.targetType,
-    target: prStore.value.target,
-    headType: prStore.value.headType,
-    head: prStore.value.head
+    targetType: prStore.targetType,
+    target: prStore.target,
+    headType: prStore.headType,
+    head: prStore.head
   };
-  if (prStore.value.prStatus === 3) {
-    req.head = prStore.value.headCommitId;
+  if (prStore.prStatus === 3) {
+    req.head = prStore.headCommitId;
     req.headType = "commit";
-    req.target = prStore.value.targetCommitId;
+    req.target = prStore.targetCommitId;
     req.targetType = "commit";
   }
   diffRefsRequest(req).then(res => {
@@ -514,13 +536,12 @@ const closePr = () => {
     cancelText: "cancel",
     onOk() {
       closePullRequestRequest(route.params.prId).then(res => {
-        console.log(res);
         if (res.data.statusChange) {
           reload();
           return;
         }
         message.success("关闭成功");
-        prStore.value.prStatus = 2;
+        prStore.prStatus = 2;
         listTimeline();
       });
     },
@@ -565,7 +586,7 @@ const cancelReply = () => {
 const canReview = () => {
   canReviewLoaded.value = false;
   nextTick(() => {
-    canReviewRequest(prStore.value.id).then(res => {
+    canReviewRequest(prStore.id).then(res => {
       if (res.data.statusChange) {
         reload();
         return;
@@ -608,7 +629,7 @@ const addComment = () => {
     return;
   }
   addCommentRequest({
-    prId: prStore.value.id,
+    prId: prStore.id,
     hasReply: replyItem.replyFrom > 0,
     comment: replyItem.replyComment,
     replyFrom: replyItem.replyFrom
@@ -627,7 +648,7 @@ const mergePr = () => {
     cancelText: "cancel",
     onOk() {
       merging.value = true;
-      mergePullRequestRequest(prStore.value.id)
+      mergePullRequestRequest(prStore.id)
         .then(res => {
           if (!res.data.statusChange) {
             merging.value = false;
@@ -643,7 +664,7 @@ const mergePr = () => {
   });
 };
 const agreeReview = () => {
-  agreeReviewRequest(prStore.value.id).then(res => {
+  agreeReviewRequest(prStore.id).then(res => {
     if (res.data.statusChange) {
       reload();
       return;
@@ -721,7 +742,7 @@ const getWorkflowTaskStatus = item => {
 };
 
 const initGetWorkflowTaskInterval = () => {
-  if (prStore.value.prStatus === 3 && !workflowTaskInterval.value) {
+  if (prStore.prStatus === 3 && !workflowTaskInterval.value) {
     getWorkflowTasks();
     workflowTaskInterval.value = setInterval(() => getWorkflowTasks(), 5000);
   }

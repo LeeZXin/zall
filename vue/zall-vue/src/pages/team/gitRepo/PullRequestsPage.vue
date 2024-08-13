@@ -26,7 +26,13 @@
           <search-outlined />
         </template>
       </a-input>
-      <a-button type="primary" style="margin-left:10px" @click="toCreatePage" :icon="h(PlusOutlined)">创建合并请求</a-button>
+      <a-button
+        type="primary"
+        style="margin-left:10px"
+        @click="toCreatePage"
+        :icon="h(PlusOutlined)"
+        v-if="repoStore.perm?.canSubmitPullRequest"
+      >创建合并请求</a-button>
     </div>
     <ul class="pr-list" v-show="prList.length > 0">
       <li v-for="item in prList" v-bind:key="item.id" @click="toDetail(item)">
@@ -79,6 +85,8 @@ import {
 } from "@/api/git/prApi";
 import { useRoute, useRouter } from "vue-router";
 import { readableTimeComparingNow } from "@/utils/time";
+import { useRepoStore } from "@/pinia/repoStore";
+const repoStore = useRepoStore();
 const searchKey = ref("");
 const route = useRoute();
 const router = useRouter();
@@ -114,11 +122,15 @@ const selectPrStatus = () => {
 };
 // 跳转创建请求页面
 const toCreatePage = () => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/create`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/create`
+  );
 };
 // 详情页
 const toDetail = item => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/${item.id}/detail`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/${item.id}/detail`
+  );
 };
 listPullRequest();
 statsPullRequestRequest(repoId).then(res => {

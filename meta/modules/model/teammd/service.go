@@ -228,14 +228,6 @@ func GetTeamsByTeamIdList(ctx context.Context, teamIdList []int64) ([]Team, erro
 	return ret, err
 }
 
-func GetRolesByRoleIdList(ctx context.Context, roleIdList []int64) ([]Role, error) {
-	ret := make([]Role, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		In("role_id", roleIdList).
-		Find(&ret)
-	return ret, err
-}
-
 func ListUserAccountByTeamId(ctx context.Context, teamId int64) ([]string, error) {
 	ret := make([]string, 0)
 	err := xormutil.MustGetXormSession(ctx).
@@ -253,11 +245,4 @@ func ListUserByTeamId(ctx context.Context, teamId int64) ([]User, error) {
 		Asc("role_id", "id").
 		Find(&ret)
 	return ret, err
-}
-
-func IsUserAnyTeamAdmin(ctx context.Context, account string) (bool, error) {
-	return xormutil.MustGetXormSession(ctx).
-		Where("account = ?", account).
-		And("is_admin = ?", 1).
-		Exist(new(User))
 }

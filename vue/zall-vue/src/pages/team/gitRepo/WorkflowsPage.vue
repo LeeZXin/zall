@@ -1,18 +1,13 @@
 <template>
   <div style="padding:10px">
-    <div style="margin-bottom:10px">
+    <div style="margin-bottom:10px" v-if="repoStore.perm?.canManageWorkflow">
       <a-button
         type="primary"
         @click="gotoVarsPage"
         :icon="h(KeyOutlined)"
         style="margin-right:8px"
       >管理变量</a-button>
-      <a-button
-        type="primary"
-        @click="gotoCreatePage"
-        :icon="h(PlusOutlined)"
-        v-if="repoStore.perm?.canManageWorkflow"
-      >创建工作流</a-button>
+      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建工作流</a-button>
     </div>
     <ul class="workflow-list" v-if="workflowList.length > 0">
       <li v-for="item in workflowList" v-bind:key="item.id">
@@ -75,13 +70,7 @@
         </div>
       </li>
     </ul>
-    <ZNoData v-else>
-      <template #desc>
-        <div class="no-data">
-          <span>没有配置工作流, 可点击上方“创建工作流”创建新的工作流</span>
-        </div>
-      </template>
-    </ZNoData>
+    <ZNoData v-else />
     <a-modal
       v-model:open="branchModalOpen"
       :title="branchModalTitle"
@@ -204,8 +193,6 @@ const killTask = item => {
   Modal.confirm({
     title: `你确定要停止${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       killWorkflowTaskRequest(item.lastTask.id).then(() => {
         message.success("停止成功");

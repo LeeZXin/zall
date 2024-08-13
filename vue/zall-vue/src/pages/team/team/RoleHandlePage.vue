@@ -239,7 +239,6 @@ const formState = reactive({
     canAccessRepo: true,
     canPushRepo: true,
     canSubmitPullRequest: true,
-    canReviewPullRequest: true,
     canAddCommentInPullRequest: true,
     canTriggerWorkflow: true
   },
@@ -334,11 +333,11 @@ const repoPermKeys = [
   "canAccessRepo",
   "canPushRepo",
   "canSubmitPullRequest",
-  "canReviewPullRequest",
   "canAddCommentInPullRequest",
   "canManageWorkflow",
   "canTriggerWorkflow",
-  "canManageWebhook"
+  "canManageWebhook",
+  "canManageProtectedBranch"
 ];
 const appPermKeys = [
   "canDevelop",
@@ -375,11 +374,6 @@ const repoPermList = [
         desc: "可发起合并请求"
       },
       {
-        checkbox: "评审合并请求",
-        key: "canReviewPullRequest",
-        desc: "可评审并同意合并请求"
-      },
-      {
         checkbox: "发表评论",
         key: "canAddCommentInPullRequest",
         desc: "可在合并请求里发表评论"
@@ -407,7 +401,17 @@ const repoPermList = [
       {
         checkbox: "管理webhook",
         key: "canManageWebhook",
-        desc: "新增、编辑、删除webhook"
+        desc: "查看、新增、编辑、删除webhook"
+      }
+    ]
+  },
+  {
+    title: "保护分支",
+    perms: [
+      {
+        checkbox: "管理保护分支",
+        key: "canManageProtectedBranch",
+        desc: "查看、新增、编辑、删除保护分支"
       }
     ]
   }
@@ -419,7 +423,6 @@ const showAddRepoPermModal = () => {
     canAccessRepo: true,
     canPushRepo: true,
     canSubmitPullRequest: true,
-    canReviewPullRequest: true,
     canAddCommentInPullRequest: true,
     canTriggerWorkflow: true
   };

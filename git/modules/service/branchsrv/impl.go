@@ -11,6 +11,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
@@ -26,9 +27,23 @@ func (*outerImpl) CreateProtectedBranch(ctx context.Context, reqDTO CreateProtec
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, err := checkAdminPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, err := checkManageProtectedBranchPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
+	}
+	// 检查审批人
+	if len(reqDTO.Cfg.ReviewerList) > 0 {
+		accounts, err := teammd.ListUserAccountByTeamId(ctx, repo.TeamId)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		// 是否包含所有的reviewerList
+		reviewerSet := hashset.NewHashSet([]string(reqDTO.Cfg.ReviewerList)...)
+		reviewerSet.Remove(accounts...)
+		if reviewerSet.Size() != 0 {
+			return util.InvalidArgsError()
+		}
 	}
 	err = branchmd.InsertProtectedBranch(ctx, branchmd.InsertProtectedBranchReqDTO{
 		RepoId:  reqDTO.RepoId,
@@ -75,7 +90,7 @@ func (*outerImpl) UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtec
 	if !b {
 		return util.InvalidArgsError()
 	}
-	repo, err := checkAdminPerm(ctx, protectedBranch.RepoId, reqDTO.Operator)
+	repo, err := checkManageProtectedBranchPerm(ctx, protectedBranch.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -125,7 +140,7 @@ func (*outerImpl) DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtec
 	if !b {
 		return util.InvalidArgsError()
 	}
-	repo, err := checkAdminPerm(ctx, pb.RepoId, reqDTO.Operator)
+	repo, err := checkManageProtectedBranchPerm(ctx, pb.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -167,7 +182,7 @@ func (*outerImpl) ListProtectedBranch(ctx context.Context, reqDTO ListProtectedB
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkTeamPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, err := checkManageProtectedBranchPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +201,8 @@ func (*outerImpl) ListProtectedBranch(ctx context.Context, reqDTO ListProtectedB
 	return ret, nil
 }
 
-// checkAdminPerm 检查权限
-func checkAdminPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
+// checkManageProtectedBranchPerm 检查权限
+func checkManageProtectedBranchPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
 	// 检查仓库是否存在
 	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
@@ -205,32 +220,8 @@ func checkAdminPerm(ctx context.Context, repoId int64, operator apisession.UserI
 	if err != nil {
 		return repo, util.InternalError(err)
 	}
-	if !b || !p.IsAdmin {
-		return repo, util.UnauthorizedError()
+	if b && (p.IsAdmin || p.PermDetail.GetRepoPerm(repoId).CanManageProtectedBranch) {
+		return repo, nil
 	}
-	return repo, nil
-}
-
-// checkTeamPerm 仅检查是否属于团队权限
-func checkTeamPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) error {
-	// 检查仓库是否存在
-	repo, b, err := repomd.GetByRepoId(ctx, repoId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	if operator.IsAdmin {
-		return nil
-	}
-	_, b, err = teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
-	if err != nil {
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.UnauthorizedError()
-	}
-	return nil
+	return repo, util.UnauthorizedError()
 }
