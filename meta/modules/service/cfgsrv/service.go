@@ -10,8 +10,18 @@ var (
 )
 
 func Init() {
+	InitInner()
+	InitOuter()
+}
+
+func InitInner() {
 	if Inner == nil {
 		Inner = new(innerImpl)
+	}
+}
+
+func InitOuter() {
+	if Outer == nil {
 		Outer = new(outerImpl)
 	}
 }

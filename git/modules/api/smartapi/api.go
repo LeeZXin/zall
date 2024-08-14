@@ -29,7 +29,7 @@ func InitApi() {
 	reposrv.Init()
 	workflowsrv.Init()
 	usersrv.InitInner()
-	cfgsrv.Init()
+	cfgsrv.InitInner()
 	// smart http协议 不实现dumb协议
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/:corpId/:repoName", handleGoGet, packRepoPath, auth)

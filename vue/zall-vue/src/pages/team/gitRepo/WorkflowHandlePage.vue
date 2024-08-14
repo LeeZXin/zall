@@ -19,16 +19,16 @@
         </div>
       </div>
       <div class="section">
-        <div class="section-title">代理地址&Token</div>
+        <div class="section-title">Zallet代理</div>
         <div class="section-body">
-          <div>
-            <a-input type="input" v-model:value="formState.agentHost" />
-          </div>
-          <div class="input-desc">代理地址为实际执行脚本的服务器地址, 将配合代理密钥和yaml执行工作流, 格式为ip:端口</div>
-          <div style="margin-top:10px">
-            <a-input type="input" v-model:value="formState.agentToken" />
-          </div>
-          <div class="input-desc">代理Token将用于校验身份, 长度不得大于255</div>
+          <a-select
+            v-model:value="formState.agentId"
+            style="width:100%;"
+            :options="zalletNodeList"
+            show-search
+            :filter-option="filterZalletNodeListOption"
+          />
+          <div class="input-desc">选择一个zallet代理来执行</div>
         </div>
       </div>
       <div class="section">
@@ -68,7 +68,7 @@
   </div>
 </template>
 <script setup>
-import { reactive, createVNode } from "vue";
+import { reactive, createVNode, ref } from "vue";
 import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
 import { Codemirror } from "vue-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -80,12 +80,11 @@ import {
   getWorkflowDetailRequest,
   updateWorkflowRequest
 } from "@/api/git/workflowApi";
+import { listAllZalletNodeRequest } from "@/api/zallet/zalletApi";
 import { useRouter, useRoute } from "vue-router";
 import {
   workflowNameRegexp,
   workflowWildBranchRegexp,
-  workflowAgentHostRegexp,
-  workflowAgentTokenRegexp,
   workflowDescRegexp
 } from "@/utils/regexp";
 const route = useRoute();
@@ -101,15 +100,15 @@ const radioStyle = reactive({
   display: "flex",
   alignItems: "flex-start"
 });
+const zalletNodeList = ref([]);
 const formState = reactive({
   id: 0,
   name: "",
-  agentHost: "",
-  agentToken: "",
   yamlContent: "",
   wildBranches: "",
   desc: "",
-  source: 1
+  source: 1,
+  agentId: undefined
 });
 const formatYaml = () => {
   if (formState.yamlContent) {
@@ -160,16 +159,12 @@ const createOrUpdateWorkflow = () => {
     message.warn("描述格式错误");
     return;
   }
-  if (!workflowAgentHostRegexp.test(formState.agentHost)) {
-    message.warn("代理地址错误");
-    return;
-  }
-  if (!workflowAgentTokenRegexp.test(formState.agentToken)) {
-    message.warn("代理token错误");
-    return;
-  }
   if (!formState.wildBranches) {
     message.warn("分支不能为空");
+    return;
+  }
+  if (!formState.agentId) {
+    message.warn("请选择代理");
     return;
   }
   let branches = formState.wildBranches.split(";");
@@ -198,42 +193,55 @@ const createOrUpdateWorkflow = () => {
       break;
   }
   if (mode === "update") {
-    let httpReq = {
+    updateWorkflowRequest({
       name: formState.name,
       workflowId: formState.id,
       source: source,
-      agentHost: formState.agentHost,
-      agentToken: formState.agentToken,
+      agentId: formState.agentId,
       yamlContent: formState.yamlContent,
       desc: formState.desc
-    };
-    updateWorkflowRequest(httpReq).then(() => {
-      message.success("操作成功");
+    }).then(() => {
+      message.success("编辑成功");
+      router.push(
+        `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/list`
+      );
     });
   } else if (mode === "create") {
-    let httpReq = {
+    createWorkflowRequest({
       name: formState.name,
       repoId: parseInt(route.params.repoId),
       source: source,
-      agentHost: formState.agentHost,
-      agentToken: formState.agentToken,
+      agentId: formState.agentId,
       yamlContent: formState.yamlContent,
       desc: formState.desc
-    };
-    createWorkflowRequest(httpReq).then(() => {
+    }).then(() => {
+      message.success("创建成功");
       router.push(
         `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/list`
       );
     });
   }
 };
+const filterZalletNodeListOption = (input, option) => {
+  return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+const listAllZalletNode = () => {
+  listAllZalletNodeRequest().then(res => {
+    zalletNodeList.value = res.data.map(item => {
+      return {
+        value: item.id,
+        label: item.name
+      };
+    });
+  });
+};
+listAllZalletNode();
 if (mode === "update") {
   getWorkflowDetailRequest(route.params.workflowId).then(res => {
     let wf = res.data;
     formState.id = wf.id;
     formState.name = wf.name;
-    formState.agentHost = wf.agentHost;
-    formState.agentToken = wf.agentToken;
+    formState.agentId = wf.agentId;
     formState.yamlContent = wf.yamlContent;
     if (wf.source.sourceType === 1) {
       formState.wildBranches = wf.source.branchSource.join(";");

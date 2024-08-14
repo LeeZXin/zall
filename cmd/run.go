@@ -24,6 +24,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/cfgapi"
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
+	"github.com/LeeZXin/zall/meta/modules/api/zalletapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/git"
@@ -131,6 +132,7 @@ func runZall(*cli.Context) error {
 	}
 	// for zallet
 	{
+		zalletapi.InitApi()
 		if static.GetBool("zallet.enabled") {
 			logger.Logger.Info("zallet status server enabled")
 			statusapi.InitApi()

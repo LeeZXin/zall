@@ -16,7 +16,7 @@ import (
 
 func InitApi() {
 	promsrv.Init()
-	cfgsrv.Init()
+	cfgsrv.InitInner()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/promScrape", apisession.CheckLogin)
 		{

@@ -73,8 +73,7 @@ type Workflow struct {
 	RepoId      int64     `json:"repoId"`
 	YamlContent string    `json:"yamlContent"`
 	Source      *Source   `json:"source"`
-	AgentHost   string    `json:"agentHost"`
-	AgentToken  string    `json:"agentToken"`
+	AgentId     int64     `json:"agentId"`
 	LastTaskId  int64     `json:"lastTaskId"`
 	Created     time.Time `json:"created" xorm:"created"`
 	Updated     time.Time `json:"updated" xorm:"updated"`

@@ -29,9 +29,9 @@
             <BookOutlined />
             <span>注册中心来源</span>
           </a-menu-item>
-          <a-menu-item key="/zallet/list">
+          <a-menu-item key="/zalletNode/list">
             <BookOutlined />
-            <span>Zallet代理</span>
+            <span>Zallet代理节点</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -80,7 +80,8 @@ const pagesMap = {
   "/user": "/user/list",
   "/propertySource": "/propertySource/list",
   "/serviceSource": "/serviceSource/list",
-  "/discoverySource": "/discoverySource/list"
+  "/discoverySource": "/discoverySource/list",
+  "/zalletNode": "/zalletNode/list"
 };
 changeSelectedKey(route.path);
 watch(

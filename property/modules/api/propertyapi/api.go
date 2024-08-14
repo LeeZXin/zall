@@ -15,7 +15,7 @@ import (
 )
 
 func InitApi() {
-	cfgsrv.Init()
+	cfgsrv.InitInner()
 	propertysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/propertySource", apisession.CheckLogin)

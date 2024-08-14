@@ -13,8 +13,7 @@ type CreateWorkflowReqDTO struct {
 	Name        string              `json:"name"`
 	RepoId      int64               `json:"repoId"`
 	YamlContent string              `json:"yamlContent"`
-	AgentHost   string              `json:"agentHost"`
-	AgentToken  string              `json:"agentToken"`
+	AgentId     int64               `json:"agentId"`
 	Source      workflowmd.Source   `json:"source"`
 	Desc        string              `json:"desc"`
 	Operator    apisession.UserInfo `json:"operator"`
@@ -33,10 +32,7 @@ func (r *CreateWorkflowReqDTO) IsValid() error {
 	if r.YamlContent == "" {
 		return util.InvalidArgsError()
 	}
-	if !util.GenIpPortPattern().MatchString(r.AgentHost) {
-		return util.InvalidArgsError()
-	}
-	if len(r.AgentToken) > 1024 {
+	if r.AgentId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Source.IsValid() {
@@ -82,8 +78,7 @@ type UpdateWorkflowReqDTO struct {
 	WorkflowId  int64               `json:"workflowId"`
 	Name        string              `json:"name"`
 	YamlContent string              `json:"yamlContent"`
-	AgentHost   string              `json:"agentHost"`
-	AgentToken  string              `json:"agentToken"`
+	AgentId     int64               `json:"agentId"`
 	Source      workflowmd.Source   `json:"source"`
 	Desc        string              `json:"desc"`
 	Operator    apisession.UserInfo `json:"operator"`
@@ -102,10 +97,7 @@ func (r *UpdateWorkflowReqDTO) IsValid() error {
 	if r.YamlContent == "" {
 		return util.InvalidArgsError()
 	}
-	if !util.GenIpPortPattern().MatchString(r.AgentHost) {
-		return util.InvalidArgsError()
-	}
-	if len(r.AgentToken) > 1024 {
+	if r.AgentId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Source.IsValid() {
@@ -203,8 +195,7 @@ type WorkflowDTO struct {
 	RepoId      int64             `json:"repoId"`
 	YamlContent string            `json:"yamlContent"`
 	Source      workflowmd.Source `json:"source"`
-	AgentHost   string            `json:"agentHost"`
-	AgentToken  string            `json:"agentToken"`
+	AgentId     int64             `json:"agentId"`
 }
 
 type GetWorkflowDetailReqDTO struct {

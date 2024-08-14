@@ -83,8 +83,7 @@ func InsertWorkflow(ctx context.Context, reqDTO InsertWorkflowReqDTO) error {
 		RepoId:      reqDTO.RepoId,
 		YamlContent: reqDTO.YamlContent,
 		Source:      &reqDTO.Source,
-		AgentHost:   reqDTO.AgentHost,
-		AgentToken:  reqDTO.AgentToken,
+		AgentId:     reqDTO.AgentId,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return err
@@ -93,11 +92,10 @@ func InsertWorkflow(ctx context.Context, reqDTO InsertWorkflowReqDTO) error {
 func UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("yaml_content", "agent_host", "agent_token", "name", "description", "source").
+		Cols("yaml_content", "agent_id", "name", "description", "source").
 		Update(&Workflow{
 			YamlContent: reqDTO.Content,
-			AgentHost:   reqDTO.AgentHost,
-			AgentToken:  reqDTO.AgentToken,
+			AgentId:     reqDTO.AgentId,
 			Name:        reqDTO.Name,
 			Description: reqDTO.Desc,
 			Source:      &reqDTO.Source,

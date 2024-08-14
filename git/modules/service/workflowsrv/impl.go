@@ -8,6 +8,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
+	"github.com/LeeZXin/zall/meta/modules/model/zalletmd"
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
@@ -141,6 +142,15 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 		logger.Logger.Error(err)
 		return err
 	}
+	// 获取agent
+	agent, b, err := zalletmd.GetZalletNodeById(ctx, wf.AgentId)
+	if err != nil {
+		logger.Logger.Error(err)
+		return err
+	}
+	if !b {
+		return fmt.Errorf("zallet agent id: %d not found", wf.AgentId)
+	}
 	now := time.Now()
 	bizId := now.Format("2006010215") + idutil.RandomUuid()
 	var task workflowmd.Task
@@ -157,8 +167,8 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 			Operator:     reqDTO.Operator,
 			Branch:       reqDTO.Branch,
 			PrId:         reqDTO.PrId,
-			AgentHost:    wf.AgentHost,
-			AgentToken:   wf.AgentToken,
+			AgentHost:    agent.AgentHost,
+			AgentToken:   agent.AgentToken,
 			BizId:        bizId,
 		})
 		if err2 != nil {
@@ -196,7 +206,7 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 			envs[vars.Name] = vars.Content
 		}
 	}
-	err = sshagent.NewAgentCommand(wf.AgentHost, wf.AgentToken).
+	err = sshagent.NewAgentCommand(agent.AgentHost, agent.AgentToken).
 		ExecuteWorkflow(wf.YamlContent, bizId, envs)
 	ctx2, closer2 := xormstore.Context(context.Background())
 	defer closer2.Close()
@@ -248,12 +258,22 @@ func (*outerImpl) CreateWorkflow(ctx context.Context, reqDTO CreateWorkflowReqDT
 		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.InvalidWorkflowContent)
 		return
 	}
+	// 校验agentId
+	b, err := zalletmd.ExistZalletNodeById(ctx, reqDTO.AgentId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
 	err = workflowmd.InsertWorkflow(ctx, workflowmd.InsertWorkflowReqDTO{
 		RepoId:      reqDTO.RepoId,
 		Name:        reqDTO.Name,
 		YamlContent: reqDTO.YamlContent,
-		AgentHost:   reqDTO.AgentHost,
-		AgentToken:  reqDTO.AgentToken,
+		AgentId:     reqDTO.AgentId,
 		Source:      reqDTO.Source,
 		Desc:        reqDTO.Desc,
 	})
@@ -353,14 +373,24 @@ func (*outerImpl) UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDT
 		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.InvalidWorkflowContent)
 		return
 	}
+	// 校验agentId
+	b, err := zalletmd.ExistZalletNodeById(ctx, reqDTO.AgentId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b {
+		err = util.InvalidArgsError()
+		return
+	}
 	_, err = workflowmd.UpdateWorkflow(ctx, workflowmd.UpdateWorkflowReqDTO{
-		Id:         reqDTO.WorkflowId,
-		Name:       reqDTO.Name,
-		Content:    reqDTO.YamlContent,
-		AgentHost:  reqDTO.AgentHost,
-		AgentToken: reqDTO.AgentToken,
-		Desc:       reqDTO.Desc,
-		Source:     reqDTO.Source,
+		Id:      reqDTO.WorkflowId,
+		Name:    reqDTO.Name,
+		Content: reqDTO.YamlContent,
+		AgentId: reqDTO.AgentId,
+		Desc:    reqDTO.Desc,
+		Source:  reqDTO.Source,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -871,8 +901,7 @@ func workflow2Dto(wf workflowmd.Workflow) WorkflowDTO {
 		Desc:        wf.Description,
 		RepoId:      wf.RepoId,
 		YamlContent: wf.YamlContent,
-		AgentHost:   wf.AgentHost,
-		AgentToken:  wf.AgentToken,
+		AgentId:     wf.AgentId,
 	}
 	if wf.Source != nil {
 		ret.Source = *wf.Source

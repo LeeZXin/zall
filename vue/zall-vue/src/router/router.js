@@ -91,6 +91,20 @@ const router = createRouter({
                 path: "/sa/user/:account(.+)/update",
                 component: () =>
                     import ("../pages/sa/UserManageHandlePage")
+            }, {
+                path: "/sa/zalletNode/list/:env?",
+                component: () =>
+                    import ("../pages/sa/ZalletNodeListPage")
+            }, {
+                path: "/sa/zalletNode/create",
+                component: () =>
+                    import ("../pages/sa/ZalletNodeHandlePage")
+
+            }, {
+                path: "/sa/zalletNode/:nodeId(\\d+)/update",
+                component: () =>
+                    import ("../pages/sa/ZalletNodeHandlePage")
+
             }]
         },
         {

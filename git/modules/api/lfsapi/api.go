@@ -30,7 +30,7 @@ const (
 func InitApi() {
 	lfssrv.Init()
 	reposrv.Init()
-	cfgsrv.Init()
+	cfgsrv.InitInner()
 	usersrv.InitInner()
 	// 注册lfs api
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {

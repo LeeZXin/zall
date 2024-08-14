@@ -24,20 +24,18 @@ type InsertWorkflowReqDTO struct {
 	RepoId      int64
 	Name        string
 	YamlContent string
-	AgentHost   string
-	AgentToken  string
+	AgentId     int64
 	Source      Source
 	Desc        string
 }
 
 type UpdateWorkflowReqDTO struct {
-	Id         int64
-	Name       string
-	Content    string
-	AgentHost  string
-	AgentToken string
-	Desc       string
-	Source     Source
+	Id      int64
+	Name    string
+	Content string
+	AgentId int64
+	Desc    string
+	Source  Source
 }
 
 type ListTaskByWorkflowIdReqDTO struct {

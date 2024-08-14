@@ -21,8 +21,6 @@ const webhookSecretRegexp = /^.{1,1024}$/;
 const workflowNameRegexp = /^.{1,32}$/;
 const workflowWildBranchRegexp = /^.{1,32}$/;
 const workflowBranchRegexp = /^.{1,1024}$/;
-const workflowAgentHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
-const workflowAgentTokenRegexp = /^.{1,1024}$/;
 const workflowDescRegexp = /^.{1,1024}$/;
 const workflowVarsNameRegexp = /^\w{1,32}$/;
 const workflowVarsContentRegexp = /^[\s\S]{1,10240}$/;
@@ -68,6 +66,10 @@ const envRegexp = /^[a-zA-Z]{1,16}$/;
 const sshKeyNameRegexp = /^.{1,128}$/;
 // gpg key
 const gpgKeyNameRegexp = /^.{1,128}$/;
+// zallet node
+const zalletNodeNameRegexp = /^.{1,32}$/;
+const zalletNodeAgentHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
+const zalletNodeAgentTokenRegexp = /^.{0,1024}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -85,8 +87,6 @@ export {
     workflowNameRegexp,
     workflowWildBranchRegexp,
     workflowBranchRegexp,
-    workflowAgentHostRegexp,
-    workflowAgentTokenRegexp,
     workflowDescRegexp,
     workflowVarsNameRegexp,
     workflowVarsContentRegexp,
@@ -116,5 +116,8 @@ export {
     gitRepoServerHostRegexp,
     envRegexp,
     sshKeyNameRegexp,
-    gpgKeyNameRegexp
+    gpgKeyNameRegexp,
+    zalletNodeNameRegexp,
+    zalletNodeAgentHostRegexp,
+    zalletNodeAgentTokenRegexp
 }

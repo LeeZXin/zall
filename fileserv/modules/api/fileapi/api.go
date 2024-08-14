@@ -24,8 +24,9 @@ var (
 
 func InitApi() {
 	productToken = static.GetString("files.product.token")
+	filesrv.Init()
 	filesrv.InitStorage()
-	cfgsrv.Init()
+	cfgsrv.InitInner()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/files/avatar", apisession.CheckLogin)
 		{

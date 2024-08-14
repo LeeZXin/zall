@@ -15,7 +15,7 @@ import (
 )
 
 func InitApi() {
-	cfgsrv.Init()
+	cfgsrv.InitInner()
 	cfgsrv.Inner.InitGitCfg()
 	reposrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
