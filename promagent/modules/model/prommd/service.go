@@ -25,13 +25,20 @@ func GetAllScrape(ctx context.Context, reqDTO GetAllScrapeReqDTO) ([]Scrape, err
 	return ret, err
 }
 
-func ListScrapeByAppIdAndEnv(ctx context.Context, appId, env string) ([]Scrape, error) {
+func ListScrape(ctx context.Context, reqDTO ListScrapeReqDTO) ([]Scrape, int64, error) {
 	ret := make([]Scrape, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		Where("app_id = ?", appId).
-		And("env = ?", env).
-		Find(&ret)
-	return ret, err
+	session := xormutil.MustGetXormSession(ctx).
+		Where("env = ?", reqDTO.Env)
+	if reqDTO.AppId != "" {
+		session.And("app_id = ?", reqDTO.AppId)
+	}
+	if reqDTO.Endpoint != "" {
+		session.And("endpoint like ?", reqDTO.Endpoint+"%")
+	}
+	total, err := session.
+		Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).
+		FindAndCount(&ret)
+	return ret, total, err
 }
 
 func DeleteScrapeById(ctx context.Context, id int64) (bool, error) {
@@ -39,6 +46,13 @@ func DeleteScrapeById(ctx context.Context, id int64) (bool, error) {
 		Where("id = ?", id).
 		Delete(new(Scrape))
 	return rows == 1, err
+}
+
+func DeleteScrapeByAppId(ctx context.Context, appId string) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		Delete(new(Scrape))
+	return err
 }
 
 func GetScrapeById(ctx context.Context, id int64) (Scrape, bool, error) {

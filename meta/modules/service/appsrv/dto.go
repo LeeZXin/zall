@@ -32,6 +32,32 @@ func (r *ListAppReqDTO) IsValid() error {
 	return nil
 }
 
+type ListAllAppByAdminReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAllAppByAdminReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ListAllAppBySaReqDTO struct {
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListAllAppBySaReqDTO) IsValid() error {
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type CreateAppReqDTO struct {
 	AppId    string              `json:"appId"`
 	TeamId   int64               `json:"teamId"`

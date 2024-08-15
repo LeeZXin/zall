@@ -3,11 +3,13 @@ package util
 import (
 	"database/sql"
 	"github.com/LeeZXin/zall/pkg/mysqltool/parser"
+	"time"
 )
 
 type MysqlQueryResult struct {
-	Columns []string
-	Data    [][]string
+	Columns  []string
+	Data     [][]string
+	Duration time.Duration
 }
 
 type MysqlQueryResultWithErr struct {
@@ -57,10 +59,12 @@ func MysqlQueries(datasourceName string, cmds ...string) ([]MysqlQueryResultWith
 }
 
 func query(db *sql.DB, cmd string) (MysqlQueryResult, error) {
+	beginTime := time.Now()
 	rows, err := db.Query(cmd)
 	if err != nil {
 		return MysqlQueryResult{}, err
 	}
+	duration := time.Since(beginTime)
 	defer rows.Close()
 	columns, err := rows.Columns()
 	if err != nil {
@@ -84,8 +88,9 @@ func query(db *sql.DB, cmd string) (MysqlQueryResult, error) {
 		ret = append(ret, row)
 	}
 	return MysqlQueryResult{
-		Columns: columns,
-		Data:    ret,
+		Columns:  columns,
+		Data:     ret,
+		Duration: duration,
 	}, err
 }
 

@@ -24,7 +24,9 @@ type OuterService interface {
 	// ListApp 应用服务列表
 	ListApp(context.Context, ListAppReqDTO) ([]AppDTO, error)
 	// ListAllAppByAdmin 所有应用服务列表 管理员权限
-	ListAllAppByAdmin(context.Context, ListAppReqDTO) ([]AppDTO, error)
+	ListAllAppByAdmin(context.Context, ListAllAppByAdminReqDTO) ([]AppDTO, error)
+	// ListAllAppBySa 所有应用服务列表 超级管理员权限
+	ListAllAppBySa(context.Context, ListAllAppBySaReqDTO) ([]AppDTO, error)
 	// TransferTeam 迁移团队
 	TransferTeam(context.Context, TransferTeamReqDTO) error
 }

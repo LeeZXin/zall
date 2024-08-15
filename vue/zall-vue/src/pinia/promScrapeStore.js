@@ -6,6 +6,7 @@ export const usePromScrapeStore = defineStore('promScrape', {
         env: "",
         endpoint: "",
         targetType: 0,
-        target: ""
+        target: "",
+        appId: ""
     })
 })

@@ -13,7 +13,6 @@ var (
 		CanManagePropertySource:  true,
 		CanDeployProperty:        true,
 		CanManageDiscoverySource: true,
-		CanManagePromAgent:       true,
 		CanCreateDeployPlan:      true,
 	}
 	DefaultTeamPerm = TeamPerm{
@@ -157,8 +156,6 @@ type AppPerm struct {
 	CanDeployProperty bool `json:"canDeployProperty"`
 	// 是否可管理注册中心来源
 	CanManageDiscoverySource bool `json:"canManageDiscoverySource"`
-	// 是否可管理监控告警
-	CanManagePromAgent bool `json:"canManagePromAgent"`
 	// 是否可直接创建发布计划
 	CanCreateDeployPlan bool `json:"canCreateDeployPlan"`
 }

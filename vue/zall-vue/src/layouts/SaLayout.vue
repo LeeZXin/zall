@@ -30,8 +30,12 @@
             <span>注册中心来源</span>
           </a-menu-item>
           <a-menu-item key="/zalletNode/list">
-            <BookOutlined />
+            <ClusterOutlined />
             <span>Zallet代理节点</span>
+          </a-menu-item>
+          <a-menu-item key="/promScrape/list">
+            <AlertOutlined />
+            <span>Prometheus</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -49,7 +53,9 @@ import { ref, watch } from "vue";
 import {
   UserOutlined,
   SettingOutlined,
-  BookOutlined
+  BookOutlined,
+  ClusterOutlined,
+  AlertOutlined
 } from "@ant-design/icons-vue";
 const route = useRoute();
 const router = useRouter();
@@ -81,7 +87,8 @@ const pagesMap = {
   "/propertySource": "/propertySource/list",
   "/serviceSource": "/serviceSource/list",
   "/discoverySource": "/discoverySource/list",
-  "/zalletNode": "/zalletNode/list"
+  "/zalletNode": "/zalletNode/list",
+  "/promScrape": "/promScrape/list"
 };
 changeSelectedKey(route.path);
 watch(

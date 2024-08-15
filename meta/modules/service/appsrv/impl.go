@@ -8,6 +8,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/perm"
+	"github.com/LeeZXin/zall/promagent/modules/model/prommd"
 	"github.com/LeeZXin/zall/property/modules/model/propertymd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -133,6 +134,11 @@ func (*outerImpl) DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) (err er
 		if err2 != nil {
 			return err2
 		}
+		// 删除prometheus抓取任务
+		err2 = prommd.DeleteScrapeByAppId(ctx, reqDTO.AppId)
+		if err2 != nil {
+			return err2
+		}
 		// 团队权限检查
 		if len(needUpdateRoles) > 0 {
 			for _, role := range needUpdateRoles {
@@ -227,7 +233,7 @@ func (*outerImpl) ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, 
 }
 
 // ListAllAppByAdmin 所有应用服务列表 管理员权限
-func (*outerImpl) ListAllAppByAdmin(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, error) {
+func (*outerImpl) ListAllAppByAdmin(ctx context.Context, reqDTO ListAllAppByAdminReqDTO) ([]AppDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
@@ -242,6 +248,30 @@ func (*outerImpl) ListAllAppByAdmin(ctx context.Context, reqDTO ListAppReqDTO) (
 	}
 	// 管理员可访问所有app
 	apps, err := appmd.ListAppByTeamId(ctx, reqDTO.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	ret, _ := listutil.Map(apps, func(t appmd.App) (AppDTO, error) {
+		return AppDTO{
+			AppId: t.AppId,
+			Name:  t.Name,
+		}, nil
+	})
+	return ret, nil
+}
+
+// ListAllAppBySa 所有应用服务列表 超级管理员权限
+func (*outerImpl) ListAllAppBySa(ctx context.Context, reqDTO ListAllAppBySaReqDTO) ([]AppDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	if !reqDTO.Operator.IsAdmin {
+		return nil, util.UnauthorizedError()
+	}
+	apps, err := appmd.ListAllApp(ctx, []string{"app_id", "name"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)

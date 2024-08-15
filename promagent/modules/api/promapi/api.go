@@ -64,30 +64,41 @@ func deleteScrape(c *gin.Context) {
 }
 
 func listScrape(c *gin.Context) {
-	scraps, err := promsrv.Outer.ListScrape(c, promsrv.ListScrapeReqDTO{
-		AppId:    c.Query("appId"),
-		Env:      c.Query("env"),
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
+	var req ListScrapeReqVO
+	if util.ShouldBindQuery(&req, c) {
+		scraps, total, err := promsrv.Outer.ListScrape(c, promsrv.ListScrapeReqDTO{
+			Endpoint: req.Endpoint,
+			AppId:    req.AppId,
+			Env:      req.Env,
+			PageNum:  req.PageNum,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(scraps, func(t promsrv.ScrapeDTO) (ScrapeVO, error) {
+			return ScrapeVO{
+				Id:         t.Id,
+				Endpoint:   t.Endpoint,
+				AppId:      t.AppId,
+				AppName:    t.AppName,
+				Target:     t.Target,
+				TargetType: t.TargetType,
+				Created:    t.Created.Format(time.DateTime),
+				Env:        t.Env,
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.Page2Resp[ScrapeVO]{
+			DataResp: ginutil.DataResp[[]ScrapeVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			PageNum:    req.PageNum,
+			TotalCount: total,
+		})
 	}
-	data, _ := listutil.Map(scraps, func(t promsrv.ScrapeDTO) (ScrapeVO, error) {
-		return ScrapeVO{
-			Id:         t.Id,
-			Endpoint:   t.Endpoint,
-			AppId:      t.AppId,
-			Target:     t.Target,
-			TargetType: t.TargetType,
-			Created:    t.Created.Format(time.DateTime),
-			Env:        t.Env,
-		}, nil
-	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]ScrapeVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
-	})
+
 }
 
 func updateScrape(c *gin.Context) {

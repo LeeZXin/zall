@@ -614,8 +614,9 @@ func executeSelectSql(c *gin.Context) {
 		c.JSON(http.StatusOK, ginutil.DataResp[ExecuteSelectSqlResultVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
 			Data: ExecuteSelectSqlResultVO{
-				Columns: result.Columns,
-				Data:    result.ToMap(),
+				Columns:  result.Columns,
+				Data:     result.ToMap(),
+				Duration: result.Duration.String(),
 			},
 		})
 	}

@@ -5,7 +5,7 @@
         v-model:value="searchKey"
         placeholder="搜索名称"
         style="width:240px;margin-right:6px"
-        @pressEnter="listZalletNode"
+        @pressEnter="searchZalletNode"
       >
         <template #suffix>
           <SearchOutlined />
@@ -136,12 +136,15 @@ const deleteZalletNode = item => {
     onOk() {
       deleteZalletNodeRequest(item.id).then(() => {
         message.success("操作成功");
-        dataPage.current = 1;
-        listZalletNode();
+        searchZalletNode();
       });
     }
   });
 };
+const searchZalletNode = () => {
+    dataPage.current = 1;
+    listZalletNode();
+}
 listZalletNode();
 </script>
 <style scoped>

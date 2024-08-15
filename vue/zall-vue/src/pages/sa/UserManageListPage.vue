@@ -5,7 +5,7 @@
         v-model:value="searchUserKey"
         placeholder="搜索帐号"
         style="width:240px;margin-right:6px"
-        @pressEnter="listUser"
+        @pressEnter="searchUser"
       >
         <template #suffix>
           <SearchOutlined />
@@ -23,7 +23,11 @@
         <span v-else-if="dataIndex === 'isProhibited'">{{dataItem[dataIndex] ? '是':'否'}}</span>
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
-          <div class="op-icon" @click="deleteUser(dataItem)" v-if="dataItem['account'] !== userStore.account">
+          <div
+            class="op-icon"
+            @click="deleteUser(dataItem)"
+            v-if="dataItem['account'] !== userStore.account"
+          >
             <a-tooltip placement="top">
               <template #title>
                 <span>Delete User</span>
@@ -277,11 +281,15 @@ const deleteUser = item => {
     onOk() {
       deleteUserRequest(item.account).then(() => {
         message.success("操作成功");
-        dataPage.current = 1;
-        listUser();
+        searchUser();
       });
     }
   });
+};
+// 搜索用户
+const searchUser = () => {
+  dataPage.current = 1;
+  listUser();
 };
 listUser();
 </script>

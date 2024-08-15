@@ -20,3 +20,11 @@ type GetAllScrapeReqDTO struct {
 	Env      string
 	Cols     []string
 }
+
+type ListScrapeReqDTO struct {
+	AppId    string
+	Env      string
+	Endpoint string
+	PageNum  int
+	PageSize int
+}

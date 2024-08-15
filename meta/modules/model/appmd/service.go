@@ -51,6 +51,16 @@ func ListAppByTeamId(ctx context.Context, teamId int64) ([]App, error) {
 	return ret, err
 }
 
+func ListAllApp(ctx context.Context, cols []string) ([]App, error) {
+	ret := make([]App, 0)
+	session := xormutil.MustGetXormSession(ctx)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Desc("id").Find(&ret)
+	return ret, err
+}
+
 func GetByAppIdList(ctx context.Context, appIdList []string) ([]App, error) {
 	ret := make([]App, 0)
 	err := xormutil.MustGetXormSession(ctx).

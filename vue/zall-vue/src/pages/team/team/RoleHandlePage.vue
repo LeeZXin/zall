@@ -315,11 +315,6 @@ const appPermList = [
     checkbox: "管理服务状态来源",
     key: "canManageServiceSource",
     desc: "拥有该权限,则可以管理服务状态来源与应用服务的绑定"
-  },
-  {
-    checkbox: "管理Prometheus Agent",
-    key: "canManagePromAgent",
-    desc: "拥有该权限,则可以管理Prometheus告警配置"
   }
 ];
 const teamPermList = [
@@ -346,7 +341,6 @@ const appPermKeys = [
   "canManagePropertySource",
   "canManageServiceSource",
   "canManageDiscoverySource",
-  "canManagePromAgent",
   "canDeployProperty"
 ];
 const repoPermList = [

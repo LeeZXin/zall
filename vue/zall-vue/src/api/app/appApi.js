@@ -4,6 +4,8 @@ import request from '@/utils/request.js'
 const listAppRequest = (teamId) => request.get("/api/app/list/" + teamId);
 // 应用服务列表
 const listAllAppByAdminRequest = (teamId) => request.get("/api/app/listAllByAdmin/" + teamId);
+// 应用服务列表
+const listAllAppBySaRequest = () => request.get("/api/app/listAllBySa");
 // 创建应用服务
 const createAppRequest = (data) => request.post("/api/app/create", data);
 // 获取应用服务
@@ -18,6 +20,7 @@ export {
     listAppRequest,
     createAppRequest,
     listAllAppByAdminRequest,
+    listAllAppBySaRequest,
     getAppRequest,
     updateAppRequest,
     deleteAppRequest,

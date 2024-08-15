@@ -129,8 +129,9 @@ type ExecuteSelectSqlReqVO struct {
 }
 
 type ExecuteSelectSqlResultVO struct {
-	Columns []string            `json:"columns"`
-	Data    []map[string]string `json:"data"`
+	Columns  []string            `json:"columns"`
+	Data     []map[string]string `json:"data"`
+	Duration string              `json:"duration"`
 }
 
 type ApplyDataUpdateReqVO struct {

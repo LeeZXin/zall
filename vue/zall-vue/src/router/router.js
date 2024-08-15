@@ -105,6 +105,21 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/sa/ZalletNodeHandlePage")
 
+            }, {
+                path: "/sa/promScrape/list/:env?",
+                component: () =>
+                    import ("../pages/sa/PromScrapeListPage")
+
+            }, {
+                path: "/sa/promScrape/create",
+                component: () =>
+                    import ("../pages/sa/PromScrapeHandlePage")
+
+            }, {
+                path: "/sa/promScrape/:scrapeId(\\d+)/update",
+                component: () =>
+                    import ("../pages/sa/PromScrapeHandlePage")
+
             }]
         },
         {
@@ -450,21 +465,6 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/app/:appId/product/list/:env?",
                 component: () =>
                     import ("../pages/team/app/ProductListPage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/promScrape/list/:env?",
-                component: () =>
-                    import ("../pages/team/app/PromScrapeListPage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/promScrape/create",
-                component: () =>
-                    import ("../pages/team/app/PromScrapeHandlePage")
-
-            }, {
-                path: "/team/:teamId(\\d+)/app/:appId/promScrape/:scrapeId(\\d+)/update",
-                component: () =>
-                    import ("../pages/team/app/PromScrapeHandlePage")
 
             }]
         },

@@ -68,16 +68,24 @@ func (r *UpdateScrapeReqDTO) IsValid() error {
 }
 
 type ListScrapeReqDTO struct {
+	Endpoint string              `json:"endpoint"`
 	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
+	PageNum  int                 `json:"pageNum"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListScrapeReqDTO) IsValid() error {
-	if !appmd.IsAppIdValid(r.AppId) {
+	if len(r.Endpoint) > 0 && !prommd.IsEndpointValid(r.Endpoint) {
+		return util.InvalidArgsError()
+	}
+	if len(r.AppId) > 0 && !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !cfgsrv.Inner.ContainsEnv(r.Env) {
@@ -90,6 +98,7 @@ type ScrapeDTO struct {
 	Id         int64
 	Endpoint   string
 	AppId      string
+	AppName    string
 	Target     string
 	TargetType prommd.TargetType
 	Created    time.Time

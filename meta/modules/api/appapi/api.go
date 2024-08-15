@@ -29,6 +29,8 @@ func InitApi() {
 			group.GET("/list/:teamId", listApp)
 			// 所有应用服务列表 管理员权限
 			group.GET("/listAllByAdmin/:teamId", listAllByAdmin)
+			// 所有应用服务列表 超级管理员权限
+			group.GET("/listAllBySa", listAllBySa)
 			// 迁移团队
 			group.PUT("/transferTeam", transferTeam)
 		}
@@ -123,8 +125,28 @@ func listApp(c *gin.Context) {
 }
 
 func listAllByAdmin(c *gin.Context) {
-	apps, err := appsrv.Outer.ListAllAppByAdmin(c, appsrv.ListAppReqDTO{
+	apps, err := appsrv.Outer.ListAllAppByAdmin(c, appsrv.ListAllAppByAdminReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data, _ := listutil.Map(apps, func(t appsrv.AppDTO) (AppVO, error) {
+		return AppVO{
+			AppId: t.AppId,
+			Name:  t.Name,
+		}, nil
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]AppVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
+}
+
+func listAllBySa(c *gin.Context) {
+	apps, err := appsrv.Outer.ListAllAppBySa(c, appsrv.ListAllAppBySaReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {

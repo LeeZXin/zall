@@ -18,7 +18,7 @@ type OuterService interface {
 	// UpdateScrape 编辑抓取配置
 	UpdateScrape(context.Context, UpdateScrapeReqDTO) error
 	// ListScrape 展示抓取列表
-	ListScrape(context.Context, ListScrapeReqDTO) ([]ScrapeDTO, error)
+	ListScrape(context.Context, ListScrapeReqDTO) ([]ScrapeDTO, int64, error)
 	// DeleteScrape 删除抓取配置
 	DeleteScrape(context.Context, DeleteScrapeReqDTO) error
 }

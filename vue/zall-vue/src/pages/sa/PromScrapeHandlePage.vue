@@ -22,6 +22,20 @@
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section">
+        <div class="section-title">应用服务</div>
+        <div class="section-body">
+          <a-select
+            style="width: 100%"
+            placeholder="请选择"
+            v-model:value="formState.appId"
+            :options="appList"
+            show-search
+            :filter-option="filterAppListOption"
+          />
+          <div class="input-desc">单选应用服务</div>
+        </div>
+      </div>
+      <div class="section">
         <div class="section-title">endpoint</div>
         <div class="section-body">
           <a-input v-model:value="formState.endpoint" />
@@ -64,11 +78,14 @@ import {
   createPromScrapeRequest,
   updatePromScrapeRequest
 } from "@/api/app/promApi";
+import { listAllAppBySaRequest } from "@/api/app/appApi";
 import { useRoute, useRouter } from "vue-router";
 import { usePromScrapeStore } from "@/pinia/promScrapeStore";
 const promScrapeStore = usePromScrapeStore();
 const route = useRoute();
 const router = useRouter();
+// 应用服务列表
+const appList = ref([]);
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
@@ -77,7 +94,8 @@ const mode = getMode();
 const formState = reactive({
   endpoint: "",
   target: "",
-  targetType: 2
+  targetType: 2,
+  appId: undefined
 });
 const envList = ref([]);
 const getEnvCfg = () => {
@@ -117,15 +135,13 @@ const saveOrUpdateScrape = () => {
   if (mode === "create") {
     createPromScrapeRequest({
       env: formState.selectedEnv,
-      appId: route.params.appId,
+      appId: formState.appId,
       endpoint: formState.endpoint,
       target: formState.target,
       targetType: formState.targetType
     }).then(() => {
       message.success("创建成功");
-      router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/promScrape/list/${formState.selectedEnv}`
-      );
+      router.push(`/sa/promScrape/list/${formState.selectedEnv}`);
     });
   } else if (mode === "update") {
     updatePromScrapeRequest({
@@ -135,27 +151,40 @@ const saveOrUpdateScrape = () => {
       endpoint: formState.endpoint
     }).then(() => {
       message.success("保存成功");
-      router.push(
-        `/team/${route.params.teamId}/app/${route.params.appId}/promScrape/list/${formState.selectedEnv}`
-      );
+      router.push(`/sa/promScrape/list/${formState.selectedEnv}`);
     });
   }
+};
+// 下拉框搜索过滤
+const filterAppListOption = (input, option) => {
+  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+// 获取所有的应用服务
+const listAllApp = () => {
+  listAllAppBySaRequest().then(res => {
+    appList.value = res.data.map(item => {
+      return {
+        value: item.appId,
+        label: `${item.name}(${item.appId})`
+      };
+    });
+  });
 };
 
 if (mode === "create") {
   getEnvCfg();
 } else if (mode === "update") {
   if (promScrapeStore.id === 0) {
-    router.push(
-      `/team/${route.params.teamId}/app/${route.params.appId}/promScrape/list`
-    );
+    router.push(`/sa/promScrape/list`);
   } else {
     formState.endpoint = promScrapeStore.endpoint;
     formState.selectedEnv = promScrapeStore.env;
     formState.targetType = promScrapeStore.targetType;
     formState.target = promScrapeStore.target;
+    formState.appId = promScrapeStore.appId;
   }
 }
+listAllApp();
 </script>
 <style scoped>
 </style>

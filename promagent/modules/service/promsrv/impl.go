@@ -3,8 +3,6 @@ package promsrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
-	"github.com/LeeZXin/zall/meta/modules/model/teammd"
-	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/promagent/modules/model/prommd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -15,14 +13,22 @@ import (
 type outerImpl struct{}
 
 // CreateScrape 创建抓取配置
-func (*outerImpl) CreateScrape(ctx context.Context, reqDTO CreateScrapeReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (*outerImpl) CreateScrape(ctx context.Context, reqDTO CreateScrapeReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err = checkManagePromAgentPermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
-		return
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
+	}
+	b, err := appmd.ExistByAppId(ctx, reqDTO.AppId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
 	}
 	err = prommd.InsertScrape(ctx, prommd.InsertScrapeReqDTO{
 		Endpoint:   reqDTO.Endpoint,
@@ -33,24 +39,23 @@ func (*outerImpl) CreateScrape(ctx context.Context, reqDTO CreateScrapeReqDTO) (
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
 // UpdateScrape 编辑抓取配置
-func (*outerImpl) UpdateScrape(ctx context.Context, reqDTO UpdateScrapeReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (*outerImpl) UpdateScrape(ctx context.Context, reqDTO UpdateScrapeReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err = checkManagePromAgentPermByScrapeId(ctx, reqDTO.ScrapeId, reqDTO.Operator); err != nil {
-		return
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
 	}
-	_, err = prommd.UpdateScrapeById(ctx, prommd.UpdateScrapeByIdReqDTO{
+	_, err := prommd.UpdateScrapeById(ctx, prommd.UpdateScrapeByIdReqDTO{
 		Id:         reqDTO.ScrapeId,
 		Endpoint:   reqDTO.Endpoint,
 		Target:     reqDTO.Target,
@@ -58,94 +63,76 @@ func (*outerImpl) UpdateScrape(ctx context.Context, reqDTO UpdateScrapeReqDTO) (
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
 // ListScrape 展示抓取列表
-func (*outerImpl) ListScrape(ctx context.Context, reqDTO ListScrapeReqDTO) ([]ScrapeDTO, error) {
+func (*outerImpl) ListScrape(ctx context.Context, reqDTO ListScrapeReqDTO) ([]ScrapeDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err := checkManagePromAgentPermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
-		return nil, err
+	if !reqDTO.Operator.IsAdmin {
+		return nil, 0, util.UnauthorizedError()
 	}
-	scrapes, err := prommd.ListScrapeByAppIdAndEnv(ctx, reqDTO.AppId, reqDTO.Env)
+	scrapes, total, err := prommd.ListScrape(ctx, prommd.ListScrapeReqDTO{
+		AppId:    reqDTO.AppId,
+		Env:      reqDTO.Env,
+		Endpoint: reqDTO.Endpoint,
+		PageNum:  reqDTO.PageNum,
+		PageSize: 10,
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
+		return nil, 0, util.InternalError(err)
 	}
+	var appIdNamMap = make(map[string]string)
+	if len(scrapes) > 0 {
+		appIdList, _ := listutil.Map(scrapes, func(t prommd.Scrape) (string, error) {
+			return t.AppId, nil
+		})
+		apps, err := appmd.GetByAppIdList(ctx, listutil.Distinct(appIdList...))
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, 0, util.InternalError(err)
+		}
+		for _, app := range apps {
+			appIdNamMap[app.AppId] = app.Name
+		}
+	}
+
 	data, _ := listutil.Map(scrapes, func(t prommd.Scrape) (ScrapeDTO, error) {
 		return ScrapeDTO{
 			Id:         t.Id,
 			Endpoint:   t.Endpoint,
 			AppId:      t.AppId,
+			AppName:    appIdNamMap[t.AppId],
 			Target:     t.Target,
 			TargetType: t.TargetType,
 			Created:    t.Created,
 			Env:        t.Env,
 		}, nil
 	})
-	return data, nil
+	return data, total, nil
 }
 
 // DeleteScrape 删除抓取配置
-func (*outerImpl) DeleteScrape(ctx context.Context, reqDTO DeleteScrapeReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func (*outerImpl) DeleteScrape(ctx context.Context, reqDTO DeleteScrapeReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err = checkManagePromAgentPermByScrapeId(ctx, reqDTO.ScrapeId, reqDTO.Operator); err != nil {
-		return
-	}
-	_, err = prommd.DeleteScrapeById(ctx, reqDTO.ScrapeId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	return
-}
-
-func checkManagePromAgentPermByAppId(ctx context.Context, appId string, operator apisession.UserInfo) error {
-	app, b, err := appmd.GetByAppId(ctx, appId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	if operator.IsAdmin {
-		return nil
-	}
-	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
+	if !reqDTO.Operator.IsAdmin {
 		return util.UnauthorizedError()
 	}
-	if p.IsAdmin || p.PermDetail.GetAppPerm(appId).CanManagePromAgent {
-		return nil
-	}
-	return util.UnauthorizedError()
-}
-
-func checkManagePromAgentPermByScrapeId(ctx context.Context, scrapeId int64, operator apisession.UserInfo) error {
-	scrape, b, err := prommd.GetScrapeById(ctx, scrapeId)
+	_, err := prommd.DeleteScrapeById(ctx, reqDTO.ScrapeId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	return checkManagePromAgentPermByAppId(ctx, scrape.AppId, operator)
+	return nil
 }
