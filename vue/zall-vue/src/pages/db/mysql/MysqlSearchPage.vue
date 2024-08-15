@@ -40,21 +40,24 @@
               @ready="searchCodeMirrorReady"
             />
           </div>
-          <div class="flex-right">
-            <span style="padding-right:6px">Limit:</span>
-            <a-select v-model:value="searchLimit" style="width:80px" :options="limitList" />
-            <a-button
-              type="primary"
-              :icon="h(SearchOutlined)"
-              @click="doSearchSql(false)"
-              style="margin-left:6px"
-            >搜索</a-button>
-            <a-button
-              type="primary"
-              style="margin-left:6px"
-              :icon="h(TableOutlined)"
-              @click="doExplainSql"
-            >执行计划</a-button>
+          <div class="flex-between">
+            <span>耗时: {{duration}}</span>
+            <div>
+              <span style="padding-right:6px">Limit:</span>
+              <a-select v-model:value="searchLimit" style="width:80px" :options="limitList" />
+              <a-button
+                type="primary"
+                :icon="h(SearchOutlined)"
+                @click="doSearchSql(false)"
+                style="margin-left:6px"
+              >搜索</a-button>
+              <a-button
+                type="primary"
+                style="margin-left:6px"
+                :icon="h(TableOutlined)"
+                @click="doExplainSql"
+              >执行计划</a-button>
+            </div>
           </div>
         </div>
         <div v-show="showSearchResult">
@@ -156,6 +159,7 @@ const tableInfoTabActiveKey = ref("table");
 const searchCodeMirror = ref(null);
 const showSearchResult = ref(false);
 const searchLimit = ref(1);
+const duration = ref("");
 const limitList = [
   {
     value: 1,
@@ -283,12 +287,14 @@ const doSearchSql = isExplain => {
     sql = subList[0];
   }
   if (sql) {
+    duration.value = "";
     executeSelectSqlRequest({
       dbId: selectedDbId.value,
       accessBase: selectedBase.value,
       cmd: isExplain ? "explain " + sql : sql,
       limit: searchLimit.value
     }).then(res => {
+      duration.value = res.data.duration;
       searchTotalCount.value = res.data.data.length;
       searchCurrPage.value = 1;
       showSearchResult.value = true;
