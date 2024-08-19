@@ -3,7 +3,6 @@ package util
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zsf-utils/bizerr"
@@ -38,7 +37,6 @@ func HandleApiErr(err error, c *gin.Context) {
 func ShouldBindJSON(obj any, c *gin.Context) bool {
 	err := c.ShouldBindJSON(obj)
 	if err != nil {
-		fmt.Println(err)
 		ReturnHttpBadRequest(c)
 		return false
 	}

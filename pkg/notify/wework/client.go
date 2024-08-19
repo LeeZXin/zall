@@ -1,11 +1,11 @@
 package wework
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 )
 
 type httpResponse struct {
@@ -21,8 +21,7 @@ func SendMessage(webhookUrl string, msg Message) error {
 	if err != nil {
 		return err
 	}
-	payload := strings.NewReader(string(msgContent))
-	httpReq, err := http.NewRequest(http.MethodPost, webhookUrl, payload)
+	httpReq, err := http.NewRequest(http.MethodPost, webhookUrl, bytes.NewReader(msgContent))
 	if err != nil {
 		return err
 	}

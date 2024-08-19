@@ -93,7 +93,7 @@ const saveOrUpdateTpl = () => {
     message.warn("模板为空");
     return;
   }
-  if (formState.template !== "feishu") {
+  if (formState.notifyType !== "feishu") {
     formState.feishuSignKey = "";
   }
   if (mode === "create") {

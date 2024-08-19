@@ -1,6 +1,7 @@
 package feishu
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -9,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -46,8 +46,7 @@ func SendMessage(webhookUrl string, signKey string, msg Message) error {
 	if err != nil {
 		return err
 	}
-	payload := strings.NewReader(string(msgContent))
-	httpReq, err := http.NewRequest(http.MethodPost, webhookUrl, payload)
+	httpReq, err := http.NewRequest(http.MethodPost, webhookUrl, bytes.NewReader(msgContent))
 	if err != nil {
 		return err
 	}

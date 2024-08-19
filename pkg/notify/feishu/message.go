@@ -52,17 +52,19 @@ func (p *PostParagraph) IsValid() error {
 }
 
 type PostLangMessage struct {
-	Title   string          `json:"title"`
-	Content []PostParagraph `json:"content"`
+	Title   string            `json:"title"`
+	Content [][]PostParagraph `json:"content"`
 }
 
 func (p *PostLangMessage) IsValid() error {
 	if len(p.Content) == 0 {
 		return errors.New("empty post lang message")
 	}
-	for _, paragraph := range p.Content {
-		if err := paragraph.IsValid(); err != nil {
-			return err
+	for _, content := range p.Content {
+		for _, paragraph := range content {
+			if err := paragraph.IsValid(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -139,7 +141,7 @@ func (m *Message) IsValid() error {
 		if m.Content == nil || m.Content.Post == nil {
 			return errors.New("empty post")
 		}
-		if m.Content.Post.ZhCn == nil || m.Content.Post.EnUs == nil {
+		if m.Content.Post.ZhCn == nil && m.Content.Post.EnUs == nil {
 			return errors.New("empty post content")
 		}
 		if m.Content.Post.ZhCn != nil {
