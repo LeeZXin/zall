@@ -3,6 +3,7 @@ package tasksrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/notify/modules/model/notifymd"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -23,7 +24,7 @@ func (o *outerImpl) CreateTask(ctx context.Context, reqDTO CreateTaskReqDTO) err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err := checkPerm(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
+	if err := checkManageTimerPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
 		return err
 	}
 	err := xormstore.WithTx(ctx, func(ctx context.Context) error {
@@ -59,15 +60,14 @@ func (o *outerImpl) ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]Task
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err := checkPerm(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
+	if err := checkManageTimerPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId); err != nil {
 		return nil, 0, err
 	}
-	const pageSize = 10
 	tasks, total, err := taskmd.PageTask(ctx, taskmd.PageTaskReqDTO{
 		TeamId:   reqDTO.TeamId,
 		Name:     reqDTO.Name,
 		PageNum:  reqDTO.PageNum,
-		PageSize: pageSize,
+		PageSize: 10,
 		Env:      reqDTO.Env,
 	})
 	if err != nil {
@@ -96,7 +96,7 @@ func (o *outerImpl) EnableTask(ctx context.Context, reqDTO EnableTaskReqDTO) err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	task, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
+	task, err := checkManageTimerPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
 		return err
 	}
@@ -111,13 +111,13 @@ func (o *outerImpl) EnableTask(ctx context.Context, reqDTO EnableTaskReqDTO) err
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		_, err2 := taskmd.EnableExecute(ctx,
-			reqDTO.TaskId,
+			reqDTO.Id,
 			nextTime.UnixMilli(),
 		)
 		if err2 != nil {
 			return err2
 		}
-		_, err2 = taskmd.EnableTask(ctx, reqDTO.TaskId)
+		_, err2 = taskmd.EnableTask(ctx, reqDTO.Id)
 		return err2
 	})
 	if err != nil {
@@ -134,16 +134,16 @@ func (o *outerImpl) DisableTask(ctx context.Context, reqDTO DisableTaskReqDTO) e
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
+	_, err := checkManageTimerPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
 		return err
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		_, err2 := taskmd.DisableExecute(ctx, reqDTO.TaskId)
+		_, err2 := taskmd.DisableExecute(ctx, reqDTO.Id)
 		if err2 != nil {
 			return err2
 		}
-		_, err2 = taskmd.DisableTask(ctx, reqDTO.TaskId)
+		_, err2 = taskmd.DisableTask(ctx, reqDTO.Id)
 		return err2
 	})
 	if err != nil {
@@ -160,20 +160,20 @@ func (o *outerImpl) DeleteTask(ctx context.Context, reqDTO DeleteTaskReqDTO) err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
+	_, err := checkManageTimerPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
 		return err
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		err2 := taskmd.DeleteTask(ctx, reqDTO.TaskId)
+		err2 := taskmd.DeleteTask(ctx, reqDTO.Id)
 		if err2 != nil {
 			return err2
 		}
-		_, err2 = taskmd.DeleteExecuteByTaskId(ctx, reqDTO.TaskId)
+		_, err2 = taskmd.DeleteExecuteByTaskId(ctx, reqDTO.Id)
 		if err2 != nil {
 			return err2
 		}
-		err2 = taskmd.DeleteLogByTaskId(ctx, reqDTO.TaskId)
+		err2 = taskmd.DeleteLogByTaskId(ctx, reqDTO.Id)
 		return err2
 	})
 	if err != nil {
@@ -192,33 +192,39 @@ func (o *outerImpl) TriggerTask(ctx context.Context, reqDTO TriggerTaskReqDTO) e
 	var (
 		task taskmd.Task
 	)
-	task, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
+	task, err := checkManageTimerPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
 		return err
 	}
-	triggerTask(&task, reqDTO.Operator.Account)
+	err = triggerTask(&task, reqDTO.Operator.Account)
+	if err != nil {
+		return util.OperationFailedError()
+	}
 	return nil
 }
 
-// PageTaskLog 获取执行历史
-func (o *outerImpl) PageTaskLog(ctx context.Context, reqDTO PageTaskLogReqDTO) ([]TaskLogDTO, int64, error) {
+// ListTaskLog 获取执行历史
+func (o *outerImpl) ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) ([]TaskLogDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
+	// 校验权限
+	_, err := checkManageTimerPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
 	if err != nil {
 		return nil, 0, err
 	}
-	const pageSize = 10
-	d := reqDTO.dateTime
+	// 当月第一天
+	beginTime := reqDTO.monthTime.AddDate(0, 0, -reqDTO.monthTime.Day()+1)
+	// 当月最后一天
+	endTime := reqDTO.monthTime.AddDate(0, 1, -1)
 	logs, total, err := taskmd.ListTaskLog(ctx, taskmd.ListTaskLogReqDTO{
 		TaskId:    reqDTO.TaskId,
 		PageNum:   reqDTO.PageNum,
-		PageSize:  pageSize,
-		BeginTime: time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, d.Location()),
-		EndTime:   time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, 0, d.Location()),
+		PageSize:  10,
+		BeginTime: beginTime,
+		EndTime:   time.Date(endTime.Year(), endTime.Month(), endTime.Day(), 23, 59, 59, 0, endTime.Location()),
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -244,12 +250,12 @@ func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkPermByTaskId(ctx, reqDTO.Operator, reqDTO.TaskId)
+	_, err := checkManageTimerPermByTaskId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
 		return err
 	}
 	_, err = taskmd.UpdateTask(ctx, taskmd.UpdateTaskReqDTO{
-		TaskId:  reqDTO.TaskId,
+		Id:      reqDTO.Id,
 		Name:    reqDTO.Name,
 		CronExp: reqDTO.CronExp,
 		Content: reqDTO.Task,
@@ -261,7 +267,79 @@ func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) err
 	return nil
 }
 
-func checkPerm(ctx context.Context, operator apisession.UserInfo, teamId int64) error {
+// GetFailedTaskNotifyTplId 获取任务失败通知模板
+func (o *outerImpl) GetFailedTaskNotifyTplId(ctx context.Context, reqDTO GetFailedTaskNotifyTplIdReqDTO) (int64, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return 0, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err := checkManageNotifyTplPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId)
+	if err != nil {
+		return 0, err
+	}
+	tpl, b, err := taskmd.GetFailedTaskNotifyTplByTeamIdAndEnv(ctx, reqDTO.TeamId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return 0, util.InternalError(err)
+	}
+	if !b {
+		return 0, nil
+	}
+	return tpl.TplId, nil
+}
+
+// BindFailedTaskNotifyTpl 绑定任务失败通知模板
+func (o *outerImpl) BindFailedTaskNotifyTpl(ctx context.Context, reqDTO BindFailedTaskNotifyTplReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	err := checkManageNotifyTplPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId)
+	if err != nil {
+		return err
+	}
+	if reqDTO.TplId == 0 {
+		// 删除绑定关系
+		_, err = taskmd.DeleteFailedTaskNotifyTplByTeamIdAndEnv(ctx, reqDTO.TeamId, reqDTO.Env)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return util.InternalError(err)
+		}
+		return nil
+	}
+	// 校验tplId
+	b, err := notifymd.ExistTplById(ctx, reqDTO.TplId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
+	tpl, b, err := taskmd.GetFailedTaskNotifyTplByTeamIdAndEnv(ctx, reqDTO.TeamId, reqDTO.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		err = taskmd.InsertFailedTaskNotifyTpl(ctx, taskmd.InsertFailedTaskNotifyTplReqDTO{
+			TeamId: reqDTO.TeamId,
+			TplId:  reqDTO.TplId,
+			Env:    reqDTO.Env,
+		})
+	} else {
+		_, err = taskmd.UpdateFailedTaskNotifyTpl(ctx, tpl.Id, reqDTO.TplId)
+	}
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+func checkManageTimerPermByTeamId(ctx context.Context, operator apisession.UserInfo, teamId int64) error {
 	if operator.IsAdmin {
 		return nil
 	}
@@ -279,7 +357,25 @@ func checkPerm(ctx context.Context, operator apisession.UserInfo, teamId int64) 
 	return nil
 }
 
-func checkPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId int64) (taskmd.Task, error) {
+func checkManageNotifyTplPermByTeamId(ctx context.Context, operator apisession.UserInfo, teamId int64) error {
+	if operator.IsAdmin {
+		return nil
+	}
+	p, b, err := teammd.GetUserPermDetail(ctx, teamId, operator.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.UnauthorizedError()
+	}
+	if !p.IsAdmin && !p.PermDetail.TeamPerm.CanManageNotifyTpl {
+		return util.UnauthorizedError()
+	}
+	return nil
+}
+
+func checkManageTimerPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId int64) (taskmd.Task, error) {
 	task, b, err := taskmd.GetTaskById(ctx, taskId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -291,16 +387,5 @@ func checkPermByTaskId(ctx context.Context, operator apisession.UserInfo, taskId
 	if operator.IsAdmin {
 		return task, nil
 	}
-	p, b, err := teammd.GetUserPermDetail(ctx, task.TeamId, operator.Account)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return taskmd.Task{}, util.InternalError(err)
-	}
-	if !b {
-		return task, util.UnauthorizedError()
-	}
-	if !p.IsAdmin && !p.PermDetail.TeamPerm.CanManageTimer {
-		return task, util.UnauthorizedError()
-	}
-	return task, nil
+	return task, checkManageTimerPermByTeamId(ctx, operator, task.TeamId)
 }

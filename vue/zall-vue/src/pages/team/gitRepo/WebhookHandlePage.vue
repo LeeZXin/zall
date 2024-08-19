@@ -46,6 +46,10 @@
               <a-checkbox v-model:checked="checkboxes.repo">仓库</a-checkbox>
               <div class="checkbox-desc">仓库的删除、归档</div>
             </li>
+            <li>
+              <a-checkbox v-model:checked="checkboxes.workflow">工作流</a-checkbox>
+              <div class="checkbox-desc">工作流的添加、删除、修改、触发事件</div>
+            </li>
           </ul>
         </div>
       </div>
@@ -80,7 +84,8 @@ const eventMap = {
   protectedBranch: 1,
   gitPush: 2,
   pullRequest: 3,
-  repo: 4
+  repo: 4,
+  workflow: 6
 };
 const webhookStore = useWebhookStore();
 const router = useRouter();
@@ -102,6 +107,9 @@ const createEvents = () => {
   }
   if (checkboxes.repo) {
     ret.push(eventMap.repo);
+  }
+  if (checkboxes.workflow) {
+    ret.push(eventMap.workflow);
   }
   return ret;
 };
@@ -127,7 +135,9 @@ const createOrUpdateWebhook = () => {
       events: events
     }).then(() => {
       message.success("添加成功");
-      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`);
+      router.push(
+        `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`
+      );
     });
   } else if (mode === "update") {
     updateWebhookRequest({
@@ -137,7 +147,9 @@ const createOrUpdateWebhook = () => {
       events: events
     }).then(() => {
       message.success("更新成功");
-      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`);
+      router.push(
+        `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`
+      );
     });
   }
 };
@@ -146,7 +158,9 @@ if (mode !== "create") {
     webhookStore.id === 0 ||
     parseInt(route.params.webhookId) !== webhookStore.id
   ) {
-    router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`);
+    router.push(
+      `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`
+    );
   } else {
     if (mode !== "create") {
       formState.hookUrl = webhookStore.hookUrl;
@@ -166,6 +180,9 @@ if (mode !== "create") {
               break;
             case 4:
               checkboxes.repo = true;
+              break;
+            case 6:
+              checkboxes.workflow = true;
               break;
           }
         }

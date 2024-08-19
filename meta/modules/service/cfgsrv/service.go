@@ -29,13 +29,17 @@ func InitOuter() {
 type InnerService interface {
 	// GetSysCfg 获取系统配置
 	GetSysCfg(context.Context) (SysCfg, error)
+	// InitSysCfg 初始化系统配置
 	InitSysCfg()
 	// GetGitCfg 获取git配置
 	GetGitCfg() (GitCfg, error)
+	// InitGitCfg 初始化git配置
 	InitGitCfg()
 	// GetEnvCfg 获取环境配置
 	GetEnvCfg(context.Context) ([]string, error)
+	// InitEnvCfg 初始化环境配置
 	InitEnvCfg()
+	// ContainsEnv 检查是否包含环境
 	ContainsEnv(string) bool
 	// GetGitRepoServerCfg 获取git服务器地址
 	GetGitRepoServerCfg() (GitRepoServerCfg, error)
@@ -58,4 +62,6 @@ type OuterService interface {
 	GetGitRepoServerCfg(context.Context, GetGitRepoServerUrlReqDTO) (GitRepoServerCfg, error)
 	// UpdateGitRepoServerCfg 更新git服务器地址
 	UpdateGitRepoServerCfg(context.Context, UpdateGitRepoServerCfgReqDTO) error
+	// 获取定时任务告警模板
+
 }

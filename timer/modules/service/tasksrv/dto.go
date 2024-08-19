@@ -67,12 +67,12 @@ func (r *ListTaskReqDTO) IsValid() error {
 }
 
 type EnableTaskReqDTO struct {
-	TaskId   int64               `json:"taskId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *EnableTaskReqDTO) IsValid() error {
-	if r.TaskId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -82,12 +82,12 @@ func (r *EnableTaskReqDTO) IsValid() error {
 }
 
 type DisableTaskReqDTO struct {
-	TaskId   int64               `json:"taskId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DisableTaskReqDTO) IsValid() error {
-	if r.TaskId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -97,12 +97,12 @@ func (r *DisableTaskReqDTO) IsValid() error {
 }
 
 type DeleteTaskReqDTO struct {
-	TaskId   int64               `json:"taskId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteTaskReqDTO) IsValid() error {
-	if r.TaskId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -122,21 +122,20 @@ type TaskDTO struct {
 	Creator   string     `json:"creator"`
 }
 
-type PageTaskLogReqDTO struct {
-	TaskId   int64               `json:"taskId"`
-	PageNum  int                 `json:"pageNum"`
-	DateStr  string              `json:"dateStr"`
-	Operator apisession.UserInfo `json:"operator"`
-
-	dateTime time.Time
+type ListTaskLogReqDTO struct {
+	TaskId    int64               `json:"taskId"`
+	PageNum   int                 `json:"pageNum"`
+	Month     string              `json:"dateStr"`
+	Operator  apisession.UserInfo `json:"operator"`
+	monthTime time.Time
 }
 
-func (r *PageTaskLogReqDTO) IsValid() error {
-	if r.TaskId <= 0 || r.PageNum <= 0 || r.DateStr == "" {
+func (r *ListTaskLogReqDTO) IsValid() error {
+	if r.TaskId <= 0 || r.PageNum <= 0 || r.Month == "" {
 		return util.InvalidArgsError()
 	}
 	var err error
-	r.dateTime, err = time.Parse(time.DateOnly, r.DateStr)
+	r.monthTime, err = time.Parse("2006-01", r.Month)
 	if err != nil {
 		return util.InvalidArgsError()
 	}
@@ -156,12 +155,12 @@ type TaskLogDTO struct {
 }
 
 type TriggerTaskReqDTO struct {
-	TaskId   int64               `json:"taskId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *TriggerTaskReqDTO) IsValid() error {
-	if r.TaskId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -171,7 +170,7 @@ func (r *TriggerTaskReqDTO) IsValid() error {
 }
 
 type UpdateTaskReqDTO struct {
-	TaskId   int64               `json:"taskId"`
+	Id       int64               `json:"id"`
 	Name     string              `json:"name"`
 	CronExp  string              `json:"cronExp"`
 	Task     timer.Task          `json:"task"`
@@ -190,6 +189,49 @@ func (r *UpdateTaskReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type GetFailedTaskNotifyTplIdReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetFailedTaskNotifyTplIdReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type BindFailedTaskNotifyTplReqDTO struct {
+	TeamId   int64               `json:"teamId"`
+	TplId    int64               `json:"tplId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *BindFailedTaskNotifyTplReqDTO) IsValid() error {
+	if r.TeamId <= 0 {
+		return util.InvalidArgsError()
+	}
+	// 可以为0 0代表没有
+	if r.TplId < 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.Inner.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil

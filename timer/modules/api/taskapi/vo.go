@@ -31,10 +31,10 @@ type TaskVO struct {
 	Creator   string     `json:"creator"`
 }
 
-type PageLogReqVO struct {
+type ListLogReqVO struct {
 	TaskId  int64  `json:"taskId"`
 	PageNum int    `json:"pageNum"`
-	DateStr string `json:"dateStr"`
+	Month   string `json:"month"`
 }
 
 type TaskLogVO struct {
@@ -51,4 +51,10 @@ type UpdateTaskReqVO struct {
 	Name    string     `json:"name"`
 	CronExp string     `json:"cronExp"`
 	Task    timer.Task `json:"task"`
+}
+
+type BindFailedTaskNotifyTplReqVO struct {
+	TeamId int64  `json:"teamId"`
+	TplId  int64  `json:"tplId"`
+	Env    string `json:"env"`
 }

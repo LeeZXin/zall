@@ -331,7 +331,7 @@ func (d *Datum) GetRaw() []byte {
 	return d.b
 }
 
-// SetAutoID set the auto increment ID according to its int flag.
+// SetAutoID set the auto increment TeamId according to its int flag.
 func (d *Datum) SetAutoID(id int64, flag uint) {
 	if mysql.HasUnsignedFlag(flag) {
 		d.SetUint64(uint64(id))

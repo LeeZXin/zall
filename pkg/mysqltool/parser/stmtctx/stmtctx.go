@@ -94,11 +94,11 @@ type StatementContext struct {
 	}
 	// PrevAffectedRows is the affected-rows value(DDL is 0, DML is the number of affected rows).
 	PrevAffectedRows int64
-	// PrevLastInsertID is the last insert ID of previous statement.
+	// PrevLastInsertID is the last insert TeamId of previous statement.
 	PrevLastInsertID uint64
-	// LastInsertID is the auto-generated ID in the current statement.
+	// LastInsertID is the auto-generated TeamId in the current statement.
 	LastInsertID uint64
-	// InsertID is the given insert ID of an auto_increment column.
+	// InsertID is the given insert TeamId of an auto_increment column.
 	InsertID uint64
 
 	// Copied from SessionVars.TimeZone.

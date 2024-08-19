@@ -53,7 +53,9 @@ export default {
         applyApproval: "Apply approval",
         dbAudit: "Database audit",
         promScrape: "Prometheus scrape",
-        roleAndMembers: "Role & Members"
+        roleAndMembers: "Role & Members",
+        setting: "Setting",
+        notifyTpl: "Notification"
     },
     roleListPage: {
         roleList: "Role List",
@@ -111,7 +113,22 @@ export default {
     no: "No",
     timerTask: {
         autoTriggerType: "Automatically",
-        manualTriggerType: "Manually"
+        manualTriggerType: "Manually",
+        successful: "Success",
+        failed: "Failed",
+        logColumns: {
+            triggerBy: "Trigger by",
+            triggerType: "Type",
+            isSuccess: "Status",
+            created: "Execute Time",
+            operation: "Operation"
+        },
+        viewErrLog: "View Error Log",
+        viewTaskCfg: "View Configuration",
+        errLog: "Error Log",
+        taskCfg: "Task Configuration",
+        executeLog: "Execute Log",
+        searchMonthly: "Search monthly"
     },
     deployPlan: {
         pendingStatus: "Pending",

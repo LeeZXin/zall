@@ -14,8 +14,7 @@ import (
 type innerImpl struct{}
 
 func (s *innerImpl) InitSysCfg() {
-	ctx := context.Background()
-	ctx, closer := xormstore.Context(ctx)
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	ret := SysCfg{}
 	b, err := cfgmd.GetByKey(ctx, &ret)
@@ -67,8 +66,7 @@ func (s *innerImpl) GetEnvCfg(ctx context.Context) ([]string, error) {
 }
 
 func (s *innerImpl) InitEnvCfg() {
-	ctx := context.Background()
-	ctx, closer := xormstore.Context(ctx)
+	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	ret := EnvCfg{}
 	b, err := cfgmd.GetByKey(ctx, &ret)

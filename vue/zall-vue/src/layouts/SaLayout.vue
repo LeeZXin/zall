@@ -88,7 +88,8 @@ const pagesMap = {
   "/serviceSource": "/serviceSource/list",
   "/discoverySource": "/discoverySource/list",
   "/zalletNode": "/zalletNode/list",
-  "/promScrape": "/promScrape/list"
+  "/promScrape": "/promScrape/list",
+  "/notifyTpl": "/notifyTpl/list"
 };
 changeSelectedKey(route.path);
 watch(

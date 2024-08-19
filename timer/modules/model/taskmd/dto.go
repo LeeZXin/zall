@@ -16,7 +16,7 @@ type InsertTaskReqDTO struct {
 }
 
 type UpdateTaskReqDTO struct {
-	TaskId  int64
+	Id      int64
 	Name    string
 	CronExp string
 	Content timer.Task
@@ -52,4 +52,10 @@ type InsertExecuteReqDTO struct {
 	IsEnabled bool
 	NextTime  int64
 	Env       string
+}
+
+type InsertFailedTaskNotifyTplReqDTO struct {
+	TeamId int64
+	TplId  int64
+	Env    string
 }

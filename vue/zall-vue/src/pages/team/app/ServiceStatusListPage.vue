@@ -40,15 +40,22 @@
     </ZTable>
   </div>
   <a-modal v-model:open="bindModal.open" title="绑定配置来源" @ok="handleBindModalOk">
-    <a-select
-      style="width: 100%"
-      placeholder="请选择"
-      v-model:value="bindModal.selectIdList"
-      :options="bindModal.sourceList"
-      show-search
-      mode="multiple"
-      :filter-option="filterSourceListOption"
-    />
+    <div>
+      <div style="font-size:12px;margin-bottom:3px">已选环境</div>
+      <div>{{selectedEnv}}</div>
+    </div>
+    <div style="margin-top: 10px">
+      <div style="font-size:12px;margin-bottom:3px">配置来源</div>
+      <a-select
+        style="width: 100%"
+        placeholder="请选择"
+        v-model:value="bindModal.selectIdList"
+        :options="bindModal.sourceList"
+        show-search
+        mode="multiple"
+        :filter-option="filterSourceListOption"
+      />
+    </div>
   </a-modal>
 </template>
 <script setup>

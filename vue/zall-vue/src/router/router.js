@@ -249,9 +249,9 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/team/TimerTaskHandlePage")
             }, {
-                path: "/team/:teamId(\\d+)/timerTask/:taskId(\\d+)/logs",
+                path: "/team/:teamId(\\d+)/timerTask/:taskId(\\d+)/log",
                 component: () =>
-                    import ("../pages/team/team/TimerTaskLogsPage")
+                    import ("../pages/team/team/TimerTaskLogListPage")
             }, {
                 path: "/team/:teamId(\\d+)/app/list",
                 component: () =>
@@ -261,9 +261,21 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/app/AppCreatePage")
             }, {
-                path: "/team/:teamId(\\d+)/settings",
+                path: "/team/:teamId(\\d+)/setting",
                 component: () =>
-                    import ("../pages/team/team/TeamSettingsPage")
+                    import ("../pages/team/team/TeamSettingPage")
+            }, {
+                path: "/team/:teamId(\\d+)/notifyTpl/list",
+                component: () =>
+                    import ("../pages/team/team/NotifyTplListPage")
+            }, {
+                path: "/team/:teamId(\\d+)/notifyTpl/create",
+                component: () =>
+                    import ("../pages/team/team/NotifyTplHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/notifyTpl/:tplId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/team/NotifyTplHandlePage")
             }]
         },
         {
@@ -321,7 +333,7 @@ const router = createRouter({
             }, {
                 path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/webhook/list",
                 component: () =>
-                    import ("../pages/team/gitRepo/WebhooksPage")
+                    import ("../pages/team/gitRepo/WebhookListPage")
             }, {
                 path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/webhook/create",
                 component: () =>

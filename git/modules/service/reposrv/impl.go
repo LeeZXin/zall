@@ -602,6 +602,7 @@ func (s *outerImpl) DeleteRepoPermanently(ctx context.Context, reqDTO DeleteRepo
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoDeletePermanentlyAction)
 	return nil
 }
 

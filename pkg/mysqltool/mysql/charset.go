@@ -22,7 +22,7 @@ import (
 // CollationID means collation type
 type CollationID uint16
 
-// CharsetIds maps charset name to its default collation ID.
+// CharsetIds maps charset name to its default collation TeamId.
 var CharsetIds = map[string]CollationID{
 	"big5":     1,
 	"dec8":     3,
@@ -111,7 +111,7 @@ var Charsets = map[string]string{
 	"eucjpms":  "eucjpms_japanese_ci",
 }
 
-// Collations maps MySQL default collation ID to its name.
+// Collations maps MySQL default collation TeamId to its name.
 var Collations = map[CollationID]string{
 	1:   "big5_chinese_ci",
 	2:   "latin2_czech_cs",
@@ -388,7 +388,7 @@ var Collations = map[CollationID]string{
 	309: "utf8mb4_0900_bin",
 }
 
-// CollationNames maps MySQL default collation name to its ID
+// CollationNames maps MySQL default collation name to its TeamId
 var CollationNames = map[string]CollationID{
 	"big5_chinese_ci":          1,
 	"latin2_czech_cs":          2,

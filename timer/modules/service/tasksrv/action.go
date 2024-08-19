@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/LeeZXin/zall/notify/modules/service/notifysrv"
 	"github.com/LeeZXin/zall/pkg/timer"
 	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
 	"github.com/LeeZXin/zsf-utils/executor"
@@ -90,8 +91,8 @@ func doExecuteTask(runCtx context.Context) {
 	}
 }
 
-func triggerTask(task *taskmd.Task, triggerBy string) {
-	taskExecutor.Execute(func() {
+func triggerTask(task *taskmd.Task, triggerBy string) error {
+	return taskExecutor.Execute(func() {
 		handleTimerTaskAndAppendLog(
 			task,
 			triggerBy,
@@ -121,6 +122,26 @@ func handleTimerTaskAndAppendLog(task *taskmd.Task, triggerBy string, triggerTyp
 		TriggerBy:   triggerBy,
 		IsSuccess:   isSuccess,
 	})
+	if !isSuccess {
+		// 失败告警
+		tpl, b, err := taskmd.GetFailedTaskNotifyTplByTeamIdAndEnv(ctx, task.TeamId, task.Env)
+		if err != nil {
+			logger.Logger.Error(err)
+			return
+		}
+		if !b {
+			return
+		}
+		if tpl.TplId > 0 {
+			notifysrv.Inner.SendNotificationByTplId(ctx, tpl.TplId, map[string]string{
+				"triggerBy":   triggerBy,
+				"eventTime":   time.Now().Format(time.DateTime),
+				"env":         task.Env,
+				"name":        task.Name,
+				"triggerType": triggerType.String(),
+			})
+		}
+	}
 }
 
 func handleExecute(execute *taskmd.Execute) error {

@@ -31,10 +31,15 @@ func InitApi() {
 			group.PUT("/trigger/:taskId", triggerTask)
 			// 编辑定时任务
 			group.POST("/update", updateTask)
+			// 获取绑定通知模板
+			group.GET("/getFailedTaskNotifyTpl", getFailedTaskNotifyTpl)
+			// 获取绑定通知模板
+			group.POST("/bindFailedTaskNotifyTpl", bindFailedTaskNotifyTpl)
 		}
 		group = e.Group("/api/timerLog", apisession.CheckLogin)
 		{
-			group.GET("/list", pageLog)
+			// 执行日志列表
+			group.GET("/list", listLog)
 		}
 	})
 }
@@ -60,7 +65,7 @@ func createTask(c *gin.Context) {
 
 func enableTask(c *gin.Context) {
 	err := tasksrv.Outer.EnableTask(c, tasksrv.EnableTaskReqDTO{
-		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Id:       cast.ToInt64(c.Param("taskId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -72,7 +77,7 @@ func enableTask(c *gin.Context) {
 
 func disableTask(c *gin.Context) {
 	err := tasksrv.Outer.DisableTask(c, tasksrv.DisableTaskReqDTO{
-		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Id:       cast.ToInt64(c.Param("taskId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -84,7 +89,7 @@ func disableTask(c *gin.Context) {
 
 func deleteTask(c *gin.Context) {
 	err := tasksrv.Outer.DeleteTask(c, tasksrv.DeleteTaskReqDTO{
-		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Id:       cast.ToInt64(c.Param("taskId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -131,13 +136,13 @@ func listTask(c *gin.Context) {
 	}
 }
 
-func pageLog(c *gin.Context) {
-	var req PageLogReqVO
+func listLog(c *gin.Context) {
+	var req ListLogReqVO
 	if util.ShouldBindQuery(&req, c) {
-		logs, total, err := tasksrv.Outer.PageTaskLog(c, tasksrv.PageTaskLogReqDTO{
+		logs, total, err := tasksrv.Outer.ListTaskLog(c, tasksrv.ListTaskLogReqDTO{
 			TaskId:   req.TaskId,
 			PageNum:  req.PageNum,
-			DateStr:  req.DateStr,
+			Month:    req.Month,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -167,7 +172,7 @@ func pageLog(c *gin.Context) {
 
 func triggerTask(c *gin.Context) {
 	err := tasksrv.Outer.TriggerTask(c, tasksrv.TriggerTaskReqDTO{
-		TaskId:   cast.ToInt64(c.Param("taskId")),
+		Id:       cast.ToInt64(c.Param("taskId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -181,10 +186,43 @@ func updateTask(c *gin.Context) {
 	var req UpdateTaskReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := tasksrv.Outer.UpdateTask(c, tasksrv.UpdateTaskReqDTO{
-			TaskId:   req.TaskId,
+			Id:       req.TaskId,
 			Name:     req.Name,
 			CronExp:  req.CronExp,
 			Task:     req.Task,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func getFailedTaskNotifyTpl(c *gin.Context) {
+	tplId, err := tasksrv.Outer.GetFailedTaskNotifyTplId(c, tasksrv.GetFailedTaskNotifyTplIdReqDTO{
+		TeamId:   cast.ToInt64(c.Query("teamId")),
+		Env:      c.Query("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[int64]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     tplId,
+	})
+}
+
+func bindFailedTaskNotifyTpl(c *gin.Context) {
+	var req BindFailedTaskNotifyTplReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := tasksrv.Outer.BindFailedTaskNotifyTpl(c, tasksrv.BindFailedTaskNotifyTplReqDTO{
+			TeamId:   req.TeamId,
+			TplId:    req.TplId,
+			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {

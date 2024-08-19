@@ -15,7 +15,11 @@ const triggerTimerTaskRequest = (taskId) => request.put("/api/timerTask/trigger/
 // 编辑定时任务
 const updateTimerTaskRequest = (data) => request.post("/api/timerTask/update", data);
 // 查看定时任务日志
-const pageTimerTaskLogRequest = (data) => request.get("/api/timerLog/list", { params: data });
+const listTimerTaskLogRequest = (data) => request.get("/api/timerLog/list", { params: data });
+// 失败定时任务通知模板
+const getFailedTaskNotifyTplRequest = (data) => request.get("/api/timerTask/getFailedTaskNotifyTpl", { params: data });
+// 绑定失败定时任务通知模板
+const bindFailedTaskNotifyTplRequest = (data) => request.post("/api/timerTask/bindFailedTaskNotifyTpl", data);
 export {
     listTimerTaskRequest,
     createTimerTaskRequest,
@@ -24,5 +28,7 @@ export {
     deleteTimerTaskRequest,
     triggerTimerTaskRequest,
     updateTimerTaskRequest,
-    pageTimerTaskLogRequest
+    listTimerTaskLogRequest,
+    getFailedTaskNotifyTplRequest,
+    bindFailedTaskNotifyTplRequest
 }

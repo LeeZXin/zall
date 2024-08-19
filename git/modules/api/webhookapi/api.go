@@ -42,7 +42,7 @@ func demoWebhook(c *gin.Context) {
 	defer c.Request.Body.Close()
 	logger.Logger.WithContext(c).Info("event-type: ", c.GetHeader(webhook.XEventType))
 	signature := c.GetHeader(webhook.XSignature)
-	logger.Logger.WithContext(c).Info("signature:", signature)
+	logger.Logger.WithContext(c).Info("signature: ", signature)
 	all, _ := io.ReadAll(c.Request.Body)
 	mySecret := "hello world"
 	mySignature := webhook.CreateSignature(all, mySecret)

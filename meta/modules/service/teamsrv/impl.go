@@ -7,6 +7,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
+	"github.com/LeeZXin/zall/notify/modules/model/notifymd"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -606,7 +607,16 @@ func (*outerImpl) DeleteTeam(ctx context.Context, reqDTO DeleteTeamReqDTO) (err 
 		}
 		// 项目用户
 		_, err2 = teammd.DeleteAllUserByTeamId(ctx, reqDTO.TeamId)
-		return err2
+		if err2 != nil {
+			return err2
+		}
+		// 外部通知模板
+		err2 = notifymd.DeleteTplByTeamId(ctx, reqDTO.TeamId)
+		if err2 != nil {
+			return err2
+		}
+		// 定时任务失败通知
+		return taskmd.DeleteFailedTaskNotifyTplByTeamId(ctx, reqDTO.TeamId)
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

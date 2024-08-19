@@ -70,6 +70,9 @@ const gpgKeyNameRegexp = /^.{1,128}$/;
 const zalletNodeNameRegexp = /^.{1,32}$/;
 const zalletNodeAgentHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
 const zalletNodeAgentTokenRegexp = /^.{0,1024}$/;
+// notify tpl
+const notifyTplNameRegexp = /^.{1,32}$/;
+const notifyTplUrlRegexp = /^https?:\/\/.+$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -119,5 +122,7 @@ export {
     gpgKeyNameRegexp,
     zalletNodeNameRegexp,
     zalletNodeAgentHostRegexp,
-    zalletNodeAgentTokenRegexp
+    zalletNodeAgentTokenRegexp,
+    notifyTplNameRegexp,
+    notifyTplUrlRegexp
 }

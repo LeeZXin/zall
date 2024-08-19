@@ -2,6 +2,8 @@ package tasksrv
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
+	"github.com/LeeZXin/zall/notify/modules/service/notifysrv"
 	"github.com/robfig/cron/v3"
 )
 
@@ -11,7 +13,9 @@ var (
 
 func Init() {
 	if Outer == nil {
+		cfgsrv.InitInner()
 		Outer = new(outerImpl)
+		notifysrv.InitInner()
 		initTask()
 		parser = cron.NewParser(
 			cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
@@ -30,10 +34,14 @@ type OuterService interface {
 	DisableTask(context.Context, DisableTaskReqDTO) error
 	// DeleteTask 删除任务
 	DeleteTask(context.Context, DeleteTaskReqDTO) error
-	// PageTaskLog 获取执行历史
-	PageTaskLog(context.Context, PageTaskLogReqDTO) ([]TaskLogDTO, int64, error)
+	// ListTaskLog 获取执行历史
+	ListTaskLog(context.Context, ListTaskLogReqDTO) ([]TaskLogDTO, int64, error)
 	// TriggerTask 手动执行任务
 	TriggerTask(context.Context, TriggerTaskReqDTO) error
 	// UpdateTask 更新任务
 	UpdateTask(context.Context, UpdateTaskReqDTO) error
+	// GetFailedTaskNotifyTplId 获取任务失败通知模板
+	GetFailedTaskNotifyTplId(context.Context, GetFailedTaskNotifyTplIdReqDTO) (int64, error)
+	// BindFailedTaskNotifyTpl 绑定任务失败通知模板
+	BindFailedTaskNotifyTpl(context.Context, BindFailedTaskNotifyTplReqDTO) error
 }

@@ -594,3 +594,14 @@ var (
 		DefaultRet: "sql没有带where关键词",
 	}
 )
+
+var (
+	TimerTaskAutoTriggerType = KeyItem{
+		Id:         "timerTask.autoTriggerType",
+		DefaultRet: "自动触发",
+	}
+	TimerTaskManualTriggerType = KeyItem{
+		Id:         "timerTask.manualTriggerType",
+		DefaultRet: "手动触发",
+	}
+)

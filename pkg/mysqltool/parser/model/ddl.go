@@ -74,10 +74,10 @@ var actionMap = map[ActionType]string{
 	ActionDropForeignKey:               "drop foreign key",
 	ActionTruncateTable:                "truncate table",
 	ActionModifyColumn:                 "modify column",
-	ActionRebaseAutoID:                 "rebase auto_increment ID",
+	ActionRebaseAutoID:                 "rebase auto_increment TeamId",
 	ActionRenameTable:                  "rename table",
 	ActionSetDefaultValue:              "set default value",
-	ActionShardRowID:                   "shard row ID",
+	ActionShardRowID:                   "shard row TeamId",
 	ActionModifyTableComment:           "modify table comment",
 	ActionRenameIndex:                  "rename index",
 	ActionAddTablePartition:            "add partition",
@@ -253,7 +253,7 @@ func (job *Job) DecodeArgs(args ...interface{}) error {
 // String implements fmt.Stringer interface.
 func (job *Job) String() string {
 	rowCount := job.GetRowCount()
-	return fmt.Sprintf("ID:%d, Type:%s, State:%s, SchemaState:%s, SchemaID:%d, TableID:%d, RowCount:%d, ArgLen:%d, start time: %v, Err:%v, ErrCount:%d, SnapshotVersion:%v",
+	return fmt.Sprintf("TeamId:%d, Type:%s, State:%s, SchemaState:%s, SchemaID:%d, TableID:%d, RowCount:%d, ArgLen:%d, start time: %v, Err:%v, ErrCount:%d, SnapshotVersion:%v",
 		job.ID, job.Type, job.State, job.SchemaState, job.SchemaID, job.TableID, rowCount, len(job.Args), TSConvert2Time(job.StartTS), job.Error, job.ErrorCount, job.SnapshotVer)
 }
 
@@ -388,8 +388,8 @@ type SchemaDiff struct {
 	SchemaID int64      `json:"schema_id"`
 	TableID  int64      `json:"table_id"`
 
-	// OldTableID is the table ID before truncate, only used by truncate table DDL.
+	// OldTableID is the table TeamId before truncate, only used by truncate table DDL.
 	OldTableID int64 `json:"old_table_id"`
-	// OldSchemaID is the schema ID before rename table, only used by rename table DDL.
+	// OldSchemaID is the schema TeamId before rename table, only used by rename table DDL.
 	OldSchemaID int64 `json:"old_schema_id"`
 }

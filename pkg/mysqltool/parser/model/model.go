@@ -144,7 +144,7 @@ func FindColumnInfo(cols []*ColumnInfo, name string) *ColumnInfo {
 	return nil
 }
 
-// ExtraHandleID is the column ID of column which we need to append to schema to occupy the handle's position
+// ExtraHandleID is the column TeamId of column which we need to append to schema to occupy the handle's position
 // for use of execution phase.
 const ExtraHandleID = -1
 
@@ -456,7 +456,7 @@ type PartitionInfo struct {
 	Num         uint64                `json:"num"`
 }
 
-// GetNameByID gets the partition name by ID.
+// GetNameByID gets the partition name by TeamId.
 func (pi *PartitionInfo) GetNameByID(id int64) string {
 	for _, def := range pi.Definitions {
 		if id == def.ID {
@@ -643,7 +643,7 @@ func (cis *CIStr) UnmarshalJSON(b []byte) error {
 //		col := ColumnToProto(c)
 //		// TODO: Here `PkHandle`'s meaning is changed, we will change it to `IsHandle` when tikv's old select logic
 //		// is abandoned.
-//		if (pkIsHandle && mysql.HasPriKeyFlag(c.Flag)) || c.ID == ExtraHandleID {
+//		if (pkIsHandle && mysql.HasPriKeyFlag(c.Flag)) || c.TeamId == ExtraHandleID {
 //			col.PkHandle = true
 //		} else {
 //			col.PkHandle = false
@@ -656,8 +656,8 @@ func (cis *CIStr) UnmarshalJSON(b []byte) error {
 //// IndexToProto converts a model.IndexInfo to a tipb.IndexInfo.
 //func IndexToProto(t *TableInfo, idx *IndexInfo) *tipb.IndexInfo {
 //	pi := &tipb.IndexInfo{
-//		TableId: t.ID,
-//		IndexId: idx.ID,
+//		TableId: t.TeamId,
+//		IndexId: idx.TeamId,
 //		Unique:  idx.Unique,
 //	}
 //	cols := make([]*tipb.ColumnInfo, 0, len(idx.Columns)+1)
@@ -682,7 +682,7 @@ func (cis *CIStr) UnmarshalJSON(b []byte) error {
 //// ColumnToProto converts model.ColumnInfo to tipb.ColumnInfo.
 //func ColumnToProto(c *ColumnInfo) *tipb.ColumnInfo {
 //	pc := &tipb.ColumnInfo{
-//		ColumnId:  c.ID,
+//		ColumnId:  c.TeamId,
 //		Collation: collationToProto(c.FieldType.Collate),
 //		ColumnLen: int32(c.FieldType.Flen),
 //		Decimal:   int32(c.FieldType.Decimal),
@@ -705,7 +705,7 @@ func collationToProto(c string) int32 {
 	return int32(mysql.DefaultCollationID)
 }
 
-// TableColumnID is composed by table ID and column ID.
+// TableColumnID is composed by table TeamId and column TeamId.
 type TableColumnID struct {
 	TableID  int64
 	ColumnID int64

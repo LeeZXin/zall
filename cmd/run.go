@@ -26,6 +26,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/api/userapi"
 	"github.com/LeeZXin/zall/meta/modules/api/zalletapi"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
+	"github.com/LeeZXin/zall/notify/modules/api/notifyapi"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/promagent/agent"
@@ -141,6 +142,10 @@ func runZall(*cli.Context) error {
 	// for discovery
 	{
 		discoveryapi.InitApi()
+	}
+	// for notify
+	{
+		notifyapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer(), prom.NewServer())
 	zsf.Run(

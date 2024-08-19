@@ -26,7 +26,7 @@ func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 
 func UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", reqDTO.TaskId).
+		Where("id = ?", reqDTO.Id).
 		Cols("name", "cron_exp", "content").
 		Update(&Task{
 			Name:    reqDTO.Name,
@@ -141,7 +141,7 @@ func ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) ([]TaskLog, int6
 		Where("task_id = ?", reqDTO.TaskId).
 		And("created between ? and ?", reqDTO.BeginTime.Format(time.DateTime), reqDTO.EndTime.Format(time.DateTime)).
 		Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).
-		OrderBy("id desc").
+		Desc("id").
 		FindAndCount(&ret)
 	return ret, total, err
 }
@@ -190,4 +190,52 @@ func DeleteLogByTaskId(ctx context.Context, taskId int64) error {
 		Where("task_id = ?", taskId).
 		Delete(new(TaskLog))
 	return err
+}
+
+func InsertFailedTaskNotifyTpl(ctx context.Context, reqDTO InsertFailedTaskNotifyTplReqDTO) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Insert(&FailedTaskNotifyTpl{
+			TeamId: reqDTO.TeamId,
+			TplId:  reqDTO.TplId,
+			Env:    reqDTO.Env,
+		})
+	return err
+}
+
+func GetFailedTaskNotifyTplByTeamIdAndEnv(ctx context.Context, teamId int64, env string) (FailedTaskNotifyTpl, bool, error) {
+	var ret FailedTaskNotifyTpl
+	b, err := xormutil.MustGetXormSession(ctx).Where("team_id = ?", teamId).And("env = ?", env).Get(&ret)
+	return ret, b, err
+}
+
+func UpdateFailedTaskNotifyTpl(ctx context.Context, id int64, tplId int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", id).
+		Cols("tpl_id").
+		Update(&FailedTaskNotifyTpl{
+			TplId: tplId,
+		})
+	return rows == 1, err
+}
+
+func DeleteFailedTaskNotifyTplByTeamId(ctx context.Context, teamId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("team_id = ?", teamId).
+		Delete(new(FailedTaskNotifyTpl))
+	return err
+}
+
+func DeleteFailedTaskNotifyTplByTplId(ctx context.Context, tplId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		Where("tpl_id = ?", tplId).
+		Delete(new(FailedTaskNotifyTpl))
+	return err
+}
+
+func DeleteFailedTaskNotifyTplByTeamIdAndEnv(ctx context.Context, teamId int64, env string) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("team_id = ?", teamId).
+		And("env = ?", env).
+		Delete(new(FailedTaskNotifyTpl))
+	return rows == 1, err
 }

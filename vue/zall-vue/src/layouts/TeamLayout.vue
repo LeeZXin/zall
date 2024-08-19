@@ -10,24 +10,28 @@
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
         <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
           <a-menu-item key="/gitRepo/list">
-            <branches-outlined />
+            <BranchesOutlined />
             <span>{{t("teamMenu.gitRepo")}}</span>
           </a-menu-item>
           <a-menu-item key="/app/list">
-            <appstore-outlined />
+            <AppstoreOutlined />
             <span>{{t("teamMenu.app")}}</span>
           </a-menu-item>
           <a-menu-item key="/timerTask/list" v-if="teamStore.perm?.canManageTimer">
-            <clock-circle-outlined />
+            <ClockCircleOutlined />
             <span>{{t("teamMenu.timerTask")}}</span>
           </a-menu-item>
           <a-menu-item key="/role/list" v-if="teamStore.isAdmin">
-            <user-outlined />
+            <UserOutlined />
             <span>{{t("teamMenu.roleAndMembers")}}</span>
           </a-menu-item>
-          <a-menu-item key="/settings" v-if="teamStore.isAdmin">
-            <setting-outlined />
-            <span>设置</span>
+          <a-menu-item key="/setting" v-if="teamStore.isAdmin">
+            <SettingOutlined />
+            <span>{{t("teamMenu.setting")}}</span>
+          </a-menu-item>
+          <a-menu-item key="/notifyTpl/list" v-if="teamStore.perm?.canManageNotifyTpl">
+            <NotificationOutlined />
+            <span>{{t("teamMenu.notifyTpl")}}</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -49,7 +53,8 @@ import {
   AppstoreOutlined,
   ClockCircleOutlined,
   SettingOutlined,
-  UserOutlined
+  UserOutlined,
+  NotificationOutlined
 } from "@ant-design/icons-vue";
 import { getTeamRequest } from "@/api/team/teamApi";
 const teamStore = useTeamStore();
@@ -85,7 +90,8 @@ const pagesMap = {
   "/role": "/role/list",
   "/timerTask": "/timerTask/list",
   "/app": "/app/list",
-  "/settings": "/settings"
+  "/setting": "/setting",
+  "/notifyTpl": "/notifyTpl/list"
 };
 changeSelectedKey(route.path);
 getTeamRequest(route.params.teamId).then(res => {

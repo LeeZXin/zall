@@ -31,6 +31,11 @@ const (
 		PingEvent ping
 	*/
 	PingEvent
+	/*
+		WorkflowEvent 工作流
+		工作流增删改、触发
+	*/
+	WorkflowEvent
 )
 
 func (e Event) String() string {
@@ -45,6 +50,8 @@ func (e Event) String() string {
 		return "git-repo-event"
 	case PingEvent:
 		return "ping-event"
+	case WorkflowEvent:
+		return "workflow-event"
 	default:
 		return "unknown-event"
 	}
@@ -52,7 +59,7 @@ func (e Event) String() string {
 
 func (e Event) IsValid() bool {
 	switch e {
-	case ProtectedBranchEvent, GitPushEvent, PullRequestEvent, GitRepoEvent:
+	case ProtectedBranchEvent, GitPushEvent, PullRequestEvent, GitRepoEvent, WorkflowEvent:
 		return true
 	default:
 		return false

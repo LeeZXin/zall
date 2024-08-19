@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+// 定时任务
 export const useTimerTaskStore = defineStore('timerTaskStore', {
     state: () => ({
         cronExp: "",

@@ -322,6 +322,11 @@ const teamPermList = [
     checkbox: "管理定时任务",
     key: "canManageTimer",
     desc: "拥有该权限,则可以对定时任务新增、查看、编辑、触发、删除"
+  },
+  {
+    checkbox: "管理外部通知",
+    key: "canManageNotifyTpl",
+    desc: "拥有该权限,则可以对外部通知新增、查看、编辑、触发、删除"
   }
 ];
 const repoPermKeys = [

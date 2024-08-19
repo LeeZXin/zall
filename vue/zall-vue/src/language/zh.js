@@ -53,7 +53,9 @@ export default {
         applyApproval: "审批申请",
         dbAudit: "数据库审计",
         promScrape: "Prometheus监控",
-        roleAndMembers: "角色&成员"
+        roleAndMembers: "角色&成员",
+        setting: "设置",
+        notifyTpl: "外部通知"
     },
     roleListPage: {
         roleList: "角色列表",
@@ -111,7 +113,22 @@ export default {
     no: "否",
     timerTask: {
         autoTriggerType: "自动触发",
-        manualTriggerType: "手动触发"
+        manualTriggerType: "手动触发",
+        successful: "成功",
+        failed: "失败",
+        logColumns: {
+            triggerBy: "操作人",
+            triggerType: "操作类型",
+            isSuccess: "状态",
+            created: "执行时间",
+            operation: "操作"
+        },
+        viewErrLog: "查看错误日志",
+        viewTaskCfg: "查看任务配置",
+        errLog: "错误日志",
+        taskCfg: "任务配置",
+        executeLog: "执行日志",
+        searchMonthly: "搜索月份"
     },
     deployPlan: {
         pendingStatus: "待发布",

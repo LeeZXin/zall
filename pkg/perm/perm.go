@@ -16,7 +16,8 @@ var (
 		CanCreateDeployPlan:      true,
 	}
 	DefaultTeamPerm = TeamPerm{
-		CanManageTimer: true,
+		CanManageTimer:     true,
+		CanManageNotifyTpl: true,
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:              true,
@@ -141,6 +142,8 @@ type RepoPerm struct {
 type TeamPerm struct {
 	// 是否可管理定时任务
 	CanManageTimer bool `json:"canManageTimer"`
+	// 是否可管理外部通知
+	CanManageNotifyTpl bool `json:"canManageNotifyTpl"`
 }
 
 type AppPerm struct {

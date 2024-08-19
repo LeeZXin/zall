@@ -1,16 +1,17 @@
 package taskmd
 
 import (
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/timer"
 	"time"
 )
 
 const (
-	TaskTableName    = "ztimer_task"
-	ExecuteTableName = "ztimer_execute"
-	LogTableName     = "ztimer_log"
-
-	DefaultTrigger = "system"
+	TaskTableName                = "ztimer_task"
+	ExecuteTableName             = "ztimer_execute"
+	LogTableName                 = "ztimer_log"
+	FailedTaskNotifyTplTableName = "ztimer_failed_task_notify_tpl"
+	DefaultTrigger               = "system"
 )
 
 type TriggerType int
@@ -21,6 +22,17 @@ func (t TriggerType) IsValid() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (t TriggerType) String() string {
+	switch t {
+	case AutoTriggerType:
+		return i18n.GetByKey(i18n.TimerTaskAutoTriggerType)
+	case ManualTriggerType:
+		return i18n.GetByKey(i18n.TimerTaskManualTriggerType)
+	default:
+		return ""
 	}
 }
 
@@ -39,6 +51,7 @@ type Task struct {
 	IsEnabled bool        `json:"isEnabled"`
 	Creator   string      `json:"creator"`
 	Created   time.Time   `json:"created" xorm:"created"`
+	Updated   time.Time   `json:"updated" xorm:"updated"`
 }
 
 func (*Task) TableName() string {
@@ -85,4 +98,17 @@ func (l *TaskLog) GetTaskContent() timer.Task {
 
 func (*TaskLog) TableName() string {
 	return LogTableName
+}
+
+type FailedTaskNotifyTpl struct {
+	Id      int64     `json:"id" xorm:"pk autoincr"`
+	TeamId  int64     `json:"taskId"`
+	TplId   int64     `json:"tplId"`
+	Env     string    `json:"env"`
+	Created time.Time `json:"created" xorm:"created"`
+	Updated time.Time `json:"updated" xorm:"updated"`
+}
+
+func (*FailedTaskNotifyTpl) TableName() string {
+	return FailedTaskNotifyTplTableName
 }

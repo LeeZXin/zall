@@ -7,8 +7,24 @@
           style="width: 240px;margin-right:10px"
           v-model:value="searchName"
           @pressEnter="()=>listTimerTask()"
-        />
-        <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建定时任务</a-button>
+        >
+          <template #suffix>
+            <SearchOutlined />
+          </template>
+        </a-input>
+        <a-button
+          type="primary"
+          :icon="h(PlusOutlined)"
+          @click="gotoCreatePage"
+          style="margin-right:10px"
+          v-if="teamStore.perm?.canManageTimer"
+        >创建定时任务</a-button>
+        <a-button
+          type="primary"
+          :icon="h(SettingOutlined)"
+          @click="showBindModal"
+          v-if="teamStore.perm?.canManageNotifyTpl"
+        >任务失败通知模板</a-button>
       </div>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
@@ -40,7 +56,7 @@
                   <play-circle-outlined />
                   <span style="margin-left:4px">手动触发任务</span>
                 </li>
-                <li @click="viewLogs(dataItem)">
+                <li @click="viewLog(dataItem)">
                   <eye-outlined />
                   <span style="margin-left:4px">查看日志</span>
                 </li>
@@ -64,10 +80,27 @@
       @change="()=>listTimerTask()"
     />
   </div>
+  <a-modal v-model:open="bindModal.open" title="任务失败通知模板" @ok="handleBindModalOk">
+    <div>
+      <div style="font-size:12px;margin-bottom:3px">已选环境</div>
+      <div>{{selectedEnv}}</div>
+    </div>
+    <div style="margin-top: 10px">
+      <div style="font-size:12px;margin-bottom:3px">任务失败通知模板</div>
+      <a-select
+        style="width: 100%"
+        placeholder="请选择"
+        v-model:value="bindModal.selectTpl"
+        :options="bindModal.tplList"
+        show-search
+        :filter-option="filterSourceListOption"
+      />
+    </div>
+  </a-modal>
 </template>
 <script setup>
 import ZTable from "@/components/common/ZTable";
-import { ref, createVNode, h } from "vue";
+import { ref, createVNode, h, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   DeleteOutlined,
@@ -76,18 +109,25 @@ import {
   EllipsisOutlined,
   PlusOutlined,
   PlayCircleOutlined,
-  EyeOutlined
+  EyeOutlined,
+  SearchOutlined,
+  SettingOutlined
 } from "@ant-design/icons-vue";
 import {
   listTimerTaskRequest,
   enableTimerTaskRequest,
   disableTimerTaskRequest,
   deleteTimerTaskRequest,
-  triggerTimerTaskRequest
+  triggerTimerTaskRequest,
+  getFailedTaskNotifyTplRequest,
+  bindFailedTaskNotifyTplRequest
 } from "@/api/team/timerApi";
+import { listAllTplByTeamIdRequest } from "@/api/notify/notifyApi";
 import { Modal, message } from "ant-design-vue";
 import { useTimerTaskStore } from "@/pinia/timerTaskStore";
 import EnvSelector from "@/components/app/EnvSelector";
+import { useTeamStore } from "@/pinia/teamStore";
+const teamStore = useTeamStore();
 const timerTaskStore = useTimerTaskStore();
 const router = useRouter();
 const route = useRoute();
@@ -97,6 +137,16 @@ const pageSize = 10;
 const totalCount = ref(0);
 const selectedEnv = ref();
 const searchName = ref("");
+const bindModal = reactive({
+  open: false,
+  selectTpl: undefined,
+  tplList: [
+    {
+      value: 0,
+      label: "不通知"
+    }
+  ]
+});
 const columns = [
   {
     title: "名称",
@@ -144,8 +194,6 @@ const deleteTimerTask = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteTimerTaskRequest(item.id).then(() => {
         message.success("删除成功");
@@ -164,8 +212,6 @@ const triggerTimerTask = item => {
   Modal.confirm({
     title: `你确定要触发${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       triggerTimerTaskRequest(item.id).then(() => {
         message.success("触发成功");
@@ -197,7 +243,11 @@ const enableOrDisableTask = item => {
     });
   }
 };
-const viewLogs = item => {
+// 下拉框搜索过滤
+const filterSourceListOption = (input, option) => {
+  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+const viewLog = item => {
   timerTaskStore.id = item.id;
   timerTaskStore.name = item.name;
   timerTaskStore.cronExp = item.cronExp;
@@ -205,12 +255,54 @@ const viewLogs = item => {
   timerTaskStore.teamId = item.teamId;
   timerTaskStore.isEnabled = item.isEnabled;
   timerTaskStore.env = item.env;
-  router.push(`/team/${route.params.teamId}/timerTask/${item.id}/logs`);
+  router.push(`/team/${route.params.teamId}/timerTask/${item.id}/log`);
 };
 const onEnvChange = e => {
   selectedEnv.value = e.newVal;
   router.replace(`/team/${route.params.teamId}/timerTask/list/${e.newVal}`);
   listTimerTask();
+};
+// 展示绑定modal
+const showBindModal = () => {
+  bindModal.selectTpl = null;
+  if (bindModal.tplList.length === 1) {
+    listAllTplByTeamIdRequest(route.params.teamId).then(res => {
+      bindModal.tplList = bindModal.tplList.concat(
+        res.data.map(item => {
+          return {
+            value: item.id,
+            label: item.name
+          };
+        })
+      );
+      getFailedTaskNotifyTplRequest({
+        teamId: parseInt(route.params.teamId),
+        env: selectedEnv.value
+      }).then(res => {
+        bindModal.selectTpl = res.data;
+        bindModal.open = true;
+      });
+    });
+  } else {
+    getFailedTaskNotifyTplRequest({
+      teamId: parseInt(route.params.teamId),
+      env: selectedEnv.value
+    }).then(res => {
+      bindModal.selectTpl = res.data;
+      bindModal.open = true;
+    });
+  }
+};
+// 绑定失败通知模板
+const handleBindModalOk = () => {
+  bindFailedTaskNotifyTplRequest({
+    teamId: parseInt(route.params.teamId),
+    env: selectedEnv.value,
+    tplId: bindModal.selectTpl
+  }).then(() => {
+    message.success("操作成功");
+    bindModal.open = false;
+  });
 };
 </script>
 <style scoped>

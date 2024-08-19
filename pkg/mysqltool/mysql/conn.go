@@ -498,7 +498,7 @@ func (c *Conn) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
 }
 
-// GetConnectionID returns the MySQL connection ID for this connection.
+// GetConnectionID returns the MySQL connection TeamId for this connection.
 func (c *Conn) GetConnectionID() uint32 {
 	return c.ConnectionID
 }
@@ -681,7 +681,7 @@ func parseOKHeader(data []byte) (uint64, uint64, uint16, uint16, error) {
 		return 0, 0, 0, 0, fmt.Errorf("invalid OK packet affectedRows: %v", data)
 	}
 
-	// Last Insert ID.
+	// Last Insert TeamId.
 	lastInsertID, pos, _, ok := ReadLenEncInt(data, pos)
 	if !ok {
 		return 0, 0, 0, 0, fmt.Errorf("invalid OK packet lastInsertID: %v", data)
