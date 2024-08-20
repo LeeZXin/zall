@@ -74,3 +74,8 @@ func (c *ProtectedBranchCfg) FromDB(content []byte) error {
 func (c *ProtectedBranchCfg) ToDB() ([]byte, error) {
 	return json.Marshal(c)
 }
+
+type ProtectedBranch struct {
+	Pattern string `json:"pattern"`
+	ProtectedBranchCfg
+}

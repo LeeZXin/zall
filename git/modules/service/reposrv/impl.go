@@ -10,6 +10,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/git/modules/service/gpgkeysrv"
 	"github.com/LeeZXin/zall/git/modules/service/sshkeysrv"
+	"github.com/LeeZXin/zall/git/modules/service/webhooksrv"
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
@@ -17,12 +18,11 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/pkg/eventbus"
+	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/git/signature"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/limiter"
 	"github.com/LeeZXin/zall/pkg/perm"
-	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -65,6 +65,7 @@ func newOuterService() OuterService {
 	if limit <= 0 {
 		limit = 10
 	}
+	webhooksrv.InitPsub()
 	sshkeysrv.InitInner()
 	gpgkeysrv.InitInner()
 	return &outerImpl{
@@ -512,7 +513,7 @@ func (s *outerImpl) DeleteRepo(ctx context.Context, reqDTO DeleteRepoReqDTO) (er
 		err = util.InternalError(err)
 		return
 	}
-	notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoDeleteTemporarilyAction)
+	notifyEvent(repo, reqDTO.Operator, event.RepoDeleteTemporarilyAction)
 	return
 }
 
@@ -540,7 +541,7 @@ func (s *outerImpl) RecoverFromRecycle(ctx context.Context, reqDTO RecoverFromRe
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoRecoverFromRecycle)
+	notifyEvent(repo, reqDTO.Operator, event.RepoRecoverFromRecycleAction)
 	return nil
 }
 
@@ -602,18 +603,23 @@ func (s *outerImpl) DeleteRepoPermanently(ctx context.Context, reqDTO DeleteRepo
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoDeletePermanentlyAction)
+	notifyEvent(repo, reqDTO.Operator, event.RepoDeletePermanentlyAction)
 	return nil
 }
 
-func notifyEventBus(repo repomd.Repo, operator string, action webhook.GitRepoAction) {
-	psub.Publish(eventbus.GitRepoEventTopic, eventbus.GitRepoEvent{
-		RepoId:    repo.Id,
-		Name:      repo.Name,
-		Path:      repo.Path,
-		Operator:  operator,
-		Action:    string(action),
-		EventTime: time.Now(),
+func notifyEvent(repo repomd.Repo, operator apisession.UserInfo, action event.GitRepoAction) {
+	psub.Publish(event.GitRepoTopic, event.GitRepoEvent{
+		BaseRepo: event.BaseRepo{
+			TeamId:   repo.TeamId,
+			RepoPath: repo.Path,
+			RepoId:   repo.Id,
+			RepoName: repo.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:  operator.Account,
+			EventTime: time.Now().UnixMilli(),
+		},
+		Action: action,
 	})
 }
 
@@ -1473,9 +1479,9 @@ func (s *outerImpl) SetRepoArchivedStatus(ctx context.Context, reqDTO SetRepoArc
 		return util.InternalError(err)
 	}
 	if reqDTO.IsArchived {
-		notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoArchivedAction)
+		notifyEvent(repo, reqDTO.Operator, event.RepoArchivedAction)
 	} else {
-		notifyEventBus(repo, reqDTO.Operator.Account, webhook.RepoUnArchivedAction)
+		notifyEvent(repo, reqDTO.Operator, event.RepoUnArchivedAction)
 	}
 	return nil
 }

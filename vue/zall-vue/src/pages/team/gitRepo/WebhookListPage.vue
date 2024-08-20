@@ -8,7 +8,7 @@
         <div class="webhook-pattern no-wrap">{{item.hookUrl}}</div>
         <ul class="op-btns">
           <li class="ping-btn" @click="pingWebhook(item)">ping</li>
-          <li class="update-btn" @click="handleWebhook(item)">编辑</li>
+          <li class="update-btn" @click="updateWebhook(item)">编辑</li>
           <li class="del-btn" @click="deleteWebhook(item)">删除</li>
         </ul>
       </li>
@@ -26,8 +26,11 @@
 import { ref, createVNode, h } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import ZNoData from "@/components/common/ZNoData";
-import { deleteWebhookRequest } from "@/api/git/webhookApi";
-import { listWebhookRequest, pingWebhookRequest } from "@/api/git/webhookApi";
+import {
+  listWebhookRequest,
+  pingWebhookRequest,
+  deleteWebhookRequest
+} from "@/api/git/webhookApi";
 import { ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
 import { useWebhookStore } from "@/pinia/webhookStore";
@@ -35,9 +38,13 @@ const router = useRouter();
 const route = useRoute();
 const webhooks = ref([]);
 const webhookStore = useWebhookStore();
+// 跳转新增webhook页面
 const gotoCreatePage = () => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/create`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/create`
+  );
 };
+// 删除webhook
 const deleteWebhook = item => {
   Modal.confirm({
     title: `你确定要删除${item.hookUrl}吗?`,
@@ -53,22 +60,27 @@ const deleteWebhook = item => {
     onCancel() {}
   });
 };
+// 获取webhook列表
 const listWebhook = () => {
   listWebhookRequest(route.params.repoId).then(res => {
     webhooks.value = res.data;
   });
 };
-const handleWebhook = item => {
+// 编辑webhook
+const updateWebhook = item => {
   webhookStore.id = item.id;
   webhookStore.hookUrl = item.hookUrl;
   webhookStore.events = item.events;
   webhookStore.secret = item.secret;
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/${item.id}/update`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/${item.id}/update`
+  );
 };
+// ping
 const pingWebhook = item => {
-  pingWebhookRequest(item.id).then(()=>{
-      message.success("成功");
-  })
+  pingWebhookRequest(item.id).then(() => {
+    message.success("成功");
+  });
 };
 listWebhook();
 </script>

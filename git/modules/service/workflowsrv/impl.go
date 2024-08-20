@@ -12,10 +12,9 @@ import (
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/pkg/eventbus"
+	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/sshagent"
-	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -223,17 +222,17 @@ func (s *innerImpl) Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO
 type outerImpl struct{}
 
 func newOuterService() OuterService {
-	psub.Subscribe(eventbus.PullRequestEventTopic, func(data any) {
-		event, ok := data.(eventbus.PullRequestEvent)
-		if ok && event.Action == string(webhook.PrMergeAction) {
+	psub.Subscribe(event.PullRequestTopic, func(data any) {
+		req, ok := data.(event.PullRequestEvent)
+		if ok && req.Action == event.PrMergeAction {
 			Inner.FindAndExecute(FindAndExecuteWorkflowReqDTO{
-				RepoId:      event.RepoId,
-				RepoPath:    event.RepoPath,
-				Operator:    event.Account,
+				RepoId:      req.RepoId,
+				RepoPath:    req.RepoPath,
+				Operator:    req.Operator,
 				TriggerType: workflowmd.HookTriggerType,
-				Branch:      event.Ref,
+				Branch:      req.Ref,
 				Source:      workflowmd.PullRequestTriggerSource,
-				PrId:        event.PrId,
+				PrId:        req.PrId,
 			})
 		}
 	})

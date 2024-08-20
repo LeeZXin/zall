@@ -33,6 +33,10 @@
             <NotificationOutlined />
             <span>{{t("teamMenu.notifyTpl")}}</span>
           </a-menu-item>
+          <a-menu-item key="/teamHook/list" v-if="teamStore.perm?.canManageTeamHook">
+            <ApiOutlined />
+            <span>{{t("teamMenu.teamHook")}}</span>
+          </a-menu-item>
         </a-menu>
       </a-layout-sider>
       <a-layout-content style="height: calc(100vh - 64px); overflow: scroll;background-color:white">
@@ -54,7 +58,8 @@ import {
   ClockCircleOutlined,
   SettingOutlined,
   UserOutlined,
-  NotificationOutlined
+  NotificationOutlined,
+  ApiOutlined
 } from "@ant-design/icons-vue";
 import { getTeamRequest } from "@/api/team/teamApi";
 const teamStore = useTeamStore();
@@ -91,7 +96,8 @@ const pagesMap = {
   "/timerTask": "/timerTask/list",
   "/app": "/app/list",
   "/setting": "/setting",
-  "/notifyTpl": "/notifyTpl/list"
+  "/notifyTpl": "/notifyTpl/list",
+  "/teamHook": "/teamHook/list"
 };
 changeSelectedKey(route.path);
 getTeamRequest(route.params.teamId).then(res => {

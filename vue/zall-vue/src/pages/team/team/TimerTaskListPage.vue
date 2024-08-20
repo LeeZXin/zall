@@ -19,12 +19,6 @@
           style="margin-right:10px"
           v-if="teamStore.perm?.canManageTimer"
         >创建定时任务</a-button>
-        <a-button
-          type="primary"
-          :icon="h(SettingOutlined)"
-          @click="showBindModal"
-          v-if="teamStore.perm?.canManageNotifyTpl"
-        >任务失败通知模板</a-button>
       </div>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
@@ -70,33 +64,16 @@
       </template>
     </ZTable>
     <a-pagination
-      v-model:current="currPage"
-      :total="totalCount"
+      v-model:current="dataPage.current"
+      :total="dataPage.totalCount"
       show-less-items
-      :pageSize="pageSize"
+      :pageSize="dataPage.pageSize"
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
       @change="()=>listTimerTask()"
     />
   </div>
-  <a-modal v-model:open="bindModal.open" title="任务失败通知模板" @ok="handleBindModalOk">
-    <div>
-      <div style="font-size:12px;margin-bottom:3px">已选环境</div>
-      <div>{{selectedEnv}}</div>
-    </div>
-    <div style="margin-top: 10px">
-      <div style="font-size:12px;margin-bottom:3px">任务失败通知模板</div>
-      <a-select
-        style="width: 100%"
-        placeholder="请选择"
-        v-model:value="bindModal.selectTpl"
-        :options="bindModal.tplList"
-        show-search
-        :filter-option="filterSourceListOption"
-      />
-    </div>
-  </a-modal>
 </template>
 <script setup>
 import ZTable from "@/components/common/ZTable";
@@ -110,19 +87,15 @@ import {
   PlusOutlined,
   PlayCircleOutlined,
   EyeOutlined,
-  SearchOutlined,
-  SettingOutlined
+  SearchOutlined
 } from "@ant-design/icons-vue";
 import {
   listTimerTaskRequest,
   enableTimerTaskRequest,
   disableTimerTaskRequest,
   deleteTimerTaskRequest,
-  triggerTimerTaskRequest,
-  getFailedTaskNotifyTplRequest,
-  bindFailedTaskNotifyTplRequest
+  triggerTimerTaskRequest
 } from "@/api/team/timerApi";
-import { listAllTplByTeamIdRequest } from "@/api/notify/notifyApi";
 import { Modal, message } from "ant-design-vue";
 import { useTimerTaskStore } from "@/pinia/timerTaskStore";
 import EnvSelector from "@/components/app/EnvSelector";
@@ -132,21 +105,13 @@ const timerTaskStore = useTimerTaskStore();
 const router = useRouter();
 const route = useRoute();
 const dataSource = ref([]);
-const currPage = ref(1);
-const pageSize = 10;
-const totalCount = ref(0);
+const dataPage = reactive({
+  current: 1,
+  pageSize: 10,
+  totalCount: 0
+});
 const selectedEnv = ref();
 const searchName = ref("");
-const bindModal = reactive({
-  open: false,
-  selectTpl: undefined,
-  tplList: [
-    {
-      value: 0,
-      label: "不通知"
-    }
-  ]
-});
 const columns = [
   {
     title: "名称",
@@ -177,11 +142,11 @@ const columns = [
 const listTimerTask = () => {
   listTimerTaskRequest({
     teamId: parseInt(route.params.teamId),
-    pageNum: currPage.value,
+    pageNum: dataPage.current,
     name: searchName.value,
     env: selectedEnv.value
   }).then(res => {
-    totalCount.value = res.totalCount;
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -243,10 +208,6 @@ const enableOrDisableTask = item => {
     });
   }
 };
-// 下拉框搜索过滤
-const filterSourceListOption = (input, option) => {
-  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
-};
 const viewLog = item => {
   timerTaskStore.id = item.id;
   timerTaskStore.name = item.name;
@@ -261,48 +222,6 @@ const onEnvChange = e => {
   selectedEnv.value = e.newVal;
   router.replace(`/team/${route.params.teamId}/timerTask/list/${e.newVal}`);
   listTimerTask();
-};
-// 展示绑定modal
-const showBindModal = () => {
-  bindModal.selectTpl = null;
-  if (bindModal.tplList.length === 1) {
-    listAllTplByTeamIdRequest(route.params.teamId).then(res => {
-      bindModal.tplList = bindModal.tplList.concat(
-        res.data.map(item => {
-          return {
-            value: item.id,
-            label: item.name
-          };
-        })
-      );
-      getFailedTaskNotifyTplRequest({
-        teamId: parseInt(route.params.teamId),
-        env: selectedEnv.value
-      }).then(res => {
-        bindModal.selectTpl = res.data;
-        bindModal.open = true;
-      });
-    });
-  } else {
-    getFailedTaskNotifyTplRequest({
-      teamId: parseInt(route.params.teamId),
-      env: selectedEnv.value
-    }).then(res => {
-      bindModal.selectTpl = res.data;
-      bindModal.open = true;
-    });
-  }
-};
-// 绑定失败通知模板
-const handleBindModalOk = () => {
-  bindFailedTaskNotifyTplRequest({
-    teamId: parseInt(route.params.teamId),
-    env: selectedEnv.value,
-    tplId: bindModal.selectTpl
-  }).then(() => {
-    message.success("操作成功");
-    bindModal.open = false;
-  });
 };
 </script>
 <style scoped>

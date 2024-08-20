@@ -7,11 +7,10 @@ import (
 )
 
 const (
-	TaskTableName                = "ztimer_task"
-	ExecuteTableName             = "ztimer_execute"
-	LogTableName                 = "ztimer_log"
-	FailedTaskNotifyTplTableName = "ztimer_failed_task_notify_tpl"
-	DefaultTrigger               = "system"
+	TaskTableName    = "ztimer_task"
+	ExecuteTableName = "ztimer_execute"
+	LogTableName     = "ztimer_log"
+	DefaultTrigger   = "system"
 )
 
 type TriggerType int
@@ -98,17 +97,4 @@ func (l *TaskLog) GetTaskContent() timer.Task {
 
 func (*TaskLog) TableName() string {
 	return LogTableName
-}
-
-type FailedTaskNotifyTpl struct {
-	Id      int64     `json:"id" xorm:"pk autoincr"`
-	TeamId  int64     `json:"taskId"`
-	TplId   int64     `json:"tplId"`
-	Env     string    `json:"env"`
-	Created time.Time `json:"created" xorm:"created"`
-	Updated time.Time `json:"updated" xorm:"updated"`
-}
-
-func (*FailedTaskNotifyTpl) TableName() string {
-	return FailedTaskNotifyTplTableName
 }

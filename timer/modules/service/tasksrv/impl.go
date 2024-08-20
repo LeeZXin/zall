@@ -3,7 +3,6 @@ package tasksrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
-	"github.com/LeeZXin/zall/notify/modules/model/notifymd"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -267,78 +266,6 @@ func (o *outerImpl) UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) err
 	return nil
 }
 
-// GetFailedTaskNotifyTplId 获取任务失败通知模板
-func (o *outerImpl) GetFailedTaskNotifyTplId(ctx context.Context, reqDTO GetFailedTaskNotifyTplIdReqDTO) (int64, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return 0, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	err := checkManageNotifyTplPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId)
-	if err != nil {
-		return 0, err
-	}
-	tpl, b, err := taskmd.GetFailedTaskNotifyTplByTeamIdAndEnv(ctx, reqDTO.TeamId, reqDTO.Env)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return 0, util.InternalError(err)
-	}
-	if !b {
-		return 0, nil
-	}
-	return tpl.TplId, nil
-}
-
-// BindFailedTaskNotifyTpl 绑定任务失败通知模板
-func (o *outerImpl) BindFailedTaskNotifyTpl(ctx context.Context, reqDTO BindFailedTaskNotifyTplReqDTO) error {
-	if err := reqDTO.IsValid(); err != nil {
-		return err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	err := checkManageNotifyTplPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId)
-	if err != nil {
-		return err
-	}
-	if reqDTO.TplId == 0 {
-		// 删除绑定关系
-		_, err = taskmd.DeleteFailedTaskNotifyTplByTeamIdAndEnv(ctx, reqDTO.TeamId, reqDTO.Env)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return util.InternalError(err)
-		}
-		return nil
-	}
-	// 校验tplId
-	b, err := notifymd.ExistTplById(ctx, reqDTO.TplId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.InvalidArgsError()
-	}
-	tpl, b, err := taskmd.GetFailedTaskNotifyTplByTeamIdAndEnv(ctx, reqDTO.TeamId, reqDTO.Env)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		err = taskmd.InsertFailedTaskNotifyTpl(ctx, taskmd.InsertFailedTaskNotifyTplReqDTO{
-			TeamId: reqDTO.TeamId,
-			TplId:  reqDTO.TplId,
-			Env:    reqDTO.Env,
-		})
-	} else {
-		_, err = taskmd.UpdateFailedTaskNotifyTpl(ctx, tpl.Id, reqDTO.TplId)
-	}
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	return nil
-}
-
 func checkManageTimerPermByTeamId(ctx context.Context, operator apisession.UserInfo, teamId int64) error {
 	if operator.IsAdmin {
 		return nil
@@ -352,24 +279,6 @@ func checkManageTimerPermByTeamId(ctx context.Context, operator apisession.UserI
 		return util.UnauthorizedError()
 	}
 	if !p.IsAdmin && !p.PermDetail.TeamPerm.CanManageTimer {
-		return util.UnauthorizedError()
-	}
-	return nil
-}
-
-func checkManageNotifyTplPermByTeamId(ctx context.Context, operator apisession.UserInfo, teamId int64) error {
-	if operator.IsAdmin {
-		return nil
-	}
-	p, b, err := teammd.GetUserPermDetail(ctx, teamId, operator.Account)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b {
-		return util.UnauthorizedError()
-	}
-	if !p.IsAdmin && !p.PermDetail.TeamPerm.CanManageNotifyTpl {
 		return util.UnauthorizedError()
 	}
 	return nil

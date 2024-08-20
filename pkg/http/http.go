@@ -1,7 +1,10 @@
 package http
 
 import (
+	"context"
 	"fmt"
+	"github.com/LeeZXin/zsf/services/discovery"
+	"github.com/LeeZXin/zsf/services/lb"
 	"net/http"
 	"net/url"
 	"strings"
@@ -27,7 +30,24 @@ func (t *Task) IsValid() bool {
 }
 
 func (t *Task) DoRequest(httpClient *http.Client) error {
-	req, err := http.NewRequest(t.Method, t.Url, strings.NewReader(t.BodyStr))
+	httpUrl := t.Url
+	parsedUrl, err := url.Parse(httpUrl)
+	if err != nil {
+		return err
+	}
+	// 走服务发现
+	if strings.HasSuffix(parsedUrl.Host, "-http") {
+		servers, err := discovery.Discover(context.Background(), parsedUrl.Host)
+		if err != nil {
+			return err
+		}
+		if len(servers) == 0 {
+			return lb.ServerNotFound
+		}
+		server := discovery.ChooseRandomServer(servers)
+		httpUrl = fmt.Sprintf("%s://%s:%d/%s", parsedUrl.Scheme, server.Host, server.Port, parsedUrl.RequestURI())
+	}
+	req, err := http.NewRequest(t.Method, httpUrl, strings.NewReader(t.BodyStr))
 	if err != nil {
 		return fmt.Errorf("http request failed: %v", err)
 	}

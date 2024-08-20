@@ -276,6 +276,18 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/notifyTpl/:tplId(\\d+)/update",
                 component: () =>
                     import ("../pages/team/team/NotifyTplHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/teamHook/create",
+                component: () =>
+                    import ("../pages/team/team/TeamHookHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/teamHook/list",
+                component: () =>
+                    import ("../pages/team/team/TeamHookListPage")
+            }, {
+                path: "/team/:teamId(\\d+)/teamHook/:hookId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/team/TeamHookHandlePage")
             }]
         },
         {

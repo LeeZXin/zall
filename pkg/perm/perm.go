@@ -18,6 +18,7 @@ var (
 	DefaultTeamPerm = TeamPerm{
 		CanManageTimer:     true,
 		CanManageNotifyTpl: true,
+		CanManageTeamHook:  true,
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:              true,
@@ -144,6 +145,8 @@ type TeamPerm struct {
 	CanManageTimer bool `json:"canManageTimer"`
 	// 是否可管理外部通知
 	CanManageNotifyTpl bool `json:"canManageNotifyTpl"`
+	// 是否可管理team hook
+	CanManageTeamHook bool `json:"canManageTeamHook"`
 }
 
 type AppPerm struct {

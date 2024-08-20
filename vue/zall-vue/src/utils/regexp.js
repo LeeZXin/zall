@@ -73,6 +73,10 @@ const zalletNodeAgentTokenRegexp = /^.{0,1024}$/;
 // notify tpl
 const notifyTplNameRegexp = /^.{1,32}$/;
 const notifyTplUrlRegexp = /^https?:\/\/.+$/;
+// teamHook
+const teamHookUrlRegexp = /^https?:\/\/.+$/;
+const teamHookSecretRegexp = /^.{1,1024}$/;
+const teamHookNameRegexp = /^.{1,32}$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -124,5 +128,8 @@ export {
     zalletNodeAgentHostRegexp,
     zalletNodeAgentTokenRegexp,
     notifyTplNameRegexp,
-    notifyTplUrlRegexp
+    notifyTplUrlRegexp,
+    teamHookUrlRegexp,
+    teamHookSecretRegexp,
+    teamHookNameRegexp
 }

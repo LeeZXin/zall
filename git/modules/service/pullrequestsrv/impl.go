@@ -13,9 +13,8 @@ import (
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/branch"
-	"github.com/LeeZXin/zall/pkg/eventbus"
+	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -221,7 +220,7 @@ func (s *outerImpl) SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequ
 		Req:      reqDTO,
 	})
 	// 触发webhook
-	notifyEventBus(repo, reqDTO.Operator, pr, webhook.PrSubmitAction)
+	notifyEvent(repo, reqDTO.Operator, pr, event.PrSubmitAction)
 	return nil
 }
 
@@ -291,7 +290,7 @@ func (*outerImpl) ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestR
 			Req:      reqDTO,
 		})
 		// 触发webhook
-		notifyEventBus(repo, reqDTO.Operator, pr, webhook.PrCloseAction)
+		notifyEvent(repo, reqDTO.Operator, pr, event.PrCloseAction)
 	}
 	return
 }
@@ -452,7 +451,7 @@ func (s *outerImpl) MergePullRequest(ctx context.Context, reqDTO MergePullReques
 		Req:      reqDTO,
 	})
 	// 触发webhook和工作流
-	notifyEventBus(repo, reqDTO.Operator, pr, webhook.PrMergeAction)
+	notifyEvent(repo, reqDTO.Operator, pr, event.PrMergeAction)
 	return
 }
 
@@ -563,7 +562,7 @@ func (s *outerImpl) AgreeReviewPullRequest(ctx context.Context, reqDTO AgreeRevi
 		Req:      reqDTO,
 	})
 	// 触发webhook
-	notifyEventBus(repo, reqDTO.Operator, pr, webhook.PrReviewAction)
+	notifyEvent(repo, reqDTO.Operator, pr, event.PrReviewAction)
 	return false, nil
 }
 
@@ -879,16 +878,22 @@ func checkAddCommentPermByRepoId(ctx context.Context, repoId int64, operator api
 	return repo, util.UnauthorizedError()
 }
 
-func notifyEventBus(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action webhook.PullRequestAction) {
-	psub.Publish(eventbus.PullRequestEventTopic, eventbus.PullRequestEvent{
-		PrId:      pr.Id,
-		PrTitle:   pr.PrTitle,
-		Action:    string(action),
-		RepoId:    repo.Id,
-		RepoPath:  repo.Path,
-		RepoName:  repo.Name,
-		Account:   operator.Account,
-		Ref:       pr.Head,
-		EventTime: time.Now(),
+func notifyEvent(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action event.PullRequestAction) {
+	psub.Publish(event.PullRequestTopic, event.PullRequestEvent{
+		PrId:    pr.Id,
+		PrTitle: pr.PrTitle,
+		Ref:     pr.Target,
+		RefType: pr.TargetType.String(),
+		Action:  action,
+		BaseRepo: event.BaseRepo{
+			TeamId:   repo.TeamId,
+			RepoPath: repo.Path,
+			RepoId:   repo.Id,
+			RepoName: repo.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:  operator.Account,
+			EventTime: time.Now().UnixMilli(),
+		},
 	})
 }

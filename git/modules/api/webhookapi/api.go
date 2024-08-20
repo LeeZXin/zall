@@ -74,11 +74,11 @@ func updateWebhook(c *gin.Context) {
 	var req UpdateWebhookReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := webhooksrv.Outer.UpdateWebhook(c, webhooksrv.UpdateWebhookReqDTO{
-			WebhookId: req.WebhookId,
-			HookUrl:   req.HookUrl,
-			Secret:    req.Secret,
-			Events:    req.Events,
-			Operator:  apisession.MustGetLoginUser(c),
+			Id:       req.WebhookId,
+			HookUrl:  req.HookUrl,
+			Secret:   req.Secret,
+			Events:   req.Events,
+			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -90,8 +90,8 @@ func updateWebhook(c *gin.Context) {
 
 func deleteWebhook(c *gin.Context) {
 	err := webhooksrv.Outer.DeleteWebhook(c, webhooksrv.DeleteWebhookReqDTO{
-		WebhookId: cast.ToInt64(c.Param("webhookId")),
-		Operator:  apisession.MustGetLoginUser(c),
+		Id:       cast.ToInt64(c.Param("webhookId")),
+		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)

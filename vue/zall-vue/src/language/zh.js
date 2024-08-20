@@ -55,7 +55,8 @@ export default {
         promScrape: "Prometheus监控",
         roleAndMembers: "角色&成员",
         setting: "设置",
-        notifyTpl: "外部通知"
+        notifyTpl: "外部通知",
+        teamHook: "Team Hook"
     },
     roleListPage: {
         roleList: "角色列表",

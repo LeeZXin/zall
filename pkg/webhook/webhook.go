@@ -3,6 +3,7 @@ package webhook
 import (
 	"context"
 	"crypto/tls"
+	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf/logger"
 	"net/http"
@@ -30,13 +31,13 @@ func initTrigger() {
 			},
 			Timeout: 3 * time.Second,
 		}
-		apiExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.CallerRunsStrategy)
+		apiExecutor, _ = executor.NewExecutor(20, 1024, time.Minute, executor.AbortStrategy)
 	})
 }
 
-func TriggerWebhook(url, secret string, req EventReq) {
+func TriggerWebhook(url, secret string, req event.Event) {
 	initTrigger()
-	_ = apiExecutor.Execute(func() {
+	apiExecutor.Execute(func() {
 		err := Post(context.Background(), url, secret, req)
 		if err != nil {
 			logger.Logger.Error(err)

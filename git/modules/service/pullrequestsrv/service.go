@@ -2,6 +2,7 @@ package pullrequestsrv
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/git/modules/service/webhooksrv"
 )
 
 var (
@@ -10,6 +11,7 @@ var (
 
 func Init() {
 	if Outer == nil {
+		webhooksrv.InitPsub()
 		Outer = new(outerImpl)
 	}
 }

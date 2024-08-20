@@ -89,7 +89,7 @@ import {
   deleteNotifyTplRequest,
   listNotifyTplRequest,
   changeNotifyTplApiKeyRequest
-} from "@/api/notify/notifyApi";
+} from "@/api/team/notifyApi";
 import { ref, h, reactive, createVNode } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useNotifyTplStore } from "@/pinia/notifyTplStore";

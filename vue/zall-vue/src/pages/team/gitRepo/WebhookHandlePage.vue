@@ -43,12 +43,8 @@
               <div class="checkbox-desc">合并请求的新增、关闭、合并、评审</div>
             </li>
             <li>
-              <a-checkbox v-model:checked="checkboxes.repo">仓库</a-checkbox>
+              <a-checkbox v-model:checked="checkboxes.gitRepo">仓库</a-checkbox>
               <div class="checkbox-desc">仓库的删除、归档</div>
-            </li>
-            <li>
-              <a-checkbox v-model:checked="checkboxes.workflow">工作流</a-checkbox>
-              <div class="checkbox-desc">工作流的添加、删除、修改、触发事件</div>
             </li>
           </ul>
         </div>
@@ -78,15 +74,8 @@ const checkboxes = reactive({
   protectedBranch: false,
   gitPush: false,
   pullRequest: false,
-  repo: false
+  gitRepo: false
 });
-const eventMap = {
-  protectedBranch: 1,
-  gitPush: 2,
-  pullRequest: 3,
-  repo: 4,
-  workflow: 6
-};
 const webhookStore = useWebhookStore();
 const router = useRouter();
 const mode = getMode();
@@ -94,25 +83,6 @@ const formState = reactive({
   hookUrl: "",
   secret: ""
 });
-const createEvents = () => {
-  let ret = [];
-  if (checkboxes.protectedBranch) {
-    ret.push(eventMap.protectedBranch);
-  }
-  if (checkboxes.gitPush) {
-    ret.push(eventMap.gitPush);
-  }
-  if (checkboxes.pullRequest) {
-    ret.push(eventMap.pullRequest);
-  }
-  if (checkboxes.repo) {
-    ret.push(eventMap.repo);
-  }
-  if (checkboxes.workflow) {
-    ret.push(eventMap.workflow);
-  }
-  return ret;
-};
 const createOrUpdateWebhook = () => {
   if (!webhookUrlRegexp.test(formState.hookUrl)) {
     message.warn("url格式错误");
@@ -122,8 +92,7 @@ const createOrUpdateWebhook = () => {
     message.warn("密钥格式错误");
     return;
   }
-  const events = createEvents();
-  if (events.length === 0) {
+  if (!checkboxes.pullRequest && !checkboxes.gitRepo && !checkboxes.gitPush && !checkboxes.protectedBranch) {
     message.warn("至少选择一个事件");
     return;
   }
@@ -132,7 +101,7 @@ const createOrUpdateWebhook = () => {
       repoId: parseInt(route.params.repoId),
       hookUrl: formState.hookUrl,
       secret: formState.secret,
-      events: events
+      events: checkboxes
     }).then(() => {
       message.success("添加成功");
       router.push(
@@ -144,7 +113,7 @@ const createOrUpdateWebhook = () => {
       webhookId: webhookStore.id,
       hookUrl: formState.hookUrl,
       secret: formState.secret,
-      events: events
+      events: checkboxes
     }).then(() => {
       message.success("更新成功");
       router.push(
@@ -153,41 +122,18 @@ const createOrUpdateWebhook = () => {
     });
   }
 };
-if (mode !== "create") {
-  if (
-    webhookStore.id === 0 ||
-    parseInt(route.params.webhookId) !== webhookStore.id
-  ) {
+if (mode === "update") {
+  if (webhookStore.id === 0) {
     router.push(
       `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`
     );
   } else {
-    if (mode !== "create") {
-      formState.hookUrl = webhookStore.hookUrl;
-      formState.secret = webhookStore.secret;
-      if (webhookStore.events && webhookStore.events.length > 0) {
-        for (let index in webhookStore.events) {
-          let item = webhookStore.events[index];
-          switch (item) {
-            case 1:
-              checkboxes.protectedBranch = true;
-              break;
-            case 2:
-              checkboxes.gitPush = true;
-              break;
-            case 3:
-              checkboxes.pullRequest = true;
-              break;
-            case 4:
-              checkboxes.repo = true;
-              break;
-            case 6:
-              checkboxes.workflow = true;
-              break;
-          }
-        }
-      }
-    }
+    formState.hookUrl = webhookStore.hookUrl;
+    formState.secret = webhookStore.secret;
+    checkboxes.protectedBranch = webhookStore.events?.protectedBranch;
+    checkboxes.gitPush = webhookStore.events?.gitPush;
+    checkboxes.pullRequest = webhookStore.events?.pullRequest;
+    checkboxes.gitRepo = webhookStore.events?.gitRepo;
   }
 }
 </script>

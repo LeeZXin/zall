@@ -12,6 +12,7 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/perm"
+	"github.com/LeeZXin/zall/teamhook/modules/model/teamhookmd"
 	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
@@ -615,8 +616,8 @@ func (*outerImpl) DeleteTeam(ctx context.Context, reqDTO DeleteTeamReqDTO) (err 
 		if err2 != nil {
 			return err2
 		}
-		// 定时任务失败通知
-		return taskmd.DeleteFailedTaskNotifyTplByTeamId(ctx, reqDTO.TeamId)
+		// 删除team hook
+		return teamhookmd.DeleteTeamHookByTeamId(ctx, reqDTO.TeamId)
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

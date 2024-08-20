@@ -27,19 +27,16 @@ func (r *CreateWebhookReqDTO) IsValid() error {
 	if len(r.Secret) == 0 || len(r.Secret) > 1024 {
 		return util.InvalidArgsError()
 	}
-	if !r.Events.IsValid() {
-		return util.InvalidArgsError()
-	}
 	return nil
 }
 
 type DeleteWebhookReqDTO struct {
-	WebhookId int64               `json:"webhookId"`
-	Operator  apisession.UserInfo `json:"operator"`
+	Id       int64               `json:"id"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteWebhookReqDTO) IsValid() error {
-	if r.WebhookId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -87,15 +84,15 @@ type WebhookDTO struct {
 }
 
 type UpdateWebhookReqDTO struct {
-	WebhookId int64               `json:"webhookId"`
-	HookUrl   string              `json:"hookUrl"`
-	Secret    string              `json:"secret"`
-	Events    webhook.Events      `json:"events"`
-	Operator  apisession.UserInfo `json:"operator"`
+	Id       int64               `json:"id"`
+	HookUrl  string              `json:"hookUrl"`
+	Secret   string              `json:"secret"`
+	Events   webhook.Events      `json:"events"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdateWebhookReqDTO) IsValid() error {
-	if r.WebhookId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	parsedUrl, err := url.Parse(r.HookUrl)
@@ -106,9 +103,6 @@ func (r *UpdateWebhookReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	if len(r.Secret) > 1024 {
-		return util.InvalidArgsError()
-	}
-	if !r.Events.IsValid() {
 		return util.InvalidArgsError()
 	}
 	return nil

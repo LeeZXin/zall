@@ -40,8 +40,4 @@ type OuterService interface {
 	TriggerTask(context.Context, TriggerTaskReqDTO) error
 	// UpdateTask 更新任务
 	UpdateTask(context.Context, UpdateTaskReqDTO) error
-	// GetFailedTaskNotifyTplId 获取任务失败通知模板
-	GetFailedTaskNotifyTplId(context.Context, GetFailedTaskNotifyTplIdReqDTO) (int64, error)
-	// BindFailedTaskNotifyTpl 绑定任务失败通知模板
-	BindFailedTaskNotifyTpl(context.Context, BindFailedTaskNotifyTplReqDTO) error
 }

@@ -52,9 +52,3 @@ type UpdateTaskReqVO struct {
 	CronExp string     `json:"cronExp"`
 	Task    timer.Task `json:"task"`
 }
-
-type BindFailedTaskNotifyTplReqVO struct {
-	TeamId int64  `json:"teamId"`
-	TplId  int64  `json:"tplId"`
-	Env    string `json:"env"`
-}

@@ -10,43 +10,43 @@
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
         <a-menu theme="dark" mode="inline" @click="clickPage" v-model:selectedKeys="selectedKeys">
           <a-menu-item key="/index">
-            <file-outlined />
+            <FileOutlined />
             <span>代码文件</span>
           </a-menu-item>
           <a-menu-item key="/pullRequest/list">
-            <pull-request-outlined />
+            <PullRequestOutlined />
             <span>合并请求</span>
           </a-menu-item>
           <a-menu-item key="/branch/list">
-            <branches-outlined />
+            <BranchesOutlined />
             <span>分支列表</span>
           </a-menu-item>
           <a-menu-item key="/tag/list">
-            <tag-outlined />
+            <TagOutlined />
             <span>标签列表</span>
           </a-menu-item>
           <a-menu-item key="/commit/list">
-            <cloud-upload-outlined />
+            <CloudUploadOutlined />
             <span>提交历史</span>
           </a-menu-item>
           <a-menu-item key="/workflow/list">
-            <node-index-outlined />
+            <NodeIndexOutlined />
             <span>工作流</span>
           </a-menu-item>
           <a-menu-item key="/protectedBranch/list" v-if="repo.perm?.canManageProtectedBranch">
-            <branches-outlined />
+            <BranchesOutlined />
             <span>保护分支</span>
           </a-menu-item>
           <a-menu-item key="/webhook/list" v-if="repo.perm?.canManageWebhook">
-            <api-outlined />
+            <ApiOutlined />
             <span>Webhook</span>
           </a-menu-item>
           <a-menu-item key="/opLogs" v-if="teamStore.isAdmin">
-            <calendar-outlined />
+            <CalendarOutlined />
             <span>操作日志</span>
           </a-menu-item>
           <a-menu-item key="/config" v-if="teamStore.isAdmin">
-            <setting-outlined />
+            <SettingOutlined />
             <span>设置</span>
           </a-menu-item>
         </a-menu>

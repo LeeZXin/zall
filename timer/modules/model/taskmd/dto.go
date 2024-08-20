@@ -53,9 +53,3 @@ type InsertExecuteReqDTO struct {
 	NextTime  int64
 	Env       string
 }
-
-type InsertFailedTaskNotifyTplReqDTO struct {
-	TeamId int64
-	TplId  int64
-	Env    string
-}

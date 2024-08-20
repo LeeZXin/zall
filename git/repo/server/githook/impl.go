@@ -11,11 +11,13 @@ import (
 	"github.com/LeeZXin/zall/git/repo/server/store"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/branch"
+	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/githook"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"path/filepath"
@@ -26,6 +28,8 @@ import (
 type hookImpl struct{}
 
 func NewHook() Hook {
+	workflowsrv.InitInner()
+	subscribeEvent()
 	return new(hookImpl)
 }
 
@@ -141,18 +145,6 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 	} else {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
-	// 查找webhook
-	webhookList, err := webhookmd.ListWebhook(ctx, repo.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return
-	}
-	// 查找工作流
-	workflowList, err := workflowmd.ListWorkflowByRepoId(ctx, repo.Id)
-	if err != nil {
-		logger.Logger.Error(err)
-		return
-	}
 	now := time.Now()
 	for _, revInfo := range opts.RevInfoList {
 		var refType string
@@ -163,37 +155,72 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 		} else {
 			continue
 		}
-		// 触发webhook
-		for _, hook := range webhookList {
-			if hook.Events.Has(webhook.GitPushEvent) {
-				webhook.TriggerWebhook(hook.HookUrl, hook.Secret, &webhook.GitPushEventReq{
-					RefType:     refType,
-					Ref:         revInfo.Ref,
-					OldCommitId: revInfo.OldCommitId,
-					NewCommitId: revInfo.NewCommitId,
-					BaseRepoReq: webhook.BaseRepoReq{
-						RepoId:    repo.Id,
-						RepoName:  repo.Name,
-						Account:   opts.PusherAccount,
-						EventTime: now.UnixMilli(),
-					},
-				})
-			}
+		req := event.GitPushEvent{
+			RefType:     refType,
+			Ref:         revInfo.Ref,
+			OldCommitId: revInfo.OldCommitId,
+			NewCommitId: revInfo.NewCommitId,
+			BaseRepo: event.BaseRepo{
+				TeamId:   repo.TeamId,
+				RepoId:   repo.Id,
+				RepoPath: repo.Path,
+				RepoName: repo.Name,
+			},
+			BaseEvent: event.BaseEvent{
+				Operator:  opts.PusherAccount,
+				EventTime: now.UnixMilli(),
+			},
 		}
-		// 触发工作流
-		for _, wf := range workflowList {
-			if refType == "commit" {
-				ref := strings.TrimPrefix(revInfo.Ref, git.BranchPrefix)
-				if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, ref) {
-					workflowsrv.Inner.Execute(wf, workflowsrv.ExecuteWorkflowReqDTO{
-						RepoPath:    repo.Path,
-						Operator:    opts.PusherAccount,
-						TriggerType: workflowmd.HookTriggerType,
-						Branch:      ref,
-						PrId:        0,
-					})
+		notifyEvent(req)
+	}
+}
+
+func notifyEvent(req event.GitPushEvent) {
+	psub.Publish(event.GitPushTopic, req)
+}
+
+func subscribeEvent() {
+	psub.Subscribe(event.GitPushTopic, func(data any) {
+		req, ok := data.(event.GitPushEvent)
+		if ok {
+			ctx := context.Background()
+			ctx, closer := xormstore.Context(ctx)
+			webhookList, err := webhookmd.ListWebhookByRepoId(ctx, req.RepoId)
+			if err != nil {
+				closer.Close()
+				// 查找webhook
+				logger.Logger.Error(err)
+				return
+			}
+			// 查找工作流
+			workflowList, err := workflowmd.ListWorkflowByRepoId(ctx, req.RepoId)
+			if err != nil {
+				closer.Close()
+				logger.Logger.Error(err)
+				return
+			}
+			closer.Close()
+			// 触发webhook
+			for _, hook := range webhookList {
+				if hook.GetEvents().GitPush {
+					webhook.TriggerWebhook(hook.HookUrl, hook.Secret, &req)
+				}
+			}
+			// 触发工作流
+			for _, wf := range workflowList {
+				if req.RefType == "commit" {
+					ref := strings.TrimPrefix(req.Ref, git.BranchPrefix)
+					if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, ref) {
+						workflowsrv.Inner.Execute(wf, workflowsrv.ExecuteWorkflowReqDTO{
+							RepoPath:    req.RepoPath,
+							Operator:    req.Operator,
+							TriggerType: workflowmd.HookTriggerType,
+							Branch:      ref,
+							PrId:        0,
+						})
+					}
 				}
 			}
 		}
-	}
+	})
 }

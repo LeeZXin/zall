@@ -10,7 +10,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/notify/feishu"
 	"github.com/LeeZXin/zall/pkg/notify/notify"
 	"github.com/LeeZXin/zall/pkg/notify/wework"
-	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/idutil"
@@ -101,15 +100,7 @@ func (*outerImpl) DeleteTpl(ctx context.Context, reqDTO DeleteTplReqDTO) error {
 	if err != nil {
 		return err
 	}
-	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		// 删除模板
-		_, err2 := notifymd.DeleteTpl(ctx, reqDTO.Id)
-		if err2 != nil {
-			return err2
-		}
-		// 删除失败定时任务通知绑定
-		return taskmd.DeleteFailedTaskNotifyTplByTplId(ctx, reqDTO.Id)
-	})
+	_, err = notifymd.DeleteTpl(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)

@@ -15,6 +15,12 @@ var (
 func Init() {
 	if Outer == nil {
 		Outer = newOuterService()
+	}
+	InitInner()
+}
+
+func InitInner() {
+	if Inner == nil {
 		Inner = new(innerImpl)
 	}
 }

@@ -55,7 +55,8 @@ export default {
         promScrape: "Prometheus scrape",
         roleAndMembers: "Role & Members",
         setting: "Setting",
-        notifyTpl: "Notification"
+        notifyTpl: "Notification",
+        teamHook: "Team Hook"
     },
     roleListPage: {
         roleList: "Role List",
@@ -65,12 +66,12 @@ export default {
         sshAndGpg: "SSH and GPG keys"
     },
     gitRepo: {
-        searchText: "search repoistory",
-        createRepoText: "Create repo",
-        switchRepo: "switch repo"
+        searchText: "Search Repository",
+        createRepoText: "Create Repository",
+        switchRepo: "Switch Repository"
     },
     appService: {
-        switchApp: "switch app"
+        switchApp: "Switch App"
     },
     createGitRepo: {
         backToRepoList: "Back to Git repo list",

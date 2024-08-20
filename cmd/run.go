@@ -32,6 +32,7 @@ import (
 	"github.com/LeeZXin/zall/promagent/agent"
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
+	"github.com/LeeZXin/zall/teamhook/modules/api/teamhookapi"
 	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
@@ -146,6 +147,10 @@ func runZall(*cli.Context) error {
 	// for notify
 	{
 		notifyapi.InitApi()
+	}
+	// for team hook
+	{
+		teamhookapi.InitApi()
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer(), prom.NewServer())
 	zsf.Run(

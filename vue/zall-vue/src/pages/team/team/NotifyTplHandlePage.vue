@@ -57,7 +57,7 @@ import { message } from "ant-design-vue";
 import {
   createNotifyTplRequest,
   updateNotifyTplRequest
-} from "@/api/notify/notifyApi";
+} from "@/api/team/notifyApi";
 import { useRoute, useRouter } from "vue-router";
 import { useNotifyTplStore } from "@/pinia/notifyTplStore";
 import { json } from "@codemirror/lang-json";

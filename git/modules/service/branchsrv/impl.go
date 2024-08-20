@@ -7,9 +7,9 @@ import (
 	"github.com/LeeZXin/zall/git/modules/service/oplogsrv"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/pkg/eventbus"
+	"github.com/LeeZXin/zall/pkg/branch"
+	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/i18n"
-	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -21,6 +21,7 @@ import (
 
 type outerImpl struct{}
 
+// CreateProtectedBranch 添加保护分支
 func (*outerImpl) CreateProtectedBranch(ctx context.Context, reqDTO CreateProtectedBranchReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
@@ -62,15 +63,15 @@ func (*outerImpl) CreateProtectedBranch(ctx context.Context, reqDTO CreateProtec
 		Req:      reqDTO,
 	})
 	// 通知其他领域
-	notifyEventBus(
+	notifyEvent(
 		repo,
-		reqDTO.Operator.Account,
+		reqDTO.Operator,
 		nil,
-		&eventbus.ProtectedBranchObj{
+		&branch.ProtectedBranch{
 			Pattern:            reqDTO.Pattern,
 			ProtectedBranchCfg: reqDTO.Cfg,
 		},
-		webhook.PbCreateAction,
+		event.PbCreateAction,
 	)
 	return nil
 }
@@ -82,7 +83,7 @@ func (*outerImpl) UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtec
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	protectedBranch, b, err := branchmd.GetById(ctx, reqDTO.ProtectedBranchId)
+	pb, b, err := branchmd.GetById(ctx, reqDTO.ProtectedBranchId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -90,7 +91,7 @@ func (*outerImpl) UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtec
 	if !b {
 		return util.InvalidArgsError()
 	}
-	repo, err := checkManageProtectedBranchPerm(ctx, protectedBranch.RepoId, reqDTO.Operator)
+	repo, err := checkManageProtectedBranchPerm(ctx, pb.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -110,22 +111,24 @@ func (*outerImpl) UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtec
 		Log:      oplogsrv.FormatI18n(i18n.BranchSrvKeysVO.UpdateProtectedBranch, reqDTO.Pattern),
 		Req:      reqDTO,
 	})
-	notifyEventBus(
+	// 上报事件
+	notifyEvent(
 		repo,
-		reqDTO.Operator.Account,
-		&eventbus.ProtectedBranchObj{
-			Pattern:            protectedBranch.Pattern,
-			ProtectedBranchCfg: protectedBranch.GetCfg(),
+		reqDTO.Operator,
+		&branch.ProtectedBranch{
+			Pattern:            pb.Pattern,
+			ProtectedBranchCfg: pb.GetCfg(),
 		},
-		&eventbus.ProtectedBranchObj{
+		&branch.ProtectedBranch{
 			Pattern:            reqDTO.Pattern,
 			ProtectedBranchCfg: reqDTO.Cfg,
 		},
-		webhook.PbUpdateAction,
+		event.PbUpdateAction,
 	)
 	return nil
 }
 
+// DeleteProtectedBranch 删除保护分支
 func (*outerImpl) DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtectedBranchReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
@@ -156,26 +159,38 @@ func (*outerImpl) DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtec
 		Log:      oplogsrv.FormatI18n(i18n.BranchSrvKeysVO.CreateProtectedBranch, pb.Pattern),
 		Req:      reqDTO,
 	})
-	notifyEventBus(repo, reqDTO.Operator.Account, &eventbus.ProtectedBranchObj{
-		Pattern:            pb.Pattern,
-		ProtectedBranchCfg: pb.GetCfg(),
-	}, nil, webhook.PbDeleteAction)
+	notifyEvent(
+		repo,
+		reqDTO.Operator,
+		&branch.ProtectedBranch{
+			Pattern:            pb.Pattern,
+			ProtectedBranchCfg: pb.GetCfg(),
+		},
+		nil,
+		event.PbDeleteAction,
+	)
 	return nil
 }
 
-func notifyEventBus(repo repomd.Repo, operator string, before, after *eventbus.ProtectedBranchObj, action webhook.ProtectedBranchAction) {
-	psub.Publish(eventbus.ProtectedBranchEventTopic, eventbus.ProtectedBranchEvent{
-		RepoId:    repo.Id,
-		Name:      repo.Name,
-		Path:      repo.Path,
-		Operator:  operator,
-		Action:    string(action),
-		Before:    before,
-		After:     after,
-		EventTime: time.Now(),
+func notifyEvent(repo repomd.Repo, operator apisession.UserInfo, before, after *branch.ProtectedBranch, action event.ProtectedBranchAction) {
+	psub.Publish(event.ProtectedBranchTopic, event.ProtectedBranchEvent{
+		BaseRepo: event.BaseRepo{
+			TeamId:   repo.TeamId,
+			RepoPath: repo.Path,
+			RepoId:   repo.Id,
+			RepoName: repo.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:  operator.Account,
+			EventTime: time.Now().UnixMilli(),
+		},
+		Action: action,
+		Before: before,
+		After:  after,
 	})
 }
 
+// ListProtectedBranch 保护分支列表
 func (*outerImpl) ListProtectedBranch(ctx context.Context, reqDTO ListProtectedBranchReqDTO) ([]ProtectedBranchDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
