@@ -124,6 +124,30 @@ func initPsub() {
 				})
 			}
 		})
+		psub.Subscribe(event.AppDeployPlanTopic, func(data any) {
+			req, ok := data.(event.AppDeployPlanEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppDeployPlanCreateAction:
+							return cfg.AppDeployPlan.Create
+						case event.AppDeployPlanCloseAction:
+							return cfg.AppDeployPlan.Close
+						case event.AppDeployPlanStartAction:
+							return cfg.AppDeployPlan.Start
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
 	})
 }
 

@@ -36,9 +36,9 @@ type AppPipelineVarsEventCfg struct {
 }
 
 type AppDeployPlanEventCfg struct {
-	Create   bool `json:"create"`
-	Close    bool `json:"close"`
-	Complete bool `json:"complete"`
+	Create bool `json:"create"`
+	Close  bool `json:"close"`
+	Start  bool `json:"start"`
 }
 
 type AppProductEventCfg struct {
