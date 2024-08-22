@@ -11,9 +11,8 @@ import (
 )
 
 func InitApi() {
-	cfgsrv.Init()
 	// 初始化全局配置
-	cfgsrv.Inner.InitSysCfg()
+	cfgsrv.InitSysCfg()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/sysCfg")
 		{
@@ -47,7 +46,7 @@ func InitApi() {
 }
 
 func getSysCfg(c *gin.Context) {
-	cfg, err := cfgsrv.Outer.GetSysCfg(c)
+	cfg, err := cfgsrv.GetSysCfg(c)
 	if err != nil {
 		util.HandleApiErr(err, c)
 		return
@@ -61,7 +60,7 @@ func getSysCfg(c *gin.Context) {
 func updateSysCfg(c *gin.Context) {
 	var req UpdateSysCfgReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := cfgsrv.Outer.UpdateSysCfg(c, cfgsrv.UpdateSysCfgReqDTO{
+		err := cfgsrv.UpdateSysCfg(c, cfgsrv.UpdateSysCfgReqDTO{
 			SysCfg:   req.SysCfg,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -74,7 +73,7 @@ func updateSysCfg(c *gin.Context) {
 }
 
 func getGitCfg(c *gin.Context) {
-	cfg, err := cfgsrv.Outer.GetGitCfg(c, cfgsrv.GetGitCfgReqDTO{
+	cfg, err := cfgsrv.GetGitCfg(c, cfgsrv.GetGitCfgReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -90,7 +89,7 @@ func getGitCfg(c *gin.Context) {
 func updateGitCfg(c *gin.Context) {
 	var req UpdateGitCfgReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := cfgsrv.Outer.UpdateGitCfg(c, cfgsrv.UpdateGitCfgReqDTO{
+		err := cfgsrv.UpdateGitCfg(c, cfgsrv.UpdateGitCfgReqDTO{
 			GitCfg:   req.GitCfg,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -103,7 +102,7 @@ func updateGitCfg(c *gin.Context) {
 }
 
 func getEnvCfg(c *gin.Context) {
-	cfg, err := cfgsrv.Outer.GetEnvCfg(c, cfgsrv.GetEnvCfgReqDTO{
+	cfg, err := cfgsrv.GetEnvCfg(c, cfgsrv.GetEnvCfgReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -119,7 +118,7 @@ func getEnvCfg(c *gin.Context) {
 func updateEnvCfg(c *gin.Context) {
 	var req UpdateEnvCfgReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := cfgsrv.Outer.UpdateEnvCfg(c, cfgsrv.UpdateEnvCfgReqDTO{
+		err := cfgsrv.UpdateEnvCfg(c, cfgsrv.UpdateEnvCfgReqDTO{
 			EnvCfg:   req.EnvCfg,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -132,7 +131,7 @@ func updateEnvCfg(c *gin.Context) {
 }
 
 func getGitRepoServerCfg(c *gin.Context) {
-	cfg, err := cfgsrv.Outer.GetGitRepoServerCfg(c, cfgsrv.GetGitRepoServerUrlReqDTO{
+	cfg, err := cfgsrv.GetGitRepoServerCfg(c, cfgsrv.GetGitRepoServerUrlReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -148,7 +147,7 @@ func getGitRepoServerCfg(c *gin.Context) {
 func updateGitRepoServerCfg(c *gin.Context) {
 	var req UpdateGitRepoServerCfgReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := cfgsrv.Outer.UpdateGitRepoServerCfg(c, cfgsrv.UpdateGitRepoServerCfgReqDTO{
+		err := cfgsrv.UpdateGitRepoServerCfg(c, cfgsrv.UpdateGitRepoServerCfgReqDTO{
 			GitRepoServerCfg: req.GitRepoServerCfg,
 			Operator:         apisession.MustGetLoginUser(c),
 		})

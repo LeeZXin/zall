@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	XEventType = "x-zgit-event-type"
-	XSignature = "x-zgit-signature"
+	XEventType = "x-zall-event-type"
+	XSignature = "x-zall-signature"
 )
 
 func Post(ctx context.Context, url, secret string, req event.Event) error {

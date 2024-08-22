@@ -1,15 +1,15 @@
-package tasksrv
+package timersrv
 
 import (
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/timer"
-	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
+	"github.com/LeeZXin/zall/timer/modules/model/timermd"
 	"github.com/LeeZXin/zall/util"
 	"time"
 )
 
-type CreateTaskReqDTO struct {
+type CreateTimerReqDTO struct {
 	Name     string              `json:"name"`
 	CronExp  string              `json:"cronExp"`
 	Task     timer.Task          `json:"task"`
@@ -18,22 +18,22 @@ type CreateTaskReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *CreateTaskReqDTO) IsValid() error {
-	if !taskmd.IsTaskNameValid(r.Name) {
+func (r *CreateTimerReqDTO) IsValid() error {
+	if !timermd.IsTimerNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	cron, err := ParseCron(r.CronExp)
+	schd, err := ParseCron(r.CronExp)
 	if err != nil {
 		return util.InvalidArgsError()
 	}
 	now := time.Now()
-	if cron.Next(now).Before(now) {
+	if schd.Next(now).Before(now) {
 		return util.InvalidArgsError()
 	}
 	if !r.Task.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -42,7 +42,7 @@ func (r *CreateTaskReqDTO) IsValid() error {
 	return nil
 }
 
-type ListTaskReqDTO struct {
+type ListTimerReqDTO struct {
 	TeamId   int64               `json:"teamId"`
 	Name     string              `json:"name"`
 	PageNum  int                 `json:"pageNum"`
@@ -50,8 +50,8 @@ type ListTaskReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListTaskReqDTO) IsValid() error {
-	if len(r.Name) > 0 && !taskmd.IsTaskNameValid(r.Name) {
+func (r *ListTimerReqDTO) IsValid() error {
+	if len(r.Name) > 0 && !timermd.IsTimerNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if r.TeamId <= 0 || r.PageNum <= 0 {
@@ -60,18 +60,18 @@ func (r *ListTaskReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type EnableTaskReqDTO struct {
+type EnableTimerReqDTO struct {
 	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *EnableTaskReqDTO) IsValid() error {
+func (r *EnableTimerReqDTO) IsValid() error {
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -81,12 +81,12 @@ func (r *EnableTaskReqDTO) IsValid() error {
 	return nil
 }
 
-type DisableTaskReqDTO struct {
+type DisableTimerReqDTO struct {
 	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *DisableTaskReqDTO) IsValid() error {
+func (r *DisableTimerReqDTO) IsValid() error {
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -96,12 +96,12 @@ func (r *DisableTaskReqDTO) IsValid() error {
 	return nil
 }
 
-type DeleteTaskReqDTO struct {
+type DeleteTimerReqDTO struct {
 	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeleteTaskReqDTO) IsValid() error {
+func (r *DeleteTimerReqDTO) IsValid() error {
 	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -111,7 +111,7 @@ func (r *DeleteTaskReqDTO) IsValid() error {
 	return nil
 }
 
-type TaskDTO struct {
+type TimerDTO struct {
 	Id        int64      `json:"id"`
 	Name      string     `json:"name"`
 	CronExp   string     `json:"cronExp"`
@@ -122,16 +122,16 @@ type TaskDTO struct {
 	Creator   string     `json:"creator"`
 }
 
-type ListTaskLogReqDTO struct {
-	TaskId    int64               `json:"taskId"`
+type ListLogReqDTO struct {
+	Id        int64               `json:"id"`
 	PageNum   int                 `json:"pageNum"`
 	Month     string              `json:"dateStr"`
 	Operator  apisession.UserInfo `json:"operator"`
 	monthTime time.Time
 }
 
-func (r *ListTaskLogReqDTO) IsValid() error {
-	if r.TaskId <= 0 || r.PageNum <= 0 || r.Month == "" {
+func (r *ListLogReqDTO) IsValid() error {
+	if r.Id <= 0 || r.PageNum <= 0 || r.Month == "" {
 		return util.InvalidArgsError()
 	}
 	var err error
@@ -145,10 +145,10 @@ func (r *ListTaskLogReqDTO) IsValid() error {
 	return nil
 }
 
-type TaskLogDTO struct {
+type LogDTO struct {
 	Task        timer.Task
 	ErrLog      string
-	TriggerType taskmd.TriggerType
+	TriggerType timer.TriggerType
 	TriggerBy   string
 	IsSuccess   bool
 	Created     time.Time
@@ -169,7 +169,7 @@ func (r *TriggerTaskReqDTO) IsValid() error {
 	return nil
 }
 
-type UpdateTaskReqDTO struct {
+type UpdateTimerReqDTO struct {
 	Id       int64               `json:"id"`
 	Name     string              `json:"name"`
 	CronExp  string              `json:"cronExp"`
@@ -177,12 +177,16 @@ type UpdateTaskReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *UpdateTaskReqDTO) IsValid() error {
-	if !taskmd.IsTaskNameValid(r.Name) {
+func (r *UpdateTimerReqDTO) IsValid() error {
+	if !timermd.IsTimerNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	_, err := ParseCron(r.CronExp)
+	schd, err := ParseCron(r.CronExp)
 	if err != nil {
+		return util.InvalidArgsError()
+	}
+	now := time.Now()
+	if schd.Next(now).Before(now) {
 		return util.InvalidArgsError()
 	}
 	if !r.Task.IsValid() {

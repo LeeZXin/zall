@@ -34,7 +34,7 @@ func (r *CreateScrapeReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -88,7 +88,7 @@ func (r *ListScrapeReqDTO) IsValid() error {
 	if r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil

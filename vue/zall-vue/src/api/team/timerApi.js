@@ -1,28 +1,28 @@
 import request from '@/utils/request.js';
 
 // 定时任务列表
-const listTimerTaskRequest = (data) => request.get("/api/timerTask/list", { params: data });
+const listTimerRequest = (data) => request.get("/api/timer/list", { params: data });
 // 创建定时任务
-const createTimerTaskRequest = (data) => request.post("/api/timerTask/create", data);
+const createTimerRequest = (data) => request.post("/api/timer/create", data);
 // 启动定时任务
-const enableTimerTaskRequest = (taskId) => request.put("/api/timerTask/enable/" + taskId);
+const enableTimerRequest = (timerId) => request.put("/api/timer/enable/" + timerId);
 // 停止定时任务
-const disableTimerTaskRequest = (taskId) => request.put("/api/timerTask/disable/" + taskId);
+const disableTimerRequest = (timerId) => request.put("/api/timer/disable/" + timerId);
 // 删除定时任务
-const deleteTimerTaskRequest = (taskId) => request.delete("/api/timerTask/delete/" + taskId);
+const deleteTimerRequest = (timerId) => request.delete("/api/timer/delete/" + timerId);
 // 触发定时任务
-const triggerTimerTaskRequest = (taskId) => request.put("/api/timerTask/trigger/" + taskId);
+const triggerTimerTaskRequest = (timerId) => request.put("/api/timer/trigger/" + timerId);
 // 编辑定时任务
-const updateTimerTaskRequest = (data) => request.post("/api/timerTask/update", data);
+const updateTimerRequest = (data) => request.post("/api/timer/update", data);
 // 查看定时任务日志
 const listTimerTaskLogRequest = (data) => request.get("/api/timerLog/list", { params: data });
 export {
-    listTimerTaskRequest,
-    createTimerTaskRequest,
-    enableTimerTaskRequest,
-    disableTimerTaskRequest,
-    deleteTimerTaskRequest,
+    listTimerRequest,
+    createTimerRequest,
+    enableTimerRequest,
+    disableTimerRequest,
+    deleteTimerRequest,
     triggerTimerTaskRequest,
-    updateTimerTaskRequest,
+    updateTimerRequest,
     listTimerTaskLogRequest,
 }

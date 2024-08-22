@@ -101,7 +101,7 @@ func InitSshServer() zsf.LifeCycle {
 
 func handleGitCommand(user usermd.UserInfo, session ssh.Session) error {
 	ctx := session.Context()
-	gitCfg, err := cfgsrv.Inner.GetGitCfg()
+	gitCfg, err := cfgsrv.GetGitCfgFromDB()
 	if err != nil {
 		logger.Logger.Error(err)
 		return errors.New(i18n.GetByKey(i18n.SystemInternalError))
@@ -187,14 +187,14 @@ func handleGitCommand(user usermd.UserInfo, session ssh.Session) error {
 		return nil
 	}
 	if accessMode == accessRepo {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    user.Account,
 			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.AccessRepo),
 			ReqContent: repo,
 			Err:        err,
 		})
 	} else {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    user.Account,
 			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.PushRepo),
 			ReqContent: repo,
@@ -224,6 +224,7 @@ func handleGitCommand(user usermd.UserInfo, session ssh.Session) error {
 			gitenv.EnvHookUrl, fmt.Sprintf("http://127.0.0.1:%d", common.HttpServerPort()),
 			gitenv.EnvRepoId, strconv.FormatInt(repo.Id, 10),
 			gitenv.EnvPusherAccount, user.Account,
+			gitenv.EnvPusherName, user.Name,
 			gitenv.EnvPusherEmail, user.Email,
 			gitenv.EnvAppUrl, gitCfg.HttpUrl,
 			gitenv.EnvHookToken, git.HookToken(),
@@ -234,7 +235,7 @@ func handleGitCommand(user usermd.UserInfo, session ssh.Session) error {
 }
 
 func checkAccessMode(ctx context.Context, user usermd.UserInfo, repoPath string, permCode int) (repomd.Repo, error) {
-	repo, b := reposrv.Inner.GetByRepoPath(ctx, repoPath)
+	repo, b := reposrv.GetByRepoPath(ctx, repoPath)
 	if !b {
 		return repomd.Repo{}, util.InvalidArgsError()
 	}
@@ -243,7 +244,7 @@ func checkAccessMode(ctx context.Context, user usermd.UserInfo, repoPath string,
 		return repo, nil
 	}
 	// 获取权限
-	p, b := teamsrv.Inner.GetUserPermDetail(ctx, repo.TeamId, user.Account)
+	p, b := teamsrv.GetUserPermDetail(ctx, repo.TeamId, user.Account)
 	if !b {
 		return repomd.Repo{}, util.UnauthorizedError()
 	}

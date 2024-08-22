@@ -3,6 +3,7 @@ package gitenv
 const (
 	EnvRepoId        = "ZGIT_REPO_ID"
 	EnvPusherAccount = "ZGIT_PUSHER_ACCOUNT"
+	EnvPusherName    = "ZGIT_PUSHER_NAME"
 	EnvPusherEmail   = "ZGIT_PUSHER_EMAIL"
 	EnvPrId          = "ZGIT_PR_ID"
 	EnvIsInternal    = "ZGIT_INTERNAL_PUSH"

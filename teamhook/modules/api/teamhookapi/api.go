@@ -13,7 +13,6 @@ import (
 )
 
 func InitApi() {
-	teamhooksrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/teamHook", apisession.CheckLogin)
 		{
@@ -32,7 +31,7 @@ func InitApi() {
 func createTeamHook(c *gin.Context) {
 	var req CreateTeamHookReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamhooksrv.Outer.CreateTeamHook(c, teamhooksrv.CreateTeamHookReqDTO{
+		err := teamhooksrv.CreateTeamHook(c, teamhooksrv.CreateTeamHookReqDTO{
 			Name:     req.Name,
 			TeamId:   req.TeamId,
 			Events:   req.Events,
@@ -51,7 +50,7 @@ func createTeamHook(c *gin.Context) {
 func updateTeamHook(c *gin.Context) {
 	var req UpdateTeamHookReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamhooksrv.Outer.UpdateTeamHook(c, teamhooksrv.UpdateTeamHookReqDTO{
+		err := teamhooksrv.UpdateTeamHook(c, teamhooksrv.UpdateTeamHookReqDTO{
 			Id:       req.Id,
 			Name:     req.Name,
 			Events:   req.Events,
@@ -68,7 +67,7 @@ func updateTeamHook(c *gin.Context) {
 }
 
 func deleteTeamHook(c *gin.Context) {
-	err := teamhooksrv.Outer.DeleteTeamHook(c, teamhooksrv.DeleteTeamHookReqDTO{
+	err := teamhooksrv.DeleteTeamHook(c, teamhooksrv.DeleteTeamHookReqDTO{
 		Id:       cast.ToInt64(c.Param("hookId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -80,7 +79,7 @@ func deleteTeamHook(c *gin.Context) {
 }
 
 func listTeamHook(c *gin.Context) {
-	hooks, err := teamhooksrv.Outer.ListTeamHook(c, teamhooksrv.ListTeamHookReqDTO{
+	hooks, err := teamhooksrv.ListTeamHook(c, teamhooksrv.ListTeamHookReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})

@@ -96,7 +96,7 @@
       </div>
       <div class="section" v-if="envList.length > 0">
         <div class="section-title">
-          <span>应用服务相关事件</span>
+          <span>环境相关事件</span>
         </div>
         <div class="section-body">
           <div style="margin-bottom: 18px">
@@ -184,10 +184,12 @@ const defaultEnvRelated = {
   timer: {
     create: false,
     delete: false,
-    update: false
+    update: false,
+    enable: false,
+    disable: false,
+    manuallyTrigger: false
   },
   timerTask: {
-    manuallyTrigger: false,
     fail: false
   }
 };
@@ -321,6 +323,18 @@ const envRelatedEvents = [
       {
         key: "delete",
         title: "删除"
+      },
+      {
+        key: "enable",
+        title: "启用"
+      },
+      {
+        key: "disable",
+        title: "禁用"
+      },
+      {
+        key: "manuallyTrigger",
+        title: "手动触发"
       }
     ]
   },
@@ -328,10 +342,6 @@ const envRelatedEvents = [
     key: "timerTask",
     title: "定时任务执行",
     actions: [
-      {
-        key: "manuallyTrigger",
-        title: "手动触发"
-      },
       {
         key: "fail",
         title: "任务失败"
@@ -383,7 +393,7 @@ const teamCheckboxes = reactive([
     ]
   },
   {
-    key: "teamMember",
+    key: "teamUser",
     title: "团队成员",
     actions: [
       {
@@ -392,8 +402,8 @@ const teamCheckboxes = reactive([
         value: false
       },
       {
-        key: "update",
-        title: "编辑",
+        key: "changeRole",
+        title: "变更角色",
         value: false
       },
       {

@@ -67,7 +67,7 @@ func handleGitCommand(session ssh.Session) error {
 }
 
 func pickRepoSshHost() (string, error) {
-	cfg, err := cfgsrv.Inner.GetGitRepoServerCfg()
+	cfg, err := cfgsrv.GetGitRepoServerCfgFromDB()
 	if err != nil {
 		return "", fmt.Errorf("git repo server ssh host is not set: %w", err)
 	}

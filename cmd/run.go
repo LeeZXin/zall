@@ -33,7 +33,8 @@ import (
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
 	"github.com/LeeZXin/zall/teamhook/modules/api/teamhookapi"
-	"github.com/LeeZXin/zall/timer/modules/api/taskapi"
+	"github.com/LeeZXin/zall/timer/modules/api/timerapi"
+	"github.com/LeeZXin/zall/timer/modules/service/timersrv"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/prom"
@@ -56,8 +57,7 @@ func runZall(*cli.Context) error {
 	}
 	// for envs
 	{
-		cfgsrv.Init()
-		cfgsrv.Inner.InitEnvCfg()
+		cfgsrv.InitEnvCfg()
 	}
 	lifeCycles := make([]zsf.LifeCycle, 0)
 	// for meta
@@ -92,7 +92,8 @@ func runZall(*cli.Context) error {
 	}
 	// for timer
 	{
-		taskapi.InitApi()
+		timerapi.InitApi()
+		timersrv.InitTask()
 	}
 	// for property
 	{

@@ -6,7 +6,7 @@
           placeholder="搜索名称"
           style="width: 240px;margin-right:10px"
           v-model:value="searchName"
-          @pressEnter="()=>listTimerTask()"
+          @pressEnter="()=>listTimer()"
         >
           <template #suffix>
             <SearchOutlined />
@@ -25,7 +25,7 @@
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'isEnabled'">
-          <a-switch :checked="dataItem[dataIndex]" @click="enableOrDisableTask(dataItem)" />
+          <a-switch :checked="dataItem[dataIndex]" @click="enableOrDisableTimer(dataItem)" />
         </template>
         <template v-else-if="dataIndex !== 'operation'">
           <span>{{dataItem[dataIndex]}}</span>
@@ -71,7 +71,7 @@
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
-      @change="()=>listTimerTask()"
+      @change="()=>listTimer()"
     />
   </div>
 </template>
@@ -90,10 +90,10 @@ import {
   SearchOutlined
 } from "@ant-design/icons-vue";
 import {
-  listTimerTaskRequest,
-  enableTimerTaskRequest,
-  disableTimerTaskRequest,
-  deleteTimerTaskRequest,
+  listTimerRequest,
+  enableTimerRequest,
+  disableTimerRequest,
+  deleteTimerRequest,
   triggerTimerTaskRequest
 } from "@/api/team/timerApi";
 import { Modal, message } from "ant-design-vue";
@@ -139,8 +139,8 @@ const columns = [
     key: "operation"
   }
 ];
-const listTimerTask = () => {
-  listTimerTaskRequest({
+const listTimer = () => {
+  listTimerRequest({
     teamId: parseInt(route.params.teamId),
     pageNum: dataPage.current,
     name: searchName.value,
@@ -160,9 +160,9 @@ const deleteTimerTask = item => {
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      deleteTimerTaskRequest(item.id).then(() => {
+      deleteTimerRequest(item.id).then(() => {
         message.success("删除成功");
-        listTimerTask();
+        listTimer();
       });
     },
     onCancel() {}
@@ -170,7 +170,7 @@ const deleteTimerTask = item => {
 };
 const gotoCreatePage = () => {
   router.push(
-    `/team/${route.params.teamId}/timerTask/create?env=${selectedEnv.value}`
+    `/team/${route.params.teamId}/timer/create?env=${selectedEnv.value}`
   );
 };
 const triggerTimerTask = item => {
@@ -193,16 +193,16 @@ const gotoUpdatePage = item => {
   timerTaskStore.teamId = item.teamId;
   timerTaskStore.isEnabled = item.isEnabled;
   timerTaskStore.env = item.env;
-  router.push(`/team/${route.params.teamId}/timerTask/${item.id}/update`);
+  router.push(`/team/${route.params.teamId}/timer/${item.id}/update`);
 };
-const enableOrDisableTask = item => {
+const enableOrDisableTimer = item => {
   if (item.isEnabled) {
-    disableTimerTaskRequest(item.id).then(() => {
+    disableTimerRequest(item.id).then(() => {
       message.success("关闭成功");
       item.isEnabled = false;
     });
   } else {
-    enableTimerTaskRequest(item.id).then(() => {
+    enableTimerRequest(item.id).then(() => {
       message.success("启动成功");
       item.isEnabled = true;
     });
@@ -216,12 +216,12 @@ const viewLog = item => {
   timerTaskStore.teamId = item.teamId;
   timerTaskStore.isEnabled = item.isEnabled;
   timerTaskStore.env = item.env;
-  router.push(`/team/${route.params.teamId}/timerTask/${item.id}/log`);
+  router.push(`/team/${route.params.teamId}/timer/${item.id}/log`);
 };
 const onEnvChange = e => {
   selectedEnv.value = e.newVal;
-  router.replace(`/team/${route.params.teamId}/timerTask/list/${e.newVal}`);
-  listTimerTask();
+  router.replace(`/team/${route.params.teamId}/timer/list/${e.newVal}`);
+  listTimer();
 };
 </script>
 <style scoped>

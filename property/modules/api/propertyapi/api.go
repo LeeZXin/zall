@@ -1,7 +1,6 @@
 package propertyapi
 
 import (
-	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/property/modules/service/propertysrv"
 	"github.com/LeeZXin/zall/util"
@@ -15,8 +14,6 @@ import (
 )
 
 func InitApi() {
-	cfgsrv.InitInner()
-	propertysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/propertySource", apisession.CheckLogin)
 		{
@@ -63,7 +60,7 @@ func InitApi() {
 }
 
 func getHistoryByVersion(c *gin.Context) {
-	history, exist, err := propertysrv.Outer.GetHistoryByVersion(c, propertysrv.GetHistoryByVersionReqDTO{
+	history, exist, err := propertysrv.GetHistoryByVersion(c, propertysrv.GetHistoryByVersionReqDTO{
 		FileId:   cast.ToInt64(c.Query("fileId")),
 		Version:  c.Query("version"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -84,7 +81,7 @@ func getHistoryByVersion(c *gin.Context) {
 func createPropertySource(c *gin.Context) {
 	var req CreatePropertySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.CreatePropertySource(c, propertysrv.CreatePropertySourceReqDTO{
+		err := propertysrv.CreatePropertySource(c, propertysrv.CreatePropertySourceReqDTO{
 			Endpoints: req.Endpoints,
 			Username:  req.Username,
 			Password:  req.Password,
@@ -103,7 +100,7 @@ func createPropertySource(c *gin.Context) {
 func updatePropertySource(c *gin.Context) {
 	var req UpdatePropertySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.UpdatePropertySource(c, propertysrv.UpdatePropertySourceReqDTO{
+		err := propertysrv.UpdatePropertySource(c, propertysrv.UpdatePropertySourceReqDTO{
 			SourceId:  req.SourceId,
 			Name:      req.Name,
 			Endpoints: req.Endpoints,
@@ -120,7 +117,7 @@ func updatePropertySource(c *gin.Context) {
 }
 
 func deletePropertySource(c *gin.Context) {
-	err := propertysrv.Outer.DeletePropertySource(c, propertysrv.DeletePropertySourceReqDTO{
+	err := propertysrv.DeletePropertySource(c, propertysrv.DeletePropertySourceReqDTO{
 		SourceId: cast.ToInt64(c.Param("sourceId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -132,7 +129,7 @@ func deletePropertySource(c *gin.Context) {
 }
 
 func listPropertySource(c *gin.Context) {
-	nodes, err := propertysrv.Outer.ListPropertySource(c, propertysrv.ListPropertySourceReqDTO{
+	nodes, err := propertysrv.ListPropertySource(c, propertysrv.ListPropertySourceReqDTO{
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -157,7 +154,7 @@ func listPropertySource(c *gin.Context) {
 }
 
 func listAllPropertySource(c *gin.Context) {
-	nodes, err := propertysrv.Outer.ListAllPropertySource(c, propertysrv.ListAllPropertySourceReqDTO{
+	nodes, err := propertysrv.ListAllPropertySource(c, propertysrv.ListAllPropertySourceReqDTO{
 		Env:      c.Param("env"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -182,7 +179,7 @@ func sourceDto2SimpleVo(sources []propertysrv.SimplePropertySourceDTO) []SimpleP
 }
 
 func listBindPropertySource(c *gin.Context) {
-	nodes, err := propertysrv.Outer.ListBindPropertySource(c, propertysrv.ListBindPropertySourceReqDTO{
+	nodes, err := propertysrv.ListBindPropertySource(c, propertysrv.ListBindPropertySourceReqDTO{
 		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -200,7 +197,7 @@ func listBindPropertySource(c *gin.Context) {
 func bindAppAndPropertySource(c *gin.Context) {
 	var req BindAppAndPropertySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.BindAppAndPropertySource(c, propertysrv.BindAppAndPropertySourceReqDTO{
+		err := propertysrv.BindAppAndPropertySource(c, propertysrv.BindAppAndPropertySourceReqDTO{
 			AppId:        req.AppId,
 			SourceIdList: req.SourceIdList,
 			Env:          req.Env,
@@ -215,7 +212,7 @@ func bindAppAndPropertySource(c *gin.Context) {
 }
 
 func listPropertySourceByFileId(c *gin.Context) {
-	sources, err := propertysrv.Outer.ListPropertySourceByFileId(c, propertysrv.ListPropertySourceByFileIdReqDTO{
+	sources, err := propertysrv.ListPropertySourceByFileId(c, propertysrv.ListPropertySourceByFileIdReqDTO{
 		FileId:   cast.ToInt64(c.Param("fileId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -232,7 +229,7 @@ func listPropertySourceByFileId(c *gin.Context) {
 func createFile(c *gin.Context) {
 	var req CreateFileReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.CreateFile(c, propertysrv.CreateFileReqDTO{
+		err := propertysrv.CreateFile(c, propertysrv.CreateFileReqDTO{
 			AppId:    req.AppId,
 			Name:     req.Name,
 			Content:  req.Content,
@@ -250,7 +247,7 @@ func createFile(c *gin.Context) {
 func newVersion(c *gin.Context) {
 	var req NewVersionReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.NewVersion(c, propertysrv.NewVersionReqDTO{
+		err := propertysrv.NewVersion(c, propertysrv.NewVersionReqDTO{
 			FileId:      req.FileId,
 			Content:     req.Content,
 			LastVersion: req.LastVersion,
@@ -265,7 +262,7 @@ func newVersion(c *gin.Context) {
 }
 
 func deleteFile(c *gin.Context) {
-	err := propertysrv.Outer.DeleteFile(c, propertysrv.DeleteFileReqDTO{
+	err := propertysrv.DeleteFile(c, propertysrv.DeleteFileReqDTO{
 		FileId:   cast.ToInt64(c.Param("fileId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -279,7 +276,7 @@ func deleteFile(c *gin.Context) {
 func deployHistory(c *gin.Context) {
 	var req DeployHistoryReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := propertysrv.Outer.DeployHistory(c, propertysrv.DeployHistoryReqDTO{
+		err := propertysrv.DeployHistory(c, propertysrv.DeployHistoryReqDTO{
 			HistoryId:    req.HistoryId,
 			SourceIdList: req.SourceIdList,
 			Operator:     apisession.MustGetLoginUser(c),
@@ -293,7 +290,7 @@ func deployHistory(c *gin.Context) {
 }
 
 func listFile(c *gin.Context) {
-	contents, err := propertysrv.Outer.ListFile(c, propertysrv.ListFileReqDTO{
+	contents, err := propertysrv.ListFile(c, propertysrv.ListFileReqDTO{
 		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -319,7 +316,7 @@ func listFile(c *gin.Context) {
 func pageHistory(c *gin.Context) {
 	var req PageHistoryReqVO
 	if util.ShouldBindQuery(&req, c) {
-		histories, cursor, err := propertysrv.Outer.PageHistory(c, propertysrv.PageHistoryReqDTO{
+		histories, cursor, err := propertysrv.PageHistory(c, propertysrv.PageHistoryReqDTO{
 			FileId:   req.FileId,
 			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),
@@ -357,7 +354,7 @@ func history2VO(t propertysrv.HistoryDTO) HistoryVO {
 }
 
 func listDeploy(c *gin.Context) {
-	deploys, err := propertysrv.Outer.ListDeploy(c, propertysrv.ListDeployReqDTO{
+	deploys, err := propertysrv.ListDeploy(c, propertysrv.ListDeployReqDTO{
 		HistoryId: cast.ToInt64(c.Param("historyId")),
 		Operator:  apisession.MustGetLoginUser(c),
 	})

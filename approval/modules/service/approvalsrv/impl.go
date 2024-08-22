@@ -453,7 +453,7 @@ func (*outerImpl) Disagree(ctx context.Context, reqDTO DisagreeFlowReqDTO) error
 func (*outerImpl) InsertCustomProcess(ctx context.Context, reqDTO InsertCustomProcessReqDTO) (err error) {
 	// 插入日志
 	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
 			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.InsertCustomProcess),
 			ReqContent: reqDTO,
@@ -509,7 +509,7 @@ func (*outerImpl) InsertCustomProcess(ctx context.Context, reqDTO InsertCustomPr
 func (*outerImpl) UpdateCustomProcess(ctx context.Context, reqDTO UpdateCustomProcessReqDTO) (err error) {
 	// 插入日志
 	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
 			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.UpdateCustomProcess),
 			ReqContent: reqDTO,
@@ -730,7 +730,7 @@ func (*outerImpl) ListOperateFlow(ctx context.Context, reqDTO ListOperateFlowReq
 func (*outerImpl) DeleteCustomProcess(ctx context.Context, reqDTO DeleteCustomProcessReqDTO) (err error) {
 	// 插入日志
 	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
 			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.DeleteCustomProcess),
 			ReqContent: reqDTO,
@@ -840,7 +840,7 @@ func (*outerImpl) ListCustomProcess(ctx context.Context, reqDTO ListCustomProces
 func (*outerImpl) InsertGroup(ctx context.Context, reqDTO InsertGroupReqDTO) (err error) {
 	// 插入日志
 	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
 			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.InsertGroup),
 			ReqContent: reqDTO,
@@ -871,7 +871,7 @@ func (*outerImpl) InsertGroup(ctx context.Context, reqDTO InsertGroupReqDTO) (er
 func (*outerImpl) DeleteGroup(ctx context.Context, reqDTO DeleteGroupReqDTO) (err error) {
 	// 插入日志
 	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
 			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.DeleteGroup),
 			ReqContent: reqDTO,
@@ -923,7 +923,7 @@ func (*outerImpl) ListGroup(ctx context.Context, reqDTO ListGroupReqDTO) ([]Grou
 func (*outerImpl) UpdateGroup(ctx context.Context, reqDTO UpdateGroupReqDTO) (err error) {
 	// 插入日志
 	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
 			OpDesc:     i18n.GetByKey(i18n.ApprovalSrvKeysVO.UpdateGroup),
 			ReqContent: reqDTO,

@@ -258,6 +258,7 @@ type MergeReq struct {
 		RepoId        int64  `json:"repoId"`
 		PrId          int64  `json:"prId"`
 		PusherAccount string `json:"pusherAccount"`
+		PusherName    string `json:"pusherName"`
 		PusherEmail   string `json:"pusherEmail"`
 		Message       string `json:"message"`
 		AppUrl        string `json:"appUrl"`

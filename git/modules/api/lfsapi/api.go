@@ -28,10 +28,6 @@ const (
 )
 
 func InitApi() {
-	lfssrv.Init()
-	reposrv.Init()
-	cfgsrv.InitInner()
-	usersrv.InitInner()
 	// 注册lfs api
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		infoLfs := e.Group("/:corpId/:repoName/info/lfs", packRepoPath)
@@ -58,7 +54,7 @@ func packRepoPath(c *gin.Context) {
 	corpId := c.Param("corpId")
 	repoName := c.Param("repoName")
 	repoPath := filepath.Join(corpId, repoName)
-	repo, b := reposrv.Inner.GetByRepoPath(ctx, repoPath)
+	repo, b := reposrv.GetByRepoPath(ctx, repoPath)
 	if !b {
 		c.JSON(http.StatusUnauthorized, ErrVO{
 			Message: i18n.GetByKey(i18n.SystemInvalidArgs),
@@ -85,7 +81,7 @@ func packRepoPath(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		userInfo, b = usersrv.Inner.CheckAccountAndPassword(ctx, usersrv.CheckAccountAndPasswordReqDTO{
+		userInfo, b = usersrv.CheckAccountAndPassword(ctx, usersrv.CheckAccountAndPasswordReqDTO{
 			Account:  account,
 			Password: password,
 		})
@@ -97,7 +93,7 @@ func packRepoPath(c *gin.Context) {
 			return
 		}
 	} else {
-		cfg, err := cfgsrv.Inner.GetGitCfg()
+		cfg, err := cfgsrv.GetGitCfgFromDB()
 		if err != nil {
 			logger.Logger.WithContext(c).Error(err)
 			c.JSON(http.StatusInternalServerError, ErrVO{
@@ -127,7 +123,7 @@ func packRepoPath(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		userInfo, b = usersrv.Inner.GetByAccount(ctx, claims.Account)
+		userInfo, b = usersrv.GetByAccount(ctx, claims.Account)
 		if !b {
 			c.JSON(http.StatusUnauthorized, ErrVO{
 				Message: i18n.GetByKey(i18n.SystemInvalidArgs),
@@ -188,7 +184,7 @@ func batch(c *gin.Context) {
 		})
 		return
 	}
-	cfg, err := cfgsrv.Inner.GetGitCfg()
+	cfg, err := cfgsrv.GetGitCfgFromDB()
 	if err != nil {
 		logger.Logger.WithContext(c).Error(err)
 		c.JSON(http.StatusInternalServerError, ErrVO{
@@ -209,7 +205,7 @@ func batch(c *gin.Context) {
 			Size: t.Size,
 		}, nil
 	})
-	respDTO, err := lfssrv.Outer.Batch(c, reqDTO)
+	respDTO, err := lfssrv.Batch(c, reqDTO)
 	if err != nil {
 		c.JSON(http.StatusForbidden, ErrVO{
 			Message:   err.Error(),
@@ -288,7 +284,7 @@ func lock(c *gin.Context) {
 		return
 	}
 	operator := getOperator(c)
-	respDTO, err := lfssrv.Outer.Lock(c, lfssrv.LockReqDTO{
+	respDTO, err := lfssrv.Lock(c, lfssrv.LockReqDTO{
 		Repo:     getRepo(c),
 		RefName:  req.Ref.Name,
 		Operator: operator,
@@ -329,7 +325,7 @@ func listLock(c *gin.Context) {
 	}
 	operator := getOperator(c)
 	cursor, _ := strconv.ParseInt(req.Cursor, 10, 64)
-	listResp, err := lfssrv.Outer.ListLock(c, lfssrv.ListLockReqDTO{
+	listResp, err := lfssrv.ListLock(c, lfssrv.ListLockReqDTO{
 		Repo:     getRepo(c),
 		Operator: operator,
 		Cursor:   cursor,
@@ -374,7 +370,7 @@ func unlock(c *gin.Context) {
 		return
 	}
 	operator := getOperator(c)
-	singleLock, err := lfssrv.Outer.Unlock(c, lfssrv.UnlockReqDTO{
+	singleLock, err := lfssrv.Unlock(c, lfssrv.UnlockReqDTO{
 		Repo:     getRepo(c),
 		LockId:   lockId,
 		Force:    req.Force,
@@ -404,7 +400,7 @@ func listLockVerify(c *gin.Context) {
 	}
 	cursor, _ := strconv.ParseInt(req.Cursor, 10, 64)
 	operator := getOperator(c)
-	listResp, err := lfssrv.Outer.ListLock(c, lfssrv.ListLockReqDTO{
+	listResp, err := lfssrv.ListLock(c, lfssrv.ListLockReqDTO{
 		Repo:     getRepo(c),
 		Operator: operator,
 		Cursor:   cursor,
@@ -450,7 +446,7 @@ func verify(c *gin.Context) {
 		})
 		return
 	}
-	exists, validate, err := lfssrv.Outer.Verify(c, lfssrv.VerifyReqDTO{
+	exists, validate, err := lfssrv.Verify(c, lfssrv.VerifyReqDTO{
 		PointerDTO: lfssrv.PointerDTO{
 			Oid:  req.Oid,
 			Size: req.Size,
@@ -485,7 +481,7 @@ func verify(c *gin.Context) {
 func download(c *gin.Context) {
 	oid := c.Param("oid")
 	ctx := c
-	err := lfssrv.Outer.Download(ctx, lfssrv.DownloadReqDTO{
+	err := lfssrv.Download(ctx, lfssrv.DownloadReqDTO{
 		Oid:      oid,
 		Repo:     getRepo(c),
 		Operator: getOperator(c),
@@ -521,7 +517,7 @@ func upload(c *gin.Context) {
 		return
 	}
 	oid := c.Param("oid")
-	err = lfssrv.Outer.Upload(c, lfssrv.UploadReqDTO{
+	err = lfssrv.Upload(c, lfssrv.UploadReqDTO{
 		Oid:      oid,
 		Size:     size,
 		Repo:     repo,

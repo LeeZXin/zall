@@ -29,7 +29,7 @@ type ListPropertySourceReqDTO struct {
 }
 
 func (r *ListPropertySourceReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -44,7 +44,7 @@ type ListAllPropertySourceReqDTO struct {
 }
 
 func (r *ListAllPropertySourceReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -63,7 +63,7 @@ func (r *ListBindPropertySourceReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -91,7 +91,7 @@ func (r *BindAppAndPropertySourceReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -122,7 +122,7 @@ type CreatePropertySourceReqDTO struct {
 }
 
 func (r *CreatePropertySourceReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Endpoints) == 0 {
@@ -196,7 +196,7 @@ type CreateFileReqDTO struct {
 }
 
 func (r *CreateFileReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !appmd.IsAppIdValid(r.AppId) {
@@ -253,7 +253,7 @@ type ListFileReqDTO struct {
 }
 
 func (r *ListFileReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !appmd.IsAppIdValid(r.AppId) {

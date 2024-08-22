@@ -25,15 +25,7 @@ import (
 	"time"
 )
 
-type hookImpl struct{}
-
-func NewHook() Hook {
-	workflowsrv.InitInner()
-	subscribeEvent()
-	return new(hookImpl)
-}
-
-func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
+func doPreReceive(ctx context.Context, opts githook.Opts) error {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	repo, b, err := repomd.GetByRepoId(ctx, opts.RepoId)
@@ -117,7 +109,7 @@ func (*hookImpl) PreReceive(ctx context.Context, opts githook.Opts) error {
 	return nil
 }
 
-func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
+func doPostReceive(ctx context.Context, opts githook.Opts) {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 获取仓库信息
@@ -167,8 +159,9 @@ func (*hookImpl) PostReceive(ctx context.Context, opts githook.Opts) {
 				RepoName: repo.Name,
 			},
 			BaseEvent: event.BaseEvent{
-				Operator:  opts.PusherAccount,
-				EventTime: now.UnixMilli(),
+				Operator:     opts.PusherAccount,
+				OperatorName: opts.PusherName,
+				EventTime:    now.Format(time.DateTime),
 			},
 		}
 		notifyEvent(req)
@@ -211,7 +204,7 @@ func subscribeEvent() {
 				if req.RefType == "commit" {
 					ref := strings.TrimPrefix(req.Ref, git.BranchPrefix)
 					if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, ref) {
-						workflowsrv.Inner.Execute(wf, workflowsrv.ExecuteWorkflowReqDTO{
+						workflowsrv.Execute(wf, workflowsrv.ExecuteWorkflowReqDTO{
 							RepoPath:    req.RepoPath,
 							Operator:    req.Operator,
 							TriggerType: workflowmd.HookTriggerType,

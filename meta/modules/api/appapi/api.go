@@ -13,7 +13,6 @@ import (
 )
 
 func InitApi() {
-	appsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/app", apisession.CheckLogin)
 		{
@@ -40,7 +39,7 @@ func InitApi() {
 func createApp(c *gin.Context) {
 	var req CreateAppReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := appsrv.Outer.CreateApp(c, appsrv.CreateAppReqDTO{
+		err := appsrv.CreateApp(c, appsrv.CreateAppReqDTO{
 			AppId:    req.AppId,
 			TeamId:   req.TeamId,
 			Name:     req.Name,
@@ -57,7 +56,7 @@ func createApp(c *gin.Context) {
 func updateApp(c *gin.Context) {
 	var req UpdateAppReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := appsrv.Outer.UpdateApp(c, appsrv.UpdateAppReqDTO{
+		err := appsrv.UpdateApp(c, appsrv.UpdateAppReqDTO{
 			AppId:    req.AppId,
 			Name:     req.Name,
 			Operator: apisession.MustGetLoginUser(c),
@@ -71,7 +70,7 @@ func updateApp(c *gin.Context) {
 }
 
 func deleteApp(c *gin.Context) {
-	err := appsrv.Outer.DeleteApp(c, appsrv.DeleteAppReqDTO{
+	err := appsrv.DeleteApp(c, appsrv.DeleteAppReqDTO{
 		AppId:    c.Param("appId"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -83,7 +82,7 @@ func deleteApp(c *gin.Context) {
 }
 
 func getApp(c *gin.Context) {
-	app, err := appsrv.Outer.GetAppWithPerm(c, appsrv.GetAppWithPermReqDTO{
+	app, err := appsrv.GetAppWithPerm(c, appsrv.GetAppWithPermReqDTO{
 		AppId:    c.Param("appId"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -104,7 +103,7 @@ func getApp(c *gin.Context) {
 }
 
 func listApp(c *gin.Context) {
-	apps, err := appsrv.Outer.ListApp(c, appsrv.ListAppReqDTO{
+	apps, err := appsrv.ListApp(c, appsrv.ListAppReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -125,7 +124,7 @@ func listApp(c *gin.Context) {
 }
 
 func listAllByAdmin(c *gin.Context) {
-	apps, err := appsrv.Outer.ListAllAppByAdmin(c, appsrv.ListAllAppByAdminReqDTO{
+	apps, err := appsrv.ListAllAppByAdmin(c, appsrv.ListAllAppByAdminReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -146,7 +145,7 @@ func listAllByAdmin(c *gin.Context) {
 }
 
 func listAllBySa(c *gin.Context) {
-	apps, err := appsrv.Outer.ListAllAppBySa(c, appsrv.ListAllAppBySaReqDTO{
+	apps, err := appsrv.ListAllAppBySa(c, appsrv.ListAllAppBySaReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -168,7 +167,7 @@ func listAllBySa(c *gin.Context) {
 func transferTeam(c *gin.Context) {
 	var req TransferTeamReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := appsrv.Outer.TransferTeam(c, appsrv.TransferTeamReqDTO{
+		err := appsrv.TransferTeam(c, appsrv.TransferTeamReqDTO{
 			AppId:    req.AppId,
 			TeamId:   req.TeamId,
 			Operator: apisession.MustGetLoginUser(c),

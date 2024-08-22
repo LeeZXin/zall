@@ -15,7 +15,6 @@ var (
 )
 
 func InitApi() {
-	statussrv.Init()
 	apiKey = static.GetString("zallet.status.api.key")
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/service/v1/status", checkAuthorization)
@@ -29,7 +28,7 @@ func InitApi() {
 }
 
 func killService(c *gin.Context) {
-	err := statussrv.Outer.KillService(c, c.Query("serviceId"))
+	err := statussrv.KillService(c, c.Query("serviceId"))
 	if err != nil {
 		c.String(http.StatusUnprocessableEntity, err.Error())
 		return
@@ -38,7 +37,7 @@ func killService(c *gin.Context) {
 }
 
 func restartService(c *gin.Context) {
-	err := statussrv.Outer.RestartService(c, c.Query("serviceId"))
+	err := statussrv.RestartService(c, c.Query("serviceId"))
 	if err != nil {
 		c.String(http.StatusUnprocessableEntity, err.Error())
 		return
@@ -49,7 +48,7 @@ func restartService(c *gin.Context) {
 func listService(c *gin.Context) {
 	var req status.ListServiceReq
 	if shouldBindQuery(&req, c) {
-		srvs, err := statussrv.Outer.ListService(c, req)
+		srvs, err := statussrv.ListService(c, req)
 		if err != nil {
 			c.String(http.StatusUnprocessableEntity, err.Error())
 			return
@@ -59,7 +58,7 @@ func listService(c *gin.Context) {
 }
 
 func getActions(c *gin.Context) {
-	c.JSON(http.StatusOK, statussrv.Outer.GetActions(c))
+	c.JSON(http.StatusOK, statussrv.GetActions(c))
 }
 
 func shouldBindQuery(obj any, c *gin.Context) bool {

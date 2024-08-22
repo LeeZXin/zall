@@ -1,11 +1,11 @@
-package taskmd
+package timermd
 
 import (
 	"github.com/LeeZXin/zall/pkg/timer"
 	"time"
 )
 
-type InsertTaskReqDTO struct {
+type InsertTimerReqDTO struct {
 	Name      string
 	CronExp   string
 	Content   timer.Task
@@ -15,14 +15,14 @@ type InsertTaskReqDTO struct {
 	Creator   string
 }
 
-type UpdateTaskReqDTO struct {
+type UpdateTimerReqDTO struct {
 	Id      int64
 	Name    string
 	CronExp string
 	Content timer.Task
 }
 
-type PageTaskReqDTO struct {
+type ListTimerReqDTO struct {
 	TeamId   int64
 	Name     string
 	PageNum  int
@@ -30,17 +30,17 @@ type PageTaskReqDTO struct {
 	Env      string
 }
 
-type InsertTaskLogReqDTO struct {
-	TaskId      int64
-	TaskContent *timer.Task
+type InsertLogReqDTO struct {
+	TimerId     int64
+	TaskContent timer.Task
 	ErrLog      string
-	TriggerType TriggerType
+	TriggerType timer.TriggerType
 	TriggerBy   string
 	IsSuccess   bool
 }
 
-type ListTaskLogReqDTO struct {
-	TaskId    int64
+type ListLogReqDTO struct {
+	TimerId   int64
 	PageNum   int
 	PageSize  int
 	BeginTime time.Time
@@ -48,7 +48,7 @@ type ListTaskLogReqDTO struct {
 }
 
 type InsertExecuteReqDTO struct {
-	TaskId    int64
+	TimerId   int64
 	IsEnabled bool
 	NextTime  int64
 	Env       string

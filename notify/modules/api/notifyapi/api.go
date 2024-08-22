@@ -13,7 +13,6 @@ import (
 )
 
 func InitApi() {
-	notifysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/notifyTpl", apisession.CheckLogin)
 		{
@@ -40,7 +39,7 @@ func InitApi() {
 func createNotifyTpl(c *gin.Context) {
 	var req CreateNotifyTplReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := notifysrv.Outer.CreateTpl(c, notifysrv.CreateTplReqDTO{
+		err := notifysrv.CreateTpl(c, notifysrv.CreateTplReqDTO{
 			Name:     req.Name,
 			Cfg:      req.Cfg,
 			TeamId:   req.TeamId,
@@ -57,7 +56,7 @@ func createNotifyTpl(c *gin.Context) {
 func updateNotifyTpl(c *gin.Context) {
 	var req UpdateNotifyTplReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := notifysrv.Outer.UpdateTpl(c, notifysrv.UpdateTplReqDTO{
+		err := notifysrv.UpdateTpl(c, notifysrv.UpdateTplReqDTO{
 			Id:       req.Id,
 			Name:     req.Name,
 			Cfg:      req.Cfg,
@@ -72,7 +71,7 @@ func updateNotifyTpl(c *gin.Context) {
 }
 
 func deleteNotifyTpl(c *gin.Context) {
-	err := notifysrv.Outer.DeleteTpl(c, notifysrv.DeleteTplReqDTO{
+	err := notifysrv.DeleteTpl(c, notifysrv.DeleteTplReqDTO{
 		Id:       cast.ToInt64(c.Param("tplId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -84,7 +83,7 @@ func deleteNotifyTpl(c *gin.Context) {
 }
 
 func changeNotifyTplApiKey(c *gin.Context) {
-	err := notifysrv.Outer.ChangeTplApiKey(c, notifysrv.ChangeTplApiKeyReqDTO{
+	err := notifysrv.ChangeTplApiKey(c, notifysrv.ChangeTplApiKeyReqDTO{
 		Id:       cast.ToInt64(c.Param("tplId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -96,7 +95,7 @@ func changeNotifyTplApiKey(c *gin.Context) {
 }
 
 func listAllTplByTeamId(c *gin.Context) {
-	tpls, err := notifysrv.Outer.ListAllTpl(c, notifysrv.ListAllTplReqDTO{
+	tpls, err := notifysrv.ListAllTpl(c, notifysrv.ListAllTplReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -119,7 +118,7 @@ func listAllTplByTeamId(c *gin.Context) {
 func listNotifyTpl(c *gin.Context) {
 	var req ListNotifyTplReqVO
 	if util.ShouldBindQuery(&req, c) {
-		tpls, total, err := notifysrv.Outer.ListTpl(c, notifysrv.ListTplReqDTO{
+		tpls, total, err := notifysrv.ListTpl(c, notifysrv.ListTplReqDTO{
 			Name:     req.Name,
 			PageNum:  req.PageNum,
 			TeamId:   req.TeamId,
@@ -151,7 +150,7 @@ func listNotifyTpl(c *gin.Context) {
 func sendNotification(c *gin.Context) {
 	req := make(map[string]string)
 	if util.ShouldBindJSON(&req, c) {
-		err := notifysrv.Outer.SendNotificationByApiKey(c, notifysrv.SendNotifyByApiKeyReqDTO{
+		err := notifysrv.SendNotificationByApiKey(c, notifysrv.SendNotifyByApiKeyReqDTO{
 			ApiKey: c.Param("apiKey"),
 			Params: req,
 		})

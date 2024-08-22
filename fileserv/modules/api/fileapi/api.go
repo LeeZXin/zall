@@ -3,7 +3,6 @@ package fileapi
 import (
 	"fmt"
 	"github.com/LeeZXin/zall/fileserv/modules/service/filesrv"
-	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
@@ -24,9 +23,7 @@ var (
 
 func InitApi() {
 	productToken = static.GetString("files.product.token")
-	filesrv.Init()
 	filesrv.InitStorage()
-	cfgsrv.InitInner()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/files/avatar", apisession.CheckLogin)
 		{
@@ -56,7 +53,7 @@ func InitApi() {
 }
 
 func deleteProduct(c *gin.Context) {
-	err := filesrv.Outer.DeleteProduct(c, filesrv.DeleteProductReqDTO{
+	err := filesrv.DeleteProduct(c, filesrv.DeleteProductReqDTO{
 		ProductId: cast.ToInt64(c.Param("productId")),
 		Operator:  apisession.MustGetLoginUser(c),
 	})
@@ -68,7 +65,7 @@ func deleteProduct(c *gin.Context) {
 }
 
 func listProduct(c *gin.Context) {
-	products, err := filesrv.Outer.ListProduct(c, filesrv.ListProductReqDTO{
+	products, err := filesrv.ListProduct(c, filesrv.ListProductReqDTO{
 		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -111,7 +108,7 @@ func uploadAvatar(c *gin.Context) {
 	if b {
 		defer body.Close()
 	}
-	path, err := filesrv.Outer.UploadAvatar(c, filesrv.UploadAvatarReqDTO{
+	path, err := filesrv.UploadAvatar(c, filesrv.UploadAvatarReqDTO{
 		Body:     body,
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -128,7 +125,7 @@ func uploadAvatar(c *gin.Context) {
 }
 
 func getAvatar(c *gin.Context) {
-	path, err := filesrv.Outer.GetAvatar(c, filesrv.GetAvatarReqDTO{
+	path, err := filesrv.GetAvatar(c, filesrv.GetAvatarReqDTO{
 		Name:     c.Param("name"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -159,7 +156,7 @@ func uploadProduct(c *gin.Context) {
 	if b {
 		defer body.Close()
 	}
-	path, err := filesrv.Outer.UploadProduct(c, filesrv.UploadProductReqDTO{
+	path, err := filesrv.UploadProduct(c, filesrv.UploadProductReqDTO{
 		AppId:   c.Param("app"),
 		Name:    c.Param("name"),
 		Creator: c.Query("creator"),
@@ -178,7 +175,7 @@ func uploadProduct(c *gin.Context) {
 
 func getProduct(c *gin.Context) {
 	name := c.Param("name")
-	path, err := filesrv.Outer.GetProduct(c, filesrv.GetProductReqDTO{
+	path, err := filesrv.GetProduct(c, filesrv.GetProductReqDTO{
 		AppId: c.Param("app"),
 		Env:   c.Param("env"),
 		Name:  name,

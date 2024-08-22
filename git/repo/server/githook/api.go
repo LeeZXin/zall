@@ -13,10 +13,6 @@ import (
 	"net/http"
 )
 
-var (
-	hookSrv = NewHook()
-)
-
 func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/v1/git/hook", checkHookToken)
@@ -43,7 +39,7 @@ func checkHookToken(c *gin.Context) {
 func preReceive(c *gin.Context) {
 	var req githook.Opts
 	if util.ShouldBindJSON(&req, c) {
-		err := hookSrv.PreReceive(c, req)
+		err := doPreReceive(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -56,7 +52,7 @@ func postReceive(c *gin.Context) {
 	var req githook.Opts
 	if ginutil.ShouldBind(&req, c) {
 		newCtx, _ := rpcheader.NewCtxFromOldCtx(c)
-		go hookSrv.PostReceive(newCtx, req)
+		go doPostReceive(newCtx, req)
 		util.DefaultOkResponse(c)
 	}
 }

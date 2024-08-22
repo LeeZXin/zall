@@ -3,44 +3,174 @@ package gpgkeysrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/git/modules/model/gpgkeymd"
+	"github.com/LeeZXin/zall/pkg/apicode"
+	"github.com/LeeZXin/zall/pkg/git/signature"
+	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"github.com/keybase/go-crypto/openpgp"
+	"strings"
 )
 
-// echo "3837db075e638d9b9a6e2b585322c8c34b7bca6f7a98715f448a3c44da97ba48" | gpg -a --default-key C18172985BDF2F4A --detach-sig
+// ListValidByAccount 根据账号获取未过期的
+func ListValidByAccount(ctx context.Context, account string) []gpgkeymd.GpgKey {
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	ret, err := gpgkeymd.ListValidByAccount(ctx, account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return []gpgkeymd.GpgKey{}
+	}
+	return ret
+}
 
-var (
-	Outer OuterService
-	Inner InnerService
-)
+// GetByKeyId 根据keyId获取gpg密钥
+func GetByKeyId(ctx context.Context, keyId string) (gpgkeymd.GpgKey, bool) {
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	ret, b, err := gpgkeymd.GetByKeyId(ctx, keyId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return gpgkeymd.GpgKey{}, false
+	}
+	return ret, b
+}
 
-func InitInner() {
-	if Inner == nil {
-		Inner = new(innerImpl)
+/*
+CreateGpgKey 创建gpg密钥
+`echo '%s' | gpg -a --default-key %s --detach-sig`, token, pubKeyId
+*/
+func CreateGpgKey(ctx context.Context, reqDTO CreateGpgKeyReqDTO) (err error) {
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	// 转换key
+	entityList, err := signature.ConvertArmoredGPGKeyString(reqDTO.Content)
+	if err != nil || len(entityList) == 0 {
+		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.GpgKeyFormatError)
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	insertReqs := make([]gpgkeymd.InsertGpgKeyReqDTO, 0, len(entityList))
+	keyIds := make([]string, 0, len(entityList))
+	for _, entity := range entityList {
+		keyIds = append(keyIds, entity.PrimaryKey.KeyIdString())
+		insertReqs = append(insertReqs, parseGpgKeyInsertReq(entity, reqDTO.Name, reqDTO.Operator.Account))
+	}
+	// 检查重复
+	var count int64
+	count, err = gpgkeymd.CountByKeyIds(ctx, keyIds)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if count > 0 {
+		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.GpgKeyAlreadyExists)
+		return
+	}
+	// 插入
+	err = gpgkeymd.BatchInsertGpgKeys(ctx, insertReqs)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+func parseGpgKeyInsertReq(entity *openpgp.Entity, name, account string) gpgkeymd.InsertGpgKeyReqDTO {
+	emailList := make([]string, 0)
+	for _, identity := range entity.Identities {
+		if identity.Revocation != nil {
+			continue
+		}
+		if identity.UserId != nil {
+			emailList = append(emailList, identity.UserId.Email)
+		}
+	}
+	subKeys := make([]gpgkeymd.InsertGpgSubKeyReqDTO, 0)
+	for _, subkey := range entity.Subkeys {
+		if subkey.PublicKey == nil {
+			continue
+		}
+		subContent, _ := signature.Base64EncGPGPubKey(subkey.PublicKey)
+		subKeys = append(subKeys, gpgkeymd.InsertGpgSubKeyReqDTO{
+			KeyId:   subkey.PublicKey.KeyIdString(),
+			Content: subContent,
+		})
+	}
+	content, _ := signature.Base64EncGPGPubKey(entity.PrimaryKey)
+	expired := signature.GetGPGKeyExpiryTime(entity)
+	return gpgkeymd.InsertGpgKeyReqDTO{
+		Name:    name,
+		Account: account,
+		KeyId:   entity.PrimaryKey.KeyIdString(),
+		Content: content,
+		SubKeys: subKeys,
+		Email:   strings.Join(emailList, ";"),
+		Expired: expired,
 	}
 }
 
-func InitOuter() {
-	if Outer == nil {
-		Outer = new(outerImpl)
+// DeleteGpgKey 删除密钥
+func DeleteGpgKey(ctx context.Context, reqDTO DeleteGpgKeyReqDTO) (err error) {
+	if err = reqDTO.IsValid(); err != nil {
+		return err
 	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	// 校验是否存在
+	key, b, err := gpgkeymd.GetById(ctx, reqDTO.Id)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	if !b || key.Account != reqDTO.Operator.Account {
+		err = util.UnauthorizedError()
+		return
+	}
+	_, err = gpgkeymd.DeleteById(ctx, reqDTO.Id)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
 }
 
-func Init() {
-	InitInner()
-	InitOuter()
-}
-
-type InnerService interface {
-	// ListValidByAccount 获取有效未过期的
-	ListValidByAccount(context.Context, string) []gpgkeymd.GpgKey
-	// GetByKeyId 根据keyId获取gpg密钥
-	GetByKeyId(context.Context, string) (gpgkeymd.GpgKey, bool)
-}
-
-type OuterService interface {
-	// CreateGpgKey 创建gpg key
-	CreateGpgKey(context.Context, CreateGpgKeyReqDTO) error
-	// DeleteGpgKey 删除gpg密钥
-	DeleteGpgKey(context.Context, DeleteGpgKeyReqDTO) error
-	// ListGpgKey gpg密钥列表
-	ListGpgKey(context.Context, ListGpgKeyReqDTO) ([]GpgKeyDTO, error)
+// ListGpgKey 密钥列表
+func ListGpgKey(ctx context.Context, reqDTO ListGpgKeyReqDTO) ([]GpgKeyDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	keys, err := gpgkeymd.ListAllByAccount(
+		ctx,
+		reqDTO.Operator.Account,
+		[]string{"id", "name", "key_id", "email", "expired", "created", "sub_keys"},
+	)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	return listutil.Map(keys, func(t gpgkeymd.GpgKey) (GpgKeyDTO, error) {
+		subKeys, _ := listutil.Map(t.SubKeys, func(t gpgkeymd.GpgSubKey) (string, error) {
+			return t.KeyId, nil
+		})
+		return GpgKeyDTO{
+			Id:      t.Id,
+			Name:    t.Name,
+			KeyId:   t.KeyId,
+			Email:   t.Email,
+			Created: t.Created,
+			Expired: t.Expired,
+			SubKeys: strings.Join(subKeys, ";"),
+		}, nil
+	})
 }

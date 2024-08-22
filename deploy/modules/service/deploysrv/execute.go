@@ -14,14 +14,18 @@ import (
 )
 
 var (
-	runner *executor.Executor
+	runner         *executor.Executor
+	initRunnerOnce = sync.Once{}
 )
 
 func initRunner() {
-	runner, _ = executor.NewExecutor(10, 1024, time.Minute, executor.AbortStrategy)
+	initRunnerOnce.Do(func() {
+		runner, _ = executor.NewExecutor(10, 1024, time.Minute, executor.AbortStrategy)
+	})
 }
 
 func executeDeployOnStartPlan(planId int64, appId string, dp deploy.Pipeline, env map[string]string, taskIdMapList []map[string]string, varsMap map[string]string) error {
+	initRunner()
 	return runner.Execute(func() {
 		for index, stage := range dp.Deploy {
 			if stage.Confirm != nil && stage.Confirm.NeedInteract ||
@@ -37,6 +41,7 @@ func executeDeployOnStartPlan(planId int64, appId string, dp deploy.Pipeline, en
 }
 
 func executeDeployOnConfirmStage(planId int64, appId string, dp deploy.Pipeline, env, varsMap map[string]string, startIndex int) error {
+	initRunner()
 	return runner.Execute(func() {
 		for index := startIndex; index < len(dp.Deploy); index++ {
 			stage := dp.Deploy[index]

@@ -14,7 +14,6 @@ import (
 )
 
 func InitApi() {
-	pullrequestsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/pullRequest", apisession.CheckLogin)
 		{
@@ -49,7 +48,7 @@ func InitApi() {
 }
 
 func canMergePullRequest(c *gin.Context) {
-	respDTO, statusChange, err := pullrequestsrv.Outer.CanMergePullRequest(c, pullrequestsrv.CanMergePullRequestReqDTO{
+	respDTO, statusChange, err := pullrequestsrv.CanMergePullRequest(c, pullrequestsrv.CanMergePullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -73,7 +72,7 @@ func canMergePullRequest(c *gin.Context) {
 }
 
 func canReviewPullRequest(c *gin.Context) {
-	respDTO, statusChange, err := pullrequestsrv.Outer.CanReviewPullRequest(c, pullrequestsrv.CanReviewPullRequestReqDTO{
+	respDTO, statusChange, err := pullrequestsrv.CanReviewPullRequest(c, pullrequestsrv.CanReviewPullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -97,7 +96,7 @@ func canReviewPullRequest(c *gin.Context) {
 func addComment(c *gin.Context) {
 	var req AddCommentReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := pullrequestsrv.Outer.AddComment(c, pullrequestsrv.AddCommentReqDTO{
+		err := pullrequestsrv.AddComment(c, pullrequestsrv.AddCommentReqDTO{
 			PrId:      req.PrId,
 			ReplyFrom: req.ReplyFrom,
 			Comment:   req.Comment,
@@ -113,7 +112,7 @@ func addComment(c *gin.Context) {
 }
 
 func deleteComment(c *gin.Context) {
-	err := pullrequestsrv.Outer.DeleteComment(c, pullrequestsrv.DeleteCommentReqDTO{
+	err := pullrequestsrv.DeleteComment(c, pullrequestsrv.DeleteCommentReqDTO{
 		CommentId: cast.ToInt64(c.Param("commentId")),
 		Operator:  apisession.MustGetLoginUser(c),
 	})
@@ -125,7 +124,7 @@ func deleteComment(c *gin.Context) {
 }
 
 func listTimeline(c *gin.Context) {
-	timelines, err := pullrequestsrv.Outer.ListTimeline(c, pullrequestsrv.ListTimelineReqDTO{
+	timelines, err := pullrequestsrv.ListTimeline(c, pullrequestsrv.ListTimelineReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -149,7 +148,7 @@ func listTimeline(c *gin.Context) {
 }
 
 func listReview(c *gin.Context) {
-	reviews, err := pullrequestsrv.Outer.ListReview(c, pullrequestsrv.ListReviewReqDTO{
+	reviews, err := pullrequestsrv.ListReview(c, pullrequestsrv.ListReviewReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -172,7 +171,7 @@ func listReview(c *gin.Context) {
 }
 
 func getPullRequest(c *gin.Context) {
-	request, err := pullrequestsrv.Outer.GetPullRequest(c, pullrequestsrv.GetPullRequestReqDTO{
+	request, err := pullrequestsrv.GetPullRequest(c, pullrequestsrv.GetPullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -189,7 +188,7 @@ func getPullRequest(c *gin.Context) {
 
 func statsPullRequest(c *gin.Context) {
 	repoId := cast.ToInt64(c.Param("repoId"))
-	stats, err := pullrequestsrv.Outer.GetStats(c, pullrequestsrv.GetStatsReqDTO{
+	stats, err := pullrequestsrv.GetStats(c, pullrequestsrv.GetStatsReqDTO{
 		RepoId:   repoId,
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -211,7 +210,7 @@ func statsPullRequest(c *gin.Context) {
 func listPullRequest(c *gin.Context) {
 	var req ListPullRequestReqVO
 	if util.ShouldBindQuery(&req, c) {
-		requests, totalCount, err := pullrequestsrv.Outer.ListPullRequest(c, pullrequestsrv.ListPullRequestReqDTO{
+		requests, totalCount, err := pullrequestsrv.ListPullRequest(c, pullrequestsrv.ListPullRequestReqDTO{
 			RepoId:    req.RepoId,
 			Status:    req.Status,
 			SearchKey: req.SearchKey,
@@ -264,7 +263,7 @@ func pr2Vo(t pullrequestsrv.PullRequestDTO) (PullRequestVO, error) {
 func submitPullRequest(c *gin.Context) {
 	var req SubmitPullRequestReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := pullrequestsrv.Outer.SubmitPullRequest(c, pullrequestsrv.SubmitPullRequestReqDTO{
+		err := pullrequestsrv.SubmitPullRequest(c, pullrequestsrv.SubmitPullRequestReqDTO{
 			RepoId:     req.RepoId,
 			Target:     req.Target,
 			TargetType: req.TargetType,
@@ -283,7 +282,7 @@ func submitPullRequest(c *gin.Context) {
 }
 
 func closePullRequest(c *gin.Context) {
-	statusChange, err := pullrequestsrv.Outer.ClosePullRequest(c, pullrequestsrv.ClosePullRequestReqDTO{
+	statusChange, err := pullrequestsrv.ClosePullRequest(c, pullrequestsrv.ClosePullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -300,7 +299,7 @@ func closePullRequest(c *gin.Context) {
 }
 
 func mergePullRequest(c *gin.Context) {
-	statusChange, err := pullrequestsrv.Outer.MergePullRequest(c, pullrequestsrv.MergePullRequestReqDTO{
+	statusChange, err := pullrequestsrv.MergePullRequest(c, pullrequestsrv.MergePullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -317,7 +316,7 @@ func mergePullRequest(c *gin.Context) {
 }
 
 func agreeReviewPullRequest(c *gin.Context) {
-	statusChange, err := pullrequestsrv.Outer.AgreeReviewPullRequest(c, pullrequestsrv.AgreeReviewPullRequestReqDTO{
+	statusChange, err := pullrequestsrv.AgreeReviewPullRequest(c, pullrequestsrv.AgreeReviewPullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})

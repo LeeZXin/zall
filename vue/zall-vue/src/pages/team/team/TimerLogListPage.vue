@@ -204,7 +204,7 @@ const showTask = item => {
 // 日志列表
 const listLog = () => {
   listTimerTaskLogRequest({
-    taskId: route.params.taskId,
+    id: route.params.timerId,
     pageNum: dataPage.current,
     month: monthVal.value.format("YYYY-MM")
   }).then(res => {

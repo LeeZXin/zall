@@ -16,7 +16,6 @@ import (
 )
 
 func InitApi() {
-	webhooksrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/webhook", apisession.CheckLogin)
 		{
@@ -55,7 +54,7 @@ func demoWebhook(c *gin.Context) {
 func createWebhook(c *gin.Context) {
 	var req CreateWebhookReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := webhooksrv.Outer.CreateWebhook(c, webhooksrv.CreateWebhookReqDTO{
+		err := webhooksrv.CreateWebhook(c, webhooksrv.CreateWebhookReqDTO{
 			RepoId:   req.RepoId,
 			HookUrl:  req.HookUrl,
 			Secret:   req.Secret,
@@ -73,7 +72,7 @@ func createWebhook(c *gin.Context) {
 func updateWebhook(c *gin.Context) {
 	var req UpdateWebhookReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := webhooksrv.Outer.UpdateWebhook(c, webhooksrv.UpdateWebhookReqDTO{
+		err := webhooksrv.UpdateWebhook(c, webhooksrv.UpdateWebhookReqDTO{
 			Id:       req.WebhookId,
 			HookUrl:  req.HookUrl,
 			Secret:   req.Secret,
@@ -89,7 +88,7 @@ func updateWebhook(c *gin.Context) {
 }
 
 func deleteWebhook(c *gin.Context) {
-	err := webhooksrv.Outer.DeleteWebhook(c, webhooksrv.DeleteWebhookReqDTO{
+	err := webhooksrv.DeleteWebhook(c, webhooksrv.DeleteWebhookReqDTO{
 		Id:       cast.ToInt64(c.Param("webhookId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -101,7 +100,7 @@ func deleteWebhook(c *gin.Context) {
 }
 
 func pingWebhook(c *gin.Context) {
-	err := webhooksrv.Outer.PingWebhook(c, webhooksrv.PingWebhookReqDTO{
+	err := webhooksrv.PingWebhook(c, webhooksrv.PingWebhookReqDTO{
 		WebhookId: cast.ToInt64(c.Param("webhookId")),
 		Operator:  apisession.MustGetLoginUser(c),
 	})
@@ -113,7 +112,7 @@ func pingWebhook(c *gin.Context) {
 }
 
 func listWebhook(c *gin.Context) {
-	hookList, err := webhooksrv.Outer.ListWebhook(c, webhooksrv.ListWebhookReqDTO{
+	hookList, err := webhooksrv.ListWebhook(c, webhooksrv.ListWebhookReqDTO{
 		RepoId:   cast.ToInt64(c.Param("repoId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})

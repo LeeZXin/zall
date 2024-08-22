@@ -14,7 +14,6 @@ import (
 )
 
 func InitApi() {
-	gpgkeysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/gpgKey", apisession.CheckLogin)
 		{
@@ -31,7 +30,7 @@ func InitApi() {
 func createGpgKey(c *gin.Context) {
 	var req CreateGpgKeyReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := gpgkeysrv.Outer.CreateGpgKey(c, gpgkeysrv.CreateGpgKeyReqDTO{
+		err := gpgkeysrv.CreateGpgKey(c, gpgkeysrv.CreateGpgKeyReqDTO{
 			Name:     req.Name,
 			Content:  req.Content,
 			Operator: apisession.MustGetLoginUser(c),
@@ -45,7 +44,7 @@ func createGpgKey(c *gin.Context) {
 }
 
 func deleteGpgKey(c *gin.Context) {
-	err := gpgkeysrv.Outer.DeleteGpgKey(c, gpgkeysrv.DeleteGpgKeyReqDTO{
+	err := gpgkeysrv.DeleteGpgKey(c, gpgkeysrv.DeleteGpgKeyReqDTO{
 		Id:       cast.ToInt64(c.Param("keyId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -57,7 +56,7 @@ func deleteGpgKey(c *gin.Context) {
 }
 
 func listGpgKey(c *gin.Context) {
-	keys, err := gpgkeysrv.Outer.ListGpgKey(c, gpgkeysrv.ListGpgKeyReqDTO{
+	keys, err := gpgkeysrv.ListGpgKey(c, gpgkeysrv.ListGpgKeyReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {

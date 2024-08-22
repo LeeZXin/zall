@@ -37,7 +37,6 @@ type TimerTaskEvent struct {
 	BaseEvent
 	BaseTimer
 	Action      TimerTaskEventAction `json:"action"`
-	TaskId      string               `json:"taskId"`
 	TriggerType string               `json:"triggerType"`
 	TaskStatus  string               `json:"taskStatus"`
 }
@@ -62,15 +61,14 @@ func (*TeamRoleEvent) EventType() string {
 	return "team-role-event"
 }
 
-type TeamMemberEvent struct {
+type TeamUserEvent struct {
 	BaseTeam
 	BaseEvent
 	BaseRole
-	MemberAccount string                `json:"memberAccount"`
-	MemberName    string                `json:"memberName"`
-	Action        TeamMemberEventAction `json:"action"`
+	User   string              `json:"user"`
+	Action TeamUserEventAction `json:"action"`
 }
 
-func (*TeamMemberEvent) EventType() string {
+func (*TeamUserEvent) EventType() string {
 	return "team-member-event"
 }

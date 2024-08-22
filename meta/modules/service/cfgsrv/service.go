@@ -2,66 +2,270 @@ package cfgsrv
 
 import (
 	"context"
+	"fmt"
+	"github.com/LeeZXin/zall/meta/modules/model/cfgmd"
+	"github.com/LeeZXin/zall/util"
+	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/xorm/xormstore"
 )
 
-var (
-	Inner InnerService
-	Outer OuterService
-)
-
-func Init() {
-	InitInner()
-	InitOuter()
-}
-
-func InitInner() {
-	if Inner == nil {
-		Inner = new(innerImpl)
+func InitSysCfg() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	ret := SysCfg{}
+	b, err := cfgmd.GetByKey(ctx, &ret)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Fatalf("init sys config with err: %v", err)
+	}
+	if !b {
+		err = cfgmd.InsertCfg(ctx, DefaultSysCfg)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Fatalf("init sys config with err: %v", err)
+		}
 	}
 }
 
-func InitOuter() {
-	if Outer == nil {
-		Outer = new(outerImpl)
+func GetSysCfgFromDB(ctx context.Context) (SysCfg, error) {
+	var cfg SysCfg
+	err := getFromDB(ctx, &cfg)
+	return cfg, err
+}
+
+func InitGitCfg() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	ret := GitCfg{}
+	b, err := cfgmd.GetByKey(ctx, &ret)
+	if err != nil {
+		logger.Logger.Fatalf("init sys config with err: %v", err)
+	}
+	if !b {
+		err = cfgmd.InsertCfg(ctx, DefaultGitCfg)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Fatalf("init sys config with err: %v", err)
+		}
 	}
 }
 
-type InnerService interface {
-	// GetSysCfg 获取系统配置
-	GetSysCfg(context.Context) (SysCfg, error)
-	// InitSysCfg 初始化系统配置
-	InitSysCfg()
-	// GetGitCfg 获取git配置
-	GetGitCfg() (GitCfg, error)
-	// InitGitCfg 初始化git配置
-	InitGitCfg()
-	// GetEnvCfg 获取环境配置
-	GetEnvCfg(context.Context) ([]string, error)
-	// InitEnvCfg 初始化环境配置
-	InitEnvCfg()
-	// ContainsEnv 检查是否包含环境
-	ContainsEnv(string) bool
-	// GetGitRepoServerCfg 获取git服务器地址
-	GetGitRepoServerCfg() (GitRepoServerCfg, error)
+func GetGitCfgFromDB() (GitCfg, error) {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	var cfg GitCfg
+	err := getFromDB(ctx, &cfg)
+	return cfg, err
 }
 
-type OuterService interface {
-	// GetSysCfg 获取系统全局配置
-	GetSysCfg(context.Context) (SysCfg, error)
-	// UpdateSysCfg 编辑系统配置
-	UpdateSysCfg(context.Context, UpdateSysCfgReqDTO) error
-	// GetGitCfg 获取git配置
-	GetGitCfg(context.Context, GetGitCfgReqDTO) (GitCfg, error)
-	// UpdateGitCfg 编辑git配置
-	UpdateGitCfg(context.Context, UpdateGitCfgReqDTO) error
-	// GetEnvCfg 获取环境列表
-	GetEnvCfg(context.Context, GetEnvCfgReqDTO) ([]string, error)
-	// UpdateEnvCfg 编辑环境列表
-	UpdateEnvCfg(context.Context, UpdateEnvCfgReqDTO) error
-	// GetGitRepoServerCfg 获取git服务器地址
-	GetGitRepoServerCfg(context.Context, GetGitRepoServerUrlReqDTO) (GitRepoServerCfg, error)
-	// UpdateGitRepoServerCfg 更新git服务器地址
-	UpdateGitRepoServerCfg(context.Context, UpdateGitRepoServerCfgReqDTO) error
-	// 获取定时任务告警模板
+func GetEnvCfgFromDB(ctx context.Context) ([]string, error) {
+	var cfg EnvCfg
+	err := getFromDB(ctx, &cfg)
+	return cfg.Envs, err
+}
 
+func InitEnvCfg() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	ret := EnvCfg{}
+	b, err := cfgmd.GetByKey(ctx, &ret)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Fatalf("init env config with err: %v", err)
+	}
+	if !b {
+		err = cfgmd.InsertCfg(ctx, DefaultEnvCfg)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Fatalf("init env config with err: %v", err)
+		}
+	}
+}
+
+func ContainsEnv(env string) bool {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	envs, _ := GetEnvCfgFromDB(ctx)
+	for _, s2 := range envs {
+		if s2 == env {
+			return true
+		}
+	}
+	return false
+}
+
+// GetGitRepoServerCfgFromDB 获取git服务器地址
+func GetGitRepoServerCfgFromDB() (GitRepoServerCfg, error) {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	var cfg GitRepoServerCfg
+	err := getFromDB(ctx, &cfg)
+	return cfg, err
+}
+
+func getFromDB(ctx context.Context, cfg util.KeyVal) error {
+	b, err := cfgmd.GetByKey(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	if !b {
+		return fmt.Errorf("%s not found", cfg.Key())
+	}
+	return nil
+}
+
+// GetSysCfg 获取系统全局配置
+func GetSysCfg(ctx context.Context) (SysCfg, error) {
+	ret := SysCfg{}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	b, err := cfgmd.GetByKey(ctx, &ret)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return SysCfg{}, err
+	}
+	if !b {
+		return *DefaultSysCfg, nil
+	}
+	return ret, nil
+}
+
+// UpdateSysCfg 编辑系统配置
+func UpdateSysCfg(ctx context.Context, reqDTO UpdateSysCfgReqDTO) (err error) {
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err = cfgmd.UpdateByKey(ctx, &reqDTO.SysCfg)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+func GetGitCfg(ctx context.Context, reqDTO GetGitCfgReqDTO) (GitCfg, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return GitCfg{}, err
+	}
+	if !reqDTO.Operator.IsAdmin {
+		return GitCfg{}, util.UnauthorizedError()
+	}
+	ret := GitCfg{}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	b, err := cfgmd.GetByKey(ctx, &ret)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return GitCfg{}, err
+	}
+	if !b {
+		return *DefaultGitCfg, nil
+	}
+	return ret, nil
+}
+
+func UpdateGitCfg(ctx context.Context, reqDTO UpdateGitCfgReqDTO) (err error) {
+	if err = reqDTO.IsValid(); err != nil {
+		return
+	}
+	if !reqDTO.Operator.IsAdmin {
+		err = util.UnauthorizedError()
+		return
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err = cfgmd.UpdateByKey(ctx, &reqDTO.GitCfg)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		err = util.InternalError(err)
+		return
+	}
+	return
+}
+
+// GetEnvCfg 所有人都可以获取 不校验权限 获取环境列表
+func GetEnvCfg(ctx context.Context, reqDTO GetEnvCfgReqDTO) ([]string, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var envConfig EnvCfg
+	_, err := cfgmd.GetByKey(ctx, &envConfig)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	ret := envConfig.Envs
+	if ret == nil {
+		ret = make([]string, 0)
+	}
+	return ret, nil
+}
+
+// UpdateEnvCfg 编辑环境配置
+func UpdateEnvCfg(ctx context.Context, reqDTO UpdateEnvCfgReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, err := cfgmd.UpdateByKey(ctx, &reqDTO.EnvCfg)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
+}
+
+// GetGitRepoServerCfg 获取git服务器地址
+func GetGitRepoServerCfg(ctx context.Context, reqDTO GetGitRepoServerUrlReqDTO) (GitRepoServerCfg, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return GitRepoServerCfg{}, err
+	}
+	if !reqDTO.Operator.IsAdmin {
+		return GitRepoServerCfg{}, util.UnauthorizedError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var cfg GitRepoServerCfg
+	_, err := cfgmd.GetByKey(ctx, &cfg)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return GitRepoServerCfg{}, util.InternalError(err)
+	}
+	return cfg, nil
+}
+
+// UpdateGitRepoServerCfg 更新git服务器地址
+func UpdateGitRepoServerCfg(ctx context.Context, reqDTO UpdateGitRepoServerCfgReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
+	}
+	if !reqDTO.Operator.IsAdmin {
+		return util.UnauthorizedError()
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	var b bool
+	b, err := cfgmd.ExistByKey(ctx, reqDTO.GitRepoServerCfg.Key())
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if b {
+		_, err = cfgmd.UpdateByKey(ctx, &reqDTO.GitRepoServerCfg)
+	} else {
+		err = cfgmd.InsertCfg(ctx, &reqDTO.GitRepoServerCfg)
+	}
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	return nil
 }

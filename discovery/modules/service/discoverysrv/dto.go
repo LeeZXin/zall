@@ -19,7 +19,7 @@ type CreateDiscoverySourceReqDTO struct {
 }
 
 func (r *CreateDiscoverySourceReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if len(r.Endpoints) == 0 {
@@ -90,7 +90,7 @@ type ListDiscoverySourceReqDTO struct {
 }
 
 func (r *ListDiscoverySourceReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -105,7 +105,7 @@ type ListAllDiscoverySourceReqDTO struct {
 }
 
 func (r *ListAllDiscoverySourceReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -124,7 +124,7 @@ func (r *ListBindDiscoverySourceReqDTO) IsValid() error {
 	if !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -251,7 +251,7 @@ func (r *BindAppAndDiscoverySourceReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	return nil

@@ -1,8 +1,12 @@
 package timer
 
 import (
-	"encoding/json"
 	"github.com/LeeZXin/zall/pkg/http"
+	"github.com/LeeZXin/zall/pkg/i18n"
+)
+
+const (
+	DefaultTrigger = "system"
 )
 
 type TaskType string
@@ -25,13 +29,29 @@ func (t *Task) IsValid() bool {
 	}
 }
 
-func (t *Task) FromDB(content []byte) error {
-	if t == nil {
-		*t = Task{}
+type TriggerType int
+
+func (t TriggerType) IsValid() bool {
+	switch t {
+	case AutoTriggerType, ManualTriggerType:
+		return true
+	default:
+		return false
 	}
-	return json.Unmarshal(content, t)
 }
 
-func (t *Task) ToDB() ([]byte, error) {
-	return json.Marshal(t)
+func (t TriggerType) String() string {
+	switch t {
+	case AutoTriggerType:
+		return i18n.GetByKey(i18n.TimerAutoTriggerType)
+	case ManualTriggerType:
+		return i18n.GetByKey(i18n.TimerManualTriggerType)
+	default:
+		return ""
+	}
 }
+
+const (
+	AutoTriggerType TriggerType = iota + 1
+	ManualTriggerType
+)

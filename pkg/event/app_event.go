@@ -6,17 +6,30 @@ type BaseApp struct {
 }
 
 type AppEvent struct {
+	BaseTeam
 	BaseApp
 	BaseEvent
-	Action  AppEventAction `json:"action"`
+	Action       AppEventAction `json:"action"`
+	TransferTeam *BaseTeam      `json:"transferTeam,omitempty"`
+}
+
+func (*AppEvent) EventType() string {
+	return "app-event"
+}
+
+type AppSourceEvent struct {
+	BaseTeam
+	BaseApp
+	BaseEvent
+	Action  AppSourceEventAction `json:"action"`
 	Sources []struct {
 		Id   int64  `json:"id"`
 		Name string `json:"name"`
 	} `json:"sources"`
 }
 
-func (*AppEvent) EventType() string {
-	return "app-event"
+func (*AppSourceEvent) EventType() string {
+	return "app-source-event"
 }
 
 type BasePropertyFile struct {
@@ -26,6 +39,7 @@ type BasePropertyFile struct {
 }
 
 type AppPropertyFileEvent struct {
+	BaseTeam
 	BaseApp
 	BaseEvent
 	BasePropertyFile
@@ -37,6 +51,7 @@ func (*AppPropertyFileEvent) EventType() string {
 }
 
 type AppPropertyVersionEvent struct {
+	BaseTeam
 	BaseApp
 	BaseEvent
 	BasePropertyFile
@@ -55,6 +70,7 @@ type BasePipeline struct {
 }
 
 type AppPipelineEvent struct {
+	BaseTeam
 	BaseApp
 	BaseEvent
 	BasePipeline
@@ -66,6 +82,7 @@ func (*AppPipelineEvent) EventType() string {
 }
 
 type AppPipelineVarsEvent struct {
+	BaseTeam
 	BaseApp
 	BaseEvent
 	BasePipeline
@@ -79,6 +96,7 @@ func (*AppPipelineVarsEvent) EventType() string {
 }
 
 type AppDeployPlanEvent struct {
+	BaseTeam
 	BaseApp
 	BaseEvent
 	Action AppDeployPlanEventAction `json:"action"`
@@ -90,6 +108,7 @@ func (*AppDeployPlanEvent) EventType() string {
 }
 
 type AppProductEvent struct {
+	BaseTeam
 	BaseApp
 	BaseEvent
 	ProductPath string                `json:"productPath"`

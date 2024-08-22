@@ -49,7 +49,7 @@ export default {
         app: "应用服务",
         action: "工作流",
         propertyCenter: "配置中心",
-        timerTask: "定时任务",
+        timer: "定时任务",
         applyApproval: "审批申请",
         dbAudit: "数据库审计",
         promScrape: "Prometheus监控",

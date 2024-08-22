@@ -13,7 +13,6 @@ import (
 )
 
 func InitApi() {
-	zalletsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/zalletNode", apisession.CheckLogin)
 		{
@@ -34,7 +33,7 @@ func InitApi() {
 func createZalletNode(c *gin.Context) {
 	var req CreateZalletNodeReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := zalletsrv.Outer.CreateZalletNode(c, zalletsrv.CreateZalletNodeReqDTO{
+		err := zalletsrv.CreateZalletNode(c, zalletsrv.CreateZalletNodeReqDTO{
 			Name:       req.Name,
 			AgentHost:  req.AgentHost,
 			AgentToken: req.AgentToken,
@@ -51,7 +50,7 @@ func createZalletNode(c *gin.Context) {
 func updateZalletNode(c *gin.Context) {
 	var req UpdateZalletNodeReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := zalletsrv.Outer.UpdateZalletNode(c, zalletsrv.UpdateZalletNodeReqDTO{
+		err := zalletsrv.UpdateZalletNode(c, zalletsrv.UpdateZalletNodeReqDTO{
 			NodeId:     req.NodeId,
 			Name:       req.Name,
 			AgentHost:  req.AgentHost,
@@ -67,7 +66,7 @@ func updateZalletNode(c *gin.Context) {
 }
 
 func deleteZalletNode(c *gin.Context) {
-	err := zalletsrv.Outer.DeleteZalletNode(c, zalletsrv.DeleteZalletNodeReqDTO{
+	err := zalletsrv.DeleteZalletNode(c, zalletsrv.DeleteZalletNodeReqDTO{
 		Id:       cast.ToInt64(c.Param("nodeId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -81,7 +80,7 @@ func deleteZalletNode(c *gin.Context) {
 func listZalletNode(c *gin.Context) {
 	var req ListZalletNodeReqVO
 	if util.ShouldBindQuery(&req, c) {
-		nodes, total, err := zalletsrv.Outer.ListZalletNode(c, zalletsrv.ListZalletNodeReqDTO{
+		nodes, total, err := zalletsrv.ListZalletNode(c, zalletsrv.ListZalletNodeReqDTO{
 			Name:     req.Name,
 			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),
@@ -110,7 +109,7 @@ func listZalletNode(c *gin.Context) {
 }
 
 func listAllZalletNode(c *gin.Context) {
-	nodes, err := zalletsrv.Outer.ListAllZalletNode(c, zalletsrv.ListAllZalletNodeReqDTO{
+	nodes, err := zalletsrv.ListAllZalletNode(c, zalletsrv.ListAllZalletNodeReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {

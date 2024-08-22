@@ -2,13 +2,24 @@ package event
 
 type TimerEventAction string
 
+func (t TimerEventAction) GetI18nValue() string {
+	return "timerEvent." + string(t)
+}
+
 const (
-	TimerCreateAction TimerEventAction = "create"
-	TimerUpdateAction TimerEventAction = "update"
-	TimerDeleteAction TimerEventAction = "delete"
+	TimerCreateAction        TimerEventAction = "create"
+	TimerUpdateAction        TimerEventAction = "update"
+	TimerDeleteAction        TimerEventAction = "delete"
+	TimerEnableAction        TimerEventAction = "enable"
+	TimerDisableAction       TimerEventAction = "disable"
+	TimerManualTriggerAction TimerEventAction = "manuallyTrigger"
 )
 
 type TeamEventAction string
+
+func (t TeamEventAction) GetI18nValue() string {
+	return "teamEvent." + string(t)
+}
 
 const (
 	TeamCreateAction TeamEventAction = "create"
@@ -18,9 +29,12 @@ const (
 
 type TimerTaskEventAction string
 
+func (t TimerTaskEventAction) GetI18nValue() string {
+	return "timerTaskEvent." + string(t)
+}
+
 const (
-	TimerTaskManualTriggerAction TimerTaskEventAction = "manuallyTrigger"
-	TimerTaskFailAction          TimerTaskEventAction = "fail"
+	TimerTaskFailAction TimerTaskEventAction = "fail"
 )
 
 type TeamRoleEventAction string
@@ -31,10 +45,10 @@ const (
 	TeamRoleDeleteAction TeamRoleEventAction = "delete"
 )
 
-type TeamMemberEventAction string
+type TeamUserEventAction string
 
 const (
-	TeamMemberCreateAction TeamMemberEventAction = "create"
-	TeamMemberUpdateAction TeamMemberEventAction = "update"
-	TeamMemberDeleteAction TeamMemberEventAction = "delete"
+	TeamUserCreateAction     TeamUserEventAction = "create"
+	TeamUserChangeRoleAction TeamUserEventAction = "changeRole"
+	TeamUserDeleteAction     TeamUserEventAction = "delete"
 )

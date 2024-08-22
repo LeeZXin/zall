@@ -13,7 +13,6 @@ import (
 )
 
 func InitApi() {
-	teamsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		// 项目
 		group := e.Group("/api/team", apisession.CheckLogin)
@@ -63,7 +62,7 @@ func InitApi() {
 func changeRole(c *gin.Context) {
 	var req ChangeRoleReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.ChangeRole(c, teamsrv.ChangeRoleReqDTO{
+		err := teamsrv.ChangeRole(c, teamsrv.ChangeRoleReqDTO{
 			RelationId: req.RelationId,
 			RoleId:     req.RoleId,
 			Operator:   apisession.MustGetLoginUser(c),
@@ -78,7 +77,7 @@ func changeRole(c *gin.Context) {
 
 func getTeam(c *gin.Context) {
 	teamId := cast.ToInt64(c.Param("teamId"))
-	team, err := teamsrv.Outer.GetTeam(c, teamsrv.GetTeamReqDTO{
+	team, err := teamsrv.GetTeam(c, teamsrv.GetTeamReqDTO{
 		TeamId:   teamId,
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -99,7 +98,7 @@ func getTeam(c *gin.Context) {
 
 func listUserByTeamId(c *gin.Context) {
 	teamId := cast.ToInt64(c.Param("teamId"))
-	users, err := teamsrv.Outer.ListUserByTeamId(c, teamsrv.ListUserByTeamIdReqDTO{
+	users, err := teamsrv.ListUserByTeamId(c, teamsrv.ListUserByTeamIdReqDTO{
 		TeamId:   teamId,
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -122,7 +121,7 @@ func listUserByTeamId(c *gin.Context) {
 func createTeam(c *gin.Context) {
 	var req CreateTeamReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.CreateTeam(c, teamsrv.CreateTeamReqDTO{
+		err := teamsrv.CreateTeam(c, teamsrv.CreateTeamReqDTO{
 			Name:     req.Name,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -135,7 +134,7 @@ func createTeam(c *gin.Context) {
 }
 
 func listTeam(c *gin.Context) {
-	teamList, err := teamsrv.Outer.ListTeam(c, teamsrv.ListTeamReqDTO{
+	teamList, err := teamsrv.ListTeam(c, teamsrv.ListTeamReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -155,7 +154,7 @@ func listTeam(c *gin.Context) {
 }
 
 func listAllTeamByAdmin(c *gin.Context) {
-	teamList, err := teamsrv.Outer.ListAllByAdmin(c, teamsrv.ListAllByAdminReqDTO{
+	teamList, err := teamsrv.ListAllByAdmin(c, teamsrv.ListAllByAdminReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -175,7 +174,7 @@ func listAllTeamByAdmin(c *gin.Context) {
 }
 
 func deleteTeam(c *gin.Context) {
-	err := teamsrv.Outer.DeleteTeam(c, teamsrv.DeleteTeamReqDTO{
+	err := teamsrv.DeleteTeam(c, teamsrv.DeleteTeamReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -189,7 +188,7 @@ func deleteTeam(c *gin.Context) {
 func updateTeam(c *gin.Context) {
 	var req UpdateTeamReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.UpdateTeam(c, teamsrv.UpdateTeamReqDTO{
+		err := teamsrv.UpdateTeam(c, teamsrv.UpdateTeamReqDTO{
 			TeamId:   req.TeamId,
 			Name:     req.Name,
 			Operator: apisession.MustGetLoginUser(c),
@@ -205,7 +204,7 @@ func updateTeam(c *gin.Context) {
 func createTeamUser(c *gin.Context) {
 	var req CreateTeamUserReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.CreateUser(c, teamsrv.CreateUserReqDTO{
+		err := teamsrv.CreateUser(c, teamsrv.CreateUserReqDTO{
 			Accounts: req.Accounts,
 			RoleId:   req.RoleId,
 			Operator: apisession.MustGetLoginUser(c),
@@ -219,7 +218,7 @@ func createTeamUser(c *gin.Context) {
 }
 
 func listRoleUser(c *gin.Context) {
-	users, err := teamsrv.Outer.ListRoleUser(c, teamsrv.ListRoleUserReqDTO{
+	users, err := teamsrv.ListRoleUser(c, teamsrv.ListRoleUserReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -243,7 +242,7 @@ func listRoleUser(c *gin.Context) {
 }
 
 func deleteTeamUser(c *gin.Context) {
-	err := teamsrv.Outer.DeleteUser(c, teamsrv.DeleteUserReqDTO{
+	err := teamsrv.DeleteUser(c, teamsrv.DeleteUserReqDTO{
 		RelationId: cast.ToInt64(c.Param("relationId")),
 		Operator:   apisession.MustGetLoginUser(c),
 	})
@@ -257,7 +256,7 @@ func deleteTeamUser(c *gin.Context) {
 func createRole(c *gin.Context) {
 	var req CreateRoleReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.CreateRole(c, teamsrv.CreateRoleReqDTO{
+		err := teamsrv.CreateRole(c, teamsrv.CreateRoleReqDTO{
 			TeamId:   req.TeamId,
 			Name:     req.Name,
 			Perm:     req.Perm,
@@ -274,7 +273,7 @@ func createRole(c *gin.Context) {
 func updateRole(c *gin.Context) {
 	var req UpdateRoleReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := teamsrv.Outer.UpdateRole(c, teamsrv.UpdateRoleReqDTO{
+		err := teamsrv.UpdateRole(c, teamsrv.UpdateRoleReqDTO{
 			RoleId:   req.RoleId,
 			Name:     req.Name,
 			Perm:     req.Perm,
@@ -289,7 +288,7 @@ func updateRole(c *gin.Context) {
 }
 
 func deleteRole(c *gin.Context) {
-	err := teamsrv.Outer.DeleteRole(c, teamsrv.DeleteRoleReqDTO{
+	err := teamsrv.DeleteRole(c, teamsrv.DeleteRoleReqDTO{
 		RoleId:   cast.ToInt64(c.Param("roleId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -301,7 +300,7 @@ func deleteRole(c *gin.Context) {
 }
 
 func listRole(c *gin.Context) {
-	groups, err := teamsrv.Outer.ListRole(c, teamsrv.ListRoleReqDTO{
+	groups, err := teamsrv.ListRole(c, teamsrv.ListRoleReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})

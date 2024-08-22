@@ -21,7 +21,7 @@ type outerImpl struct{}
 func (*outerImpl) InsertConfig(ctx context.Context, reqDTO InsertConfigReqDTO) (err error) {
 	// 插入日志
 	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
 			OpDesc:     i18n.GetByKey(i18n.AlertSrvKeysVO.InsertConfig),
 			ReqContent: reqDTO,
@@ -57,7 +57,7 @@ func (*outerImpl) InsertConfig(ctx context.Context, reqDTO InsertConfigReqDTO) (
 func (*outerImpl) UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) (err error) {
 	// 插入日志
 	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
 			OpDesc:     i18n.GetByKey(i18n.AlertSrvKeysVO.UpdateConfig),
 			ReqContent: reqDTO,
@@ -93,7 +93,7 @@ func (*outerImpl) UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) (
 func (*outerImpl) DeleteConfig(ctx context.Context, reqDTO DeleteConfigReqDTO) (err error) {
 	// 插入日志
 	defer func() {
-		opsrv.Inner.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
+		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
 			Account:    reqDTO.Operator.Account,
 			OpDesc:     i18n.GetByKey(i18n.AlertSrvKeysVO.DeleteConfig),
 			ReqContent: reqDTO,

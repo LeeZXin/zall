@@ -10,7 +10,7 @@ type Events struct {
 	GitWorkflow     event.GitWorkflowEventCfg     `json:"gitWorkflow"`
 	Team            event.TeamEventCfg            `json:"team"`
 	TeamRole        event.TeamRoleEventCfg        `json:"teamRole"`
-	TeamMember      event.TeamMemberEventCfg      `json:"teamMember"`
+	TeamUser        event.TeamUserEventCfg        `json:"teamUser"`
 	App             event.AppEventCfg             `json:"app"`
 	EnvRelated      map[string]EnvRelatedCfg      `json:"envRelated"`
 }

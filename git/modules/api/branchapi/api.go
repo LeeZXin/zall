@@ -13,7 +13,6 @@ import (
 )
 
 func InitApi() {
-	branchsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		// 保护分支
 		group := e.Group("/api/protectedBranch", apisession.CheckLogin)
@@ -33,7 +32,7 @@ func InitApi() {
 func createProtectedBranch(c *gin.Context) {
 	var req InsertProtectedBranchReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := branchsrv.Outer.CreateProtectedBranch(c, branchsrv.CreateProtectedBranchReqDTO{
+		err := branchsrv.CreateProtectedBranch(c, branchsrv.CreateProtectedBranchReqDTO{
 			RepoId:   req.RepoId,
 			Pattern:  req.Pattern,
 			Cfg:      req.Cfg,
@@ -50,7 +49,7 @@ func createProtectedBranch(c *gin.Context) {
 func updateProtectedBranch(c *gin.Context) {
 	var req UpdateProtectedBranchVO
 	if util.ShouldBindJSON(&req, c) {
-		err := branchsrv.Outer.UpdateProtectedBranch(c, branchsrv.UpdateProtectedBranchReqDTO{
+		err := branchsrv.UpdateProtectedBranch(c, branchsrv.UpdateProtectedBranchReqDTO{
 			ProtectedBranchId: req.ProtectedBranchId,
 			Pattern:           req.Pattern,
 			Cfg:               req.Cfg,
@@ -65,7 +64,7 @@ func updateProtectedBranch(c *gin.Context) {
 }
 
 func deleteProtectedBranch(c *gin.Context) {
-	err := branchsrv.Outer.DeleteProtectedBranch(c, branchsrv.DeleteProtectedBranchReqDTO{
+	err := branchsrv.DeleteProtectedBranch(c, branchsrv.DeleteProtectedBranchReqDTO{
 		ProtectedBranchId: cast.ToInt64(c.Param("id")),
 		Operator:          apisession.MustGetLoginUser(c),
 	})
@@ -77,7 +76,7 @@ func deleteProtectedBranch(c *gin.Context) {
 }
 
 func listProtectedBranch(c *gin.Context) {
-	branchList, err := branchsrv.Outer.ListProtectedBranch(c, branchsrv.ListProtectedBranchReqDTO{
+	branchList, err := branchsrv.ListProtectedBranch(c, branchsrv.ListProtectedBranchReqDTO{
 		RepoId:   cast.ToInt64(c.Param("repoId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})

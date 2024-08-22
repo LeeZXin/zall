@@ -516,6 +516,7 @@ func (s *storeImpl) UploadPack(req reqvo.UploadPackReq) {
 	env = append(env, util.JoinFields(
 		gitenv.EnvRepoId, req.C.GetHeader("Repo-PrId"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
+		gitenv.EnvPusherName, req.C.GetHeader("Pusher-Name"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
 		gitenv.EnvAppUrl, req.C.GetHeader("App-Url"),
 		gitenv.EnvHookToken, git.HookToken(),
@@ -561,6 +562,7 @@ func (s *storeImpl) ReceivePack(req reqvo.ReceivePackReq) {
 		gitenv.EnvHookUrl, fmt.Sprintf("http://127.0.0.1:%d", common.HttpServerPort()),
 		gitenv.EnvRepoId, req.C.GetHeader("Repo-PrId"),
 		gitenv.EnvPusherAccount, req.C.GetHeader("Pusher-Account"),
+		gitenv.EnvPusherName, req.C.GetHeader("Pusher-Name"),
 		gitenv.EnvPusherEmail, req.C.GetHeader("Pusher-Email"),
 		gitenv.EnvAppUrl, req.C.GetHeader("App-Url"),
 		gitenv.EnvHookToken, git.HookToken(),
@@ -606,6 +608,7 @@ func (s *storeImpl) Merge(ctx context.Context, req reqvo.MergeReq) (reqvo.DiffRe
 		RepoId:        req.MergeOpts.RepoId,
 		PrId:          req.MergeOpts.PrId,
 		PusherAccount: req.MergeOpts.PusherAccount,
+		PusherName:    req.MergeOpts.PusherName,
 		Message:       req.MergeOpts.Message,
 		AppUrl:        req.MergeOpts.AppUrl,
 	})

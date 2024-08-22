@@ -1,20 +1,23 @@
-package taskmd
+package timermd
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/pkg/timer"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
 )
 
-func IsTaskNameValid(name string) bool {
+func IsTimerNameValid(name string) bool {
 	return len(name) <= 64 && len(name) > 0
 }
 
-func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
-	ret := Task{
-		Name:      reqDTO.Name,
-		CronExp:   reqDTO.CronExp,
-		Content:   &reqDTO.Content,
+func InsertTimer(ctx context.Context, reqDTO InsertTimerReqDTO) (Timer, error) {
+	ret := Timer{
+		Name:    reqDTO.Name,
+		CronExp: reqDTO.CronExp,
+		Content: &xormutil.Conversion[timer.Task]{
+			Data: reqDTO.Content,
+		},
 		TeamId:    reqDTO.TeamId,
 		Env:       reqDTO.Env,
 		IsEnabled: reqDTO.IsEnabled,
@@ -24,21 +27,23 @@ func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 	return ret, err
 }
 
-func UpdateTask(ctx context.Context, reqDTO UpdateTaskReqDTO) (bool, error) {
+func UpdateTimer(ctx context.Context, reqDTO UpdateTimerReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
 		Cols("name", "cron_exp", "content").
-		Update(&Task{
+		Update(&Timer{
 			Name:    reqDTO.Name,
 			CronExp: reqDTO.CronExp,
-			Content: &reqDTO.Content,
+			Content: &xormutil.Conversion[timer.Task]{
+				Data: reqDTO.Content,
+			},
 		})
 	return rows == 1, err
 }
 
-func UpdateExecuteNextTime(ctx context.Context, taskId, nextTime, runVersion int64) (bool, error) {
+func UpdateExecuteNextTime(ctx context.Context, timerId, nextTime, runVersion int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("task_id = ?", taskId).
+		Where("timer_id = ?", timerId).
 		And("run_version = ?", runVersion).
 		Cols("next_time", "run_version").
 		Update(&Execute{
@@ -48,9 +53,9 @@ func UpdateExecuteNextTime(ctx context.Context, taskId, nextTime, runVersion int
 	return rows == 1, err
 }
 
-func EnableExecute(ctx context.Context, taskId int64, nextTime int64) (bool, error) {
+func EnableExecute(ctx context.Context, timerId int64, nextTime int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("task_id = ?", taskId).
+		Where("timer_id = ?", timerId).
 		And("is_enabled = 0").
 		Cols("is_enabled", "next_time").
 		Update(&Execute{
@@ -60,20 +65,20 @@ func EnableExecute(ctx context.Context, taskId int64, nextTime int64) (bool, err
 	return rows == 1, err
 }
 
-func EnableTask(ctx context.Context, taskId int64) (bool, error) {
+func EnableTimer(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", taskId).
+		Where("id = ?", id).
 		And("is_enabled = 0").
 		Cols("is_enabled").
-		Update(&Task{
+		Update(&Timer{
 			IsEnabled: true,
 		})
 	return rows == 1, err
 }
 
-func DisableExecute(ctx context.Context, taskId int64) (bool, error) {
+func DisableExecute(ctx context.Context, timerId int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("task_id = ?", taskId).
+		Where("timer_id = ?", timerId).
 		And("is_enabled = 1").
 		Cols("is_enabled", "next_time").
 		Update(&Execute{
@@ -83,12 +88,12 @@ func DisableExecute(ctx context.Context, taskId int64) (bool, error) {
 	return rows == 1, err
 }
 
-func DisableTask(ctx context.Context, taskId int64) (bool, error) {
+func DisableTimer(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", taskId).
+		Where("id = ?", id).
 		And("is_enabled = 1").
 		Cols("is_enabled").
-		Update(&Task{
+		Update(&Timer{
 			IsEnabled: false,
 		})
 	return rows == 1, err
@@ -107,14 +112,14 @@ func IterateExecute(ctx context.Context, nextTime int64, env string, fn func(*Ex
 		})
 }
 
-func PageTask(ctx context.Context, reqDTO PageTaskReqDTO) ([]Task, int64, error) {
+func ListTimer(ctx context.Context, reqDTO ListTimerReqDTO) ([]Timer, int64, error) {
 	session := xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", reqDTO.TeamId).
 		And("env = ?", reqDTO.Env)
 	if reqDTO.Name != "" {
 		session.And("name like ?", reqDTO.Name+"%")
 	}
-	ret := make([]Task, 0)
+	ret := make([]Timer, 0)
 	total, err := session.
 		Desc("id").
 		Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).
@@ -122,10 +127,12 @@ func PageTask(ctx context.Context, reqDTO PageTaskReqDTO) ([]Task, int64, error)
 	return ret, total, err
 }
 
-func InsertTaskLog(ctx context.Context, reqDTO InsertTaskLogReqDTO) error {
-	ret := TaskLog{
-		TaskId:      reqDTO.TaskId,
-		TaskContent: reqDTO.TaskContent,
+func InsertLog(ctx context.Context, reqDTO InsertLogReqDTO) error {
+	ret := Log{
+		TimerId: reqDTO.TimerId,
+		TaskContent: &xormutil.Conversion[timer.Task]{
+			Data: reqDTO.TaskContent,
+		},
 		ErrLog:      reqDTO.ErrLog,
 		TriggerType: reqDTO.TriggerType,
 		TriggerBy:   reqDTO.TriggerBy,
@@ -135,10 +142,10 @@ func InsertTaskLog(ctx context.Context, reqDTO InsertTaskLogReqDTO) error {
 	return err
 }
 
-func ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) ([]TaskLog, int64, error) {
-	ret := make([]TaskLog, 0)
+func ListLog(ctx context.Context, reqDTO ListLogReqDTO) ([]Log, int64, error) {
+	ret := make([]Log, 0)
 	total, err := xormutil.MustGetXormSession(ctx).
-		Where("task_id = ?", reqDTO.TaskId).
+		Where("timer_id = ?", reqDTO.TimerId).
 		And("created between ? and ?", reqDTO.BeginTime.Format(time.DateTime), reqDTO.EndTime.Format(time.DateTime)).
 		Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).
 		Desc("id").
@@ -146,25 +153,25 @@ func ListTaskLog(ctx context.Context, reqDTO ListTaskLogReqDTO) ([]TaskLog, int6
 	return ret, total, err
 }
 
-func GetTaskById(ctx context.Context, id int64) (Task, bool, error) {
-	var ret Task
+func GetTimerById(ctx context.Context, id int64) (Timer, bool, error) {
+	var ret Timer
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		Get(&ret)
 	return ret, b, err
 }
 
-func DeleteTask(ctx context.Context, id int64) error {
+func DeleteTimer(ctx context.Context, id int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
-		Delete(new(Task))
+		Delete(new(Timer))
 	return err
 }
 
 func InsertExecute(ctx context.Context, reqDTO InsertExecuteReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&Execute{
-			TaskId:    reqDTO.TaskId,
+			TimerId:   reqDTO.TimerId,
 			IsEnabled: reqDTO.IsEnabled,
 			NextTime:  reqDTO.NextTime,
 			Env:       reqDTO.Env,
@@ -172,22 +179,22 @@ func InsertExecute(ctx context.Context, reqDTO InsertExecuteReqDTO) error {
 	return err
 }
 
-func DeleteExecuteByTaskId(ctx context.Context, taskId int64) (bool, error) {
+func DeleteExecuteByTimerId(ctx context.Context, timerId int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("task_id = ?", taskId).
+		Where("timer_id = ?", timerId).
 		Delete(new(Execute))
 	return rows == 1, err
 }
 
-func CountTaskByTeamId(ctx context.Context, teamId int64) (int64, error) {
+func CountTimerByTeamId(ctx context.Context, teamId int64) (int64, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("team_id = ?", teamId).
-		Count(new(Task))
+		Count(new(Timer))
 }
 
-func DeleteLogByTaskId(ctx context.Context, taskId int64) error {
+func DeleteLogByTimerId(ctx context.Context, timerId int64) error {
 	_, err := xormutil.MustGetXormSession(ctx).
-		Where("task_id = ?", taskId).
-		Delete(new(TaskLog))
+		Where("timer_id = ?", timerId).
+		Delete(new(Log))
 	return err
 }

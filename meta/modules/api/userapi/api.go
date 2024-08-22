@@ -13,7 +13,6 @@ import (
 )
 
 func InitApi() {
-	usersrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/login")
 		{
@@ -56,7 +55,7 @@ func InitApi() {
 }
 
 func listAll(c *gin.Context) {
-	users, err := usersrv.Outer.ListAllUser(c, usersrv.ListAllUserReqDTO{
+	users, err := usersrv.ListAllUser(c, usersrv.ListAllUserReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -78,7 +77,7 @@ func listAll(c *gin.Context) {
 func login(c *gin.Context) {
 	var req LoginReqVO
 	if util.ShouldBindJSON(&req, c) {
-		session, err := usersrv.Outer.Login(c, usersrv.LoginReqDTO{
+		session, err := usersrv.Login(c, usersrv.LoginReqDTO{
 			Account:  req.Account,
 			Password: req.Password,
 		})
@@ -103,7 +102,7 @@ func getUserInfo(c *gin.Context) {
 }
 
 func refresh(c *gin.Context) {
-	sessionId, expireAt, err := usersrv.Outer.Refresh(c, usersrv.RefreshReqDTO{
+	sessionId, expireAt, err := usersrv.Refresh(c, usersrv.RefreshReqDTO{
 		SessionId: apisession.GetSessionId(c),
 		Operator:  apisession.MustGetLoginUser(c),
 	})
@@ -120,7 +119,7 @@ func refresh(c *gin.Context) {
 }
 
 func logout(c *gin.Context) {
-	err := usersrv.Outer.Logout(c, usersrv.LogoutReqDTO{
+	err := usersrv.Logout(c, usersrv.LogoutReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -133,7 +132,7 @@ func logout(c *gin.Context) {
 func createUser(c *gin.Context) {
 	var req CreateUserReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := usersrv.Outer.CreateUser(c, usersrv.CreateUserReqDTO{
+		err := usersrv.CreateUser(c, usersrv.CreateUserReqDTO{
 			Account:   req.Account,
 			Name:      req.Name,
 			Email:     req.Email,
@@ -150,7 +149,7 @@ func createUser(c *gin.Context) {
 }
 
 func deleteUser(c *gin.Context) {
-	err := usersrv.Outer.DeleteUser(c, usersrv.DeleteUserReqDTO{
+	err := usersrv.DeleteUser(c, usersrv.DeleteUserReqDTO{
 		Account:  c.Param("account"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -164,7 +163,7 @@ func deleteUser(c *gin.Context) {
 func updateUser(c *gin.Context) {
 	var req UpdateUserReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := usersrv.Outer.UpdateUser(c, usersrv.UpdateUserReqDTO{
+		err := usersrv.UpdateUser(c, usersrv.UpdateUserReqDTO{
 			Account:   req.Account,
 			Name:      req.Name,
 			Email:     req.Email,
@@ -182,7 +181,7 @@ func updateUser(c *gin.Context) {
 func listUser(c *gin.Context) {
 	var req ListUserReqVO
 	if util.ShouldBindQuery(&req, c) {
-		users, total, err := usersrv.Outer.ListUser(c, usersrv.ListUserReqDTO{
+		users, total, err := usersrv.ListUser(c, usersrv.ListUserReqDTO{
 			Account:  req.Account,
 			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),
@@ -217,7 +216,7 @@ func listUser(c *gin.Context) {
 func updatePassword(c *gin.Context) {
 	var req UpdatePasswordReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := usersrv.Outer.UpdatePassword(c, usersrv.UpdatePasswordReqDTO{
+		err := usersrv.UpdatePassword(c, usersrv.UpdatePasswordReqDTO{
 			Origin:   req.Origin,
 			Password: req.Password,
 			Operator: apisession.MustGetLoginUser(c),
@@ -233,7 +232,7 @@ func updatePassword(c *gin.Context) {
 func register(c *gin.Context) {
 	var req RegisterUserReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := usersrv.Outer.RegisterUser(c, usersrv.RegisterUserReqDTO{
+		err := usersrv.RegisterUser(c, usersrv.RegisterUserReqDTO{
 			Account:  req.Account,
 			Name:     req.Name,
 			Email:    req.Email,
@@ -250,7 +249,7 @@ func register(c *gin.Context) {
 func setAdmin(c *gin.Context) {
 	var req SetAdminReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := usersrv.Outer.SetAdmin(c, usersrv.SetAdminReqDTO{
+		err := usersrv.SetAdmin(c, usersrv.SetAdminReqDTO{
 			Account:  req.Account,
 			IsAdmin:  req.IsAdmin,
 			Operator: apisession.MustGetLoginUser(c),
@@ -266,7 +265,7 @@ func setAdmin(c *gin.Context) {
 func setProhibited(c *gin.Context) {
 	var req SetProhibitedReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := usersrv.Outer.SetProhibited(c, usersrv.SetProhibitedReqDTO{
+		err := usersrv.SetProhibited(c, usersrv.SetProhibitedReqDTO{
 			Account:      req.Account,
 			IsProhibited: req.IsProhibited,
 			Operator:     apisession.MustGetLoginUser(c),
@@ -282,7 +281,7 @@ func setProhibited(c *gin.Context) {
 func setDba(c *gin.Context) {
 	var req SetDbaReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := usersrv.Outer.SetDba(c, usersrv.SetDbaReqDTO{
+		err := usersrv.SetDba(c, usersrv.SetDbaReqDTO{
 			Account:  req.Account,
 			IsDba:    req.IsDba,
 			Operator: apisession.MustGetLoginUser(c),
@@ -296,7 +295,7 @@ func setDba(c *gin.Context) {
 }
 
 func resetPassword(c *gin.Context) {
-	err := usersrv.Outer.ResetPassword(c, usersrv.ResetPasswordReqDTO{
+	err := usersrv.ResetPassword(c, usersrv.ResetPasswordReqDTO{
 		Account:  c.Param("account"),
 		Operator: apisession.MustGetLoginUser(c),
 	})

@@ -1,8 +1,8 @@
-package taskapi
+package timerapi
 
 import (
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/timer/modules/service/tasksrv"
+	"github.com/LeeZXin/zall/timer/modules/service/timersrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -13,24 +13,23 @@ import (
 )
 
 func InitApi() {
-	tasksrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/api/timerTask", apisession.CheckLogin)
+		group := e.Group("/api/timer", apisession.CheckLogin)
 		{
 			// 创建定时任务
-			group.POST("/create", createTask)
+			group.POST("/create", createTimer)
 			// 定时任务列表
-			group.GET("/list", listTask)
+			group.GET("/list", listTimer)
 			// 启动定时任务
-			group.PUT("/enable/:taskId", enableTask)
+			group.PUT("/enable/:timerId", enableTimer)
 			// 关闭定时任务
-			group.PUT("/disable/:taskId", disableTask)
+			group.PUT("/disable/:timerId", disableTimer)
 			// 删除定时任务
-			group.DELETE("/delete/:taskId", deleteTask)
+			group.DELETE("/delete/:timerId", deleteTimer)
 			// 触发定时任务
-			group.PUT("/trigger/:taskId", triggerTask)
+			group.PUT("/trigger/:timerId", triggerTask)
 			// 编辑定时任务
-			group.POST("/update", updateTask)
+			group.POST("/update", updateTimer)
 		}
 		group = e.Group("/api/timerLog", apisession.CheckLogin)
 		{
@@ -40,10 +39,10 @@ func InitApi() {
 	})
 }
 
-func createTask(c *gin.Context) {
-	var req CreateTaskReqVO
+func createTimer(c *gin.Context) {
+	var req CreateTimerReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := tasksrv.Outer.CreateTask(c, tasksrv.CreateTaskReqDTO{
+		err := timersrv.CreateTimer(c, timersrv.CreateTimerReqDTO{
 			Name:     req.Name,
 			CronExp:  req.CronExp,
 			TeamId:   req.TeamId,
@@ -59,9 +58,9 @@ func createTask(c *gin.Context) {
 	}
 }
 
-func enableTask(c *gin.Context) {
-	err := tasksrv.Outer.EnableTask(c, tasksrv.EnableTaskReqDTO{
-		Id:       cast.ToInt64(c.Param("taskId")),
+func enableTimer(c *gin.Context) {
+	err := timersrv.EnableTimer(c, timersrv.EnableTimerReqDTO{
+		Id:       cast.ToInt64(c.Param("timerId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -71,9 +70,9 @@ func enableTask(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func disableTask(c *gin.Context) {
-	err := tasksrv.Outer.DisableTask(c, tasksrv.DisableTaskReqDTO{
-		Id:       cast.ToInt64(c.Param("taskId")),
+func disableTimer(c *gin.Context) {
+	err := timersrv.DisableTimer(c, timersrv.DisableTimerReqDTO{
+		Id:       cast.ToInt64(c.Param("timerId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -83,9 +82,9 @@ func disableTask(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func deleteTask(c *gin.Context) {
-	err := tasksrv.Outer.DeleteTask(c, tasksrv.DeleteTaskReqDTO{
-		Id:       cast.ToInt64(c.Param("taskId")),
+func deleteTimer(c *gin.Context) {
+	err := timersrv.DeleteTimer(c, timersrv.DeleteTimerReqDTO{
+		Id:       cast.ToInt64(c.Param("timerId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -95,10 +94,10 @@ func deleteTask(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func listTask(c *gin.Context) {
-	var req ListTaskReqVO
+func listTimer(c *gin.Context) {
+	var req ListTimerReqVO
 	if util.ShouldBindQuery(&req, c) {
-		tasks, total, err := tasksrv.Outer.ListTask(c, tasksrv.ListTaskReqDTO{
+		tasks, total, err := timersrv.ListTimer(c, timersrv.ListTimerReqDTO{
 			TeamId:   req.TeamId,
 			Name:     req.Name,
 			PageNum:  req.PageNum,
@@ -109,8 +108,8 @@ func listTask(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(tasks, func(t tasksrv.TaskDTO) (TaskVO, error) {
-			return TaskVO{
+		data, _ := listutil.Map(tasks, func(t timersrv.TimerDTO) (TimerVO, error) {
+			return TimerVO{
 				Id:        t.Id,
 				Name:      t.Name,
 				CronExp:   t.CronExp,
@@ -121,8 +120,8 @@ func listTask(c *gin.Context) {
 				Creator:   t.Creator,
 			}, nil
 		})
-		c.JSON(http.StatusOK, ginutil.Page2Resp[TaskVO]{
-			DataResp: ginutil.DataResp[[]TaskVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[TimerVO]{
+			DataResp: ginutil.DataResp[[]TimerVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},
@@ -135,8 +134,8 @@ func listTask(c *gin.Context) {
 func listLog(c *gin.Context) {
 	var req ListLogReqVO
 	if util.ShouldBindQuery(&req, c) {
-		logs, total, err := tasksrv.Outer.ListTaskLog(c, tasksrv.ListTaskLogReqDTO{
-			TaskId:   req.TaskId,
+		logs, total, err := timersrv.ListLog(c, timersrv.ListLogReqDTO{
+			Id:       req.Id,
 			PageNum:  req.PageNum,
 			Month:    req.Month,
 			Operator: apisession.MustGetLoginUser(c),
@@ -145,7 +144,7 @@ func listLog(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(logs, func(t tasksrv.TaskLogDTO) (TaskLogVO, error) {
+		data, _ := listutil.Map(logs, func(t timersrv.LogDTO) (TaskLogVO, error) {
 			return TaskLogVO{
 				Task:        t.Task,
 				ErrLog:      t.ErrLog,
@@ -167,8 +166,8 @@ func listLog(c *gin.Context) {
 }
 
 func triggerTask(c *gin.Context) {
-	err := tasksrv.Outer.TriggerTask(c, tasksrv.TriggerTaskReqDTO{
-		Id:       cast.ToInt64(c.Param("taskId")),
+	err := timersrv.TriggerTask(c, timersrv.TriggerTaskReqDTO{
+		Id:       cast.ToInt64(c.Param("timerId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -178,11 +177,11 @@ func triggerTask(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func updateTask(c *gin.Context) {
-	var req UpdateTaskReqVO
+func updateTimer(c *gin.Context) {
+	var req UpdateTimerReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := tasksrv.Outer.UpdateTask(c, tasksrv.UpdateTaskReqDTO{
-			Id:       req.TaskId,
+		err := timersrv.UpdateTimer(c, timersrv.UpdateTimerReqDTO{
+			Id:       req.Id,
 			Name:     req.Name,
 			CronExp:  req.CronExp,
 			Task:     req.Task,

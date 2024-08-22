@@ -24,7 +24,7 @@ func InitApi() {
 func pageLog(c *gin.Context) {
 	var req PageLogReqVO
 	if util.ShouldBindQuery(&req, c) {
-		logs, total, err := oplogsrv.Outer.PageOpLog(c, oplogsrv.PageOpLogReqDTO{
+		logs, total, err := oplogsrv.PageOpLog(c, oplogsrv.PageOpLogReqDTO{
 			RepoId:   req.RepoId,
 			Account:  req.Account,
 			DateStr:  req.DateStr,

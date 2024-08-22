@@ -9,7 +9,7 @@
       </a-input>
     </div>
     <div class="text-input">
-      <a-input-password v-model:value="password" :placeholder="t('login.passwordPlaceholder')">
+      <a-input-password v-model:value="password" :placeholder="t('login.passwordPlaceholder')" @pressEnter="login">
         <template #prefix>
           <key-outlined />
         </template>

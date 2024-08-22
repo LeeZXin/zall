@@ -68,6 +68,7 @@ func scanStdinAndDoHttp(ctx context.Context, httpUrl string) error {
 	infoList := make([]githook.RevInfo, 0)
 	// the environment is set by serv command
 	pusherId := os.Getenv(gitenv.EnvPusherAccount)
+	pusherName := os.Getenv(gitenv.EnvPusherName)
 	pusherEmail := os.Getenv(gitenv.EnvPusherEmail)
 	prId, _ := strconv.ParseInt(os.Getenv(gitenv.EnvPrId), 10, 64)
 	repoId, _ := strconv.ParseInt(os.Getenv(gitenv.EnvRepoId), 10, 64)
@@ -99,6 +100,7 @@ func scanStdinAndDoHttp(ctx context.Context, httpUrl string) error {
 			RepoId:                       repoId,
 			PrId:                         prId,
 			PusherAccount:                pusherId,
+			PusherName:                   pusherName,
 			PusherEmail:                  pusherEmail,
 			ObjectDirectory:              od,
 			AlternativeObjectDirectories: aod,

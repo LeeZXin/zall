@@ -237,21 +237,21 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/team/UserListPage")
             }, {
-                path: "/team/:teamId(\\d+)/timerTask/list/:env?",
+                path: "/team/:teamId(\\d+)/timer/list/:env?",
                 component: () =>
-                    import ("../pages/team/team/TimerTaskListPage")
+                    import ("../pages/team/team/TimerListPage")
             }, {
-                path: "/team/:teamId(\\d+)/timerTask/create",
+                path: "/team/:teamId(\\d+)/timer/create",
                 component: () =>
-                    import ("../pages/team/team/TimerTaskHandlePage")
+                    import ("../pages/team/team/TimerHandlePage")
             }, {
-                path: "/team/:teamId(\\d+)/timerTask/:taskId(\\d+)/update",
+                path: "/team/:teamId(\\d+)/timer/:timerId(\\d+)/update",
                 component: () =>
-                    import ("../pages/team/team/TimerTaskHandlePage")
+                    import ("../pages/team/team/TimerHandlePage")
             }, {
-                path: "/team/:teamId(\\d+)/timerTask/:taskId(\\d+)/log",
+                path: "/team/:teamId(\\d+)/timer/:timerId(\\d+)/log",
                 component: () =>
-                    import ("../pages/team/team/TimerTaskLogListPage")
+                    import ("../pages/team/team/TimerLogListPage")
             }, {
                 path: "/team/:teamId(\\d+)/app/list",
                 component: () =>

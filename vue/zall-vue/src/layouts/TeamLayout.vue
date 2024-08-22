@@ -17,9 +17,9 @@
             <AppstoreOutlined />
             <span>{{t("teamMenu.app")}}</span>
           </a-menu-item>
-          <a-menu-item key="/timerTask/list" v-if="teamStore.perm?.canManageTimer">
+          <a-menu-item key="/timer/list" v-if="teamStore.perm?.canManageTimer">
             <ClockCircleOutlined />
-            <span>{{t("teamMenu.timerTask")}}</span>
+            <span>{{t("teamMenu.timer")}}</span>
           </a-menu-item>
           <a-menu-item key="/role/list" v-if="teamStore.isAdmin">
             <UserOutlined />
@@ -93,7 +93,7 @@ const changeSelectedKey = path => {
 const pagesMap = {
   "/gitRepo": "/gitRepo/list",
   "/role": "/role/list",
-  "/timerTask": "/timerTask/list",
+  "/timer": "/timer/list",
   "/app": "/app/list",
   "/setting": "/setting",
   "/notifyTpl": "/notifyTpl/list",

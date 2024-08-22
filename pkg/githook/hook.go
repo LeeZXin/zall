@@ -16,6 +16,7 @@ type Opts struct {
 	RepoId                       int64     `json:"repoId"`
 	PrId                         int64     `json:"prId"`
 	PusherAccount                string    `json:"pusherAccount"`
+	PusherName                   string    `json:"pusherName"`
 	PusherEmail                  string    `json:"pusherEmail"`
 	ObjectDirectory              string    `json:"objectDirectory"`
 	AlternativeObjectDirectories string    `json:"alternativeObjectDirectories"`

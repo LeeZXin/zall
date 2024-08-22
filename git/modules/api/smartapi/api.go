@@ -25,11 +25,6 @@ const (
 )
 
 func InitApi() {
-	smartsrv.Init()
-	reposrv.Init()
-	workflowsrv.Init()
-	usersrv.InitInner()
-	cfgsrv.InitInner()
 	// smart http协议 不实现dumb协议
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/:corpId/:repoName", handleGoGet, packRepoPath, auth)
@@ -48,7 +43,7 @@ func handleGoGet(c *gin.Context) {
 			c.Next()
 			return
 		}
-		cfg, err := cfgsrv.Inner.GetGitCfg()
+		cfg, err := cfgsrv.GetGitCfgFromDB()
 		if err != nil {
 			logger.Logger.WithContext(c).Error(err)
 			c.String(http.StatusInternalServerError, "")
@@ -74,7 +69,7 @@ func packRepoPath(c *gin.Context) {
 	corpId := c.Param("corpId")
 	repoName := c.Param("repoName")
 	repoPath := filepath.Join(corpId, repoName)
-	repo, b := reposrv.Inner.GetByRepoPath(c, repoPath)
+	repo, b := reposrv.GetByRepoPath(c, repoPath)
 	if !b {
 		c.String(http.StatusNotFound, "not found")
 		c.Abort()
@@ -98,7 +93,7 @@ func auth(c *gin.Context) {
 	)
 	if password == "" {
 		// 检查是否是工作流的git token
-		userInfo, b = workflowsrv.Inner.CheckWorkflowToken(c, repo.Id, account)
+		userInfo, b = workflowsrv.CheckWorkflowToken(c, repo.Id, account)
 		if !b {
 			c.Header("WWW-Authenticate", "Basic realm=\".\"")
 			c.String(http.StatusUnauthorized, "")
@@ -106,7 +101,7 @@ func auth(c *gin.Context) {
 			return
 		}
 	} else {
-		userInfo, b = usersrv.Inner.CheckAccountAndPassword(c, usersrv.CheckAccountAndPasswordReqDTO{
+		userInfo, b = usersrv.CheckAccountAndPassword(c, usersrv.CheckAccountAndPasswordReqDTO{
 			Account:  account,
 			Password: password,
 		})
@@ -122,7 +117,7 @@ func auth(c *gin.Context) {
 }
 
 func uploadPack(c *gin.Context) {
-	err := smartsrv.Outer.UploadPack(c, smartsrv.UploadPackReqDTO{
+	err := smartsrv.UploadPack(c, smartsrv.UploadPackReqDTO{
 		Repo:     getRepo(c),
 		Operator: getUserInfo(c),
 		C:        c,
@@ -133,7 +128,7 @@ func uploadPack(c *gin.Context) {
 }
 
 func receivePack(c *gin.Context) {
-	err := smartsrv.Outer.ReceivePack(c, smartsrv.ReceivePackReqDTO{
+	err := smartsrv.ReceivePack(c, smartsrv.ReceivePackReqDTO{
 		Repo:     getRepo(c),
 		Operator: getUserInfo(c),
 		C:        c,
@@ -144,7 +139,7 @@ func receivePack(c *gin.Context) {
 }
 
 func infoRefs(c *gin.Context) {
-	err := smartsrv.Outer.InfoRefs(c, smartsrv.InfoRefsReqDTO{
+	err := smartsrv.InfoRefs(c, smartsrv.InfoRefsReqDTO{
 		Repo:     getRepo(c),
 		Operator: getUserInfo(c),
 		C:        c,

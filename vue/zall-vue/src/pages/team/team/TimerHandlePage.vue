@@ -117,10 +117,7 @@ import ZCron from "@/components/common/ZCron";
 import { useRoute, useRouter } from "vue-router";
 import { ref, reactive, h } from "vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
-import {
-  createTimerTaskRequest,
-  updateTimerTaskRequest
-} from "@/api/team/timerApi";
+import { createTimerRequest, updateTimerRequest } from "@/api/team/timerApi";
 import { message } from "ant-design-vue";
 import { timerTaskNameRegexp } from "@/utils/regexp";
 import { MinusOutlined } from "@ant-design/icons-vue";
@@ -239,7 +236,7 @@ const saveOrUpdateTimerTask = () => {
     };
   }
   if (mode === "create") {
-    createTimerTaskRequest({
+    createTimerRequest({
       env: formState.selectedEnv,
       cronExp: formState.cronExp,
       teamId: parseInt(route.params.teamId),
@@ -248,19 +245,19 @@ const saveOrUpdateTimerTask = () => {
     }).then(() => {
       message.success("创建成功");
       router.push(
-        `/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`
+        `/team/${route.params.teamId}/timer/list/${formState.selectedEnv}`
       );
     });
   } else if (mode === "update") {
-    updateTimerTaskRequest({
+    updateTimerRequest({
       cronExp: formState.cronExp,
       task,
       name: formState.name,
-      taskId: timerTaskStore.id
+      id: timerTaskStore.id
     }).then(() => {
       message.success("编辑成功");
       router.push(
-        `/team/${route.params.teamId}/timerTask/list/${formState.selectedEnv}`
+        `/team/${route.params.teamId}/timer/list/${formState.selectedEnv}`
       );
     });
   }
@@ -269,7 +266,7 @@ if (mode === "create") {
   getEnvCfg();
 } else if (mode === "update") {
   if (timerTaskStore.id === 0) {
-    router.push(`/team/${route.params.teamId}/timerTask/list`);
+    router.push(`/team/${route.params.teamId}/timer/list`);
   } else {
     formState.selectedEnv = timerTaskStore.env;
     formState.cronExp = timerTaskStore.cronExp;

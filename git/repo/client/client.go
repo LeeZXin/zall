@@ -550,7 +550,7 @@ func proxyHttp(path string, ctx *gin.Context, headers map[string]string) error {
 }
 
 func getHttpUrl() (string, error) {
-	cfg, err := cfgsrv.Inner.GetGitRepoServerCfg()
+	cfg, err := cfgsrv.GetGitRepoServerCfgFromDB()
 	if err != nil {
 		logger.Logger.Error(err)
 		return "", bizerr.NewBizErr(apicode.OperationFailedErrCode.Int(), "git repo server url is not set")

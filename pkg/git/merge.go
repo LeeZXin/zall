@@ -56,6 +56,7 @@ type MergeRepoOpts struct {
 	RepoId        int64
 	PrId          int64
 	PusherAccount string
+	PusherName    string
 	PusherEmail   string
 	Message       string
 	AppUrl        string
@@ -227,6 +228,7 @@ func doMerge(ctx context.Context, repoPath string, pr DiffRefsInfo, opts MergeRe
 					gitenv.EnvHookToken, HookToken(),
 					gitenv.EnvPrId, strconv.FormatInt(opts.PrId, 10),
 					gitenv.EnvPusherAccount, opts.PusherAccount,
+					gitenv.EnvPusherName, opts.PusherName,
 					gitenv.EnvPusherEmail, opts.PusherEmail,
 					gitenv.EnvHookUrl, fmt.Sprintf("http://127.0.0.1:%d", common.HttpServerPort()),
 				),

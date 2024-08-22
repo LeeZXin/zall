@@ -5,6 +5,8 @@ type Event interface {
 }
 
 type BaseEvent struct {
-	Operator  string `json:"operator"`
-	EventTime int64  `json:"eventTime"`
+	Operator     string `json:"operator"`
+	OperatorName string `json:"operatorName"`
+	EventTime    string `json:"eventTime"`
+	ActionName   string `json:"actionName"`
 }

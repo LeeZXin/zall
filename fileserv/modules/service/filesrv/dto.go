@@ -80,7 +80,7 @@ type ListProductReqDTO struct {
 }
 
 func (r *ListProductReqDTO) IsValid() error {
-	if !cfgsrv.Inner.ContainsEnv(r.Env) {
+	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}
 	if !appmd.IsAppIdValid(r.AppId) {

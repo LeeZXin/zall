@@ -1,11 +1,14 @@
-package tasksrv
+package timersrv
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/timer"
-	"github.com/LeeZXin/zall/timer/modules/model/taskmd"
+	"github.com/LeeZXin/zall/timer/modules/model/timermd"
 	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/lease"
@@ -25,7 +28,7 @@ var (
 	httpClient   *http.Client
 )
 
-func initTask() {
+func InitTask() {
 	httpClient = httputil.NewRetryableHttpClient()
 	env = static.GetString("timer.env")
 	if env == "" {
@@ -78,7 +81,7 @@ func initTask() {
 func doExecuteTask(runCtx context.Context) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	err := taskmd.IterateExecute(ctx, time.Now().UnixMilli(), env, func(execute *taskmd.Execute) error {
+	err := timermd.IterateExecute(ctx, time.Now().UnixMilli(), env, func(execute *timermd.Execute) error {
 		rerr := runCtx.Err()
 		if rerr == nil {
 			return handleExecute(execute)
@@ -90,17 +93,18 @@ func doExecuteTask(runCtx context.Context) {
 	}
 }
 
-func triggerTask(task *taskmd.Task, triggerBy string) error {
+func triggerTask(task *timermd.Timer, triggerBy, triggerByName string) error {
 	return taskExecutor.Execute(func() {
 		handleTimerTaskAndAppendLog(
 			task,
 			triggerBy,
-			taskmd.ManualTriggerType,
+			triggerByName,
+			timer.ManualTriggerType,
 		)
 	})
 }
 
-func handleTimerTaskAndAppendLog(task *taskmd.Task, triggerBy string, triggerType taskmd.TriggerType) {
+func handleTimerTaskAndAppendLog(task *timermd.Timer, triggerBy, triggerByName string, triggerType timer.TriggerType) {
 	var (
 		errLog    string
 		isSuccess bool
@@ -113,36 +117,54 @@ func handleTimerTaskAndAppendLog(task *taskmd.Task, triggerBy string, triggerTyp
 	}
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	taskmd.InsertTaskLog(ctx, taskmd.InsertTaskLogReqDTO{
-		TaskId:      task.Id,
-		TaskContent: task.Content,
+	timermd.InsertLog(ctx, timermd.InsertLogReqDTO{
+		TimerId:     task.Id,
+		TaskContent: task.GetContent(),
 		ErrLog:      errLog,
 		TriggerType: triggerType,
 		TriggerBy:   triggerBy,
 		IsSuccess:   isSuccess,
 	})
+	team, b, err := teammd.GetByTeamId(ctx, task.TeamId)
+	if err != nil {
+		logger.Logger.Error(err)
+		return
+	}
+	if !b {
+		return
+	}
+	// 失败通知
+	if !isSuccess {
+		notifyTimerTaskEvent(
+			triggerBy,
+			triggerByName,
+			team,
+			*task,
+			triggerType.String(),
+			i18n.GetByValue("timerTask.fail"),
+			event.TimerTaskFailAction,
+		)
+	}
 }
 
-func handleExecute(execute *taskmd.Execute) error {
+func handleExecute(execute *timermd.Execute) error {
 	return taskExecutor.Execute(func() {
 		ctx, closer := xormstore.Context(context.Background())
-		task, b, err := taskmd.GetTaskById(ctx, execute.TaskId)
+		task, b, err := timermd.GetTimerById(ctx, execute.TimerId)
 		closer.Close()
 		if err == nil && b && resetNextTime(&task, execute.RunVersion) {
 			handleTimerTaskAndAppendLog(
 				&task,
-				taskmd.DefaultTrigger,
-				taskmd.AutoTriggerType,
+				timer.DefaultTrigger,
+				timer.DefaultTrigger,
+				timer.AutoTriggerType,
 			)
 		}
 	})
 }
 
-func handleTimerTask(task *taskmd.Task) error {
-	if task.Content == nil {
-		return errors.New("empty task content")
-	}
-	t := task.Content
+func handleTimerTask(task *timermd.Timer) error {
+	t := task.GetContent()
 	switch t.TaskType {
 	case timer.HttpTask:
 		if t.HttpTask == nil {
@@ -154,7 +176,7 @@ func handleTimerTask(task *taskmd.Task) error {
 	}
 }
 
-func resetNextTime(task *taskmd.Task, runVersion int64) bool {
+func resetNextTime(task *timermd.Timer, runVersion int64) bool {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	cron, err := ParseCron(task.CronExp)
@@ -165,18 +187,18 @@ func resetNextTime(task *taskmd.Task, runVersion int64) bool {
 	now := time.Now()
 	next := cron.Next(now)
 	if next.After(now) {
-		b, err := taskmd.UpdateExecuteNextTime(ctx, task.Id, next.UnixMilli(), runVersion)
+		b, err := timermd.UpdateExecuteNextTime(ctx, task.Id, next.UnixMilli(), runVersion)
 		if err != nil {
 			logger.Logger.Error(err)
 		}
 		return err == nil && b
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		_, err2 := taskmd.DisableTask(ctx, task.Id)
+		_, err2 := timermd.DisableTimer(ctx, task.Id)
 		if err2 != nil {
 			return err2
 		}
-		_, err2 = taskmd.DisableExecute(ctx, task.Id)
+		_, err2 = timermd.DisableExecute(ctx, task.Id)
 		return err2
 	})
 	if err != nil {

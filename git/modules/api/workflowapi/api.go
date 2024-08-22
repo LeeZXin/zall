@@ -16,7 +16,6 @@ import (
 )
 
 func InitApi() {
-	workflowsrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/workflow", apisession.CheckLogin)
 		{
@@ -67,7 +66,7 @@ func InitApi() {
 }
 
 func listVars(c *gin.Context) {
-	varsList, err := workflowsrv.Outer.ListVars(c, workflowsrv.ListVarsReqDTO{
+	varsList, err := workflowsrv.ListVars(c, workflowsrv.ListVarsReqDTO{
 		RepoId:   cast.ToInt64(c.Param("workflowId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -90,7 +89,7 @@ func listVars(c *gin.Context) {
 func createVars(c *gin.Context) {
 	var req CreateVarsReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := workflowsrv.Outer.CreateVars(c, workflowsrv.CreateVarsReqDTO{
+		err := workflowsrv.CreateVars(c, workflowsrv.CreateVarsReqDTO{
 			RepoId:   req.RepoId,
 			Name:     req.Name,
 			Content:  req.Content,
@@ -105,7 +104,7 @@ func createVars(c *gin.Context) {
 }
 
 func deleteVars(c *gin.Context) {
-	err := workflowsrv.Outer.DeleteVars(c, workflowsrv.DeleteVarsReqDTO{
+	err := workflowsrv.DeleteVars(c, workflowsrv.DeleteVarsReqDTO{
 		VarsId:   cast.ToInt64(c.Param("varsId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -119,7 +118,7 @@ func deleteVars(c *gin.Context) {
 func updateVars(c *gin.Context) {
 	var req UpdateVarsReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := workflowsrv.Outer.UpdateVars(c, workflowsrv.UpdateVarsReqDTO{
+		err := workflowsrv.UpdateVars(c, workflowsrv.UpdateVarsReqDTO{
 			VarsId:   req.VarsId,
 			Content:  req.Content,
 			Operator: apisession.MustGetLoginUser(c),
@@ -133,7 +132,7 @@ func updateVars(c *gin.Context) {
 }
 
 func getVarsContent(c *gin.Context) {
-	vars, err := workflowsrv.Outer.GetVarsContent(c, workflowsrv.GetVarsContentReqDTO{
+	vars, err := workflowsrv.GetVarsContent(c, workflowsrv.GetVarsContentReqDTO{
 		VarsId:   cast.ToInt64(c.Param("varsId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -160,13 +159,13 @@ func internalTaskCallback(c *gin.Context) {
 	}
 	var req sshagent.TaskStatusCallbackReq
 	if util.ShouldBindJSON(&req, c) {
-		workflowsrv.Inner.TaskCallback(c.Query("taskId"), req)
+		workflowsrv.TaskCallback(c.Query("taskId"), req)
 		c.String(http.StatusOK, "")
 	}
 }
 
 func killWorkflowTask(c *gin.Context) {
-	err := workflowsrv.Outer.KillWorkflowTask(c, workflowsrv.KillWorkflowTaskReqDTO{
+	err := workflowsrv.KillWorkflowTask(c, workflowsrv.KillWorkflowTaskReqDTO{
 		TaskId:   cast.ToInt64(c.Param("taskId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -178,7 +177,7 @@ func killWorkflowTask(c *gin.Context) {
 }
 
 func getWorkflowDetail(c *gin.Context) {
-	detail, err := workflowsrv.Outer.GetWorkflowDetail(c, workflowsrv.GetWorkflowDetailReqDTO{
+	detail, err := workflowsrv.GetWorkflowDetail(c, workflowsrv.GetWorkflowDetailReqDTO{
 		WorkflowId: cast.ToInt64(c.Param("workflowId")),
 		Operator:   apisession.MustGetLoginUser(c),
 	})
@@ -203,7 +202,7 @@ func getWorkflowDetail(c *gin.Context) {
 func createWorkflow(c *gin.Context) {
 	var req CreateWorkflowReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := workflowsrv.Outer.CreateWorkflow(c, workflowsrv.CreateWorkflowReqDTO{
+		err := workflowsrv.CreateWorkflow(c, workflowsrv.CreateWorkflowReqDTO{
 			Name:        req.Name,
 			RepoId:      req.RepoId,
 			YamlContent: req.YamlContent,
@@ -221,7 +220,7 @@ func createWorkflow(c *gin.Context) {
 }
 
 func listWorkflow(c *gin.Context) {
-	workflows, err := workflowsrv.Outer.ListWorkflowWithLastTask(c, workflowsrv.ListWorkflowWithLastTaskReqDTO{
+	workflows, err := workflowsrv.ListWorkflowWithLastTask(c, workflowsrv.ListWorkflowWithLastTaskReqDTO{
 		RepoId:   cast.ToInt64(c.Param("repoId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -248,7 +247,7 @@ func listWorkflow(c *gin.Context) {
 }
 
 func deleteWorkflow(c *gin.Context) {
-	err := workflowsrv.Outer.DeleteWorkflow(c, workflowsrv.DeleteWorkflowReqDTO{
+	err := workflowsrv.DeleteWorkflow(c, workflowsrv.DeleteWorkflowReqDTO{
 		WorkflowId: cast.ToInt64(c.Param("workflowId")),
 		Operator:   apisession.MustGetLoginUser(c),
 	})
@@ -262,7 +261,7 @@ func deleteWorkflow(c *gin.Context) {
 func updateWorkflow(c *gin.Context) {
 	var req UpdateWorkflowReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := workflowsrv.Outer.UpdateWorkflow(c, workflowsrv.UpdateWorkflowReqDTO{
+		err := workflowsrv.UpdateWorkflow(c, workflowsrv.UpdateWorkflowReqDTO{
 			WorkflowId:  req.WorkflowId,
 			Name:        req.Name,
 			YamlContent: req.YamlContent,
@@ -280,7 +279,7 @@ func updateWorkflow(c *gin.Context) {
 }
 
 func triggerWorkflow(c *gin.Context) {
-	err := workflowsrv.Outer.TriggerWorkflow(c, workflowsrv.TriggerWorkflowReqDTO{
+	err := workflowsrv.TriggerWorkflow(c, workflowsrv.TriggerWorkflowReqDTO{
 		WorkflowId: cast.ToInt64(c.Param("workflowId")),
 		Branch:     c.Query("branch"),
 		Operator:   apisession.MustGetLoginUser(c),
@@ -295,7 +294,7 @@ func triggerWorkflow(c *gin.Context) {
 func listTask(c *gin.Context) {
 	var req ginutil.Page2Req
 	if util.ShouldBindQuery(&req, c) {
-		tasks, total, err := workflowsrv.Outer.ListTask(c, workflowsrv.ListTaskReqDTO{
+		tasks, total, err := workflowsrv.ListTask(c, workflowsrv.ListTaskReqDTO{
 			WorkflowId: cast.ToInt64(c.Param("workflowId")),
 			Page2Req:   req,
 			Operator:   apisession.MustGetLoginUser(c),
@@ -319,7 +318,7 @@ func listTask(c *gin.Context) {
 }
 
 func listTaskByPrId(c *gin.Context) {
-	tasks, err := workflowsrv.Outer.ListTaskByPrId(c, workflowsrv.ListTaskByPrIdReqDTO{
+	tasks, err := workflowsrv.ListTaskByPrId(c, workflowsrv.ListTaskByPrIdReqDTO{
 		PrId:     cast.ToInt64(c.Param("prId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -361,7 +360,7 @@ func task2Vo(t workflowsrv.TaskDTO) (TaskVO, error) {
 }
 
 func getTaskStatus(c *gin.Context) {
-	status, err := workflowsrv.Outer.GetTaskStatus(c, workflowsrv.GetTaskStatusReqDTO{
+	status, err := workflowsrv.GetTaskStatus(c, workflowsrv.GetTaskStatusReqDTO{
 		TaskId:   cast.ToInt64(c.Param("taskId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -376,7 +375,7 @@ func getTaskStatus(c *gin.Context) {
 }
 
 func getLogContent(c *gin.Context) {
-	logs, err := workflowsrv.Outer.GetLogContent(c, workflowsrv.GetLogContentReqDTO{
+	logs, err := workflowsrv.GetLogContent(c, workflowsrv.GetLogContentReqDTO{
 		TaskId:    cast.ToInt64(c.Param("taskId")),
 		JobName:   c.Query("jobName"),
 		StepIndex: cast.ToInt(c.Query("stepIndex")),
@@ -393,7 +392,7 @@ func getLogContent(c *gin.Context) {
 }
 
 func getTaskDetail(c *gin.Context) {
-	task, err := workflowsrv.Outer.GetTaskDetail(c, workflowsrv.GetTaskDetailReqDTO{
+	task, err := workflowsrv.GetTaskDetail(c, workflowsrv.GetTaskDetailReqDTO{
 		TaskId:   cast.ToInt64(c.Param("taskId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})

@@ -1,7 +1,6 @@
 package promapi
 
 import (
-	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/promagent/modules/service/promsrv"
 	"github.com/LeeZXin/zall/util"
@@ -15,8 +14,6 @@ import (
 )
 
 func InitApi() {
-	promsrv.Init()
-	cfgsrv.InitInner()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/promScrape", apisession.CheckLogin)
 		{
@@ -35,7 +32,7 @@ func InitApi() {
 func createScrape(c *gin.Context) {
 	var req CreateScrapeReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := promsrv.Outer.CreateScrape(c, promsrv.CreateScrapeReqDTO{
+		err := promsrv.CreateScrape(c, promsrv.CreateScrapeReqDTO{
 			Endpoint:   req.Endpoint,
 			AppId:      req.AppId,
 			Target:     req.Target,
@@ -52,7 +49,7 @@ func createScrape(c *gin.Context) {
 }
 
 func deleteScrape(c *gin.Context) {
-	err := promsrv.Outer.DeleteScrape(c, promsrv.DeleteScrapeReqDTO{
+	err := promsrv.DeleteScrape(c, promsrv.DeleteScrapeReqDTO{
 		ScrapeId: cast.ToInt64(c.Param("scrapeId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -66,7 +63,7 @@ func deleteScrape(c *gin.Context) {
 func listScrape(c *gin.Context) {
 	var req ListScrapeReqVO
 	if util.ShouldBindQuery(&req, c) {
-		scraps, total, err := promsrv.Outer.ListScrape(c, promsrv.ListScrapeReqDTO{
+		scraps, total, err := promsrv.ListScrape(c, promsrv.ListScrapeReqDTO{
 			Endpoint: req.Endpoint,
 			AppId:    req.AppId,
 			Env:      req.Env,
@@ -104,7 +101,7 @@ func listScrape(c *gin.Context) {
 func updateScrape(c *gin.Context) {
 	var req UpdateScrapeReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := promsrv.Outer.UpdateScrape(c, promsrv.UpdateScrapeReqDTO{
+		err := promsrv.UpdateScrape(c, promsrv.UpdateScrapeReqDTO{
 			ScrapeId:   req.ScrapeId,
 			Endpoint:   req.Endpoint,
 			Target:     req.Target,

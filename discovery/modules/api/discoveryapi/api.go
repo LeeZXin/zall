@@ -13,7 +13,6 @@ import (
 )
 
 func InitApi() {
-	discoverysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/discoverySource", apisession.CheckLogin)
 		{
@@ -49,7 +48,7 @@ func InitApi() {
 func listDiscoverySource(c *gin.Context) {
 	var req ListDiscoverySourceReqVO
 	if util.ShouldBindQuery(&req, c) {
-		sources, err := discoverysrv.Outer.ListDiscoverySource(c, discoverysrv.ListDiscoverySourceReqDTO{
+		sources, err := discoverysrv.ListDiscoverySource(c, discoverysrv.ListDiscoverySourceReqDTO{
 			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
 		})
@@ -77,7 +76,7 @@ func listDiscoverySource(c *gin.Context) {
 func listBindDiscoverySource(c *gin.Context) {
 	var req ListBindDiscoverySourceReqVO
 	if util.ShouldBindQuery(&req, c) {
-		sources, err := discoverysrv.Outer.ListBindDiscoverySource(c, discoverysrv.ListBindDiscoverySourceReqDTO{
+		sources, err := discoverysrv.ListBindDiscoverySource(c, discoverysrv.ListBindDiscoverySourceReqDTO{
 			AppId:    req.AppId,
 			Env:      req.Env,
 			Operator: apisession.MustGetLoginUser(c),
@@ -104,7 +103,7 @@ func listBindDiscoverySource(c *gin.Context) {
 func createDiscoverySource(c *gin.Context) {
 	var req CreateDiscoverySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := discoverysrv.Outer.CreateDiscoverySource(c, discoverysrv.CreateDiscoverySourceReqDTO{
+		err := discoverysrv.CreateDiscoverySource(c, discoverysrv.CreateDiscoverySourceReqDTO{
 			Name:      req.Name,
 			Endpoints: req.Endpoints,
 			Username:  req.Username,
@@ -123,7 +122,7 @@ func createDiscoverySource(c *gin.Context) {
 func updateDiscoverySource(c *gin.Context) {
 	var req UpdateDiscoverySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := discoverysrv.Outer.UpdateDiscoverySource(c, discoverysrv.UpdateDiscoverySourceReqDTO{
+		err := discoverysrv.UpdateDiscoverySource(c, discoverysrv.UpdateDiscoverySourceReqDTO{
 			SourceId:  req.SourceId,
 			Name:      req.Name,
 			Endpoints: req.Endpoints,
@@ -140,7 +139,7 @@ func updateDiscoverySource(c *gin.Context) {
 }
 
 func deleteDiscoverySource(c *gin.Context) {
-	err := discoverysrv.Outer.DeleteDiscoverySource(c, discoverysrv.DeleteDiscoverySourceReqDTO{
+	err := discoverysrv.DeleteDiscoverySource(c, discoverysrv.DeleteDiscoverySourceReqDTO{
 		SourceId: cast.ToInt64(c.Param("sourceId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -152,7 +151,7 @@ func deleteDiscoverySource(c *gin.Context) {
 }
 
 func listDiscoveryService(c *gin.Context) {
-	services, err := discoverysrv.Outer.ListDiscoveryService(c, discoverysrv.ListDiscoveryServiceReqDTO{
+	services, err := discoverysrv.ListDiscoveryService(c, discoverysrv.ListDiscoveryServiceReqDTO{
 		BindId:   cast.ToInt64(c.Param("bindId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -176,7 +175,7 @@ func listDiscoveryService(c *gin.Context) {
 func deregisterService(c *gin.Context) {
 	var req DeregisterServiceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := discoverysrv.Outer.DeregisterService(c, discoverysrv.DeregisterServiceReqDTO{
+		err := discoverysrv.DeregisterService(c, discoverysrv.DeregisterServiceReqDTO{
 			BindId:     req.BindId,
 			InstanceId: req.InstanceId,
 			Operator:   apisession.MustGetLoginUser(c),
@@ -192,7 +191,7 @@ func deregisterService(c *gin.Context) {
 func reRegisterService(c *gin.Context) {
 	var req ReRegisterServiceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := discoverysrv.Outer.ReRegisterService(c, discoverysrv.ReRegisterServiceReqDTO{
+		err := discoverysrv.ReRegisterService(c, discoverysrv.ReRegisterServiceReqDTO{
 			BindId:     req.BindId,
 			InstanceId: req.InstanceId,
 			Operator:   apisession.MustGetLoginUser(c),
@@ -208,7 +207,7 @@ func reRegisterService(c *gin.Context) {
 func deleteDownService(c *gin.Context) {
 	var req DeleteDownServiceReqVO
 	if util.ShouldBindQuery(&req, c) {
-		err := discoverysrv.Outer.DeleteDownService(c, discoverysrv.DeleteDownServiceReqDTO{
+		err := discoverysrv.DeleteDownService(c, discoverysrv.DeleteDownServiceReqDTO{
 			BindId:     req.BindId,
 			InstanceId: req.InstanceId,
 			Operator:   apisession.MustGetLoginUser(c),
@@ -224,7 +223,7 @@ func deleteDownService(c *gin.Context) {
 func bindAppAndDiscoverySource(c *gin.Context) {
 	var req BindAppAndDiscoverySourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := discoverysrv.Outer.BindAppAndDiscoverySource(c, discoverysrv.BindAppAndDiscoverySourceReqDTO{
+		err := discoverysrv.BindAppAndDiscoverySource(c, discoverysrv.BindAppAndDiscoverySourceReqDTO{
 			AppId:        req.AppId,
 			SourceIdList: req.SourceIdList,
 			Env:          req.Env,
@@ -239,7 +238,7 @@ func bindAppAndDiscoverySource(c *gin.Context) {
 }
 
 func listAllDiscoverySource(c *gin.Context) {
-	nodes, err := discoverysrv.Outer.ListAllDiscoverySource(c, discoverysrv.ListAllDiscoverySourceReqDTO{
+	nodes, err := discoverysrv.ListAllDiscoverySource(c, discoverysrv.ListAllDiscoverySourceReqDTO{
 		Env:      c.Param("env"),
 		Operator: apisession.MustGetLoginUser(c),
 	})

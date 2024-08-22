@@ -40,3 +40,7 @@ func SupportedLangeList() []string {
 func GetByKey(item KeyItem) string {
 	return i18n.GetOrDefault(item.Id, item.DefaultRet)
 }
+
+func GetByValue(val string) string {
+	return i18n.Get(val)
+}

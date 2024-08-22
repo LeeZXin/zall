@@ -45,11 +45,11 @@ export default {
         pleaseConfirmConfirmPassword: "confirm password should be equal with password"
     },
     teamMenu: {
-        gitRepo: "Git repo",
-        app: "App service",
+        gitRepo: "Git Repo",
+        app: "App Service",
         action: "Action",
-        propertyCenter: "Property center",
-        timerTask: "Timer task",
+        propertyCenter: "Property Center",
+        timer: "Timer Task",
         applyApproval: "Apply approval",
         dbAudit: "Database audit",
         promScrape: "Prometheus scrape",

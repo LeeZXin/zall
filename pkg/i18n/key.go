@@ -108,18 +108,6 @@ var (
 		Id:         "gpgKey.formatError",
 		DefaultRet: "gpg公钥格式错误",
 	}
-	GpgKeyVerifiedFailedError = KeyItem{
-		Id:         "gpgKey.verifiedFailedError",
-		DefaultRet: "gpg校验失败",
-	}
-	GpgTokenExpiredError = KeyItem{
-		Id:         "gpgKey.tokenExpiredError",
-		DefaultRet: "token过期",
-	}
-	GpgVerifyGuide = KeyItem{
-		Id:         "gpgKey.verifyGuide",
-		DefaultRet: "请在十分钟内执行以下命令，输出签名并提交",
-	}
 	GpgKeyAlreadyExists = KeyItem{
 		Id:         "gpg.alreadyExists",
 		DefaultRet: "gpg公钥已存在",
@@ -130,14 +118,6 @@ var (
 	TeamAdminUserGroupName = KeyItem{
 		Id:         "team.adminUserGroupName",
 		DefaultRet: "项目组管理员",
-	}
-	TeamUserGroupHasUserWhenDel = KeyItem{
-		Id:         "team.userGroupHasUserWhenDel",
-		DefaultRet: "该项目组存在关联用户, 无法删除",
-	}
-	TeamUserGroupUpdateAdminNotAllow = KeyItem{
-		Id:         "team.updateTeamUserAdminGroupNotAllow",
-		DefaultRet: "不允许编辑项目组管理员权限",
 	}
 )
 
@@ -227,17 +207,9 @@ var (
 		Id:         "pullRequest.unknownStatus",
 		DefaultRet: "未知",
 	}
-	PullRequestMergeMessage = KeyItem{
-		Id:         "pullRequest.mergeMessage",
-		DefaultRet: "合并请求: %v, 申请人: %s, 合并人: %s",
-	}
 	PullRequestAgreeReviewStatus = KeyItem{
 		Id:         "pullRequest.agreeMerge",
 		DefaultRet: "同意合并",
-	}
-	PullRequestDisagreeMergeStatus = KeyItem{
-		Id:         "pullRequest.disagreeMerge",
-		DefaultRet: "不同意合并",
 	}
 	PullRequestCanceledReviewStatus = KeyItem{
 		Id:         "pullRequest.canceledMerge",
@@ -302,10 +274,6 @@ var (
 		Id:         "action.invalidContent",
 		DefaultRet: "action yaml不合法",
 	}
-	ActionInstanceNotFound = KeyItem{
-		Id:         "action.instanceNotFound",
-		DefaultRet: "无可用执行节点",
-	}
 )
 
 var (
@@ -316,10 +284,6 @@ var (
 )
 
 var (
-	AppPermsContainerTargetAppId = KeyItem{
-		Id:         "app.permsContainerTargetAppId",
-		DefaultRet: "该项目组仍包含该app的特殊权限配置",
-	}
 	AppRemainCountGreaterThanZero = KeyItem{
 		Id:         "app.remainCountGreaterThanZero",
 		DefaultRet: "app数量仍大于0",
@@ -393,25 +357,6 @@ var (
 	WorkflowUnknownTriggerType = KeyItem{
 		Id:         "action.unknownTriggerType",
 		DefaultRet: "未知类型触发",
-	}
-)
-
-var (
-	DeployProcessServiceType = KeyItem{
-		Id:         "deploy.processServiceType",
-		DefaultRet: "主机进程服务",
-	}
-	DeployK8sServiceType = KeyItem{
-		Id:         "deploy.k8sServiceType",
-		DefaultRet: "k8s服务",
-	}
-	DeployDockerSwarmType = KeyItem{
-		Id:         "deploy.dockerSwarmType",
-		DefaultRet: "dockerSwarm服务",
-	}
-	DeployUnknownServiceType = KeyItem{
-		Id:         "deploy.k8sServiceType",
-		DefaultRet: "未知服务类型",
 	}
 )
 
@@ -596,11 +541,11 @@ var (
 )
 
 var (
-	TimerTaskAutoTriggerType = KeyItem{
+	TimerAutoTriggerType = KeyItem{
 		Id:         "timerTask.autoTriggerType",
 		DefaultRet: "自动触发",
 	}
-	TimerTaskManualTriggerType = KeyItem{
+	TimerManualTriggerType = KeyItem{
 		Id:         "timerTask.manualTriggerType",
 		DefaultRet: "手动触发",
 	}

@@ -15,7 +15,6 @@ import (
 )
 
 func InitApi() {
-	deploysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/deployPlan", apisession.CheckLogin)
 		{
@@ -102,7 +101,7 @@ func InitApi() {
 func doServiceStatusAction(c *gin.Context) {
 	var req DoServiceStatusActionReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.DoStatusAction(c, deploysrv.DoStatusActionReqDTO{
+		err := deploysrv.DoStatusAction(c, deploysrv.DoStatusActionReqDTO{
 			BindId:    req.BindId,
 			ServiceId: req.ServiceId,
 			Action:    req.Action,
@@ -118,7 +117,7 @@ func doServiceStatusAction(c *gin.Context) {
 }
 
 func listServiceStatus(c *gin.Context) {
-	services, err := deploysrv.Outer.ListServiceStatus(c, deploysrv.ListServiceStatusReqDTO{
+	services, err := deploysrv.ListServiceStatus(c, deploysrv.ListServiceStatusReqDTO{
 		BindId:   cast.ToInt64(c.Param("bindId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -133,7 +132,7 @@ func listServiceStatus(c *gin.Context) {
 }
 
 func listServiceStatusActions(c *gin.Context) {
-	actions, err := deploysrv.Outer.ListStatusActions(c, deploysrv.ListStatusActionReqDTO{
+	actions, err := deploysrv.ListStatusActions(c, deploysrv.ListStatusActionReqDTO{
 		BindId:   cast.ToInt64(c.Param("bindId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -148,7 +147,7 @@ func listServiceStatusActions(c *gin.Context) {
 }
 
 func listPipelineVars(c *gin.Context) {
-	varsList, err := deploysrv.Outer.ListPipelineVars(c, deploysrv.ListPipelineVarsReqDTO{
+	varsList, err := deploysrv.ListPipelineVars(c, deploysrv.ListPipelineVarsReqDTO{
 		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -174,7 +173,7 @@ func listPipelineVars(c *gin.Context) {
 func createPipelineVars(c *gin.Context) {
 	var req CreatePipelineVarsReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.CreatePipelineVars(c, deploysrv.CreatePipelineVarsReqDTO{
+		err := deploysrv.CreatePipelineVars(c, deploysrv.CreatePipelineVarsReqDTO{
 			AppId:    req.AppId,
 			Env:      req.Env,
 			Name:     req.Name,
@@ -192,7 +191,7 @@ func createPipelineVars(c *gin.Context) {
 func updatePipelineVars(c *gin.Context) {
 	var req UpdatePipelineVarsReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.UpdatePipelineVars(c, deploysrv.UpdatePipelineVarsReqDTO{
+		err := deploysrv.UpdatePipelineVars(c, deploysrv.UpdatePipelineVarsReqDTO{
 			Id:       req.Id,
 			Content:  req.Content,
 			Operator: apisession.MustGetLoginUser(c),
@@ -206,7 +205,7 @@ func updatePipelineVars(c *gin.Context) {
 }
 
 func getPipelineVars(c *gin.Context) {
-	vars, err := deploysrv.Outer.GetPipelineVarsContent(c, deploysrv.GetPipelineVarsContentReqDTO{
+	vars, err := deploysrv.GetPipelineVarsContent(c, deploysrv.GetPipelineVarsContentReqDTO{
 		Id:       cast.ToInt64(c.Param("varsId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -227,7 +226,7 @@ func getPipelineVars(c *gin.Context) {
 }
 
 func deletePipelineVars(c *gin.Context) {
-	err := deploysrv.Outer.DeletePipelineVars(c, deploysrv.DeletePipelineVarsReqDTO{
+	err := deploysrv.DeletePipelineVars(c, deploysrv.DeletePipelineVarsReqDTO{
 		Id:       cast.ToInt64(c.Param("varsId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -239,7 +238,7 @@ func deletePipelineVars(c *gin.Context) {
 }
 
 func listServiceSource(c *gin.Context) {
-	sources, err := deploysrv.Outer.ListServiceSource(c, deploysrv.ListServiceSourceReqDTO{
+	sources, err := deploysrv.ListServiceSource(c, deploysrv.ListServiceSourceReqDTO{
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -264,7 +263,7 @@ func listServiceSource(c *gin.Context) {
 }
 
 func listAllServiceSource(c *gin.Context) {
-	sources, err := deploysrv.Outer.ListAllServiceSource(c, deploysrv.ListAllServiceSourceReqDTO{
+	sources, err := deploysrv.ListAllServiceSource(c, deploysrv.ListAllServiceSourceReqDTO{
 		Env:      c.Param("env"),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -287,7 +286,7 @@ func listAllServiceSource(c *gin.Context) {
 func createServiceSource(c *gin.Context) {
 	var req CreateServiceSourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.CreateServiceSource(c, deploysrv.CreateServiceSourceReqDTO{
+		err := deploysrv.CreateServiceSource(c, deploysrv.CreateServiceSourceReqDTO{
 			Env:      req.Env,
 			Name:     req.Name,
 			Host:     req.Host,
@@ -305,7 +304,7 @@ func createServiceSource(c *gin.Context) {
 func updateServiceSource(c *gin.Context) {
 	var req UpdateServiceSourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.UpdateServiceSource(c, deploysrv.UpdateServiceSourceReqDTO{
+		err := deploysrv.UpdateServiceSource(c, deploysrv.UpdateServiceSourceReqDTO{
 			SourceId: req.SourceId,
 			Name:     req.Name,
 			Host:     req.Host,
@@ -321,7 +320,7 @@ func updateServiceSource(c *gin.Context) {
 }
 
 func deleteServiceSource(c *gin.Context) {
-	err := deploysrv.Outer.DeleteServiceSource(c, deploysrv.DeleteServiceSourceReqDTO{
+	err := deploysrv.DeleteServiceSource(c, deploysrv.DeleteServiceSourceReqDTO{
 		SourceId: cast.ToInt64(c.Param("sourceId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -333,7 +332,7 @@ func deleteServiceSource(c *gin.Context) {
 }
 
 func redoAgentStage(c *gin.Context) {
-	err := deploysrv.Outer.RedoAgentStage(c, deploysrv.RedoAgentStageReqDTO{
+	err := deploysrv.RedoAgentStage(c, deploysrv.RedoAgentStageReqDTO{
 		StageId:  cast.ToInt64(c.Param("stageId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -347,7 +346,7 @@ func redoAgentStage(c *gin.Context) {
 func confirmInteractStage(c *gin.Context) {
 	var req ConfirmInteractStageReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.ConfirmInteractStage(c, deploysrv.ConfirmInteractStageReqDTO{
+		err := deploysrv.ConfirmInteractStage(c, deploysrv.ConfirmInteractStageReqDTO{
 			PlanId:     req.PlanId,
 			StageIndex: req.StageIndex,
 			Args:       req.Args,
@@ -364,7 +363,7 @@ func confirmInteractStage(c *gin.Context) {
 func forceRedoStage(c *gin.Context) {
 	var req ForceRedoStageReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.ForceRedoNotSuccessfulAgentStages(c, deploysrv.ForceRedoNotSuccessfulAgentStagesReqDTO{
+		err := deploysrv.ForceRedoNotSuccessfulAgentStages(c, deploysrv.ForceRedoNotSuccessfulAgentStagesReqDTO{
 			PlanId:     req.PlanId,
 			StageIndex: req.StageIndex,
 			Args:       req.Args,
@@ -379,7 +378,7 @@ func forceRedoStage(c *gin.Context) {
 }
 
 func killStage(c *gin.Context) {
-	err := deploysrv.Outer.KillStage(c, deploysrv.KillStageReqDTO{
+	err := deploysrv.KillStage(c, deploysrv.KillStageReqDTO{
 		PlanId:     cast.ToInt64(c.Param("planId")),
 		StageIndex: cast.ToInt(c.Param("index")),
 		Operator:   apisession.MustGetLoginUser(c),
@@ -394,7 +393,7 @@ func killStage(c *gin.Context) {
 func createPlan(c *gin.Context) {
 	var req CreatePlanReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.CreatePlan(c, deploysrv.CreatePlanReqDTO{
+		err := deploysrv.CreatePlan(c, deploysrv.CreatePlanReqDTO{
 			Name:           req.Name,
 			PipelineId:     req.PipelineId,
 			ProductVersion: req.ProductVersion,
@@ -409,7 +408,7 @@ func createPlan(c *gin.Context) {
 }
 
 func closePlan(c *gin.Context) {
-	err := deploysrv.Outer.ClosePlan(c, deploysrv.ClosePlanReqDTO{
+	err := deploysrv.ClosePlan(c, deploysrv.ClosePlanReqDTO{
 		PlanId:   cast.ToInt64(c.Param("planId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -421,7 +420,7 @@ func closePlan(c *gin.Context) {
 }
 
 func startPlan(c *gin.Context) {
-	err := deploysrv.Outer.StartPlan(c, deploysrv.StartPlanReqDTO{
+	err := deploysrv.StartPlan(c, deploysrv.StartPlanReqDTO{
 		PlanId:   cast.ToInt64(c.Param("planId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -435,7 +434,7 @@ func startPlan(c *gin.Context) {
 func listPlan(c *gin.Context) {
 	var req ListPlanReqVO
 	if util.ShouldBindQuery(&req, c) {
-		plans, total, err := deploysrv.Outer.ListPlan(c, deploysrv.ListPlanReqDTO{
+		plans, total, err := deploysrv.ListPlan(c, deploysrv.ListPlanReqDTO{
 			AppId:    req.AppId,
 			Env:      req.Env,
 			PageNum:  req.PageNum,
@@ -470,7 +469,7 @@ func listPlan(c *gin.Context) {
 }
 
 func getPlanDetail(c *gin.Context) {
-	plan, err := deploysrv.Outer.GetPlanDetail(c, deploysrv.GetPlanDetailReqDTO{
+	plan, err := deploysrv.GetPlanDetail(c, deploysrv.GetPlanDetailReqDTO{
 		PlanId:   cast.ToInt64(c.Param("planId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -496,7 +495,7 @@ func getPlanDetail(c *gin.Context) {
 }
 
 func listStages(c *gin.Context) {
-	stages, err := deploysrv.Outer.ListStages(c, deploysrv.ListStagesReqDTO{
+	stages, err := deploysrv.ListStages(c, deploysrv.ListStagesReqDTO{
 		PlanId:   cast.ToInt64(c.Param("planId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -539,7 +538,7 @@ func listStages(c *gin.Context) {
 func createPipeline(c *gin.Context) {
 	var req CreatePipelineReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.CreatePipeline(c, deploysrv.CreatePipelineReqDTO{
+		err := deploysrv.CreatePipeline(c, deploysrv.CreatePipelineReqDTO{
 			AppId:    req.AppId,
 			Name:     req.Name,
 			Config:   req.Config,
@@ -557,7 +556,7 @@ func createPipeline(c *gin.Context) {
 func updatePipeline(c *gin.Context) {
 	var req UpdatePipelineReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.UpdatePipeline(c, deploysrv.UpdatePipelineReqDTO{
+		err := deploysrv.UpdatePipeline(c, deploysrv.UpdatePipelineReqDTO{
 			PipelineId: req.PipelineId,
 			Name:       req.Name,
 			Config:     req.Config,
@@ -572,7 +571,7 @@ func updatePipeline(c *gin.Context) {
 }
 
 func deletePipeline(c *gin.Context) {
-	err := deploysrv.Outer.DeletePipeline(c, deploysrv.DeletePipelineReqDTO{
+	err := deploysrv.DeletePipeline(c, deploysrv.DeletePipelineReqDTO{
 		PipelineId: cast.ToInt64(c.Param("pipelineId")),
 		Operator:   apisession.MustGetLoginUser(c),
 	})
@@ -584,7 +583,7 @@ func deletePipeline(c *gin.Context) {
 }
 
 func listPipeline(c *gin.Context) {
-	pipelines, err := deploysrv.Outer.ListPipeline(c, deploysrv.ListPipelineReqDTO{
+	pipelines, err := deploysrv.ListPipeline(c, deploysrv.ListPipelineReqDTO{
 		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -609,7 +608,7 @@ func listPipeline(c *gin.Context) {
 }
 
 func listPipelineWhenCreatePlan(c *gin.Context) {
-	pipelines, err := deploysrv.Outer.ListPipelineWhenCreatePlan(c, deploysrv.ListPipelineWhenCreatePlanReqDTO{
+	pipelines, err := deploysrv.ListPipelineWhenCreatePlan(c, deploysrv.ListPipelineWhenCreatePlanReqDTO{
 		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -632,7 +631,7 @@ func listPipelineWhenCreatePlan(c *gin.Context) {
 }
 
 func listBindServiceSource(c *gin.Context) {
-	sources, err := deploysrv.Outer.ListBindServiceSource(c, deploysrv.ListBindServiceSourceReqDTO{
+	sources, err := deploysrv.ListBindServiceSource(c, deploysrv.ListBindServiceSourceReqDTO{
 		AppId:    c.Query("appId"),
 		Env:      c.Query("env"),
 		Operator: apisession.MustGetLoginUser(c),
@@ -658,7 +657,7 @@ func listBindServiceSource(c *gin.Context) {
 func bindAppAndServiceSource(c *gin.Context) {
 	var req BindAppAndServiceSourceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.Outer.BindAppAndServiceSource(c, deploysrv.BindAppAndServiceSourceReqDTO{
+		err := deploysrv.BindAppAndServiceSource(c, deploysrv.BindAppAndServiceSourceReqDTO{
 			AppId:        req.AppId,
 			SourceIdList: req.SourceIdList,
 			Env:          req.Env,

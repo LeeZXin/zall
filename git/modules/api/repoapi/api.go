@@ -15,9 +15,7 @@ import (
 )
 
 func InitApi() {
-	cfgsrv.InitInner()
-	cfgsrv.Inner.InitGitCfg()
-	reposrv.Init()
+	cfgsrv.InitGitCfg()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/gitRepo", apisession.CheckLogin)
 		{
@@ -88,7 +86,7 @@ func InitApi() {
 }
 
 func listRepoByAdmin(c *gin.Context) {
-	repos, err := reposrv.Outer.ListRepoByAdmin(c, reposrv.ListRepoByAdminReqDTO{
+	repos, err := reposrv.ListRepoByAdmin(c, reposrv.ListRepoByAdminReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -110,7 +108,7 @@ func listRepoByAdmin(c *gin.Context) {
 }
 
 func setArchived(c *gin.Context) {
-	err := reposrv.Outer.SetRepoArchivedStatus(c, reposrv.SetRepoArchivedStatusReqDTO{
+	err := reposrv.SetRepoArchivedStatus(c, reposrv.SetRepoArchivedStatusReqDTO{
 		RepoId:     getRepoId(c),
 		IsArchived: true,
 		Operator:   apisession.MustGetLoginUser(c),
@@ -123,7 +121,7 @@ func setArchived(c *gin.Context) {
 }
 
 func setUnArchived(c *gin.Context) {
-	err := reposrv.Outer.SetRepoArchivedStatus(c, reposrv.SetRepoArchivedStatusReqDTO{
+	err := reposrv.SetRepoArchivedStatus(c, reposrv.SetRepoArchivedStatusReqDTO{
 		RepoId:     getRepoId(c),
 		IsArchived: false,
 		Operator:   apisession.MustGetLoginUser(c),
@@ -136,7 +134,7 @@ func setUnArchived(c *gin.Context) {
 }
 
 func getRepo(c *gin.Context) {
-	repo, perm, err := reposrv.Outer.GetRepoAndPerm(c, reposrv.GetRepoAndPermReqDTO{
+	repo, perm, err := reposrv.GetRepoAndPerm(c, reposrv.GetRepoAndPermReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -160,7 +158,7 @@ func getRepo(c *gin.Context) {
 func updateRepo(c *gin.Context) {
 	var req UpdateRepoReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.UpdateRepo(c, reposrv.UpdateRepoReqDTO{
+		err := reposrv.UpdateRepo(c, reposrv.UpdateRepoReqDTO{
 			RepoId:       req.RepoId,
 			Desc:         req.Desc,
 			DisableLfs:   req.DisableLfs,
@@ -177,7 +175,7 @@ func updateRepo(c *gin.Context) {
 }
 
 func getSimpleInfo(c *gin.Context) {
-	info, err := reposrv.Outer.GetSimpleInfo(c, reposrv.GetSimpleInfoReqDTO{
+	info, err := reposrv.GetSimpleInfo(c, reposrv.GetSimpleInfoReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -197,7 +195,7 @@ func getSimpleInfo(c *gin.Context) {
 }
 
 func getDetailInfo(c *gin.Context) {
-	info, err := reposrv.Outer.GetDetailInfo(c, reposrv.GetDetailInfoReqDTO{
+	info, err := reposrv.GetDetailInfo(c, reposrv.GetDetailInfoReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -214,7 +212,7 @@ func getDetailInfo(c *gin.Context) {
 func deleteBranch(c *gin.Context) {
 	var req DeleteBranchReqVO
 	if util.ShouldBindQuery(&req, c) {
-		err := reposrv.Outer.DeleteBranch(c, reposrv.DeleteBranchReqDTO{
+		err := reposrv.DeleteBranch(c, reposrv.DeleteBranchReqDTO{
 			RepoId:   req.RepoId,
 			Branch:   req.Branch,
 			Operator: apisession.MustGetLoginUser(c),
@@ -230,7 +228,7 @@ func deleteBranch(c *gin.Context) {
 func deleteTag(c *gin.Context) {
 	var req DeleteTagReqVO
 	if util.ShouldBindQuery(&req, c) {
-		err := reposrv.Outer.DeleteTag(c, reposrv.DeleteTagReqDTO{
+		err := reposrv.DeleteTag(c, reposrv.DeleteTagReqDTO{
 			RepoId:   req.RepoId,
 			Tag:      req.Tag,
 			Operator: apisession.MustGetLoginUser(c),
@@ -244,7 +242,7 @@ func deleteTag(c *gin.Context) {
 }
 
 func allBranches(c *gin.Context) {
-	branches, err := reposrv.Outer.AllBranches(c, reposrv.AllBranchesReqDTO{
+	branches, err := reposrv.AllBranches(c, reposrv.AllBranchesReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -261,7 +259,7 @@ func allBranches(c *gin.Context) {
 func pageBranchCommits(c *gin.Context) {
 	var req PageRefCommitsReqVO
 	if util.ShouldBindQuery(&req, c) {
-		branches, total, err := reposrv.Outer.PageBranchCommits(c, reposrv.PageRefCommitsReqDTO{
+		branches, total, err := reposrv.PageBranchCommits(c, reposrv.PageRefCommitsReqDTO{
 			RepoId:   req.RepoId,
 			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),
@@ -300,7 +298,7 @@ func pageBranchCommits(c *gin.Context) {
 func pageTagCommits(c *gin.Context) {
 	var req PageRefCommitsReqVO
 	if util.ShouldBindQuery(&req, c) {
-		tags, total, err := reposrv.Outer.PageTagCommits(c, reposrv.PageRefCommitsReqDTO{
+		tags, total, err := reposrv.PageTagCommits(c, reposrv.PageRefCommitsReqDTO{
 			RepoId:   req.RepoId,
 			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),
@@ -327,7 +325,7 @@ func pageTagCommits(c *gin.Context) {
 }
 
 func allTags(c *gin.Context) {
-	branches, err := reposrv.Outer.AllTags(c, reposrv.AllTagsReqDTO{
+	branches, err := reposrv.AllTags(c, reposrv.AllTagsReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -342,7 +340,7 @@ func allTags(c *gin.Context) {
 }
 
 func gc(c *gin.Context) {
-	err := reposrv.Outer.Gc(c, reposrv.GcReqDTO{
+	err := reposrv.Gc(c, reposrv.GcReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -355,7 +353,7 @@ func gc(c *gin.Context) {
 
 // allGitIgnoreTemplateList 获取模版列表
 func allGitIgnoreTemplateList(c *gin.Context) {
-	templateList := reposrv.Outer.AllGitIgnoreTemplateList()
+	templateList := reposrv.AllGitIgnoreTemplateList()
 	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     templateList,
@@ -366,7 +364,7 @@ func allGitIgnoreTemplateList(c *gin.Context) {
 func indexRepo(c *gin.Context) {
 	var req IndexRepoReqVO
 	if util.ShouldBindQuery(&req, c) {
-		respDTO, err := reposrv.Outer.IndexRepo(c, reposrv.IndexRepoReqDTO{
+		respDTO, err := reposrv.IndexRepo(c, reposrv.IndexRepoReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			RefType:  req.RefType,
@@ -392,7 +390,7 @@ func indexRepo(c *gin.Context) {
 func entriesRepo(c *gin.Context) {
 	var req EntriesRepoReqVO
 	if util.ShouldBindQuery(&req, c) {
-		blobs, err := reposrv.Outer.EntriesRepo(c, reposrv.EntriesRepoReqDTO{
+		blobs, err := reposrv.EntriesRepo(c, reposrv.EntriesRepoReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			Dir:      req.Dir,
@@ -472,7 +470,7 @@ func fileDto2Vo(list []reposrv.FileDTO) []FileVO {
 func createRepo(c *gin.Context) {
 	var req CreateRepoReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.CreateRepo(c, reposrv.CreateRepoReqDTO{
+		err := reposrv.CreateRepo(c, reposrv.CreateRepoReqDTO{
 			Operator:      apisession.MustGetLoginUser(c),
 			Name:          req.Name,
 			Desc:          req.Desc,
@@ -490,7 +488,7 @@ func createRepo(c *gin.Context) {
 }
 
 func deleteRepo(c *gin.Context) {
-	err := reposrv.Outer.DeleteRepo(c, reposrv.DeleteRepoReqDTO{
+	err := reposrv.DeleteRepo(c, reposrv.DeleteRepoReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 		RepoId:   getRepoId(c),
 	})
@@ -502,7 +500,7 @@ func deleteRepo(c *gin.Context) {
 }
 
 func deletePermanentlyRepo(c *gin.Context) {
-	err := reposrv.Outer.DeleteRepoPermanently(c, reposrv.DeleteRepoReqDTO{
+	err := reposrv.DeleteRepoPermanently(c, reposrv.DeleteRepoReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 		RepoId:   getRepoId(c),
 	})
@@ -514,7 +512,7 @@ func deletePermanentlyRepo(c *gin.Context) {
 }
 
 func recoverFromRecycle(c *gin.Context) {
-	err := reposrv.Outer.RecoverFromRecycle(c, reposrv.RecoverFromRecycleReqDTO{
+	err := reposrv.RecoverFromRecycle(c, reposrv.RecoverFromRecycleReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 		RepoId:   getRepoId(c),
 	})
@@ -526,7 +524,7 @@ func recoverFromRecycle(c *gin.Context) {
 }
 
 func listRepo(c *gin.Context) {
-	repoList, err := reposrv.Outer.ListRepo(c, reposrv.ListRepoReqDTO{
+	repoList, err := reposrv.ListRepo(c, reposrv.ListRepoReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -544,7 +542,7 @@ func listRepo(c *gin.Context) {
 }
 
 func listDeletedRepo(c *gin.Context) {
-	repoList, err := reposrv.Outer.ListDeletedRepo(c, reposrv.ListDeletedRepoReqDTO{
+	repoList, err := reposrv.ListDeletedRepo(c, reposrv.ListDeletedRepoReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -585,7 +583,7 @@ func repo2VO(t reposrv.RepoDTO) RepoVO {
 func catFile(c *gin.Context) {
 	var req CatFileReqVO
 	if util.ShouldBindQuery(&req, c) {
-		resp, err := reposrv.Outer.CatFile(c, reposrv.CatFileReqDTO{
+		resp, err := reposrv.CatFile(c, reposrv.CatFileReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			FilePath: req.FilePath,
@@ -611,7 +609,7 @@ func catFile(c *gin.Context) {
 func blame(c *gin.Context) {
 	var req BlameReqVO
 	if util.ShouldBindQuery(&req, c) {
-		lines, err := reposrv.Outer.Blame(c, reposrv.BlameReqDTO{
+		lines, err := reposrv.Blame(c, reposrv.BlameReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			FilePath: req.FilePath,
@@ -638,7 +636,7 @@ func blame(c *gin.Context) {
 func diffFile(c *gin.Context) {
 	var req DiffFileReqVO
 	if util.ShouldBindQuery(&req, c) {
-		respDTO, err := reposrv.Outer.DiffFile(c, reposrv.DiffFileReqDTO{
+		respDTO, err := reposrv.DiffFile(c, reposrv.DiffFileReqDTO{
 			RepoId:   req.RepoId,
 			Target:   req.Target,
 			Head:     req.Head,
@@ -679,7 +677,7 @@ func diffFile(c *gin.Context) {
 func createArchive(c *gin.Context) {
 	var req CreateArchiveReqVO
 	if util.ShouldBindQuery(&req, c) {
-		err := reposrv.Outer.CreateArchive(c, reposrv.CreateArchiveReqDTO{
+		err := reposrv.CreateArchive(c, reposrv.CreateArchiveReqDTO{
 			RepoId:   req.RepoId,
 			FileName: req.FileName,
 			C:        c,
@@ -695,7 +693,7 @@ func createArchive(c *gin.Context) {
 func diffRefs(c *gin.Context) {
 	var req DiffRefsReqVO
 	if util.ShouldBindQuery(&req, c) {
-		respDTO, err := reposrv.Outer.DiffRefs(c, reposrv.DiffRefsReqDTO{
+		respDTO, err := reposrv.DiffRefs(c, reposrv.DiffRefsReqDTO{
 			RepoId:     req.RepoId,
 			Target:     req.Target,
 			TargetType: req.TargetType,
@@ -742,7 +740,7 @@ func diffRefs(c *gin.Context) {
 func diffCommits(c *gin.Context) {
 	var req DiffCommitsReqVO
 	if util.ShouldBindQuery(&req, c) {
-		respDTO, err := reposrv.Outer.DiffCommits(c, reposrv.DiffCommitsReqDTO{
+		respDTO, err := reposrv.DiffCommits(c, reposrv.DiffCommitsReqDTO{
 			RepoId:   req.RepoId,
 			CommitId: req.CommitId,
 			Operator: apisession.MustGetLoginUser(c),
@@ -778,7 +776,7 @@ func diffCommits(c *gin.Context) {
 func historyCommits(c *gin.Context) {
 	var req HistoryCommitsReqVO
 	if util.ShouldBindQuery(&req, c) {
-		respDTO, err := reposrv.Outer.HistoryCommits(c, reposrv.HistoryCommitsReqDTO{
+		respDTO, err := reposrv.HistoryCommits(c, reposrv.HistoryCommitsReqDTO{
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			Cursor:   req.Cursor,
@@ -801,7 +799,7 @@ func historyCommits(c *gin.Context) {
 func transferTeam(c *gin.Context) {
 	var req TransferTeamReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := reposrv.Outer.TransferTeam(c, reposrv.TransferTeamReqDTO{
+		err := reposrv.TransferTeam(c, reposrv.TransferTeamReqDTO{
 			RepoId:   req.RepoId,
 			TeamId:   req.TeamId,
 			Operator: apisession.MustGetLoginUser(c),

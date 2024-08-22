@@ -14,7 +14,6 @@ import (
 )
 
 func InitApi() {
-	sshkeysrv.Init()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/sshKey", apisession.CheckLogin)
 		{
@@ -31,7 +30,7 @@ func InitApi() {
 func createSshKey(c *gin.Context) {
 	var req CreateSshKeyReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := sshkeysrv.Outer.CreateSshKey(c, sshkeysrv.CreateSshKeyReqDTO{
+		err := sshkeysrv.CreateSshKey(c, sshkeysrv.CreateSshKeyReqDTO{
 			Name:     req.Name,
 			Content:  req.Content,
 			Operator: apisession.MustGetLoginUser(c),
@@ -45,7 +44,7 @@ func createSshKey(c *gin.Context) {
 }
 
 func deleteSshKey(c *gin.Context) {
-	err := sshkeysrv.Outer.DeleteSshKey(c, sshkeysrv.DeleteSshKeyReqDTO{
+	err := sshkeysrv.DeleteSshKey(c, sshkeysrv.DeleteSshKeyReqDTO{
 		Id:       cast.ToInt64(c.Param("keyId")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -57,7 +56,7 @@ func deleteSshKey(c *gin.Context) {
 }
 
 func listSshKey(c *gin.Context) {
-	keys, err := sshkeysrv.Outer.ListSshKey(c, sshkeysrv.ListSshKeyReqDTO{
+	keys, err := sshkeysrv.ListSshKey(c, sshkeysrv.ListSshKeyReqDTO{
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
