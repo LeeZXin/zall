@@ -34,8 +34,7 @@ func InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (Plan, error) {
 		Creator:        reqDTO.Creator,
 		PipelineConfig: reqDTO.PipelineConfig,
 	}
-	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&ret)
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
 }
 
@@ -269,15 +268,15 @@ func IsPipelineNameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
 }
 
-func InsertPipeline(ctx context.Context, reqDTO InsertPipelineReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&Pipeline{
-			AppId:  reqDTO.AppId,
-			Name:   reqDTO.Name,
-			Config: reqDTO.Config,
-			Env:    reqDTO.Env,
-		})
-	return err
+func InsertPipeline(ctx context.Context, reqDTO InsertPipelineReqDTO) (Pipeline, error) {
+	ret := Pipeline{
+		AppId:  reqDTO.AppId,
+		Name:   reqDTO.Name,
+		Config: reqDTO.Config,
+		Env:    reqDTO.Env,
+	}
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	return ret, err
 }
 
 func ListPipeline(ctx context.Context, reqDTO ListPipelineReqDTO) ([]Pipeline, error) {
@@ -309,7 +308,7 @@ func DeletePipelineByAppId(ctx context.Context, appId string) error {
 
 func UpdatePipeline(ctx context.Context, reqDTO UpdatePipelineReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", reqDTO.PipelineId).
+		Where("id = ?", reqDTO.Id).
 		Cols("config", "name").
 		Update(&Pipeline{
 			Name:   reqDTO.Name,
@@ -410,14 +409,15 @@ func ListPipelineVarsMap(ctx context.Context, appId, env string) (map[string]str
 	return varsMap, nil
 }
 
-func InsertPipelineVars(ctx context.Context, reqDTO InsertPipelineVarsReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&PipelineVars{
+func InsertPipelineVars(ctx context.Context, reqDTO InsertPipelineVarsReqDTO) (PipelineVars, error) {
+	ret := PipelineVars{
 		AppId:   reqDTO.AppId,
 		Env:     reqDTO.Env,
 		Name:    reqDTO.Name,
 		Content: reqDTO.Content,
-	})
-	return err
+	}
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	return ret, err
 }
 
 func UpdatePipelineVars(ctx context.Context, reqDTO UpdatePipelineVarsReqDTO) (bool, error) {

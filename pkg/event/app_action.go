@@ -2,6 +2,10 @@ package event
 
 type AppEventAction string
 
+func (a AppEventAction) GetI18nValue() string {
+	return "appEvent." + string(a)
+}
+
 const (
 	AppCreateAction   AppEventAction = "create"
 	AppDeleteAction   AppEventAction = "delete"
@@ -11,6 +15,10 @@ const (
 
 type AppSourceEventAction string
 
+func (a AppSourceEventAction) GetI18nValue() string {
+	return "appSourceEvent." + string(a)
+}
+
 const (
 	AppManagePropertySourceAction  AppSourceEventAction = "managePropertySource"
 	AppManageServiceSourceAction   AppSourceEventAction = "manageServiceSource"
@@ -19,6 +27,10 @@ const (
 
 type AppPropertyFileEventAction string
 
+func (a AppPropertyFileEventAction) GetI18nValue() string {
+	return "appPropertyFileEvent." + string(a)
+}
+
 const (
 	AppPropertyFileCreateFileAction AppPropertyFileEventAction = "create"
 	AppPropertyFileDeleteFileAction AppPropertyFileEventAction = "delete"
@@ -26,38 +38,79 @@ const (
 
 type AppPropertyVersionEventAction string
 
+func (a AppPropertyVersionEventAction) GetI18nValue() string {
+	return "appPropertyVersionEvent." + string(a)
+}
+
 const (
-	AppPropertyVersionCreateAction AppPropertyVersionEventAction = "create"
+	AppPropertyVersionNewAction    AppPropertyVersionEventAction = "new"
 	AppPropertyVersionDeployAction AppPropertyVersionEventAction = "deploy"
 )
 
-type AppPipelineEventAction string
+type AppDeployPipelineEventAction string
+
+func (a AppDeployPipelineEventAction) GetI18nValue() string {
+	return "appDeployPipelineEvent." + string(a)
+}
 
 const (
-	AppPipelineCreatePipelineAction AppPipelineEventAction = "create"
-	AppPipelineUpdatePipelineAction AppPipelineEventAction = "update"
-	AppPipelineDeletePipelineAction AppPipelineEventAction = "delete"
+	AppDeployPipelineCreatePipelineAction AppDeployPipelineEventAction = "create"
+	AppDeployPipelineUpdatePipelineAction AppDeployPipelineEventAction = "update"
+	AppDeployPipelineDeletePipelineAction AppDeployPipelineEventAction = "delete"
 )
 
-type AppPipelineVarsEventAction string
+type AppDeployPipelineVarsEventAction string
+
+func (a AppDeployPipelineVarsEventAction) GetI18nValue() string {
+	return "appDeployPipelineVarsEvent." + string(a)
+}
 
 const (
-	AppPipelineCreateVarsAction AppPipelineVarsEventAction = "create"
-	AppPipelineUpdateVarsAction AppPipelineVarsEventAction = "update"
-	AppPipelineDeleteVarsAction AppPipelineVarsEventAction = "delete"
+	AppDeployPipelineVarsCreateAction AppDeployPipelineVarsEventAction = "create"
+	AppDeployPipelineVarsUpdateAction AppDeployPipelineVarsEventAction = "update"
+	AppDeployPipelineVarsDeleteAction AppDeployPipelineVarsEventAction = "delete"
 )
 
 type AppDeployPlanEventAction string
 
+func (a AppDeployPlanEventAction) GetI18nValue() string {
+	return "appDeployPlanEvent." + string(a)
+}
+
 const (
-	AppDeployPlanCreateAction   AppDeployPlanEventAction = "create"
-	AppDeployPlanCloseAction    AppDeployPlanEventAction = "close"
-	AppDeployPlanCompleteAction AppDeployPlanEventAction = "complete"
+	AppDeployPlanCreateAction AppDeployPlanEventAction = "create"
+	AppDeployPlanStartAction  AppDeployPlanEventAction = "start"
+	AppDeployPlanCloseAction  AppDeployPlanEventAction = "close"
 )
 
 type AppProductEventAction string
 
+func (a AppProductEventAction) GetI18nValue() string {
+	return "appProductEvent." + string(a)
+}
+
 const (
-	AppProductCreateAction AppProductEventAction = "create"
 	AppProductDeleteAction AppProductEventAction = "delete"
+)
+
+type AppDiscoveryEventAction string
+
+func (a AppDiscoveryEventAction) GetI18nValue() string {
+	return "appDiscoveryEvent." + string(a)
+}
+
+const (
+	AppDiscoveryDeregisterAction        AppDiscoveryEventAction = "deregister"
+	AppDiscoveryReRegisterAction        AppDiscoveryEventAction = "reRegister"
+	AppDiscoveryDeleteDownServiceAction AppDiscoveryEventAction = "deleteDownService"
+)
+
+type AppDeployServiceEventAction string
+
+func (a AppDeployServiceEventAction) GetI18nValue() string {
+	return "appDeployServiceEvent." + string(a)
+}
+
+const (
+	AppDeployServiceTriggerActionAction AppDeployServiceEventAction = "triggerAction"
 )

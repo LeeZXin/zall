@@ -9,11 +9,15 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/files"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/teamhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf-utils/typesniffer"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
@@ -24,12 +28,15 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 )
 
 var (
 	avatarStorage  files.Storage
 	productStorage files.Storage
 	domain         string
+	initPsubOnce   = sync.Once{}
 )
 
 func InitStorage() {
@@ -49,6 +56,31 @@ func InitStorage() {
 	avatarStorage, _ = files.NewLocalStorage(avatarDir, avatarTempDir)
 	productStorage, _ = files.NewLocalStorage(productDir, productTempDir)
 	domain = static.GetString("files.domain")
+}
+
+func initPsub() {
+	initPsubOnce.Do(func() {
+		psub.Subscribe(event.AppProductTopic, func(data any) {
+			req, ok := data.(event.AppProductEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppProductDeleteAction:
+							return cfg.AppProduct.Delete
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+	})
 }
 
 // UploadAvatar 上传头像
@@ -164,22 +196,27 @@ func GetProduct(ctx context.Context, reqDTO GetProductReqDTO) (string, error) {
 }
 
 // ListProduct 制品库列表
-func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]ProductDTO, error) {
+func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]ProductDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkAppDevelopPermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
+	_, _, err := checkAppDevelopPermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	products, err := productmd.ListProduct(ctx, reqDTO.AppId, reqDTO.Env)
+	products, total, err := productmd.ListProduct(ctx, productmd.ListProductReqDTO{
+		AppId:    reqDTO.AppId,
+		Env:      reqDTO.Env,
+		PageNum:  reqDTO.PageNum,
+		PageSize: 10,
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
+		return nil, 0, util.InternalError(err)
 	}
-	return listutil.Map(products, func(t productmd.Product) (ProductDTO, error) {
+	ret, _ := listutil.Map(products, func(t productmd.Product) (ProductDTO, error) {
 		return ProductDTO{
 			Id:      t.Id,
 			Name:    t.Name,
@@ -187,6 +224,7 @@ func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]ProductDTO, e
 			Created: t.Created,
 		}, nil
 	})
+	return ret, total, nil
 }
 
 // DeleteProduct 删除制品
@@ -196,7 +234,7 @@ func DeleteProduct(ctx context.Context, reqDTO DeleteProductReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	product, err := checkAppDevelopPermByProductId(ctx, reqDTO.ProductId, reqDTO.Operator)
+	product, app, team, err := checkAppDevelopPermByProductId(ctx, reqDTO.ProductId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -211,45 +249,83 @@ func DeleteProduct(ctx context.Context, reqDTO DeleteProductReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyProductEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		product,
+		event.AppProductDeleteAction,
+	)
 	return nil
 }
 
-func checkAppDevelopPermByAppId(ctx context.Context, appId string, operator apisession.UserInfo) error {
+func checkAppDevelopPermByAppId(ctx context.Context, appId string, operator apisession.UserInfo) (appmd.App, teammd.Team, error) {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return appmd.App{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, app.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return appmd.App{}, teammd.Team{}, util.InvalidArgsError()
 	}
 	if operator.IsAdmin {
-		return nil
+		return app, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 	if err != nil {
-		return util.InternalError(err)
+		return app, team, util.InternalError(err)
 	}
 	if !b {
-		return util.UnauthorizedError()
+		return app, team, util.UnauthorizedError()
 	}
-	if p.IsAdmin {
-		return nil
+	if p.IsAdmin || p.PermDetail.GetAppPerm(appId).CanDevelop {
+		return app, team, nil
 	}
-	if p.PermDetail.GetAppPerm(appId).CanDevelop {
-		return nil
-	}
-	return nil
+	return app, team, util.UnauthorizedError()
 }
 
-func checkAppDevelopPermByProductId(ctx context.Context, productId int64, operator apisession.UserInfo) (productmd.Product, error) {
+func checkAppDevelopPermByProductId(ctx context.Context, productId int64, operator apisession.UserInfo) (productmd.Product, appmd.App, teammd.Team, error) {
 	product, b, err := productmd.GetProductById(ctx, productId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return productmd.Product{}, util.InternalError(err)
+		return productmd.Product{}, appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return productmd.Product{}, util.InvalidArgsError()
+		return productmd.Product{}, appmd.App{}, teammd.Team{}, util.InvalidArgsError()
 	}
-	return product, checkAppDevelopPermByAppId(ctx, product.AppId, operator)
+	app, team, err := checkAppDevelopPermByAppId(ctx, product.AppId, operator)
+	return product, app, team, err
+}
+
+func notifyProductEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, product productmd.Product, action event.AppProductEventAction) {
+	initPsub()
+	psub.Publish(event.AppProductTopic, event.AppProductEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		ProductId:   product.Id,
+		ProductName: product.Name,
+		Env:         product.Env,
+		Action:      action,
+	})
 }

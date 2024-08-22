@@ -76,10 +76,14 @@ func (r *GetProductReqDTO) IsValid() error {
 type ListProductReqDTO struct {
 	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
+	PageNum  int                 `json:"pageNum"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListProductReqDTO) IsValid() error {
+	if r.PageNum <= 0 {
+		return util.InvalidArgsError()
+	}
 	if !cfgsrv.ContainsEnv(r.Env) {
 		return util.InvalidArgsError()
 	}

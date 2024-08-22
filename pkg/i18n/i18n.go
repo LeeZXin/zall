@@ -8,33 +8,22 @@ import (
 )
 
 const (
-	ZH_CN = "zh-CN"
-	EN_US = "en-US"
+	ZH_CN = "zh-cn"
+	EN_US = "en-us"
 )
 
 func init() {
-	lang := static.GetString("app.lang")
-	if lang != "" {
-		iniPath := filepath.Join(common.ResourcesDir, "i18n", lang+".ini")
-		locale, err := i18n.NewImmutableLocaleFromIniFile(iniPath, lang)
-		if err == nil {
-			i18n.AddLocale(locale)
-			i18n.SetDefaultLocale(lang)
-			return
-		}
-	}
-	iniPath := filepath.Join(common.ResourcesDir, "i18n", ZH_CN+".ini")
-	locale, err := i18n.NewImmutableLocaleFromIniFile(iniPath, ZH_CN)
+	iniPath := filepath.Join(common.ResourcesDir, "i18n", EN_US+".ini")
+	locale, err := i18n.NewImmutableLocaleFromIniFile(iniPath, EN_US)
 	if err == nil {
 		i18n.AddLocale(locale)
-		i18n.SetDefaultLocale(ZH_CN)
 	}
-}
-
-func SupportedLangeList() []string {
-	return []string{
-		ZH_CN, EN_US,
+	iniPath = filepath.Join(common.ResourcesDir, "i18n", ZH_CN+".ini")
+	locale, err = i18n.NewImmutableLocaleFromIniFile(iniPath, ZH_CN)
+	if err == nil {
+		i18n.AddLocale(locale)
 	}
+	i18n.SetDefaultLocale(static.GetString("app.lang"))
 }
 
 func GetByKey(item KeyItem) string {
@@ -43,4 +32,12 @@ func GetByKey(item KeyItem) string {
 
 func GetByValue(val string) string {
 	return i18n.Get(val)
+}
+
+func GetByLangAndValue(lang, val string) string {
+	locale, b := i18n.GetLocale(lang)
+	if !b {
+		return ""
+	}
+	return locale.Get(val)
 }

@@ -19,11 +19,11 @@ type AppPropertyFileEventCfg struct {
 }
 
 type AppPropertyVersionEventCfg struct {
-	Create bool `json:"create"`
+	New    bool `json:"new"`
 	Deploy bool `json:"deploy"`
 }
 
-type AppPipelineEventCfg struct {
+type AppDeployPipelineEventCfg struct {
 	Create bool `json:"create"`
 	Update bool `json:"update"`
 	Delete bool `json:"delete"`
@@ -42,6 +42,15 @@ type AppDeployPlanEventCfg struct {
 }
 
 type AppProductEventCfg struct {
-	Create bool `json:"create"`
 	Delete bool `json:"delete"`
+}
+
+type AppDiscoveryEventCfg struct {
+	Deregister        bool `json:"deregister"`
+	ReRegister        bool `json:"reRegister"`
+	DeleteDownService bool `json:"deleteDownService"`
+}
+
+type AppDeployServiceEventCfg struct {
+	TriggerAction bool `json:"triggerAction"`
 }

@@ -41,13 +41,13 @@ func DeleteProductById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
-func ListProduct(ctx context.Context, appId, env string) ([]Product, error) {
+func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]Product, int64, error) {
 	ret := make([]Product, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		Where("app_id = ?", appId).
-		And("env = ?", env).
+	total, err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", reqDTO.AppId).
+		And("env = ?", reqDTO.Env).
 		OrderBy("id desc").
-		Limit(20).
-		Find(&ret)
-	return ret, err
+		Limit(reqDTO.PageSize, (reqDTO.PageNum-1)*reqDTO.PageSize).
+		FindAndCount(&ret)
+	return ret, total, err
 }

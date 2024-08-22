@@ -17,15 +17,19 @@ func (*AppEvent) EventType() string {
 	return "app-event"
 }
 
+type AppSource struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
+	Env  string `json:"env"`
+}
+
 type AppSourceEvent struct {
 	BaseTeam
 	BaseApp
 	BaseEvent
+	Env     string               `json:"env"`
 	Action  AppSourceEventAction `json:"action"`
-	Sources []struct {
-		Id   int64  `json:"id"`
-		Name string `json:"name"`
-	} `json:"sources"`
+	Sources []AppSource          `json:"sources"`
 }
 
 func (*AppSourceEvent) EventType() string {
@@ -67,40 +71,44 @@ func (*AppPropertyVersionEvent) EventType() string {
 type BasePipeline struct {
 	PipelineId   int64  `json:"pipelineId"`
 	PipelineName string `json:"pipelineName"`
+	Env          string `json:"env"`
 }
 
-type AppPipelineEvent struct {
+type AppDeployPipelineEvent struct {
 	BaseTeam
 	BaseApp
 	BaseEvent
 	BasePipeline
-	Action AppPipelineEventAction `json:"action"`
+	Action AppDeployPipelineEventAction `json:"action"`
 }
 
-func (*AppPipelineEvent) EventType() string {
-	return "app-pipeline-event"
+func (*AppDeployPipelineEvent) EventType() string {
+	return "app-deploy-pipeline-event"
 }
 
-type AppPipelineVarsEvent struct {
+type AppDeployPipelineVarsEvent struct {
 	BaseTeam
 	BaseApp
 	BaseEvent
-	BasePipeline
-	VarsId   int64                      `json:"varsId"`
-	VarsName string                     `json:"varsName"`
-	Action   AppPipelineVarsEventAction `json:"action"`
+	VarsId   int64                            `json:"varsId"`
+	VarsName string                           `json:"varsName"`
+	Env      string                           `json:"env"`
+	Action   AppDeployPipelineVarsEventAction `json:"action"`
 }
 
-func (*AppPipelineVarsEvent) EventType() string {
-	return "app-pipeline-vars-event"
+func (*AppDeployPipelineVarsEvent) EventType() string {
+	return "app-deploy-pipeline-vars-event"
 }
 
 type AppDeployPlanEvent struct {
 	BaseTeam
 	BaseApp
 	BaseEvent
-	Action AppDeployPlanEventAction `json:"action"`
-	Status string                   `json:"status"`
+	BasePipeline
+	Action   AppDeployPlanEventAction `json:"action"`
+	PlanId   int64                    `json:"planId"`
+	PlanName string                   `json:"planName"`
+	Env      string                   `json:"env"`
 }
 
 func (*AppDeployPlanEvent) EventType() string {
@@ -111,11 +119,37 @@ type AppProductEvent struct {
 	BaseTeam
 	BaseApp
 	BaseEvent
-	ProductPath string                `json:"productPath"`
+	ProductId   int64                 `json:"productId"`
 	ProductName string                `json:"productName"`
+	Env         string                `json:"env"`
 	Action      AppProductEventAction `json:"action"`
 }
 
 func (*AppProductEvent) EventType() string {
 	return "app-product-event"
+}
+
+type AppDiscoveryEvent struct {
+	BaseTeam
+	BaseApp
+	BaseEvent
+	Source AppSource               `json:"source"`
+	Action AppDiscoveryEventAction `json:"action"`
+}
+
+func (*AppDiscoveryEvent) EventType() string {
+	return "app-discovery-event"
+}
+
+type AppDeployServiceEvent struct {
+	BaseTeam
+	BaseApp
+	BaseEvent
+	Source        AppSource                   `json:"source"`
+	Action        AppDeployServiceEventAction `json:"action"`
+	TriggerAction string                      `json:"triggerAction"`
+}
+
+func (*AppDeployServiceEvent) EventType() string {
+	return "app-deploy-service-event"
 }

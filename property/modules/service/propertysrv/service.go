@@ -6,9 +6,14 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/property/modules/model/propertymd"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
@@ -17,8 +22,82 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+var (
+	initPsubOnce = sync.Once{}
+)
+
+func initPsub() {
+	initPsubOnce.Do(func() {
+		psub.Subscribe(event.AppPropertyFileTopic, func(data any) {
+			req, ok := data.(event.AppPropertyFileEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppPropertyFileCreateFileAction:
+							return cfg.AppPropertyFile.Create
+						case event.AppPropertyFileDeleteFileAction:
+							return cfg.AppPropertyFile.Delete
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+		psub.Subscribe(event.AppPropertyVersionTopic, func(data any) {
+			req, ok := data.(event.AppPropertyVersionEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppPropertyVersionNewAction:
+							return cfg.AppPropertyVersion.New
+						case event.AppPropertyVersionDeployAction:
+							return cfg.AppPropertyVersion.Deploy
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+		psub.Subscribe(event.AppSourceTopic, func(data any) {
+			req, ok := data.(event.AppSourceEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppManagePropertySourceAction:
+							return cfg.AppSource.ManagePropertySource
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+	})
+}
 
 func ListPropertySource(ctx context.Context, reqDTO ListPropertySourceReqDTO) ([]PropertySourceDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
@@ -84,7 +163,7 @@ func ListBindPropertySource(ctx context.Context, reqDTO ListBindPropertySourceRe
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	_, _, err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -116,7 +195,7 @@ func ListPropertySourceByFileId(ctx context.Context, reqDTO ListPropertySourceBy
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	file, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
+	file, _, _, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +225,7 @@ func BindAppAndPropertySource(ctx context.Context, reqDTO BindAppAndPropertySour
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkManagePropertySourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	app, team, err := checkManagePropertySourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
 	if err != nil {
 		return err
 	}
@@ -156,9 +235,17 @@ func BindAppAndPropertySource(ctx context.Context, reqDTO BindAppAndPropertySour
 			logger.Logger.WithContext(ctx).Error(err)
 			return util.InternalError(err)
 		}
+		// 通知
+		notifyPropertySourceEvent(
+			reqDTO.Operator,
+			team,
+			app,
+			nil,
+			reqDTO.Env,
+		)
 		return nil
 	}
-	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, reqDTO.SourceIdList, []string{"id", "env"})
+	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, reqDTO.SourceIdList, []string{"id", "name", "env"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -191,22 +278,29 @@ func BindAppAndPropertySource(ctx context.Context, reqDTO BindAppAndPropertySour
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	// 通知
+	notifyPropertySourceEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		nodes,
+		reqDTO.Env,
+	)
 	return nil
 }
 
 // CreatePropertySource 新增配置来源
-func CreatePropertySource(ctx context.Context, reqDTO CreatePropertySourceReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func CreatePropertySource(ctx context.Context, reqDTO CreatePropertySourceReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
 	if !reqDTO.Operator.IsAdmin {
-		err = util.UnauthorizedError()
-		return
+		return util.UnauthorizedError()
 	}
-	err = propertymd.InsertEtcdNode(ctx, propertymd.InsertEtcdNodeReqDTO{
+	err := propertymd.InsertEtcdNode(ctx, propertymd.InsertEtcdNodeReqDTO{
 		Endpoints: strings.Join(reqDTO.Endpoints, ";"),
 		Username:  reqDTO.Username,
 		Password:  reqDTO.Password,
@@ -215,10 +309,9 @@ func CreatePropertySource(ctx context.Context, reqDTO CreatePropertySourceReqDTO
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
 // DeletePropertySource 删除配置来源
@@ -280,7 +373,8 @@ func CreateFile(ctx context.Context, reqDTO CreateFileReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	app, team, err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
 		return err
 	}
 	b, err := propertymd.ExistFile(ctx, reqDTO.AppId, reqDTO.Name, reqDTO.Env)
@@ -291,8 +385,10 @@ func CreateFile(ctx context.Context, reqDTO CreateFileReqDTO) error {
 	if b {
 		return util.AlreadyExistsError()
 	}
+	var file propertymd.File
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		file, err2 := propertymd.InsertFile(ctx, propertymd.InsertFileReqDTO{
+		var err2 error
+		file, err2 = propertymd.InsertFile(ctx, propertymd.InsertFileReqDTO{
 			AppId: reqDTO.AppId,
 			Name:  reqDTO.Name,
 			Env:   reqDTO.Env,
@@ -311,6 +407,13 @@ func CreateFile(ctx context.Context, reqDTO CreateFileReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPropertyFileEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		file,
+		event.AppPropertyFileCreateFileAction,
+	)
 	return nil
 }
 
@@ -322,7 +425,7 @@ func NewVersion(ctx context.Context, reqDTO NewVersionReqDTO) error {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
+	file, app, team, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
 	if err != nil {
 		return err
 	}
@@ -335,10 +438,11 @@ func NewVersion(ctx context.Context, reqDTO NewVersionReqDTO) error {
 	if !exist {
 		return util.InvalidArgsError()
 	}
+	version := genVersion()
 	err = propertymd.InsertHistory(ctx, propertymd.InsertHistoryReqDTO{
 		FileId:      reqDTO.FileId,
 		Content:     reqDTO.Content,
-		Version:     genVersion(),
+		Version:     version,
 		LastVersion: reqDTO.LastVersion,
 		Creator:     reqDTO.Operator.Account,
 	})
@@ -346,19 +450,28 @@ func NewVersion(ctx context.Context, reqDTO NewVersionReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPropertyVersionEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		file,
+		event.AppPropertyVersionNewAction,
+		version,
+		reqDTO.LastVersion,
+	)
 	return nil
 }
 
 // DeleteFile 删除配置文件
-func DeleteFile(ctx context.Context, reqDTO DeleteFileReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func DeleteFile(ctx context.Context, reqDTO DeleteFileReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	var file propertymd.File
-	if file, err = checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId); err != nil {
-		return
+	file, app, team, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
+	if err != nil {
+		return err
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 删除配置文件
@@ -376,11 +489,17 @@ func DeleteFile(ctx context.Context, reqDTO DeleteFileReqDTO) (err error) {
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	go deleteFromEtcd(file)
-	return
+	notifyPropertyFileEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		file,
+		event.AppPropertyFileDeleteFileAction,
+	)
+	return nil
 }
 
 // ListFile 配置文件列表
@@ -390,7 +509,8 @@ func ListFile(ctx context.Context, reqDTO ListFileReqDTO) ([]FileDTO, error) {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	_, _, err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
 		return nil, err
 	}
 	contents, err := propertymd.ListFile(ctx, reqDTO.AppId, reqDTO.Env)
@@ -415,7 +535,7 @@ func GetHistoryByVersion(ctx context.Context, reqDTO GetHistoryByVersionReqDTO) 
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	file, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
+	file, _, _, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
 	if err != nil {
 		return HistoryDTO{}, false, err
 	}
@@ -441,31 +561,25 @@ func GetHistoryByVersion(ctx context.Context, reqDTO GetHistoryByVersionReqDTO) 
 }
 
 // DeployHistory 部署配置
-func DeployHistory(ctx context.Context, reqDTO DeployHistoryReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func DeployHistory(ctx context.Context, reqDTO DeployHistoryReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	var (
-		file    propertymd.File
-		history propertymd.History
-	)
 	// 检查权限
-	history, file, err = checkPropertyDeployPermByHistoryId(ctx, reqDTO.Operator, reqDTO.HistoryId)
+	history, file, app, team, err := checkPropertyDeployPermByHistoryId(ctx, reqDTO.Operator, reqDTO.HistoryId)
 	if err != nil {
-		return
+		return err
 	}
 	// 校验发布节点
 	binds, err := propertymd.BatchGetAppEtcdNodeBindByNodeIdListAndAppId(ctx, reqDTO.SourceIdList, file.AppId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if len(binds) == 0 {
-		err = util.InvalidArgsError()
-		return
+		return util.InvalidArgsError()
 	}
 	nodeIdList, _ := listutil.Map(binds, func(t propertymd.AppEtcdNodeBind) (int64, error) {
 		return t.NodeId, nil
@@ -473,17 +587,14 @@ func DeployHistory(ctx context.Context, reqDTO DeployHistoryReqDTO) (err error) 
 	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, nodeIdList, nil)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if len(nodes) == 0 {
-		err = util.InvalidArgsError()
-		return
+		return util.InvalidArgsError()
 	}
 	for _, node := range nodes {
 		if node.Env != file.Env {
-			err = util.InvalidArgsError()
-			return
+			return util.InvalidArgsError()
 		}
 	}
 	go func() {
@@ -491,24 +602,32 @@ func DeployHistory(ctx context.Context, reqDTO DeployHistoryReqDTO) (err error) 
 			deployToEtcd(file, history, source, reqDTO.Operator.Account)
 		}
 	}()
-	return
+	notifyPropertyVersionEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		file,
+		event.AppPropertyVersionDeployAction,
+		history.Version,
+		history.LastVersion,
+	)
+	return nil
 }
 
-func PageHistory(ctx context.Context, reqDTO PageHistoryReqDTO) ([]HistoryDTO, int64, error) {
+func ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]HistoryDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	file, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
+	file, _, _, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
 	if err != nil {
 		return nil, 0, err
 	}
-	const pageSize = 10
-	histories, total, err := propertymd.PageHistory(ctx, propertymd.PageHistoryReqDTO{
+	histories, total, err := propertymd.ListHistory(ctx, propertymd.ListHistoryReqDTO{
 		FileId:   reqDTO.FileId,
 		PageNum:  reqDTO.PageNum,
-		PageSize: pageSize,
+		PageSize: 10,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -536,7 +655,8 @@ func ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]DeployDTO, erro
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, _, err := checkAppDevelopPermByHistoryId(ctx, reqDTO.Operator, reqDTO.HistoryId); err != nil {
+	_, _, err := checkAppDevelopPermByHistoryId(ctx, reqDTO.Operator, reqDTO.HistoryId)
+	if err != nil {
 		return nil, err
 	}
 	deploys, err := propertymd.ListDeployByHistoryId(ctx, reqDTO.HistoryId)
@@ -653,16 +773,17 @@ func genVersion() string {
 	return now.Format("20060102150405") + rint
 }
 
-func checkAppDevelopPermByFileId(ctx context.Context, operator apisession.UserInfo, fileId int64) (propertymd.File, error) {
+func checkAppDevelopPermByFileId(ctx context.Context, operator apisession.UserInfo, fileId int64) (propertymd.File, appmd.App, teammd.Team, error) {
 	file, b, err := propertymd.GetFileById(ctx, fileId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return propertymd.File{}, util.InternalError(err)
+		return propertymd.File{}, appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return propertymd.File{}, util.InvalidArgsError()
+		return propertymd.File{}, appmd.App{}, teammd.Team{}, util.InvalidArgsError()
 	}
-	return file, checkAppDevelopPermByAppId(ctx, operator, file.AppId)
+	app, team, err := checkAppDevelopPermByAppId(ctx, operator, file.AppId)
+	return file, app, team, err
 }
 
 func checkAppDevelopPermByHistoryId(ctx context.Context, operator apisession.UserInfo, historyId int64) (propertymd.History, propertymd.File, error) {
@@ -674,100 +795,210 @@ func checkAppDevelopPermByHistoryId(ctx context.Context, operator apisession.Use
 	if !b {
 		return propertymd.History{}, propertymd.File{}, util.InvalidArgsError()
 	}
-	file, err := checkAppDevelopPermByFileId(ctx, operator, history.FileId)
+	file, _, _, err := checkAppDevelopPermByFileId(ctx, operator, history.FileId)
 	return history, file, err
 }
 
-func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
+func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) (appmd.App, teammd.Team, error) {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return appmd.App{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, app.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return appmd.App{}, teammd.Team{}, util.ThereHasBugErr()
 	}
 	if operator.IsAdmin {
-		return nil
+		return app, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return app, team, util.InternalError(err)
 	}
 	if !b {
-		return util.UnauthorizedError()
+		return app, team, util.UnauthorizedError()
 	}
 	if p.IsAdmin || p.PermDetail.GetAppPerm(appId).CanDevelop {
-		return nil
+		return app, team, nil
 	}
-	return util.UnauthorizedError()
+	return app, team, util.UnauthorizedError()
 }
 
-func checkManagePropertySourcePermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
+func checkManagePropertySourcePermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) (appmd.App, teammd.Team, error) {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return appmd.App{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, app.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return appmd.App{}, teammd.Team{}, util.InvalidArgsError()
 	}
 	if operator.IsAdmin {
-		return nil
+		return app, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return app, team, util.InternalError(err)
 	}
 	if !b {
-		return util.UnauthorizedError()
+		return app, team, util.UnauthorizedError()
 	}
 	if p.IsAdmin || p.PermDetail.GetAppPerm(appId).CanManagePropertySource {
-		return nil
+		return app, team, nil
 	}
-	return util.UnauthorizedError()
+	return app, team, util.UnauthorizedError()
 }
 
-func checkPropertyDeployPermByHistoryId(ctx context.Context, operator apisession.UserInfo, historyId int64) (propertymd.History, propertymd.File, error) {
+func checkPropertyDeployPermByHistoryId(ctx context.Context, operator apisession.UserInfo, historyId int64) (propertymd.History, propertymd.File, appmd.App, teammd.Team, error) {
 	history, b, err := propertymd.GetHistoryById(ctx, historyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return propertymd.History{}, propertymd.File{}, util.InternalError(err)
+		return propertymd.History{}, propertymd.File{}, appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return propertymd.History{}, propertymd.File{}, util.InvalidArgsError()
+		return propertymd.History{}, propertymd.File{}, appmd.App{}, teammd.Team{}, util.InvalidArgsError()
 	}
 	file, b, err := propertymd.GetFileById(ctx, history.FileId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return propertymd.History{}, propertymd.File{}, util.InternalError(err)
+		return propertymd.History{}, propertymd.File{}, appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return propertymd.History{}, propertymd.File{}, util.ThereHasBugErr()
+		return propertymd.History{}, propertymd.File{}, appmd.App{}, teammd.Team{}, util.ThereHasBugErr()
 	}
 	app, b, err := appmd.GetByAppId(ctx, file.AppId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return propertymd.History{}, propertymd.File{}, util.InternalError(err)
+		return propertymd.History{}, propertymd.File{}, appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return propertymd.History{}, propertymd.File{}, util.ThereHasBugErr()
+		return propertymd.History{}, propertymd.File{}, appmd.App{}, teammd.Team{}, util.ThereHasBugErr()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, app.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return propertymd.History{}, propertymd.File{}, appmd.App{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return propertymd.History{}, propertymd.File{}, appmd.App{}, teammd.Team{}, util.ThereHasBugErr()
 	}
 	if operator.IsAdmin {
-		return history, file, nil
+		return history, file, app, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return propertymd.History{}, propertymd.File{}, util.InternalError(err)
+		return history, file, app, team, util.InternalError(err)
 	}
 	if !b {
-		return propertymd.History{}, propertymd.File{}, util.UnauthorizedError()
+		return history, file, app, team, util.UnauthorizedError()
 	}
 	if p.IsAdmin || p.PermDetail.GetAppPerm(file.AppId).CanDeployProperty {
-		return history, file, nil
+		return history, file, app, team, nil
 	}
-	return propertymd.History{}, propertymd.File{}, util.UnauthorizedError()
+	return history, file, app, team, util.UnauthorizedError()
+}
+
+func notifyPropertyFileEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, file propertymd.File, action event.AppPropertyFileEventAction) {
+	initPsub()
+	psub.Publish(event.AppPropertyFileTopic, event.AppPropertyFileEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Name,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		BasePropertyFile: event.BasePropertyFile{
+			FileId:   file.Id,
+			FileName: file.Name,
+			Env:      file.Env,
+		},
+		Action: action,
+	})
+}
+
+func notifyPropertySourceEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, sources []propertymd.EtcdNode, env string) {
+	initPsub()
+	srcs, _ := listutil.Map(sources, func(t propertymd.EtcdNode) (event.AppSource, error) {
+		return event.AppSource{
+			Id:   t.Id,
+			Name: t.Name,
+			Env:  t.Env,
+		}, nil
+	})
+	psub.Publish(event.AppSourceTopic, event.AppSourceEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, event.AppManagePropertySourceAction.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, event.AppManagePropertySourceAction.GetI18nValue()),
+		},
+		Action:  event.AppManagePropertySourceAction,
+		Env:     env,
+		Sources: srcs,
+	})
+}
+
+func notifyPropertyVersionEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, file propertymd.File, action event.AppPropertyVersionEventAction, version, oldVersion string) {
+	initPsub()
+	psub.Publish(event.AppPropertyVersionTopic, event.AppPropertyVersionEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Name,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		BasePropertyFile: event.BasePropertyFile{
+			FileId:   file.Id,
+			FileName: file.Name,
+			Env:      file.Env,
+		},
+		Version: version,
+		Action:  action,
+	})
 }

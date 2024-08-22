@@ -316,7 +316,7 @@ func listFile(c *gin.Context) {
 func pageHistory(c *gin.Context) {
 	var req PageHistoryReqVO
 	if util.ShouldBindQuery(&req, c) {
-		histories, cursor, err := propertysrv.PageHistory(c, propertysrv.PageHistoryReqDTO{
+		histories, cursor, err := propertysrv.ListHistory(c, propertysrv.ListHistoryReqDTO{
 			FileId:   req.FileId,
 			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),

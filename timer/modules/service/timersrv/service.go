@@ -29,6 +29,9 @@ func initPsub() {
 			req, ok := data.(event.TimerEvent)
 			if ok {
 				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
 					cfg, ok := events.EnvRelated[req.Env]
 					if ok {
 						switch req.Action {
@@ -56,6 +59,9 @@ func initPsub() {
 			req, ok := data.(event.TimerTaskEvent)
 			if ok {
 				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
 					cfg, ok := events.EnvRelated[req.Env]
 					if ok {
 						switch req.Action {
@@ -413,7 +419,8 @@ func notifyTimerEvent(operator apisession.UserInfo, team teammd.Team, timer time
 			Operator:     operator.Account,
 			OperatorName: operator.Name,
 			EventTime:    time.Now().Format(time.DateTime),
-			ActionName:   i18n.GetByValue(action.GetI18nValue()),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 		},
 		BaseTimer: event.BaseTimer{
 			TimerId:   timer.Id,
@@ -434,8 +441,9 @@ func notifyTimerTaskEvent(operatorAccount, operatorName string, team teammd.Team
 		BaseEvent: event.BaseEvent{
 			Operator:     operatorAccount,
 			OperatorName: operatorName,
-			ActionName:   i18n.GetByValue(action.GetI18nValue()),
 			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 		},
 		BaseTimer: event.BaseTimer{
 			TimerId:   timer.Id,

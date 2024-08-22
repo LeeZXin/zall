@@ -833,6 +833,8 @@ func notifyTeamUserEvent(operator apisession.UserInfo, team teammd.Team, role te
 			Operator:     operator.Account,
 			OperatorName: operator.Name,
 			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 		},
 		BaseRole: event.BaseRole{
 			RoleId:   role.Id,
@@ -854,6 +856,8 @@ func notifyTeamRoleEvent(operator apisession.UserInfo, team teammd.Team, role te
 			Operator:     operator.Account,
 			OperatorName: operator.Name,
 			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 		},
 		BaseRole: event.BaseRole{
 			RoleId:   role.Id,
@@ -875,7 +879,8 @@ func notifyTeamEvent(operator apisession.UserInfo, team teammd.Team, action even
 			Operator:     operator.Account,
 			OperatorName: operator.Name,
 			EventTime:    time.Now().Format(time.DateTime),
-			ActionName:   i18n.GetByValue(action.GetI18nValue()),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 		},
 		Action: action,
 	})

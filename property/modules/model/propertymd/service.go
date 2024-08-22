@@ -190,7 +190,7 @@ func ExistHistoryByVersion(ctx context.Context, fileId int64, version string) (b
 		Get(new(History))
 }
 
-func PageHistory(ctx context.Context, reqDTO PageHistoryReqDTO) ([]History, int64, error) {
+func ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]History, int64, error) {
 	ret := make([]History, 0)
 	total, err := xormutil.MustGetXormSession(ctx).
 		Where("file_id = ?", reqDTO.FileId).

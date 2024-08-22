@@ -12,3 +12,10 @@ type GetProductReqDTO struct {
 	Name  string
 	Env   string
 }
+
+type ListProductReqDTO struct {
+	AppId    string
+	Env      string
+	PageNum  int
+	PageSize int
+}

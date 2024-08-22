@@ -304,15 +304,15 @@ func (r *CreatePipelineReqDTO) IsValid() error {
 }
 
 type UpdatePipelineReqDTO struct {
-	PipelineId int64               `json:"pipelineId"`
-	Name       string              `json:"name"`
-	Config     string              `json:"config"`
-	Operator   apisession.UserInfo `json:"operator"`
-	pipeline   deploy.Pipeline
+	Id       int64               `json:"id"`
+	Name     string              `json:"name"`
+	Config   string              `json:"config"`
+	Operator apisession.UserInfo `json:"operator"`
+	pipeline deploy.Pipeline
 }
 
 func (r *UpdatePipelineReqDTO) IsValid() error {
-	if r.PipelineId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	err := yaml.Unmarshal([]byte(r.Config), &r.pipeline)
@@ -326,12 +326,12 @@ func (r *UpdatePipelineReqDTO) IsValid() error {
 }
 
 type DeletePipelineReqDTO struct {
-	PipelineId int64               `json:"pipelineId"`
-	Operator   apisession.UserInfo `json:"operator"`
+	Id       int64               `json:"id"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeletePipelineReqDTO) IsValid() error {
-	if r.PipelineId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

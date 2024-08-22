@@ -4,13 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/LeeZXin/zall/deploy/modules/model/deploymd"
+	"github.com/LeeZXin/zall/meta/modules/model/appmd"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/deploy"
+	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zall/pkg/status"
+	"github.com/LeeZXin/zall/pkg/teamhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"gopkg.in/yaml.v3"
@@ -18,7 +26,106 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 )
+
+var (
+	initPsubOnce = sync.Once{}
+)
+
+func initPsub() {
+	initPsubOnce.Do(func() {
+		psub.Subscribe(event.AppSourceTopic, func(data any) {
+			req, ok := data.(event.AppSourceEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppManageServiceSourceAction:
+							return cfg.AppSource.ManageServiceSource
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+		psub.Subscribe(event.AppDeployServiceTopic, func(data any) {
+			req, ok := data.(event.AppDeployServiceEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Source.Env]
+					if ok {
+						switch req.Action {
+						case event.AppDeployServiceTriggerActionAction:
+							return cfg.AppDeployService.TriggerAction
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+		psub.Subscribe(event.AppDeployPipelineTopic, func(data any) {
+			req, ok := data.(event.AppDeployPipelineEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppDeployPipelineCreatePipelineAction:
+							return cfg.AppDeployPipeline.Create
+						case event.AppDeployPipelineUpdatePipelineAction:
+							return cfg.AppDeployPipeline.Update
+						case event.AppDeployPipelineDeletePipelineAction:
+							return cfg.AppDeployPipeline.Delete
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+		psub.Subscribe(event.AppDeployPipelineVarsTopic, func(data any) {
+			req, ok := data.(event.AppDeployPipelineVarsEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppDeployPipelineVarsCreateAction:
+							return cfg.AppDeployPipelineVars.Create
+						case event.AppDeployPipelineVarsUpdateAction:
+							return cfg.AppDeployPipelineVars.Update
+						case event.AppDeployPipelineVarsDeleteAction:
+							return cfg.AppDeployPipelineVars.Delete
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+	})
+}
 
 // CreatePlan 创建发布计划
 func CreatePlan(ctx context.Context, reqDTO CreatePlanReqDTO) error {
@@ -28,7 +135,7 @@ func CreatePlan(ctx context.Context, reqDTO CreatePlanReqDTO) error {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	pipeline, err := checkDeployPlanPermByPipelineId(ctx, reqDTO.Operator, reqDTO.PipelineId)
+	pipeline, app, team, err := checkDeployPlanPermByPipelineId(ctx, reqDTO.Operator, reqDTO.PipelineId)
 	if err != nil {
 		return err
 	}
@@ -41,7 +148,7 @@ func CreatePlan(ctx context.Context, reqDTO CreatePlanReqDTO) error {
 	if b {
 		return util.AlreadyExistsError()
 	}
-	_, err = deploymd.InsertPlan(ctx, deploymd.InsertPlanReqDTO{
+	plan, err := deploymd.InsertPlan(ctx, deploymd.InsertPlanReqDTO{
 		Name:           reqDTO.Name,
 		PlanStatus:     deploymd.PendingPlanStatus,
 		AppId:          pipeline.AppId,
@@ -55,6 +162,14 @@ func CreatePlan(ctx context.Context, reqDTO CreatePlanReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPlanEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		plan,
+		pipeline,
+		event.AppDeployPlanCreateAction,
+	)
 	return nil
 }
 
@@ -73,7 +188,7 @@ func StartPlan(ctx context.Context, reqDTO StartPlanReqDTO) error {
 	if !b || plan.PlanStatus != deploymd.PendingPlanStatus {
 		return util.InvalidArgsError()
 	}
-	pipeline, err := checkAppDevelopPermByPipelineId(ctx, reqDTO.Operator, plan.PipelineId)
+	pipeline, app, team, err := checkAppDevelopPermByPipelineId(ctx, reqDTO.Operator, plan.PipelineId)
 	if err != nil {
 		return err
 	}
@@ -118,6 +233,14 @@ func StartPlan(ctx context.Context, reqDTO StartPlanReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.OperationFailedError()
 	}
+	notifyPlanEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		plan,
+		pipeline,
+		event.AppDeployPlanStartAction,
+	)
 	return nil
 }
 
@@ -128,7 +251,7 @@ func RedoAgentStage(ctx context.Context, reqDTO RedoAgentStageReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	stage, plan, pipeline, err := checkAppDevelopPermByStageId(ctx, reqDTO.Operator, reqDTO.StageId)
+	stage, plan, pipeline, _, _, err := checkAppDevelopPermByStageId(ctx, reqDTO.Operator, reqDTO.StageId)
 	if err != nil {
 		return err
 	}
@@ -179,7 +302,7 @@ func ForceRedoNotSuccessfulAgentStages(ctx context.Context, reqDTO ForceRedoNotS
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	plan, pipeline, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
+	plan, pipeline, _, _, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
 	if err != nil {
 		return err
 	}
@@ -314,7 +437,7 @@ func ClosePlan(ctx context.Context, reqDTO ClosePlanReqDTO) error {
 	if !b || plan.PlanStatus.IsFinalStatus() {
 		return util.InvalidArgsError()
 	}
-	pipeline, err := checkAppDevelopPermByPipelineId(ctx, reqDTO.Operator, plan.PipelineId)
+	pipeline, app, team, err := checkAppDevelopPermByPipelineId(ctx, reqDTO.Operator, plan.PipelineId)
 	if err != nil {
 		return err
 	}
@@ -337,6 +460,14 @@ func ClosePlan(ctx context.Context, reqDTO ClosePlanReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPlanEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		plan,
+		pipeline,
+		event.AppDeployPlanCloseAction,
+	)
 	return nil
 }
 
@@ -347,7 +478,8 @@ func ListPlan(ctx context.Context, reqDTO ListPlanReqDTO) ([]PlanDTO, int64, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	_, _, err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
 		return nil, 0, err
 	}
 	const pageSize = 10
@@ -384,7 +516,7 @@ func GetPlanDetail(ctx context.Context, reqDTO GetPlanDetailReqDTO) (PlanDetailD
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	plan, pipeline, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
+	plan, pipeline, _, _, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
 	if err != nil {
 		return PlanDetailDTO{}, err
 	}
@@ -415,10 +547,11 @@ func CreatePipeline(ctx context.Context, reqDTO CreatePipelineReqDTO) error {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+	app, team, err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
+	if err != nil {
 		return err
 	}
-	err := deploymd.InsertPipeline(ctx, deploymd.InsertPipelineReqDTO{
+	pipeline, err := deploymd.InsertPipeline(ctx, deploymd.InsertPipelineReqDTO{
 		AppId:  reqDTO.AppId,
 		Config: reqDTO.Config,
 		Env:    reqDTO.Env,
@@ -428,6 +561,13 @@ func CreatePipeline(ctx context.Context, reqDTO CreatePipelineReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPipelineEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		pipeline,
+		event.AppDeployPipelineCreatePipelineAction,
+	)
 	return nil
 }
 
@@ -439,18 +579,26 @@ func UpdatePipeline(ctx context.Context, reqDTO UpdatePipelineReqDTO) error {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err := checkPipelinePermByPipelineId(ctx, reqDTO.PipelineId, reqDTO.Operator); err != nil {
+	pipeline, app, team, err := checkPipelinePermByPipelineId(ctx, reqDTO.Id, reqDTO.Operator)
+	if err != nil {
 		return err
 	}
-	_, err := deploymd.UpdatePipeline(ctx, deploymd.UpdatePipelineReqDTO{
-		PipelineId: reqDTO.PipelineId,
-		Name:       reqDTO.Name,
-		Config:     reqDTO.Config,
+	_, err = deploymd.UpdatePipeline(ctx, deploymd.UpdatePipelineReqDTO{
+		Id:     reqDTO.Id,
+		Name:   reqDTO.Name,
+		Config: reqDTO.Config,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPipelineEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		pipeline,
+		event.AppDeployPipelineUpdatePipelineAction,
+	)
 	return nil
 }
 
@@ -462,11 +610,12 @@ func DeletePipeline(ctx context.Context, reqDTO DeletePipelineReqDTO) error {
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err := checkPipelinePermByPipelineId(ctx, reqDTO.PipelineId, reqDTO.Operator); err != nil {
+	pipeline, app, team, err := checkPipelinePermByPipelineId(ctx, reqDTO.Id, reqDTO.Operator)
+	if err != nil {
 		return err
 	}
 	// 存在正在执行的发布计划
-	b, err := deploymd.ExistPendingOrRunningPlanByPipelineId(ctx, reqDTO.PipelineId)
+	b, err := deploymd.ExistPendingOrRunningPlanByPipelineId(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -474,11 +623,18 @@ func DeletePipeline(ctx context.Context, reqDTO DeletePipelineReqDTO) error {
 	if b {
 		return util.AlreadyExistsError()
 	}
-	_, err = deploymd.DeletePipelineById(ctx, reqDTO.PipelineId)
+	_, err = deploymd.DeletePipelineById(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPipelineEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		pipeline,
+		event.AppDeployPipelineDeletePipelineAction,
+	)
 	return nil
 }
 
@@ -490,7 +646,8 @@ func ListPipeline(ctx context.Context, reqDTO ListPipelineReqDTO) ([]PipelineDTO
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+	_, _, err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
+	if err != nil {
 		return nil, err
 	}
 	pipelines, err := deploymd.ListPipeline(ctx, deploymd.ListPipelineReqDTO{
@@ -521,7 +678,8 @@ func ListPipelineWhenCreatePlan(ctx context.Context, reqDTO ListPipelineWhenCrea
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	if err := checkDeployPlanPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId); err != nil {
+	_, _, err := checkDeployPlanPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	if err != nil {
 		return nil, err
 	}
 	pipelines, err := deploymd.ListPipeline(ctx, deploymd.ListPipelineReqDTO{
@@ -550,7 +708,7 @@ func ListStages(ctx context.Context, reqDTO ListStagesReqDTO) ([]StageDTO, error
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	plan, srv, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
+	plan, srv, _, _, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
 	if err != nil {
 		return nil, err
 	}
@@ -686,7 +844,7 @@ func KillStage(ctx context.Context, reqDTO KillStageReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	plan, _, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
+	plan, _, _, _, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
 	if err != nil {
 		return err
 	}
@@ -738,7 +896,7 @@ func ConfirmInteractStage(ctx context.Context, reqDTO ConfirmInteractStageReqDTO
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	plan, pipeline, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
+	plan, pipeline, _, _, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
 	if err != nil {
 		return err
 	}
@@ -943,7 +1101,8 @@ func ListPipelineVars(ctx context.Context, reqDTO ListPipelineVarsReqDTO) ([]Pip
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	if err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+	_, _, err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
+	if err != nil {
 		return nil, err
 	}
 	vars, err := deploymd.ListPipelineVars(ctx, reqDTO.AppId, reqDTO.Env, []string{"id", "app_id", "env", "name"})
@@ -969,7 +1128,8 @@ func CreatePipelineVars(ctx context.Context, reqDTO CreatePipelineVarsReqDTO) er
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	if err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator); err != nil {
+	app, team, err := checkManagePipelinePermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
+	if err != nil {
 		return err
 	}
 	b, err := deploymd.ExistPipelineVarsByAppIdAndEnvAndName(ctx, reqDTO.AppId, reqDTO.Env, reqDTO.Name)
@@ -980,7 +1140,7 @@ func CreatePipelineVars(ctx context.Context, reqDTO CreatePipelineVarsReqDTO) er
 	if b {
 		return util.AlreadyExistsError()
 	}
-	err = deploymd.InsertPipelineVars(ctx, deploymd.InsertPipelineVarsReqDTO{
+	vars, err := deploymd.InsertPipelineVars(ctx, deploymd.InsertPipelineVarsReqDTO{
 		AppId:   reqDTO.AppId,
 		Env:     reqDTO.Env,
 		Name:    reqDTO.Name,
@@ -990,6 +1150,13 @@ func CreatePipelineVars(ctx context.Context, reqDTO CreatePipelineVarsReqDTO) er
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPipelineVarsEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		vars,
+		event.AppDeployPipelineVarsCreateAction,
+	)
 	return nil
 }
 
@@ -1001,10 +1168,11 @@ func UpdatePipelineVars(ctx context.Context, reqDTO UpdatePipelineVarsReqDTO) er
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	if _, err := checkManagePipelinePermByVarsId(ctx, reqDTO.Id, reqDTO.Operator); err != nil {
+	vars, app, team, err := checkManagePipelinePermByVarsId(ctx, reqDTO.Id, reqDTO.Operator)
+	if err != nil {
 		return err
 	}
-	_, err := deploymd.UpdatePipelineVars(ctx, deploymd.UpdatePipelineVarsReqDTO{
+	_, err = deploymd.UpdatePipelineVars(ctx, deploymd.UpdatePipelineVarsReqDTO{
 		Id:      reqDTO.Id,
 		Content: reqDTO.Content,
 	})
@@ -1012,6 +1180,13 @@ func UpdatePipelineVars(ctx context.Context, reqDTO UpdatePipelineVarsReqDTO) er
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPipelineVarsEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		vars,
+		event.AppDeployPipelineVarsUpdateAction,
+	)
 	return nil
 }
 
@@ -1023,14 +1198,22 @@ func DeletePipelineVars(ctx context.Context, reqDTO DeletePipelineVarsReqDTO) er
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	if _, err := checkManagePipelinePermByVarsId(ctx, reqDTO.Id, reqDTO.Operator); err != nil {
+	vars, app, team, err := checkManagePipelinePermByVarsId(ctx, reqDTO.Id, reqDTO.Operator)
+	if err != nil {
 		return err
 	}
-	_, err := deploymd.DeletePipelineVarsById(ctx, reqDTO.Id)
+	_, err = deploymd.DeletePipelineVarsById(ctx, reqDTO.Id)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyPipelineVarsEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		vars,
+		event.AppDeployPipelineVarsDeleteAction,
+	)
 	return nil
 }
 
@@ -1042,7 +1225,7 @@ func GetPipelineVarsContent(ctx context.Context, reqDTO GetPipelineVarsContentRe
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 检查权限
-	vars, err := checkManagePipelinePermByVarsId(ctx, reqDTO.Id, reqDTO.Operator)
+	vars, _, _, err := checkManagePipelinePermByVarsId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return PipelineVarsDTO{}, err
 	}
@@ -1062,12 +1245,12 @@ func ListServiceStatus(ctx context.Context, reqDTO ListServiceStatusReqDTO) ([]s
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	appId, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
+	app, _, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return nil, err
 	}
 	url := strings.TrimSuffix(source.Host, "/") +
-		fmt.Sprintf("/api/service/v1/status/list?app=%s&env=%s", appId, source.Env)
+		fmt.Sprintf("/api/service/v1/status/list?app=%s&env=%s", app.AppId, source.Env)
 	resp := make([]status.Service, 0)
 	err = httputil.Get(
 		ctx,
@@ -1092,7 +1275,7 @@ func DoStatusAction(ctx context.Context, reqDTO DoStatusActionReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
+	app, team, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return err
 	}
@@ -1123,10 +1306,18 @@ func DoStatusAction(ctx context.Context, reqDTO DoStatusActionReqDTO) error {
 				logger.Logger.WithContext(ctx).Infof("url: %s message: %s", url, string(all))
 				return util.OperationFailedError()
 			}
+			notifyDeployServiceEvent(
+				reqDTO.Operator,
+				team,
+				app,
+				source,
+				event.AppDeployServiceTriggerActionAction,
+				reqDTO.Action,
+			)
 			return nil
 		}
 	}
-	return util.OperationFailedError()
+	return nil
 }
 
 // ListStatusActions 获取服务操作列表
@@ -1136,7 +1327,7 @@ func ListStatusActions(ctx context.Context, reqDTO ListStatusActionReqDTO) ([]st
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
+	_, _, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return nil, err
 	}
@@ -1158,7 +1349,7 @@ func ListBindServiceSource(ctx context.Context, reqDTO ListBindServiceSourceReqD
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	_, _, err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
 	if err != nil {
 		return nil, err
 	}
@@ -1199,7 +1390,7 @@ func BindAppAndServiceSource(ctx context.Context, reqDTO BindAppAndServiceSource
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err := checkManageServiceSourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	app, team, err := checkManageServiceSourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
 	if err != nil {
 		return err
 	}
@@ -1208,6 +1399,13 @@ func BindAppAndServiceSource(ctx context.Context, reqDTO BindAppAndServiceSource
 		if err != nil {
 			return util.InternalError(err)
 		}
+		notifyServiceSourceEvent(
+			reqDTO.Operator,
+			team,
+			app,
+			nil,
+			reqDTO.Env,
+		)
 		return nil
 	}
 	// 校验sourceIdList
@@ -1244,6 +1442,13 @@ func BindAppAndServiceSource(ctx context.Context, reqDTO BindAppAndServiceSource
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyServiceSourceEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		sources,
+		reqDTO.Env,
+	)
 	return nil
 }
 
@@ -1263,4 +1468,145 @@ func listActions(ctx context.Context, source deploymd.ServiceSource) ([]status.A
 		return nil, err
 	}
 	return resp, nil
+}
+
+func notifyDeployServiceEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, source deploymd.ServiceSource, action event.AppDeployServiceEventAction, triggerAction string) {
+	initPsub()
+	psub.Publish(event.AppDeployServiceTopic, event.AppDeployServiceEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		Action:        action,
+		TriggerAction: triggerAction,
+		Source: event.AppSource{
+			Id:   source.Id,
+			Name: source.Name,
+			Env:  source.Env,
+		},
+	})
+}
+
+func notifyServiceSourceEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, sources []deploymd.ServiceSource, env string) {
+	initPsub()
+	srcs, _ := listutil.Map(sources, func(t deploymd.ServiceSource) (event.AppSource, error) {
+		return event.AppSource{
+			Id:   t.Id,
+			Name: t.Name,
+			Env:  t.Env,
+		}, nil
+	})
+	psub.Publish(event.AppSourceTopic, event.AppSourceEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, event.AppManageServiceSourceAction.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, event.AppManageServiceSourceAction.GetI18nValue()),
+		},
+		Env:     env,
+		Action:  event.AppManageServiceSourceAction,
+		Sources: srcs,
+	})
+}
+
+func notifyPipelineEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, pipeline deploymd.Pipeline, action event.AppDeployPipelineEventAction) {
+	initPsub()
+	psub.Publish(event.AppDeployPipelineTopic, event.AppDeployPipelineEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		BasePipeline: event.BasePipeline{
+			PipelineId:   pipeline.Id,
+			PipelineName: pipeline.Name,
+			Env:          pipeline.Env,
+		},
+		Action: action,
+	})
+}
+
+func notifyPipelineVarsEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, vars deploymd.PipelineVars, action event.AppDeployPipelineVarsEventAction) {
+	initPsub()
+	psub.Publish(event.AppDeployPipelineVarsTopic, event.AppDeployPipelineVarsEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		VarsId:   vars.Id,
+		VarsName: vars.Name,
+		Env:      vars.Env,
+		Action:   action,
+	})
+}
+
+func notifyPlanEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, plan deploymd.Plan, pipeline deploymd.Pipeline, action event.AppDeployPlanEventAction) {
+	initPsub()
+	psub.Publish(event.AppDeployPlanTopic, event.AppDeployPlanEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		BasePipeline: event.BasePipeline{
+			PipelineId:   pipeline.Id,
+			PipelineName: pipeline.Name,
+			Env:          pipeline.Env,
+		},
+		Action:   action,
+		PlanId:   plan.Id,
+		PlanName: plan.Name,
+		Env:      plan.Env,
+	})
 }

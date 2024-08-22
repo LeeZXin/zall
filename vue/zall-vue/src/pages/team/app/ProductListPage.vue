@@ -16,6 +16,16 @@
         </div>
       </template>
     </ZTable>
+    <a-pagination
+      v-model:current="dataPage.current"
+      :total="dataPage.totalCount"
+      show-less-items
+      :pageSize="dataPage.pageSize"
+      style="margin-top:10px"
+      :hideOnSinglePage="true"
+      :showSizeChanger="false"
+      @change="()=>listProduct()"
+    />
   </div>
 </template>
 <script setup>
@@ -25,7 +35,7 @@ import {
 } from "@ant-design/icons-vue";
 import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
-import { ref, createVNode } from "vue";
+import { ref, createVNode, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { listProductRequest, deleteProductRequest } from "@/api/app/productApi";
 import { message, Modal } from "ant-design-vue";
@@ -33,6 +43,11 @@ const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
 const dataSource = ref([]);
+const dataPage = reactive({
+  current: 1,
+  pageSize: 10,
+  totalCount: 0
+});
 const columns = [
   {
     title: "制品号",
@@ -59,10 +74,12 @@ const listProduct = () => {
   listProductRequest(
     {
       appId: route.params.appId,
-      env: selectedEnv.value
+      env: selectedEnv.value,
+      pageNum: dataPage.current
     },
     selectedEnv.value
   ).then(res => {
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -76,11 +93,10 @@ const deleteProduct = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteProductRequest(item.id, item.env).then(() => {
         message.success("删除成功");
+        dataPage.current = 1;
         listProduct();
       });
     },

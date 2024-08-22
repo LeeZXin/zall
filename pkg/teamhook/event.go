@@ -16,13 +16,15 @@ type Events struct {
 }
 
 type EnvRelatedCfg struct {
-	AppSource          event.AppSourceEventCfg          `json:"appSource"`
-	AppPropertyFile    event.AppPropertyFileEventCfg    `json:"appPropertyFile"`
-	AppPropertyVersion event.AppPropertyVersionEventCfg `json:"appPropertyVersion"`
-	AppPipeline        event.AppPipelineEventCfg        `json:"appPipeline"`
-	AppPipelineVars    event.AppPipelineVarsEventCfg    `json:"appPipelineVars"`
-	AppDeployPlan      event.AppDeployPlanEventCfg      `json:"appDeployPlan"`
-	AppProduct         event.AppProductEventCfg         `json:"appProduct"`
-	Timer              event.TimerEventCfg              `json:"timer"`
-	TimerTask          event.TimerTaskEventCfg          `json:"timerTask"`
+	AppSource             event.AppSourceEventCfg          `json:"appSource"`
+	AppPropertyFile       event.AppPropertyFileEventCfg    `json:"appPropertyFile"`
+	AppPropertyVersion    event.AppPropertyVersionEventCfg `json:"appPropertyVersion"`
+	AppDeployPipeline     event.AppDeployPipelineEventCfg  `json:"appDeployPipeline"`
+	AppDeployPipelineVars event.AppPipelineVarsEventCfg    `json:"appDeployPipelineVars"`
+	AppDeployPlan         event.AppDeployPlanEventCfg      `json:"appDeployPlan"`
+	AppProduct            event.AppProductEventCfg         `json:"appProduct"`
+	AppDiscovery          event.AppDiscoveryEventCfg       `json:"appDiscovery"`
+	AppDeployService      event.AppDeployServiceEventCfg   `json:"appDeployService"`
+	Timer                 event.TimerEventCfg              `json:"timer"`
+	TimerTask             event.TimerTaskEventCfg          `json:"timerTask"`
 }

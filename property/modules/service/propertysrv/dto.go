@@ -291,13 +291,13 @@ func (r *DeployHistoryReqDTO) IsValid() error {
 	return nil
 }
 
-type PageHistoryReqDTO struct {
+type ListHistoryReqDTO struct {
 	FileId   int64               `json:"fileId"`
 	PageNum  int                 `json:"pageNum"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *PageHistoryReqDTO) IsValid() error {
+func (r *ListHistoryReqDTO) IsValid() error {
 	if r.FileId <= 0 {
 		return util.InvalidArgsError()
 	}

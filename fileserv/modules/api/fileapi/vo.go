@@ -6,3 +6,9 @@ type ProductVO struct {
 	Creator string `json:"creator"`
 	Created string `json:"created"`
 }
+
+type ListProductReqVO struct {
+	AppId   string `json:"appId"`
+	Env     string `json:"env"`
+	PageNum int    `json:"pageNum"`
+}

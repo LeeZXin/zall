@@ -557,10 +557,10 @@ func updatePipeline(c *gin.Context) {
 	var req UpdatePipelineReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.UpdatePipeline(c, deploysrv.UpdatePipelineReqDTO{
-			PipelineId: req.PipelineId,
-			Name:       req.Name,
-			Config:     req.Config,
-			Operator:   apisession.MustGetLoginUser(c),
+			Id:       req.PipelineId,
+			Name:     req.Name,
+			Config:   req.Config,
+			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -572,8 +572,8 @@ func updatePipeline(c *gin.Context) {
 
 func deletePipeline(c *gin.Context) {
 	err := deploysrv.DeletePipeline(c, deploysrv.DeletePipelineReqDTO{
-		PipelineId: cast.ToInt64(c.Param("pipelineId")),
-		Operator:   apisession.MustGetLoginUser(c),
+		Id:       cast.ToInt64(c.Param("pipelineId")),
+		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)

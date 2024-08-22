@@ -9,8 +9,13 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/teamhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/actuator"
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
@@ -20,8 +25,62 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
+
+var (
+	initPsubOnce = sync.Once{}
+)
+
+func initPsub() {
+	initPsubOnce.Do(func() {
+		psub.Subscribe(event.AppSourceTopic, func(data any) {
+			req, ok := data.(event.AppSourceEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppManageDiscoverySourceAction:
+							return cfg.AppSource.ManageDiscoverySource
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+		psub.Subscribe(event.AppDiscoveryTopic, func(data any) {
+			req, ok := data.(event.AppDiscoveryEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Source.Env]
+					if ok {
+						switch req.Action {
+						case event.AppDiscoveryDeregisterAction:
+							return cfg.AppDiscovery.Deregister
+						case event.AppDiscoveryReRegisterAction:
+							return cfg.AppDiscovery.ReRegister
+						case event.AppDiscoveryDeleteDownServiceAction:
+							return cfg.AppDiscovery.DeleteDownService
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+	})
+}
 
 // ListDiscoverySource 注册中心来源
 func ListDiscoverySource(ctx context.Context, reqDTO ListDiscoverySourceReqDTO) ([]DiscoverySourceDTO, error) {
@@ -82,7 +141,7 @@ func BindAppAndDiscoverySource(ctx context.Context, reqDTO BindAppAndDiscoverySo
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkManageDiscoverySourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	app, team, err := checkManageDiscoverySourcePermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
 	if err != nil {
 		return err
 	}
@@ -94,7 +153,7 @@ func BindAppAndDiscoverySource(ctx context.Context, reqDTO BindAppAndDiscoverySo
 		}
 		return nil
 	}
-	nodes, err := discoverymd.BatchGetEtcdNodeByIdList(ctx, reqDTO.SourceIdList, []string{"id", "env"})
+	nodes, err := discoverymd.BatchGetEtcdNodeByIdList(ctx, reqDTO.SourceIdList, []string{"id", "name", "env"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -127,6 +186,13 @@ func BindAppAndDiscoverySource(ctx context.Context, reqDTO BindAppAndDiscoverySo
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyDiscoverySourceEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		nodes,
+		reqDTO.Env,
+	)
 	return nil
 }
 
@@ -137,7 +203,7 @@ func ListBindDiscoverySource(ctx context.Context, reqDTO ListBindDiscoverySource
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
+	_, _, err := checkAppDevelopPermByAppId(ctx, reqDTO.Operator, reqDTO.AppId)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +304,7 @@ func ListDiscoveryService(ctx context.Context, reqDTO ListDiscoveryServiceReqDTO
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	appId, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
+	app, _, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +315,7 @@ func ListDiscoveryService(ctx context.Context, reqDTO ListDiscoveryServiceReqDTO
 	}
 	defer client.Close()
 	kv := clientv3.NewKV(client)
-	prefix := common.ServicePrefix + appId + "-http/"
+	prefix := common.ServicePrefix + app.AppId + "-http/"
 	response, err := kv.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -267,7 +333,7 @@ func ListDiscoveryService(ctx context.Context, reqDTO ListDiscoveryServiceReqDTO
 			})
 		}
 	}
-	services, err := discoverymd.ListDownServiceBySourceIdAndAppId(ctx, source.Id, appId)
+	services, err := discoverymd.ListDownServiceBySourceIdAndAppId(ctx, source.Id, app.AppId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
@@ -292,7 +358,7 @@ func DeregisterService(ctx context.Context, reqDTO DeregisterServiceReqDTO) erro
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	appId, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
+	app, team, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return err
 	}
@@ -311,7 +377,7 @@ func DeregisterService(ctx context.Context, reqDTO DeregisterServiceReqDTO) erro
 	}
 	defer client.Close()
 	kv := clientv3.NewKV(client)
-	response, err := kv.Get(ctx, common.ServicePrefix+appId+"-http/"+reqDTO.InstanceId)
+	response, err := kv.Get(ctx, common.ServicePrefix+app.AppId+"-http/"+reqDTO.InstanceId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -327,7 +393,7 @@ func DeregisterService(ctx context.Context, reqDTO DeregisterServiceReqDTO) erro
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		err2 := discoverymd.InsertDownService(ctx, discoverymd.InsertDownServiceDTO{
 			SourceId:   source.Id,
-			AppId:      appId,
+			AppId:      app.AppId,
 			Service:    s,
 			InstanceId: reqDTO.InstanceId,
 		})
@@ -348,6 +414,13 @@ func DeregisterService(ctx context.Context, reqDTO DeregisterServiceReqDTO) erro
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.OperationFailedError()
 	}
+	notifyDiscoveryEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		event.AppDiscoveryDeregisterAction,
+		source,
+	)
 	time.Sleep(time.Second)
 	return nil
 }
@@ -359,7 +432,7 @@ func ReRegisterService(ctx context.Context, reqDTO ReRegisterServiceReqDTO) erro
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
+	app, team, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return err
 	}
@@ -390,6 +463,13 @@ func ReRegisterService(ctx context.Context, reqDTO ReRegisterServiceReqDTO) erro
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.OperationFailedError()
 	}
+	notifyDiscoveryEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		event.AppDiscoveryReRegisterAction,
+		source,
+	)
 	time.Sleep(time.Second)
 	return nil
 }
@@ -401,7 +481,7 @@ func DeleteDownService(ctx context.Context, reqDTO DeleteDownServiceReqDTO) erro
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
+	app, team, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return err
 	}
@@ -418,6 +498,13 @@ func DeleteDownService(ctx context.Context, reqDTO DeleteDownServiceReqDTO) erro
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyDiscoveryEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		event.AppDiscoveryDeleteDownServiceAction,
+		source,
+	)
 	return nil
 }
 
@@ -431,80 +518,152 @@ func newEtcdClient(node discoverymd.EtcdNode) (*clientv3.Client, error) {
 	})
 }
 
-func checkAppDevelopPermByBindId(ctx context.Context, operator apisession.UserInfo, bindId int64) (string, discoverymd.EtcdNode, error) {
+func checkAppDevelopPermByBindId(ctx context.Context, operator apisession.UserInfo, bindId int64) (appmd.App, teammd.Team, discoverymd.EtcdNode, error) {
 	bind, b, err := discoverymd.GetAppEtcdNodeBindById(ctx, bindId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return "", discoverymd.EtcdNode{}, util.InternalError(err)
+		return appmd.App{}, teammd.Team{}, discoverymd.EtcdNode{}, util.InternalError(err)
 	}
 	if !b {
-		return "", discoverymd.EtcdNode{}, util.InvalidArgsError()
+		return appmd.App{}, teammd.Team{}, discoverymd.EtcdNode{}, util.InvalidArgsError()
 	}
 	node, b, err := discoverymd.GetEtcdNodeById(ctx, bind.NodeId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return "", discoverymd.EtcdNode{}, util.InternalError(err)
+		return appmd.App{}, teammd.Team{}, discoverymd.EtcdNode{}, util.InternalError(err)
 	}
 	if !b {
-		return "", discoverymd.EtcdNode{}, util.InvalidArgsError()
+		return appmd.App{}, teammd.Team{}, discoverymd.EtcdNode{}, util.InvalidArgsError()
 	}
-	return bind.AppId, node, checkAppDevelopPermByAppId(ctx, operator, bind.AppId)
+	app, team, err := checkAppDevelopPermByAppId(ctx, operator, bind.AppId)
+	return app, team, node, err
 }
 
-func checkManageDiscoverySourcePermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
+func checkManageDiscoverySourcePermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) (appmd.App, teammd.Team, error) {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return appmd.App{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, app.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return appmd.App{}, teammd.Team{}, util.InvalidArgsError()
 	}
 	if operator.IsAdmin {
-		return nil
+		return app, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return app, team, util.InternalError(err)
 	}
 	if !b {
-		return util.UnauthorizedError()
+		return app, team, util.UnauthorizedError()
 	}
 	if p.IsAdmin {
-		return nil
+		return app, team, nil
 	}
 	if p.PermDetail.GetAppPerm(appId).CanManageDiscoverySource {
-		return nil
+		return app, team, nil
 	}
-	return util.UnauthorizedError()
+	return app, team, util.UnauthorizedError()
 }
 
-func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) error {
+func checkAppDevelopPermByAppId(ctx context.Context, operator apisession.UserInfo, appId string) (appmd.App, teammd.Team, error) {
 	app, b, err := appmd.GetByAppId(ctx, appId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return appmd.App{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, app.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return appmd.App{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return appmd.App{}, teammd.Team{}, util.ThereHasBugErr()
 	}
 	if operator.IsAdmin {
-		return nil
+		return app, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, app.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return app, team, util.InternalError(err)
 	}
 	if !b {
-		return util.UnauthorizedError()
+		return app, team, util.UnauthorizedError()
 	}
-	if p.IsAdmin {
-		return nil
+	if p.IsAdmin || p.PermDetail.GetAppPerm(appId).CanDevelop {
+		return app, team, nil
 	}
-	if p.PermDetail.GetAppPerm(appId).CanDevelop {
-		return nil
-	}
-	return util.UnauthorizedError()
+	return app, team, util.UnauthorizedError()
+}
+
+func notifyDiscoveryEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, action event.AppDiscoveryEventAction, source discoverymd.EtcdNode) {
+	initPsub()
+	psub.Publish(event.AppDiscoveryTopic, event.AppDiscoveryEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		Action: action,
+		Source: event.AppSource{
+			Id:   source.Id,
+			Name: source.Name,
+			Env:  source.Env,
+		},
+	})
+}
+
+func notifyDiscoverySourceEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, sources []discoverymd.EtcdNode, env string) {
+	initPsub()
+	srcs, _ := listutil.Map(sources, func(t discoverymd.EtcdNode) (event.AppSource, error) {
+		return event.AppSource{
+			Id:   t.Id,
+			Name: t.Name,
+			Env:  t.Env,
+		}, nil
+	})
+	psub.Publish(event.AppSourceTopic, event.AppSourceEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, event.AppManageDiscoverySourceAction.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, event.AppManageDiscoverySourceAction.GetI18nValue()),
+		},
+		Env:     env,
+		Action:  event.AppManageDiscoverySourceAction,
+		Sources: srcs,
+	})
 }

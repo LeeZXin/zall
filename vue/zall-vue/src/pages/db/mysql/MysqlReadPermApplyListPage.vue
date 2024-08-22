@@ -41,10 +41,10 @@
       </template>
     </ZTable>
     <a-pagination
-      v-model:current="currPage"
-      :total="totalCount"
+      v-model:current="dataPage.current"
+      :total="dataPage.totalCount"
       show-less-items
-      :pageSize="pageSize"
+      :pageSize="dataPage.pageSize"
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
@@ -65,15 +65,17 @@ import {
   listReadPermApplyByOperatorRequest,
   cancelReadPermApplyRequest
 } from "@/api/db/mysqlApi";
-import { ref, h, createVNode } from "vue";
+import { ref, h, createVNode, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { Modal, message } from "ant-design-vue";
 const router = useRouter();
 const dataSource = ref([]);
 const applyStatus = ref(1);
-const currPage = ref(1);
-const pageSize = 10;
-const totalCount = ref(0);
+const dataPage = reactive({
+  current: 1,
+  pageSize: 10,
+  totalCount: 0
+});
 const columns = ref([
   {
     title: "数据库名称",
@@ -320,10 +322,10 @@ const gotoCreatePage = () => {
 
 const listApply = () => {
   listReadPermApplyByOperatorRequest({
-    pageNum: currPage.value,
+    pageNum: dataPage.current,
     applyStatus: applyStatus.value
   }).then(res => {
-    totalCount.value = res.totalCount;
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -340,7 +342,7 @@ const cancelApply = item => {
     onOk() {
       cancelReadPermApplyRequest(item.id).then(() => {
         message.success("撤销成功");
-        currPage.value = 1;
+        dataPage.current = 1;
         listApply();
       });
     },

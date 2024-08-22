@@ -65,27 +65,35 @@ func deleteProduct(c *gin.Context) {
 }
 
 func listProduct(c *gin.Context) {
-	products, err := filesrv.ListProduct(c, filesrv.ListProductReqDTO{
-		AppId:    c.Query("appId"),
-		Env:      c.Query("env"),
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
+	var req ListProductReqVO
+	if util.ShouldBindQuery(&req, c) {
+		products, total, err := filesrv.ListProduct(c, filesrv.ListProductReqDTO{
+			AppId:    req.AppId,
+			Env:      req.Env,
+			PageNum:  req.PageNum,
+			Operator: apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		data, _ := listutil.Map(products, func(t filesrv.ProductDTO) (ProductVO, error) {
+			return ProductVO{
+				Id:      t.Id,
+				Name:    t.Name,
+				Creator: t.Creator,
+				Created: t.Created.Format(time.DateTime),
+			}, nil
+		})
+		c.JSON(http.StatusOK, ginutil.Page2Resp[ProductVO]{
+			DataResp: ginutil.DataResp[[]ProductVO]{
+				BaseResp: ginutil.DefaultSuccessResp,
+				Data:     data,
+			},
+			PageNum:    req.PageNum,
+			TotalCount: total,
+		})
 	}
-	data, _ := listutil.Map(products, func(t filesrv.ProductDTO) (ProductVO, error) {
-		return ProductVO{
-			Id:      t.Id,
-			Name:    t.Name,
-			Creator: t.Creator,
-			Created: t.Created.Format(time.DateTime),
-		}, nil
-	})
-	c.JSON(http.StatusOK, ginutil.DataResp[[]ProductVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
-	})
 }
 
 func checkProductToken(c *gin.Context) {

@@ -8,6 +8,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/perm"
 	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/promagent/modules/model/prommd"
@@ -443,6 +444,8 @@ func notifyEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, 
 			Operator:     operator.Account,
 			OperatorName: operator.Name,
 			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 		},
 		Action: action,
 	})
@@ -463,6 +466,8 @@ func notifyTransferEvent(operator apisession.UserInfo, team teammd.Team, app app
 			Operator:     operator.Account,
 			OperatorName: operator.Name,
 			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, event.AppTransferAction.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, event.AppTransferAction.GetI18nValue()),
 		},
 		Action: event.AppTransferAction,
 		TransferTeam: &event.BaseTeam{

@@ -159,15 +159,15 @@ const defaultEnvRelated = {
     delete: false
   },
   appPropertyVersion: {
-    create: false,
+    new: false,
     deploy: false
   },
-  appPipeline: {
+  appDeployPipeline: {
     create: false,
     delete: false,
     update: false
   },
-  appPipelineVars: {
+  appDeployPipelineVars: {
     create: false,
     delete: false,
     update: false
@@ -175,10 +175,17 @@ const defaultEnvRelated = {
   appDeployPlan: {
     create: false,
     close: false,
-    complete: false
+    start: false
+  },
+  appDeployService: {
+    triggerAction: false
+  },
+  appDiscovery: {
+    deregister: false,
+    reRegister: false,
+    deleteDownService: false
   },
   appProduct: {
-    create: false,
     delete: false
   },
   timer: {
@@ -231,7 +238,7 @@ const envRelatedEvents = [
     title: "配置版本",
     actions: [
       {
-        key: "create",
+        key: "new",
         title: "新增"
       },
       {
@@ -241,7 +248,7 @@ const envRelatedEvents = [
     ]
   },
   {
-    key: "appPipeline",
+    key: "appDeployPipeline",
     title: "部署流水线",
     actions: [
       {
@@ -259,7 +266,7 @@ const envRelatedEvents = [
     ]
   },
   {
-    key: "appPipelineVars",
+    key: "appDeployPipelineVars",
     title: "部署流水线变量",
     actions: [
       {
@@ -289,8 +296,36 @@ const envRelatedEvents = [
         title: "关闭"
       },
       {
-        key: "complete",
-        title: "完成"
+        key: "start",
+        title: "开始"
+      }
+    ]
+  },
+  {
+    key: "appDeployService",
+    title: "部署服务",
+    actions: [
+      {
+        key: "triggerAction",
+        title: "触发指令"
+      }
+    ]
+  },
+  {
+    key: "appDiscovery",
+    title: "注册中心",
+    actions: [
+      {
+        key: "deregister",
+        title: "线下服务"
+      },
+      {
+        key: "reRegister",
+        title: "上线服务"
+      },
+      {
+        key: "deleteDownService",
+        title: "删除下线服务"
       }
     ]
   },
@@ -298,10 +333,6 @@ const envRelatedEvents = [
     key: "appProduct",
     title: "应用制品",
     actions: [
-      {
-        key: "create",
-        title: "新增"
-      },
       {
         key: "delete",
         title: "删除"

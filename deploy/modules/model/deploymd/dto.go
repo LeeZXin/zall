@@ -70,9 +70,9 @@ type InsertPipelineReqDTO struct {
 }
 
 type UpdatePipelineReqDTO struct {
-	PipelineId int64
-	Name       string
-	Config     string
+	Id     int64
+	Name   string
+	Config string
 }
 
 type ListPipelineReqDTO struct {

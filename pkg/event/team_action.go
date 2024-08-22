@@ -39,6 +39,10 @@ const (
 
 type TeamRoleEventAction string
 
+func (t TeamRoleEventAction) GetI18nValue() string {
+	return "timerRoleEvent." + string(t)
+}
+
 const (
 	TeamRoleCreateAction TeamRoleEventAction = "create"
 	TeamRoleUpdateAction TeamRoleEventAction = "update"
@@ -46,6 +50,10 @@ const (
 )
 
 type TeamUserEventAction string
+
+func (t TeamUserEventAction) GetI18nValue() string {
+	return "timerUserEvent." + string(t)
+}
 
 const (
 	TeamUserCreateAction     TeamUserEventAction = "create"

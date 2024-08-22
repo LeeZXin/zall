@@ -11,4 +11,14 @@ const (
 	TeamUserTopic        = "team-user"
 	TimerTopic           = "timer"
 	TimerTaskTopic       = "timer-task"
+
+	AppPropertyFileTopic       = "app-property-file"
+	AppPropertyVersionTopic    = "app-property-version"
+	AppSourceTopic             = "app-source"
+	AppDiscoveryTopic          = "app-discovery"
+	AppDeployServiceTopic      = "app-deploy-service"
+	AppDeployPipelineTopic     = "app-deploy-pipeline"
+	AppDeployPipelineVarsTopic = "app-deploy-pipeline-vars"
+	AppDeployPlanTopic         = "app-deploy-plan"
+	AppProductTopic            = "app-product"
 )

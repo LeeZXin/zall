@@ -41,7 +41,7 @@ type InsertDeployReqDTO struct {
 	Creator   string
 }
 
-type PageHistoryReqDTO struct {
+type ListHistoryReqDTO struct {
 	FileId   int64
 	PageNum  int
 	PageSize int
