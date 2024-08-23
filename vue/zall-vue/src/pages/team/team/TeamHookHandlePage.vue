@@ -317,7 +317,7 @@ const envRelatedEvents = [
     actions: [
       {
         key: "deregister",
-        title: "线下服务"
+        title: "下线服务"
       },
       {
         key: "reRegister",

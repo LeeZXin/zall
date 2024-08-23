@@ -675,6 +675,50 @@ func ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]DeployDTO, erro
 	return ret, nil
 }
 
+func SearchFromSource(ctx context.Context, reqDTO SearchFromSourceReqDTO) (PropertyContentVal, bool, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return PropertyContentVal{}, false, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	file, _, _, err := checkAppDevelopPermByFileId(ctx, reqDTO.Operator, reqDTO.FileId)
+	if err != nil {
+		return PropertyContentVal{}, false, err
+	}
+	b, err := propertymd.ExistAppEtcdNodeBindByNodeIdAndAppIdAndEnv(ctx, reqDTO.SourceId, file.AppId, file.Env)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return PropertyContentVal{}, false, util.InternalError(err)
+	}
+	if !b {
+		return PropertyContentVal{}, false, util.InvalidArgsError()
+	}
+	node, b, err := propertymd.GetEtcdNodeById(ctx, reqDTO.SourceId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return PropertyContentVal{}, false, util.InternalError(err)
+	}
+	if !b {
+		return PropertyContentVal{}, false, util.ThereHasBugErr()
+	}
+	etcdClient, err := newEtcdClient(node)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return PropertyContentVal{}, false, util.OperationFailedError()
+	}
+	resp, err := etcdClient.Get(ctx, getPropertyPath(file))
+	etcdClient.Close()
+	if err != nil {
+		return PropertyContentVal{}, false, util.OperationFailedError()
+	}
+	if len(resp.Kvs) == 0 {
+		return PropertyContentVal{}, false, nil
+	}
+	var content PropertyContentVal
+	json.Unmarshal(resp.Kvs[0].Value, &content)
+	return content, true, nil
+}
+
 func deleteFromEtcd(file propertymd.File) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
@@ -698,7 +742,7 @@ func deleteFromEtcd(file propertymd.File) {
 			continue
 		}
 		kv := clientv3.NewKV(etcdClient)
-		_, err = kv.Delete(context.Background(), common.PropertyPrefix+file.AppId+"/"+file.Name)
+		_, err = kv.Delete(context.Background(), getPropertyPath(file))
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 		}
@@ -706,7 +750,11 @@ func deleteFromEtcd(file propertymd.File) {
 	}
 }
 
-type contentVal struct {
+func getPropertyPath(file propertymd.File) string {
+	return common.PropertyPrefix + file.AppId + "/" + file.Name
+}
+
+type PropertyContentVal struct {
 	Version string `json:"version"`
 	Content string `json:"content"`
 }
@@ -724,14 +772,11 @@ func deployToEtcd(file propertymd.File, history propertymd.History, node propert
 	defer etcdClient.Close()
 	kv := clientv3.NewKV(etcdClient)
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		jsonBytes, _ := json.Marshal(contentVal{
+		jsonBytes, _ := json.Marshal(PropertyContentVal{
 			Version: history.Version,
 			Content: history.Content,
 		})
-		_, err2 := kv.Put(ctx,
-			common.PropertyPrefix+file.AppId+"/"+file.Name,
-			string(jsonBytes),
-		)
+		_, err2 := kv.Put(ctx, getPropertyPath(file), string(jsonBytes))
 		if err2 != nil {
 			return err
 		}

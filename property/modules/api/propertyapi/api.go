@@ -42,6 +42,8 @@ func InitApi() {
 			group.GET("/listSource/:fileId", listPropertySourceByFileId)
 			// 删除文件
 			group.DELETE("/delete/:fileId", deleteFile)
+			// 搜索
+			group.GET("/searchFromSource", searchPropertyFromSource)
 		}
 		group = e.Group("/api/propertyHistory", apisession.CheckLogin)
 		{
@@ -271,6 +273,26 @@ func deleteFile(c *gin.Context) {
 		return
 	}
 	util.DefaultOkResponse(c)
+}
+
+func searchPropertyFromSource(c *gin.Context) {
+	contentVal, exist, err := propertysrv.SearchFromSource(c, propertysrv.SearchFromSourceReqDTO{
+		FileId:   cast.ToInt64(c.Query("fileId")),
+		SourceId: cast.ToInt64(c.Query("sourceId")),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[SearchFromSourceResult]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data: SearchFromSourceResult{
+			Version: contentVal.Version,
+			Content: contentVal.Content,
+			Exist:   exist,
+		},
+	})
 }
 
 func deployHistory(c *gin.Context) {

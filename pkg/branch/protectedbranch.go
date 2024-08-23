@@ -42,8 +42,6 @@ type ProtectedBranchCfg struct {
 	ReviewCountWhenCreatePr int `json:"reviewCountWhenCreatePr"`
 	// 代码评审员名单
 	ReviewerList AccountList `json:"reviewerList"`
-	// 撤销过时的审批
-	CancelOldReviewApprovalWhenNewCommit bool `json:"cancelOldReviewApprovalWhenNewCommit"`
 }
 
 func (c *ProtectedBranchCfg) IsValid() bool {

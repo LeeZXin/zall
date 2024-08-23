@@ -16,9 +16,10 @@ var (
 		CanCreateDeployPlan:      true,
 	}
 	DefaultTeamPerm = TeamPerm{
-		CanManageTimer:     true,
-		CanManageNotifyTpl: true,
-		CanManageTeamHook:  true,
+		CanManageTimer:      true,
+		CanManageNotifyTpl:  true,
+		CanManageTeamHook:   true,
+		CanManagePromScrape: true,
 	}
 	DefaultRepoPerm = RepoPerm{
 		CanAccessRepo:              true,
@@ -147,6 +148,8 @@ type TeamPerm struct {
 	CanManageNotifyTpl bool `json:"canManageNotifyTpl"`
 	// 是否可管理team hook
 	CanManageTeamHook bool `json:"canManageTeamHook"`
+	// 是否可管理prometheus抓取任务
+	CanManagePromScrape bool `json:"canManagePromScrape"`
 }
 
 type AppPerm struct {

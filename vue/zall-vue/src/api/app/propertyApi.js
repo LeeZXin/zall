@@ -32,6 +32,8 @@ const listAllPropertySourceRequest = (env) => request.get("/api/propertySource/l
 const listBindPropertySourceRequest = (data) => request.get("/api/propertySource/listBind", { params: data });
 // 绑定应用服务和配置来源
 const bindAppAndPropertySourceRequest = (data) => request.post("/api/propertySource/bindApp", data);
+// 从来源搜索配置
+const searchFromSourceRequest = (data) => request.get("/api/propertyFile/searchFromSource", { params: data });
 export {
     listPropertyFileRequest,
     createPropertyFileRequest,
@@ -48,5 +50,6 @@ export {
     deletePropertyFileRequest,
     listAllPropertySourceRequest,
     listBindPropertySourceRequest,
-    bindAppAndPropertySourceRequest
+    bindAppAndPropertySourceRequest,
+    searchFromSourceRequest
 }

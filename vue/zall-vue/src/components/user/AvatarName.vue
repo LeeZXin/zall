@@ -68,7 +68,7 @@ const goto = url => {
   padding: 0 10px;
 }
 .drawer-item:hover {
-  background-color: #f0f0f0;
+  color: #1677ff;
 }
 .drawer-item > span {
   margin-left: 6px;

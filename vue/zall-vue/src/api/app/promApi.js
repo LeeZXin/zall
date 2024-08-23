@@ -1,17 +1,29 @@
 import request from '@/utils/request.js'
 
 // prometheus抓取任务列表
-const listPromScrapeRequest = (data) => request.get("/api/promScrape/list", { params: data });
+const listPromScrapeBySaRequest = (data) => request.get("/api/promScrapeBySa/list", { params: data });
 // 创建prometheus抓取任务
-const createPromScrapeRequest = (data) => request.post("/api/promScrape/create", data);
+const createPromScrapeBySaRequest = (data) => request.post("/api/promScrapeBySa/create", data);
 // 编辑prometheus抓取任务
-const updatePromScrapeRequest = (data) => request.post("/api/promScrape/update", data);
+const updatePromScrapeBySaRequest = (data) => request.post("/api/promScrapeBySa/update", data);
 // 删除prometheus抓取任务
-const deletePromScrapeRequest = (scrapeId) => request.delete("/api/promScrape/delete/" + scrapeId);
+const deletePromScrapeBySaRequest = (scrapeId) => request.delete("/api/promScrapeBySa/delete/" + scrapeId);
+// prometheus抓取任务列表
+const listPromScrapeByTeamRequest = (data) => request.get("/api/promScrapeByTeam/list", { params: data });
+// 创建prometheus抓取任务
+const createPromScrapeByTeamRequest = (data) => request.post("/api/promScrapeByTeam/create", data);
+// 编辑prometheus抓取任务
+const updatePromScrapeByTeamRequest = (data) => request.post("/api/promScrapeByTeam/update", data);
+// 删除prometheus抓取任务
+const deletePromScrapeByTeamRequest = (scrapeId) => request.delete("/api/promScrapeByTeam/delete/" + scrapeId);
 
 export {
-    listPromScrapeRequest,
-    deletePromScrapeRequest,
-    createPromScrapeRequest,
-    updatePromScrapeRequest
+    listPromScrapeBySaRequest,
+    deletePromScrapeBySaRequest,
+    createPromScrapeBySaRequest,
+    updatePromScrapeBySaRequest,
+    listPromScrapeByTeamRequest,
+    createPromScrapeByTeamRequest,
+    updatePromScrapeByTeamRequest,
+    deletePromScrapeByTeamRequest
 }

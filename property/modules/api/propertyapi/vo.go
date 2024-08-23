@@ -84,3 +84,9 @@ type BindAppAndPropertySourceReqVO struct {
 	SourceIdList []int64 `json:"sourceIdList"`
 	Env          string  `json:"env"`
 }
+
+type SearchFromSourceResult struct {
+	Version string `json:"version"`
+	Content string `json:"content"`
+	Exist   bool   `json:"exist"`
+}

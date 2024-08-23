@@ -326,7 +326,12 @@ const teamPermList = [
   {
     checkbox: "管理外部通知",
     key: "canManageNotifyTpl",
-    desc: "拥有该权限,则可以对外部通知新增、查看、编辑、触发、删除"
+    desc: "拥有该权限,则可以对外部通知新增、查看、编辑、删除"
+  },
+  {
+    checkbox: "管理Team Hook",
+    key: "canManageTeamHook",
+    desc: "拥有该权限,则可以对Team Hook新增、查看、编辑、删除"
   }
 ];
 const repoPermKeys = [

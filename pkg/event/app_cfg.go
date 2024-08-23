@@ -54,3 +54,9 @@ type AppDiscoveryEventCfg struct {
 type AppDeployServiceEventCfg struct {
 	TriggerAction bool `json:"triggerAction"`
 }
+
+type AppPromScrapeEventCfg struct {
+	Create bool `json:"create"`
+	Update bool `json:"update"`
+	Delete bool `json:"delete"`
+}

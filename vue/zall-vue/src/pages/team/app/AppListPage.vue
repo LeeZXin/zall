@@ -6,7 +6,11 @@
         placeholder="搜索应用服务"
         style="width:240px;margin-right:10px"
         @change="searchChange"
-      />
+      >
+        <template #suffix>
+          <SearchOutlined />
+        </template>
+      </a-input>
       <a-button
         type="primary"
         @click="gotoCreatePage"
@@ -26,7 +30,7 @@
 </template>
 <script setup>
 import ZTable from "@/components/common/ZTable";
-import { PlusOutlined } from "@ant-design/icons-vue";
+import { PlusOutlined, SearchOutlined } from "@ant-design/icons-vue";
 import { listAppRequest } from "@/api/app/appApi";
 import { ref, h } from "vue";
 import { useRouter, useRoute } from "vue-router";

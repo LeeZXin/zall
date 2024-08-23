@@ -109,12 +109,15 @@ func GetDeletedRepoListByTeamId(ctx context.Context, teamId int64) ([]Repo, erro
 	return ret, err
 }
 
-func GetRepoByIdList(ctx context.Context, repoIdList []int64) ([]Repo, error) {
+func GetRepoByIdList(ctx context.Context, repoIdList []int64, cols []string) ([]Repo, error) {
 	ret := make([]Repo, 0)
-	err := xormutil.MustGetXormSession(ctx).
+	session := xormutil.MustGetXormSession(ctx).
 		In("id", repoIdList).
-		And("is_deleted = 0").
-		Find(&ret)
+		And("is_deleted = 0")
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Find(&ret)
 	return ret, err
 }
 

@@ -12,15 +12,6 @@
             <SearchOutlined />
           </template>
         </a-input>
-        <a-select
-          style="width: 200px;margin-right:10px"
-          placeholder="请选择"
-          v-model:value="searchAppIdKey"
-          :options="appList"
-          show-search
-          :filter-option="filterAppListOption"
-          @change="()=>searchPromScrape()"
-        />
         <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建抓取任务</a-button>
       </div>
 
@@ -29,8 +20,6 @@
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex === 'targetType'">{{targetTypeMap[dataItem[dataIndex]]}}</span>
-        <span v-else-if="dataIndex === 'app'">{{dataItem['appName']}}({{dataItem['appId']}})</span>
-        <span v-else-if="dataIndex === 'team'">{{dataItem['teamName']}}</span>
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deletePromScrape(dataItem)">
@@ -83,10 +72,9 @@ import ZTable from "@/components/common/ZTable";
 import { ref, h, createVNode, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
-  listPromScrapeBySaRequest,
-  deletePromScrapeBySaRequest
+  listPromScrapeByTeamRequest,
+  deletePromScrapeByTeamRequest
 } from "@/api/app/promApi";
-import { listAllAppBySaRequest } from "@/api/app/appApi";
 import { usePromScrapeStore } from "@/pinia/promScrapeStore";
 import { Modal, message } from "ant-design-vue";
 const promScrapeStore = usePromScrapeStore();
@@ -97,13 +85,6 @@ const dataPage = reactive({
   pageSize: 10
 });
 const searchEndpointKey = ref("");
-const searchAppIdKey = ref("");
-const appList = ref([
-  {
-    value: "",
-    label: "所有应用服务"
-  }
-]);
 const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
@@ -117,16 +98,6 @@ const columns = [
     title: "endpoint",
     dataIndex: "endpoint",
     key: "endpoint"
-  },
-  {
-    title: "团队",
-    dataIndex: "team",
-    key: "team"
-  },
-  {
-    title: "应用服务",
-    dataIndex: "app",
-    key: "app"
   },
   {
     title: "目标",
@@ -150,7 +121,7 @@ const deletePromScrape = item => {
     title: `你确定要删除${item.endpoint}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      deletePromScrapeBySaRequest(item.id).then(() => {
+      deletePromScrapeByTeamRequest(item.id).then(() => {
         message.success("删除成功");
         searchPromScrape();
       });
@@ -159,9 +130,9 @@ const deletePromScrape = item => {
 };
 
 const listPromScrape = () => {
-  listPromScrapeBySaRequest({
+  listPromScrapeByTeamRequest({
     endpoint: searchEndpointKey.value,
-    appId: searchAppIdKey.value,
+    appId: route.params.appId,
     env: selectedEnv.value,
     pageNum: dataPage.current
   }).then(res => {
@@ -179,13 +150,11 @@ const searchPromScrape = () => {
   dataPage.current = 1;
   listPromScrape();
 };
-// 下拉框搜索过滤
-const filterAppListOption = (input, option) => {
-  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
-};
 
 const gotoCreatePage = () => {
-  router.push(`/sa/promScrape/create?env=${selectedEnv.value}`);
+  router.push(
+    `/team/${route.params.teamId}/app/${route.params.appId}/promScrape/create?env=${selectedEnv.value}`
+  );
 };
 
 const gotoUpdatePage = item => {
@@ -195,28 +164,18 @@ const gotoUpdatePage = item => {
   promScrapeStore.targetType = item.targetType;
   promScrapeStore.target = item.target;
   promScrapeStore.appId = item.appId;
-  router.push(`/sa/promScrape/${item.id}/update`);
+  router.push(
+    `/team/${route.params.teamId}/app/${route.params.appId}/promScrape/${item.id}/update`
+  );
 };
 
 const onEnvChange = e => {
-  router.replace(`/sa/promScrape/list/${e.newVal}`);
+  router.replace(
+    `/team/${route.params.teamId}/app/${route.params.appId}/promScrape/list/${e.newVal}`
+  );
   selectedEnv.value = e.newVal;
   searchPromScrape();
 };
-// 获取所有的应用服务
-const listAllApp = () => {
-  listAllAppBySaRequest().then(res => {
-    appList.value = appList.value.concat(
-      res.data.map(item => {
-        return {
-          value: item.appId,
-          label: `${item.name}(${item.appId})`
-        };
-      })
-    );
-  });
-};
-listAllApp();
 </script>
 <style scoped>
 </style>

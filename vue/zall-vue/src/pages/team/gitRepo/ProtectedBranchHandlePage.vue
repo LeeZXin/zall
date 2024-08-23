@@ -67,12 +67,6 @@
             />
             <div class="input-desc">只有白名单用户或团队的审核才能计数。 没有批准的白名单，来自任何有写访问权限的人的审核都将计数。</div>
           </div>
-          <div style="margin-top: 14px">
-            <a-checkbox
-              v-model:checked="formState.cancelOldReviewApprovalWhenNewCommit"
-              style="font-size:14px"
-            >当新的提交更改合并请求内容被推送到分支时，旧的批准将被撤销。</a-checkbox>
-          </div>
         </div>
       </div>
       <div class="save-btn-line">
@@ -108,8 +102,7 @@ const formState = reactive({
   pushOption: 0,
   pushWhiteList: [],
   reviewCountWhenCreatePr: 1,
-  reviewerList: [],
-  cancelOldReviewApprovalWhenNewCommit: true
+  reviewerList: []
 });
 const radioStyle = reactive({
   display: "flex",
@@ -120,11 +113,11 @@ const filterUserListOption = (input, option) => {
 };
 const listUser = () => {
   listUserByTeamIdRequest(repoStore.teamId).then(res => {
-    userList.value = res.data.map(item=>{
+    userList.value = res.data.map(item => {
       return {
         value: item.account,
         label: `${item.account}(${item.name})`
-      }
+      };
     });
   });
 };
@@ -148,13 +141,13 @@ const createOrUpdateProtectedBranch = () => {
         pushOption: formState.pushOption,
         pushWhiteList: formState.pushWhiteList,
         reviewCountWhenCreatePr: formState.reviewCountWhenCreatePr,
-        reviewerList: formState.reviewerList,
-        cancelOldReviewApprovalWhenNewCommit:
-          formState.cancelOldReviewApprovalWhenNewCommit
+        reviewerList: formState.reviewerList
       }
     }).then(() => {
       message.success("添加成功");
-      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`);
+      router.push(
+        `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`
+      );
     });
   } else if (mode === "update") {
     updateProtectedBranchRequest({
@@ -165,13 +158,13 @@ const createOrUpdateProtectedBranch = () => {
         pushOption: formState.pushOption,
         pushWhiteList: formState.pushWhiteList,
         reviewCountWhenCreatePr: formState.reviewCountWhenCreatePr,
-        reviewerList: formState.reviewerList,
-        cancelOldReviewApprovalWhenNewCommit:
-          formState.cancelOldReviewApprovalWhenNewCommit
+        reviewerList: formState.reviewerList
       }
     }).then(() => {
       message.success("更新成功");
-      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`);
+      router.push(
+        `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`
+      );
     });
   }
 };
@@ -180,7 +173,9 @@ if (mode !== "create") {
     protectedBranchStore.id === 0 ||
     parseInt(route.params.protectedBranchId) !== protectedBranchStore.id
   ) {
-    router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`);
+    router.push(
+      `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`
+    );
   } else {
     if (mode !== "create") {
       formState.pattern = protectedBranchStore.pattern;
@@ -189,8 +184,6 @@ if (mode !== "create") {
       formState.reviewCountWhenCreatePr =
         protectedBranchStore.cfg?.reviewCountWhenCreatePr;
       formState.reviewerList = protectedBranchStore.cfg?.reviewerList;
-      formState.cancelOldReviewApprovalWhenNewCommit =
-        protectedBranchStore.cfg?.cancelOldReviewApprovalWhenNewCommit;
     }
     listUser();
   }

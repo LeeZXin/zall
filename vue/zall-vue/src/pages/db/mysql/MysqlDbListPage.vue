@@ -6,7 +6,11 @@
         placeholder="搜索Mysql数据源"
         style="width:240px;margin-right:10px"
         @pressEnter="()=>searchDb()"
-      />
+      >
+        <template #suffix>
+          <SearchOutlined />
+        </template>
+      </a-input>
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建Mysql数据源</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
@@ -56,7 +60,8 @@ import {
   DeleteOutlined,
   EllipsisOutlined,
   EditOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  SearchOutlined
 } from "@ant-design/icons-vue";
 import { listMysqlDbRequest, deleteMysqlDbRequest } from "@/api/db/mysqlApi";
 import { ref, h, createVNode } from "vue";

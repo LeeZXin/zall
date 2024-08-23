@@ -51,5 +51,5 @@ func NewBizErrWithMsg(code apicode.Code, msg string) *bizerr.Err {
 }
 
 func ThereHasBugErr() error {
-	return NewBizErr(apicode.ThereHasBugErrCode, i18n.SystemInternalError)
+	return NewBizErr(apicode.ThereHasBugErrCode, i18n.SystemHasBug)
 }

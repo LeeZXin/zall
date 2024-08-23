@@ -6,7 +6,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/promagent/modules/model/prommd"
 	"github.com/LeeZXin/zall/util"
-	"time"
 )
 
 type CreateScrapeReqDTO struct {
@@ -41,7 +40,7 @@ func (r *CreateScrapeReqDTO) IsValid() error {
 }
 
 type UpdateScrapeReqDTO struct {
-	ScrapeId   int64               `json:"scrapeId"`
+	Id         int64               `json:"id"`
 	Endpoint   string              `json:"endpoint"`
 	Target     string              `json:"target"`
 	TargetType prommd.TargetType   `json:"targetType"`
@@ -49,7 +48,7 @@ type UpdateScrapeReqDTO struct {
 }
 
 func (r *UpdateScrapeReqDTO) IsValid() error {
-	if r.ScrapeId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !prommd.IsEndpointValid(r.Endpoint) {
@@ -75,7 +74,7 @@ type ListScrapeReqDTO struct {
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListScrapeReqDTO) IsValid() error {
+func (r *ListScrapeReqDTO) IsValidBySa() error {
 	if len(r.Endpoint) > 0 && !prommd.IsEndpointValid(r.Endpoint) {
 		return util.InvalidArgsError()
 	}
@@ -94,24 +93,52 @@ func (r *ListScrapeReqDTO) IsValid() error {
 	return nil
 }
 
-type ScrapeDTO struct {
+func (r *ListScrapeReqDTO) IsValidByTeam() error {
+	if len(r.Endpoint) > 0 && !prommd.IsEndpointValid(r.Endpoint) {
+		return util.InvalidArgsError()
+	}
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.PageNum <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !cfgsrv.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type ScrapeByTeamDTO struct {
+	Id         int64
+	Endpoint   string
+	Target     string
+	TargetType prommd.TargetType
+	Env        string
+}
+
+type ScrapeBySaDTO struct {
 	Id         int64
 	Endpoint   string
 	AppId      string
 	AppName    string
+	TeamId     int64
+	TeamName   string
 	Target     string
 	TargetType prommd.TargetType
-	Created    time.Time
 	Env        string
 }
 
 type DeleteScrapeReqDTO struct {
-	ScrapeId int64               `json:"scrapeId"`
+	Id       int64               `json:"id"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *DeleteScrapeReqDTO) IsValid() error {
-	if r.ScrapeId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

@@ -25,6 +25,7 @@ type EnvRelatedCfg struct {
 	AppProduct            event.AppProductEventCfg         `json:"appProduct"`
 	AppDiscovery          event.AppDiscoveryEventCfg       `json:"appDiscovery"`
 	AppDeployService      event.AppDeployServiceEventCfg   `json:"appDeployService"`
+	AppPromScrape         event.AppPromScrapeEventCfg      `json:"appPromScrape"`
 	Timer                 event.TimerEventCfg              `json:"timer"`
 	TimerTask             event.TimerTaskEventCfg          `json:"timerTask"`
 }

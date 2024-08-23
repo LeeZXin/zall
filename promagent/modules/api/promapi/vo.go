@@ -19,14 +19,23 @@ type UpdateScrapeReqVO struct {
 	TargetType prommd.TargetType `json:"targetType"`
 }
 
-type ScrapeVO struct {
+type ScrapeBySaVO struct {
 	Id         int64             `json:"id"`
 	Endpoint   string            `json:"endpoint"`
 	AppId      string            `json:"appId"`
 	AppName    string            `json:"appName"`
+	TeamId     int64             `json:"teamId"`
+	TeamName   string            `json:"teamName"`
 	Target     string            `json:"target"`
 	TargetType prommd.TargetType `json:"targetType"`
-	Created    string            `json:"created"`
+	Env        string            `json:"env"`
+}
+
+type ScrapeByTeamVO struct {
+	Id         int64             `json:"id"`
+	Endpoint   string            `json:"endpoint"`
+	Target     string            `json:"target"`
+	TargetType prommd.TargetType `json:"targetType"`
 	Env        string            `json:"env"`
 }
 

@@ -75,8 +75,8 @@ import {
 import { message } from "ant-design-vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
 import {
-  createPromScrapeBySaRequest,
-  updatePromScrapeBySaRequest
+  createPromScrapeRequest,
+  updatePromScrapeRequest
 } from "@/api/app/promApi";
 import { listAllAppBySaRequest } from "@/api/app/appApi";
 import { useRoute, useRouter } from "vue-router";
@@ -133,7 +133,7 @@ const saveOrUpdateScrape = () => {
     return;
   }
   if (mode === "create") {
-    createPromScrapeBySaRequest({
+    createPromScrapeRequest({
       env: formState.selectedEnv,
       appId: formState.appId,
       endpoint: formState.endpoint,
@@ -144,7 +144,7 @@ const saveOrUpdateScrape = () => {
       router.push(`/sa/promScrape/list/${formState.selectedEnv}`);
     });
   } else if (mode === "update") {
-    updatePromScrapeBySaRequest({
+    updatePromScrapeRequest({
       scrapeId: promScrapeStore.id,
       target: formState.target,
       targetType: formState.targetType,

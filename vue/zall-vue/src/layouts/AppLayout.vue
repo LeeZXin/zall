@@ -33,7 +33,11 @@
             <DatabaseOutlined />
             <span>制品库</span>
           </a-menu-item>
-          <a-menu-item key="/settings" v-if="teamStore.isAdmin">
+          <a-menu-item key="/promScrape/list" v-if="teamStore.perm?.canManagePromScrape">
+            <AlertOutlined />
+            <span>Prometheus</span>
+          </a-menu-item>
+          <a-menu-item key="/setting" v-if="teamStore.isAdmin">
             <SettingOutlined />
             <span>设置</span>
           </a-menu-item>
@@ -58,7 +62,8 @@ import {
   ContainerOutlined,
   BlockOutlined,
   SettingOutlined,
-  DatabaseOutlined
+  DatabaseOutlined,
+  AlertOutlined
 } from "@ant-design/icons-vue";
 import { getAppRequest } from "@/api/app/appApi";
 import { useAppStore } from "@/pinia/appStore";
@@ -100,7 +105,7 @@ const pagesMap = {
   "/deployPlan": "/deployPlan/list",
   "/serviceStatus": "/serviceStatus/list",
   "/discoveryService": "/discoveryService/list",
-  "/settings": "/settings",
+  "/setting": "/setting",
   "/product": "/product/list"
 };
 watch(

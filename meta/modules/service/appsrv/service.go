@@ -256,7 +256,7 @@ func ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, error) {
 			return t.AppId, nil
 		})
 		if len(appIdList) > 0 {
-			apps, err = appmd.GetByAppIdList(ctx, appIdList)
+			apps, err = appmd.GetByAppIdList(ctx, appIdList, []string{"app_id", "name"})
 		} else {
 			apps = []appmd.App{}
 		}

@@ -74,14 +74,14 @@ func UpdateScrapeById(ctx context.Context, reqDTO UpdateScrapeByIdReqDTO) (bool,
 	return rows == 1, err
 }
 
-func InsertScrape(ctx context.Context, reqDTO InsertScrapeReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&Scrape{
-			Endpoint:   reqDTO.Endpoint,
-			AppId:      reqDTO.AppId,
-			Target:     reqDTO.Target,
-			TargetType: reqDTO.TargetType,
-			Env:        reqDTO.Env,
-		})
-	return err
+func InsertScrape(ctx context.Context, reqDTO InsertScrapeReqDTO) (Scrape, error) {
+	ret := Scrape{
+		Endpoint:   reqDTO.Endpoint,
+		AppId:      reqDTO.AppId,
+		Target:     reqDTO.Target,
+		TargetType: reqDTO.TargetType,
+		Env:        reqDTO.Env,
+	}
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	return ret, err
 }

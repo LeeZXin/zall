@@ -541,7 +541,7 @@ func checkReqPerm(ctx context.Context, permDetail perm.Detail, teamId int64) err
 		repoIdList, _ := listutil.Map(permDetail.RepoPermList, func(t perm.RepoPermWithId) (int64, error) {
 			return t.RepoId, nil
 		})
-		repoList, err := repomd.GetRepoByIdList(ctx, repoIdList)
+		repoList, err := repomd.GetRepoByIdList(ctx, repoIdList, []string{"team_id"})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return util.InternalError(err)
@@ -560,7 +560,7 @@ func checkReqPerm(ctx context.Context, permDetail perm.Detail, teamId int64) err
 		appIdList, _ := listutil.Map(permDetail.AppPermList, func(t perm.AppPermWithId) (string, error) {
 			return t.AppId, nil
 		})
-		appList, err := appmd.GetByAppIdList(ctx, appIdList)
+		appList, err := appmd.GetByAppIdList(ctx, appIdList, []string{"team_id"})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return util.InternalError(err)
@@ -647,7 +647,7 @@ func ListTeam(ctx context.Context, reqDTO ListTeamReqDTO) ([]TeamDTO, error) {
 	)
 	if reqDTO.Operator.IsAdmin {
 		var err error
-		teamList, err = teammd.ListAllTeam(ctx)
+		teamList, err = teammd.ListAllTeam(ctx, []string{"id", "name"})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return nil, util.InternalError(err)
@@ -661,7 +661,7 @@ func ListTeam(ctx context.Context, reqDTO ListTeamReqDTO) ([]TeamDTO, error) {
 		teamIdList, _ := listutil.Map(puList, func(t teammd.User) (int64, error) {
 			return t.TeamId, nil
 		})
-		teamList, err = teammd.GetTeamsByTeamIdList(ctx, teamIdList)
+		teamList, err = teammd.ListTeamByIdList(ctx, teamIdList, []string{"id", "name"})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return nil, util.InternalError(err)
@@ -809,7 +809,7 @@ func ListAllByAdmin(ctx context.Context, reqDTO ListAllByAdminReqDTO) ([]TeamDTO
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	teams, err := teammd.ListAllTeam(ctx)
+	teams, err := teammd.ListAllTeam(ctx, []string{"id", "name"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)

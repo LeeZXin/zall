@@ -153,3 +153,16 @@ type AppDeployServiceEvent struct {
 func (*AppDeployServiceEvent) EventType() string {
 	return "app-deploy-service-event"
 }
+
+type AppPromScrapeEvent struct {
+	BaseTeam
+	BaseApp
+	BaseEvent
+	Action   AppPromScrapeEventAction `json:"action"`
+	Env      string                   `json:"env"`
+	Endpoint string                   `json:"endpoint"`
+}
+
+func (*AppPromScrapeEvent) EventType() string {
+	return "app-prom-scrape-event"
+}

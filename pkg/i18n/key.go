@@ -45,6 +45,10 @@ var (
 		Id:         "system.tooManyOperation",
 		DefaultRet: "太多人操作了，请稍后",
 	}
+	SystemHasBug = KeyItem{
+		Id:         "system.hasBug",
+		DefaultRet: "系统数据异常",
+	}
 )
 
 var (

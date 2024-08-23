@@ -151,6 +151,12 @@ func BatchGetEtcdNodesById(ctx context.Context, nodeIdList []int64, cols []strin
 	return ret, err
 }
 
+func GetEtcdNodeById(ctx context.Context, id int64) (EtcdNode, bool, error) {
+	var ret EtcdNode
+	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	return ret, b, err
+}
+
 func InsertDeploy(ctx context.Context, reqDTO InsertDeployReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&Deploy{
@@ -250,6 +256,14 @@ func BatchGetAppEtcdNodeBindByNodeIdListAndAppId(ctx context.Context, nodeIdList
 		In("node_id", nodeIdList).
 		Find(&ret)
 	return ret, err
+}
+
+func ExistAppEtcdNodeBindByNodeIdAndAppIdAndEnv(ctx context.Context, nodeId int64, appId, env string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		And("app_id = ?", appId).
+		And("node_id = ?", nodeId).
+		And("env = ?", env).
+		Exist(new(AppEtcdNodeBind))
 }
 
 func ListAppEtcdNodeBindByAppIdAndEnv(ctx context.Context, appId, env string) ([]AppEtcdNodeBind, error) {

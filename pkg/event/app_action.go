@@ -114,3 +114,15 @@ func (a AppDeployServiceEventAction) GetI18nValue() string {
 const (
 	AppDeployServiceTriggerActionAction AppDeployServiceEventAction = "triggerAction"
 )
+
+type AppPromScrapeEventAction string
+
+func (a AppPromScrapeEventAction) GetI18nValue() string {
+	return "appPromScrapeEvent." + string(a)
+}
+
+const (
+	AppPromScrapeCreateAction AppPromScrapeEventAction = "create"
+	AppPromScrapeUpdateAction AppPromScrapeEventAction = "update"
+	AppPromScrapeDeleteAction AppPromScrapeEventAction = "delete"
+)

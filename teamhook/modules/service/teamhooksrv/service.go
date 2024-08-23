@@ -188,7 +188,7 @@ func checkManageTeamHookByTeamId(ctx context.Context, teamId int64, operator api
 	if !b {
 		return util.UnauthorizedError()
 	}
-	if p.IsAdmin || p.PermDetail.TeamPerm.CanManageNotifyTpl {
+	if p.IsAdmin || p.PermDetail.TeamPerm.CanManageTeamHook {
 		return nil
 	}
 	return util.UnauthorizedError()

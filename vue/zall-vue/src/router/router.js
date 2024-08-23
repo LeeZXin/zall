@@ -481,14 +481,19 @@ const router = createRouter({
                     import ("../pages/team/app/DiscoveryServiceListPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/settings",
+                path: "/team/:teamId(\\d+)/app/:appId/setting",
                 component: () =>
-                    import ("../pages/team/app/AppSettingsPage")
+                    import ("../pages/team/app/AppSettingPage")
 
             }, {
                 path: "/team/:teamId(\\d+)/app/:appId/product/list/:env?",
                 component: () =>
                     import ("../pages/team/app/ProductListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/promScrape/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/PromScrapeListPage")
 
             }]
         },

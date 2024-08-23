@@ -6,7 +6,11 @@
         :placeholder="t('gitRepo.searchText')"
         style="width:240px;margin-right:10px"
         @change="searchChange"
-      />
+      >
+        <template #suffix>
+          <SearchOutlined />
+        </template>
+      </a-input>
       <a-button
         type="primary"
         @click="gotoCreatePage"
@@ -41,7 +45,11 @@
 </template>
 <script setup>
 import ZTable from "@/components/common/ZTable";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons-vue";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  SearchOutlined
+} from "@ant-design/icons-vue";
 import { ref, h } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter, useRoute } from "vue-router";

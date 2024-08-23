@@ -225,7 +225,7 @@ func ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]RepoDTO, error) {
 				idList, _ := listutil.Map(repoPermList, func(t perm.RepoPermWithId) (int64, error) {
 					return t.RepoId, nil
 				})
-				repoList, err = repomd.GetRepoByIdList(ctx, idList)
+				repoList, err = repomd.GetRepoByIdList(ctx, idList, nil)
 				if err != nil {
 					logger.Logger.WithContext(ctx).Error(err)
 					return nil, util.InternalError(err)

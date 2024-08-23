@@ -180,9 +180,13 @@ func ListRole(ctx context.Context, teamId int64) ([]Role, error) {
 	return ret, err
 }
 
-func ListAllTeam(ctx context.Context) ([]Team, error) {
+func ListAllTeam(ctx context.Context, cols []string) ([]Team, error) {
 	ret := make([]Team, 0)
-	err := xormutil.MustGetXormSession(ctx).Find(&ret)
+	session := xormutil.MustGetXormSession(ctx)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Find(&ret)
 	return ret, err
 }
 
@@ -220,11 +224,14 @@ func ListUserByAccount(ctx context.Context, account string) ([]User, error) {
 	return ret, err
 }
 
-func GetTeamsByTeamIdList(ctx context.Context, teamIdList []int64) ([]Team, error) {
+func ListTeamByIdList(ctx context.Context, idList []int64, cols []string) ([]Team, error) {
 	ret := make([]Team, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		In("id", teamIdList).
-		Find(&ret)
+	session := xormutil.MustGetXormSession(ctx).
+		In("id", idList)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Find(&ret)
 	return ret, err
 }
 

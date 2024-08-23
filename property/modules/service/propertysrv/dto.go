@@ -362,3 +362,22 @@ func (r *GetHistoryByVersionReqDTO) IsValid() error {
 	}
 	return nil
 }
+
+type SearchFromSourceReqDTO struct {
+	FileId   int64               `json:"fileId"`
+	SourceId int64               `json:"sourceId"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *SearchFromSourceReqDTO) IsValid() error {
+	if r.FileId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.SourceId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}

@@ -1,8 +1,8 @@
 <template>
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
-      <div style="font-size:20px;font-weight:bold">
-        <span style="margin-right:8px">{{propertyFileStore.name}}</span>
+      <div style="font-size:20px;">
+        <span style="margin-right:8px;font-weight:bold">{{propertyFileStore.name}}</span>
         <a-tag color="orange">{{propertyFileStore.env}}</a-tag>
       </div>
     </div>
