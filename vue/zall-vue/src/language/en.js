@@ -95,18 +95,17 @@ export default {
         pleaseConfirmConfirmPassword: "confirm password should be equal with password"
     },
     teamMenu: {
-        gitRepo: "Git Repo",
-        app: "App Service",
+        gitRepo: "Git repo",
+        app: "App service",
         action: "Action",
-        propertyCenter: "Property Center",
-        timer: "Timer Task",
-        applyApproval: "Apply approval",
+        propertyCenter: "Property center",
+        timer: "Timer task",
         dbAudit: "Database audit",
         promScrape: "Prometheus scrape",
-        roleAndMembers: "Role & Members",
+        roleAndMembers: "Role&Member",
         setting: "Setting",
         notifyTpl: "Notification",
-        teamHook: "Team Hook"
+        teamHook: "Team hook"
     },
     roleListPage: {
         roleList: "Role List",

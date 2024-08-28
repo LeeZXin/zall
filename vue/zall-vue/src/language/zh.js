@@ -100,7 +100,6 @@ export default {
         action: "工作流",
         propertyCenter: "配置中心",
         timer: "定时任务",
-        applyApproval: "审批申请",
         dbAudit: "数据库审计",
         promScrape: "Prometheus监控",
         roleAndMembers: "角色&成员",
