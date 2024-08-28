@@ -62,11 +62,11 @@ func listAll(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(users, func(t usersrv.SimpleUserDTO) (SimpleUserVO, error) {
+	data := listutil.MapNe(users, func(t usersrv.SimpleUserDTO) SimpleUserVO {
 		return SimpleUserVO{
 			Account: t.Account,
 			Name:    t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleUserVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -190,7 +190,7 @@ func listUser(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(users, func(t usersrv.UserDTO) (UserVO, error) {
+		data := listutil.MapNe(users, func(t usersrv.UserDTO) UserVO {
 			return UserVO{
 				Account:      t.Account,
 				Name:         t.Name,
@@ -200,7 +200,7 @@ func listUser(c *gin.Context) {
 				AvatarUrl:    t.AvatarUrl,
 				Created:      t.Created.Format(time.DateTime),
 				IsDba:        t.IsDba,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[UserVO]{
 			DataResp: ginutil.DataResp[[]UserVO]{

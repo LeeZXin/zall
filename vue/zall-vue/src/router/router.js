@@ -317,7 +317,7 @@ const router = createRouter({
             }, {
                 path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/branch/list",
                 component: () =>
-                    import ("../pages/team/gitRepo/BranchesPage")
+                    import ("../pages/team/gitRepo/BranchListPage")
             }, {
                 path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/commit/list/:ref?",
                 component: () =>
@@ -329,11 +329,11 @@ const router = createRouter({
             }, {
                 path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/tag/list",
                 component: () =>
-                    import ("../pages/team/gitRepo/TagsPage")
+                    import ("../pages/team/gitRepo/TagListPage")
             }, {
                 path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/protectedBranch/list",
                 component: () =>
-                    import ("../pages/team/gitRepo/ProtectedBranchesPage")
+                    import ("../pages/team/gitRepo/ProtectedBranchListPage")
             }, {
                 path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/protectedBranch/create",
                 component: () =>
@@ -387,13 +387,9 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/gitRepo/WorkflowVarsHandlePage")
             }, {
-                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/config",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/setting",
                 component: () =>
-                    import ("../pages/team/gitRepo/RepoConfigPage")
-            }, {
-                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/opLogs",
-                component: () =>
-                    import ("../pages/team/gitRepo/OpLogsPage")
+                    import ("../pages/team/gitRepo/RepoSettingPage")
             }]
         },
         {
@@ -494,6 +490,31 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/app/:appId/promScrape/list/:env?",
                 component: () =>
                     import ("../pages/team/app/PromScrapeListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/promScrape/create",
+                component: () =>
+                    import ("../pages/team/app/PromScrapeHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/promScrape/:scrapeId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/app/PromScrapeHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/alertConfig/list/:env?",
+                component: () =>
+                    import ("../pages/team/app/AlertConfigListPage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/alertConfig/create",
+                component: () =>
+                    import ("../pages/team/app/AlertConfigHandlePage")
+
+            }, {
+                path: "/team/:teamId(\\d+)/app/:appId/alertConfig/:configId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/app/AlertConfigHandlePage")
 
             }]
         },

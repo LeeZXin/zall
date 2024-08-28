@@ -16,7 +16,6 @@
     <span style="margin-left:8px">失败</span>
   </span>
 </template>
-
 <script setup>
 import { defineProps } from "vue";
 import {
@@ -24,6 +23,9 @@ import {
   CloseCircleFilled,
   LoadingOutlined
 } from "@ant-design/icons-vue";
+/*
+  发布计划阶段状态值
+*/
 const props = defineProps(["status"]);
 </script>
 

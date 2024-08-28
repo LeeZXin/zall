@@ -74,11 +74,11 @@ func listVars(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(varsList, func(t workflowsrv.VarsWithoutContentDTO) (VarsWithoutContentVO, error) {
+	data := listutil.MapNe(varsList, func(t workflowsrv.VarsWithoutContentDTO) VarsWithoutContentVO {
 		return VarsWithoutContentVO{
 			Id:   t.VarsId,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]VarsWithoutContentVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -228,7 +228,7 @@ func listWorkflow(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(workflows, func(t workflowsrv.WorkflowWithLastTaskDTO) (WorkflowWithLastTaskVO, error) {
+	data := listutil.MapNe(workflows, func(t workflowsrv.WorkflowWithLastTaskDTO) WorkflowWithLastTaskVO {
 		ret := WorkflowWithLastTaskVO{
 			Id:   t.Id,
 			Name: t.Name,
@@ -238,7 +238,7 @@ func listWorkflow(c *gin.Context) {
 			vo := task2WithoutYamlContentVo(*t.LastTask)
 			ret.LastTask = &vo
 		}
-		return ret, nil
+		return ret
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]WorkflowWithLastTaskVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -303,9 +303,7 @@ func listTask(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(tasks, func(t workflowsrv.TaskWithoutYamlContentDTO) (TaskWithoutYamlContentVO, error) {
-			return task2WithoutYamlContentVo(t), nil
-		})
+		data := listutil.MapNe(tasks, task2WithoutYamlContentVo)
 		c.JSON(http.StatusOK, ginutil.Page2Resp[TaskWithoutYamlContentVO]{
 			DataResp: ginutil.DataResp[[]TaskWithoutYamlContentVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
@@ -326,11 +324,11 @@ func listTaskByPrId(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(tasks, func(t workflowsrv.WorkflowTaskDTO) (WorkflowTaskVO, error) {
+	data := listutil.MapNe(tasks, func(t workflowsrv.WorkflowTaskDTO) WorkflowTaskVO {
 		return WorkflowTaskVO{
 			Name:                     t.Name,
 			TaskWithoutYamlContentVO: task2WithoutYamlContentVo(t.TaskWithoutYamlContentDTO),
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]WorkflowTaskVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

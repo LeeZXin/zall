@@ -76,7 +76,7 @@ func UpdateTaskStatusAndDurationAndStatusLog(ctx context.Context, taskId int64, 
 	return rows == 1, err
 }
 
-func InsertWorkflow(ctx context.Context, reqDTO InsertWorkflowReqDTO) error {
+func InsertWorkflow(ctx context.Context, reqDTO InsertWorkflowReqDTO) (Workflow, error) {
 	ret := Workflow{
 		Name:        reqDTO.Name,
 		Description: reqDTO.Desc,
@@ -86,7 +86,7 @@ func InsertWorkflow(ctx context.Context, reqDTO InsertWorkflowReqDTO) error {
 		AgentId:     reqDTO.AgentId,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
-	return err
+	return ret, err
 }
 
 func UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDTO) (bool, error) {
@@ -209,14 +209,14 @@ func ListVarsByRepoId(ctx context.Context, repoId int64, cols []string) ([]Vars,
 	return ret, err
 }
 
-func InsertVars(ctx context.Context, reqDTO InsertVarsReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&Vars{
-			RepoId:  reqDTO.RepoId,
-			Name:    reqDTO.Name,
-			Content: reqDTO.Content,
-		})
-	return err
+func InsertVars(ctx context.Context, reqDTO InsertVarsReqDTO) (Vars, error) {
+	ret := Vars{
+		RepoId:  reqDTO.RepoId,
+		Name:    reqDTO.Name,
+		Content: reqDTO.Content,
+	}
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	return ret, err
 }
 
 func ExistsVars(ctx context.Context, reqDTO ExistsVarsReqDTO) (bool, error) {

@@ -19,11 +19,14 @@ import (
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/git/signature"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/limiter"
 	"github.com/LeeZXin/zall/pkg/perm"
+	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/pkg/webhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -87,6 +90,39 @@ func initPsub() {
 						}
 					}
 				}
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					switch req.Action {
+					case event.RepoEventCreateAction:
+						return events.GitRepo.Create
+					case event.RepoEventUpdateAction:
+						return events.GitRepo.Update
+					case event.RepoEventDeleteTemporarilyAction:
+						return events.GitRepo.DeleteTemporarily
+					case event.RepoEventDeletePermanentlyAction:
+						return events.GitRepo.DeletePermanently
+					case event.RepoEventArchivedAction:
+						return events.GitRepo.Archived
+					case event.RepoEventUnArchivedAction:
+						return events.GitRepo.UnArchived
+					case event.RepoEventRecoverFromRecycleAction:
+						return events.GitRepo.RecoverFromRecycle
+					default:
+						return false
+					}
+				})
+			}
+		})
+		psub.Subscribe(event.GitPushTopic+"-remote", func(data any) {
+			req, ok := data.(event.GitPushEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					switch req.Action {
+					case event.GitPushEventDeleteAction:
+						return events.GitPush.Delete
+					default:
+						return false
+					}
+				})
 			}
 		})
 	})
@@ -217,13 +253,13 @@ func ListRepo(ctx context.Context, reqDTO ListRepoReqDTO) ([]RepoDTO, error) {
 		}
 		if len(p.PermDetail.RepoPermList) > 0 {
 			// 访问部分仓库
-			repoPermList, _ := listutil.Filter(p.PermDetail.RepoPermList, func(p perm.RepoPermWithId) (bool, error) {
-				return p.CanAccessRepo, nil
+			repoPermList := listutil.FilterNe(p.PermDetail.RepoPermList, func(p perm.RepoPermWithId) bool {
+				return p.CanAccessRepo
 			})
 			// 存在部分可读仓库权限
 			if len(repoPermList) > 0 {
-				idList, _ := listutil.Map(repoPermList, func(t perm.RepoPermWithId) (int64, error) {
-					return t.RepoId, nil
+				idList := listutil.MapNe(repoPermList, func(t perm.RepoPermWithId) int64 {
+					return t.RepoId
 				})
 				repoList, err = repomd.GetRepoByIdList(ctx, idList, nil)
 				if err != nil {
@@ -258,7 +294,7 @@ func ListDeletedRepo(ctx context.Context, reqDTO ListDeletedRepoReqDTO) ([]Delet
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkTeamAdmin(ctx, reqDTO.TeamId, reqDTO.Operator)
+	_, err := checkTeamAdminByTeamId(ctx, reqDTO.TeamId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -382,11 +418,11 @@ func GetSimpleInfo(ctx context.Context, reqDTO GetSimpleInfoReqDTO) (SimpleInfoD
 		return SimpleInfoDTO{}, util.InternalError(err)
 	}
 	ret := SimpleInfoDTO{}
-	ret.Branches, _ = listutil.Map(branches, func(t reqvo.RefVO) (string, error) {
-		return t.Name, nil
+	ret.Branches = listutil.MapNe(branches, func(t reqvo.RefVO) string {
+		return t.Name
 	})
-	ret.Tags, _ = listutil.Map(tags, func(t reqvo.RefVO) (string, error) {
-		return t.Name, nil
+	ret.Tags = listutil.MapNe(tags, func(t reqvo.RefVO) string {
+		return t.Name
 	})
 	cfg, err := cfgsrv.GetGitCfgFromDB()
 	if err == nil {
@@ -423,28 +459,28 @@ func GetDetailInfo(ctx context.Context, reqDTO GetDetailInfoReqDTO) (RepoDTO, er
 
 func tree2Dto(vo reqvo.TreeVO) TreeDTO {
 	ret := TreeDTO{}
-	ret.Files, _ = listutil.Map(vo.Files, func(t reqvo.FileVO) (FileDTO, error) {
+	ret.Files = listutil.MapNe(vo.Files, func(t reqvo.FileVO) FileDTO {
 		return FileDTO{
 			Mode:    t.Mode,
 			RawPath: t.RawPath,
 			Path:    t.Path,
 			Commit:  commit2Dto(t.Commit),
-		}, nil
+		}
 	})
 	return ret
 }
 
 // CreateRepo 初始化仓库
-func CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	err = checkTeamAdmin(ctx, reqDTO.TeamId, reqDTO.Operator)
+	team, err := checkTeamAdminByTeamId(ctx, reqDTO.TeamId, reqDTO.Operator)
 	if err != nil {
-		return
+		return err
 	}
 	var b bool
 	// 相对路径
@@ -453,18 +489,18 @@ func CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) (err error) {
 	// 数据库异常
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	// 仓库已存在 不能添加
 	if b {
-		err = util.NewBizErr(apicode.InvalidArgsCode, i18n.RepoAlreadyExists)
-		return
+		return util.NewBizErr(apicode.InvalidArgsCode, i18n.RepoAlreadyExists)
 	}
+	var repo repomd.Repo
 	// 添加数据
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
+		var err2 error
 		// 插入数据库
-		repo, err2 := repomd.InsertRepo(ctx, repomd.InsertRepoReqDTO{
+		repo, err2 = repomd.InsertRepo(ctx, repomd.InsertRepoReqDTO{
 			Name:          reqDTO.Name,
 			Path:          relativePath,
 			TeamId:        reqDTO.TeamId,
@@ -495,9 +531,10 @@ func CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) (err error) {
 			return err
 		}
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
+		return util.InternalError(err)
 	}
-	return
+	notifyEvent(repo, team, reqDTO.Operator, event.RepoEventCreateAction)
+	return nil
 }
 
 // AllGitIgnoreTemplateList 所有gitignore模版名称
@@ -506,34 +543,23 @@ func AllGitIgnoreTemplateList() []string {
 }
 
 // DeleteRepo 删除仓库
-func DeleteRepo(ctx context.Context, reqDTO DeleteRepoReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func DeleteRepo(ctx context.Context, reqDTO DeleteRepoReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
+	repo, team, err := checkTeamAdminByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
-	}
-	if !b {
-		err = util.InvalidArgsError()
-		return
-	}
-	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
-	if err != nil {
-		return
+		return err
 	}
 	_, err = repomd.SetRepoDeleted(ctx, reqDTO.RepoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	notifyEvent(repo, reqDTO.Operator, event.RepoDeleteTemporarilyAction)
-	return
+	notifyEvent(repo, team, reqDTO.Operator, event.RepoEventDeleteTemporarilyAction)
+	return nil
 }
 
 // RecoverFromRecycle 恢复仓库
@@ -551,7 +577,7 @@ func RecoverFromRecycle(ctx context.Context, reqDTO RecoverFromRecycleReqDTO) er
 	if !b || !repo.IsDeleted {
 		return util.InvalidArgsError()
 	}
-	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	team, err := checkTeamAdminByTeamId(ctx, repo.TeamId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -560,7 +586,7 @@ func RecoverFromRecycle(ctx context.Context, reqDTO RecoverFromRecycleReqDTO) er
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	notifyEvent(repo, reqDTO.Operator, event.RepoRecoverFromRecycleAction)
+	notifyEvent(repo, team, reqDTO.Operator, event.RepoEventRecoverFromRecycleAction)
 	return nil
 }
 
@@ -579,7 +605,7 @@ func DeleteRepoPermanently(ctx context.Context, reqDTO DeleteRepoReqDTO) error {
 	if !b || !repo.IsDeleted {
 		return util.InvalidArgsError()
 	}
-	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	team, err := checkTeamAdminByTeamId(ctx, repo.TeamId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -616,21 +642,29 @@ func DeleteRepoPermanently(ctx context.Context, reqDTO DeleteRepoReqDTO) error {
 		if err2 != nil {
 			return err2
 		}
+		// 删除保护分支
+		err2 = branchmd.DeleteProtectedBranchByRepoId(ctx, reqDTO.RepoId)
+		if err2 != nil {
+			return err2
+		}
 		return nil
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	notifyEvent(repo, reqDTO.Operator, event.RepoDeletePermanentlyAction)
+	notifyEvent(repo, team, reqDTO.Operator, event.RepoEventDeletePermanentlyAction)
 	return nil
 }
 
-func notifyEvent(repo repomd.Repo, operator apisession.UserInfo, action event.GitRepoAction) {
+func notifyEvent(repo repomd.Repo, team teammd.Team, operator apisession.UserInfo, action event.RepoEventAction) {
 	initPsub()
 	psub.Publish(event.GitRepoTopic, event.GitRepoEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
 		BaseRepo: event.BaseRepo{
-			TeamId:   repo.TeamId,
 			RepoPath: repo.Path,
 			RepoId:   repo.Id,
 			RepoName: repo.Name,
@@ -639,8 +673,36 @@ func notifyEvent(repo repomd.Repo, operator apisession.UserInfo, action event.Gi
 			Operator:     operator.Account,
 			OperatorName: operator.Name,
 			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 		},
 		Action: action,
+	})
+}
+
+func notifyGitPushDeleteEvent(repo repomd.Repo, team teammd.Team, operator apisession.UserInfo, ref, refType string) {
+	initPsub()
+	action := event.GitPushEventDeleteAction
+	psub.Publish(event.GitPushTopic+"-remote", event.GitPushEvent{
+		RefType: refType,
+		Ref:     ref,
+		Action:  action,
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseRepo: event.BaseRepo{
+			RepoPath: repo.Path,
+			RepoId:   repo.Id,
+			RepoName: repo.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
 	})
 }
 
@@ -691,6 +753,14 @@ func DeleteBranch(ctx context.Context, reqDTO DeleteBranchReqDTO) error {
 	if !b {
 		return util.InvalidArgsError()
 	}
+	team, b, err := teammd.GetByTeamId(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.ThereHasBugErr()
+	}
 	err = checkPermByRepo(ctx, repo, reqDTO.Operator, updateRepo)
 	if err != nil {
 		return err
@@ -700,7 +770,8 @@ func DeleteBranch(ctx context.Context, reqDTO DeleteBranchReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if b, _ = branches.IsProtectedBranch(reqDTO.Branch); b {
+	isProtectedBranch, _ := branches.IsProtectedBranch(reqDTO.Branch)
+	if isProtectedBranch {
 		return util.InvalidArgsError()
 	}
 	err = client.DeleteBranch(ctx, reqvo.DeleteBranchReq{
@@ -711,6 +782,7 @@ func DeleteBranch(ctx context.Context, reqDTO DeleteBranchReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyGitPushDeleteEvent(repo, team, reqDTO.Operator, git.BranchPrefix+reqDTO.Branch, "branch")
 	return nil
 }
 
@@ -729,6 +801,14 @@ func DeleteTag(ctx context.Context, reqDTO DeleteTagReqDTO) error {
 	if !b {
 		return util.InvalidArgsError()
 	}
+	team, b, err := teammd.GetByTeamId(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.ThereHasBugErr()
+	}
 	err = checkPermByRepo(ctx, repo, reqDTO.Operator, updateRepo)
 	if err != nil {
 		return err
@@ -741,6 +821,7 @@ func DeleteTag(ctx context.Context, reqDTO DeleteTagReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyGitPushDeleteEvent(repo, team, reqDTO.Operator, git.TagPrefix+reqDTO.Tag, "tag")
 	return nil
 }
 
@@ -792,11 +873,11 @@ func Gc(ctx context.Context, reqDTO GcReqDTO) error {
 		return util.InvalidArgsError()
 	}
 	// 管理员权限
-	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	_, err = checkTeamAdminByTeamId(ctx, repo.TeamId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
-	gitSize, err := client.Gc(ctx, reqvo.GcReq{
+	gc, err := client.Gc(ctx, reqvo.GcReq{
 		RepoPath: repo.Path,
 	})
 	if err != nil {
@@ -806,7 +887,7 @@ func Gc(ctx context.Context, reqDTO GcReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	repomd.UpdateGitSize(ctx, reqDTO.RepoId, gitSize)
+	repomd.UpdateGitSize(ctx, reqDTO.RepoId, gc.GitSize)
 	return nil
 }
 
@@ -857,17 +938,15 @@ func DiffRefs(ctx context.Context, reqDTO DiffRefsReqDTO) (DiffRefsRespDTO, erro
 		},
 		ConflictFiles: refs.ConflictFiles,
 	}
-	ret.DiffNumsStats.Stats, _ = listutil.Map(refs.DiffNumsStats.Stats, func(t reqvo.DiffNumsStatVO) (DiffNumsStatDTO, error) {
+	ret.DiffNumsStats.Stats = listutil.MapNe(refs.DiffNumsStats.Stats, func(t reqvo.DiffNumsStatVO) DiffNumsStatDTO {
 		return DiffNumsStatDTO{
 			RawPath:    t.RawPath,
 			Path:       t.Path,
 			InsertNums: t.InsertNums,
 			DeleteNums: t.DeleteNums,
-		}, nil
+		}
 	})
-	ret.Commits, _ = listutil.Map(refs.Commits, func(t reqvo.CommitVO) (CommitDTO, error) {
-		return commit2Dto(t), nil
-	})
+	ret.Commits = listutil.MapNe(refs.Commits, commit2Dto)
 	ret.CanMerge = refs.CanMerge
 	return ret, nil
 }
@@ -912,13 +991,13 @@ func DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (DiffCommitsResp
 			DeleteNums:     refs.DiffNumsStats.DeleteNums,
 		},
 	}
-	ret.DiffNumsStats.Stats, _ = listutil.Map(refs.DiffNumsStats.Stats, func(t reqvo.DiffNumsStatVO) (DiffNumsStatDTO, error) {
+	ret.DiffNumsStats.Stats = listutil.MapNe(refs.DiffNumsStats.Stats, func(t reqvo.DiffNumsStatVO) DiffNumsStatDTO {
 		return DiffNumsStatDTO{
 			RawPath:    t.RawPath,
 			Path:       t.Path,
 			InsertNums: t.InsertNums,
 			DeleteNums: t.DeleteNums,
-		}, nil
+		}
 	})
 	return ret, nil
 }
@@ -1008,13 +1087,13 @@ func DiffFile(ctx context.Context, reqDTO DiffFileReqDTO) (DiffFileRespDTO, erro
 		CopyFrom:    resp.CopyFrom,
 		CopyTo:      resp.CopyTo,
 	}
-	ret.Lines, _ = listutil.Map(resp.Lines, func(t reqvo.DiffLineVO) (DiffLineDTO, error) {
+	ret.Lines = listutil.MapNe(resp.Lines, func(t reqvo.DiffLineVO) DiffLineDTO {
 		return DiffLineDTO{
 			LeftNo:  t.LeftNo,
 			Prefix:  t.Prefix,
 			RightNo: t.RightNo,
 			Text:    t.Text,
-		}, nil
+		}
 	})
 	return ret, nil
 }
@@ -1084,7 +1163,7 @@ func HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReqDTO) (HistoryCo
 	ret := HistoryCommitsRespDTO{
 		Cursor: resp.Cursor,
 	}
-	ret.Data, _ = listutil.Map(resp.Data, func(t reqvo.CommitVO) (CommitDTO, error) {
+	ret.Data = listutil.MapNe(resp.Data, func(t reqvo.CommitVO) CommitDTO {
 		r := commit2Dto(t)
 		if t.CommitSig != "" {
 			sig := signature.CommitSig(t.CommitSig)
@@ -1094,7 +1173,7 @@ func HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReqDTO) (HistoryCo
 				r.Verified, r.Signer.Account, r.Signer.Key, r.Signer.Type = verifyCommitWithGpgKeys(ctx, &t, gpgMap, gpgIdMap)
 			}
 		}
-		return r, nil
+		return r
 	})
 	// 查找头像和姓名
 	accountList := make([]string, 0)
@@ -1213,19 +1292,40 @@ func verifyCommitWithGpgKey(gpgKey *gpgkeymd.GpgKey, sig *packet.Signature, comm
 	return false
 }
 
-func checkTeamAdmin(ctx context.Context, teamId int64, operator apisession.UserInfo) error {
+func checkTeamAdminByTeamId(ctx context.Context, teamId int64, operator apisession.UserInfo) (teammd.Team, error) {
+	team, b, err := teammd.GetByTeamId(ctx, teamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return teammd.Team{}, util.InvalidArgsError()
+	}
 	if operator.IsAdmin {
-		return nil
+		return team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, teamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return team, util.InternalError(err)
 	}
 	if !b || !p.IsAdmin {
-		return util.UnauthorizedError()
+		return team, util.UnauthorizedError()
 	}
-	return nil
+	return team, nil
+}
+
+func checkTeamAdminByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, teammd.Team, error) {
+	repo, b, err := repomd.GetByRepoId(ctx, repoId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, err := checkTeamAdminByTeamId(ctx, repo.TeamId, operator)
+	return repo, team, err
 }
 
 func checkPermByRepo(ctx context.Context, repo repomd.Repo, operator apisession.UserInfo, permCode int) error {
@@ -1325,8 +1425,8 @@ func PageBranchCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]Bran
 	}
 	var prMap map[string]pullrequestmd.PullRequest
 	if len(branches) > 0 {
-		heads, _ := listutil.Map(branches, func(t reqvo.RefCommitVO) (string, error) {
-			return t.Name, nil
+		heads := listutil.MapNe(branches, func(t reqvo.RefCommitVO) string {
+			return t.Name
 		})
 		pullRequests, err := pullrequestmd.GetLastPullRequestByRepoIdAndHead(ctx, reqDTO.RepoId, heads)
 		if err != nil {
@@ -1346,7 +1446,7 @@ func PageBranchCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]Bran
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(branches, func(t reqvo.RefCommitVO) (BranchCommitDTO, error) {
+	data := listutil.MapNe(branches, func(t reqvo.RefCommitVO) BranchCommitDTO {
 		pr, b := prMap[t.Name]
 		isProtectedBranch, _ := pbList.IsProtectedBranch(t.Name)
 		ret := BranchCommitDTO{
@@ -1362,7 +1462,7 @@ func PageBranchCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]Bran
 				Created:  pr.Created,
 			}
 		}
-		return ret, nil
+		return ret
 	})
 	return data, totalCount, nil
 }
@@ -1395,11 +1495,11 @@ func PageTagCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]TagComm
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(tags, func(t reqvo.RefCommitVO) (TagCommitDTO, error) {
+	data := listutil.MapNe(tags, func(t reqvo.RefCommitVO) TagCommitDTO {
 		return TagCommitDTO{
 			Name:   t.Name,
 			Commit: commit2Dto(t.Commit),
-		}, nil
+		}
 	})
 	return data, totalCount, nil
 }
@@ -1456,7 +1556,7 @@ func UpdateRepo(ctx context.Context, reqDTO UpdateRepoReqDTO) error {
 	if !b {
 		return util.InvalidArgsError()
 	}
-	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	team, err := checkTeamAdminByTeamId(ctx, repo.TeamId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -1473,6 +1573,7 @@ func UpdateRepo(ctx context.Context, reqDTO UpdateRepoReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(repo, team, reqDTO.Operator, event.RepoEventUpdateAction)
 	return nil
 }
 
@@ -1491,7 +1592,7 @@ func SetRepoArchivedStatus(ctx context.Context, reqDTO SetRepoArchivedStatusReqD
 	if !b {
 		return util.InvalidArgsError()
 	}
-	err = checkTeamAdmin(ctx, repo.TeamId, reqDTO.Operator)
+	team, err := checkTeamAdminByTeamId(ctx, repo.TeamId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -1501,9 +1602,9 @@ func SetRepoArchivedStatus(ctx context.Context, reqDTO SetRepoArchivedStatusReqD
 		return util.InternalError(err)
 	}
 	if reqDTO.IsArchived {
-		notifyEvent(repo, reqDTO.Operator, event.RepoArchivedAction)
+		notifyEvent(repo, team, reqDTO.Operator, event.RepoEventArchivedAction)
 	} else {
-		notifyEvent(repo, reqDTO.Operator, event.RepoUnArchivedAction)
+		notifyEvent(repo, team, reqDTO.Operator, event.RepoEventUnArchivedAction)
 	}
 	return nil
 }
@@ -1515,7 +1616,7 @@ func ListRepoByAdmin(ctx context.Context, reqDTO ListRepoByAdminReqDTO) ([]Simpl
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkTeamAdmin(ctx, reqDTO.TeamId, reqDTO.Operator)
+	_, err := checkTeamAdminByTeamId(ctx, reqDTO.TeamId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}

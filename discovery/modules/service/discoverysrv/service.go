@@ -166,12 +166,12 @@ func BindAppAndDiscoverySource(ctx context.Context, reqDTO BindAppAndDiscoverySo
 			return util.InvalidArgsError()
 		}
 	}
-	insertReqs, _ := listutil.Map(nodes, func(t discoverymd.EtcdNode) (discoverymd.InsertAppEtcdNodeBindReqDTO, error) {
+	insertReqs := listutil.MapNe(nodes, func(t discoverymd.EtcdNode) discoverymd.InsertAppEtcdNodeBindReqDTO {
 		return discoverymd.InsertAppEtcdNodeBindReqDTO{
 			NodeId: t.Id,
 			AppId:  reqDTO.AppId,
 			Env:    reqDTO.Env,
-		}, nil
+		}
 	})
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 先删除
@@ -215,9 +215,9 @@ func ListBindDiscoverySource(ctx context.Context, reqDTO ListBindDiscoverySource
 		return []SimpleBindDiscoverySourceDTO{}, nil
 	}
 	bindMap := make(map[int64]discoverymd.AppEtcdNodeBind, len(binds))
-	nodeIdList, _ := listutil.Map(binds, func(t discoverymd.AppEtcdNodeBind) (int64, error) {
+	nodeIdList := listutil.MapNe(binds, func(t discoverymd.AppEtcdNodeBind) int64 {
 		bindMap[t.NodeId] = t
-		return t.NodeId, nil
+		return t.NodeId
 	})
 	nodes, err := discoverymd.BatchGetEtcdNodeByIdList(ctx, nodeIdList, []string{"id", "name"})
 	return listutil.Map(nodes, func(t discoverymd.EtcdNode) (SimpleBindDiscoverySourceDTO, error) {
@@ -639,12 +639,12 @@ func notifyDiscoveryEvent(operator apisession.UserInfo, team teammd.Team, app ap
 
 func notifyDiscoverySourceEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, sources []discoverymd.EtcdNode, env string) {
 	initPsub()
-	srcs, _ := listutil.Map(sources, func(t discoverymd.EtcdNode) (event.AppSource, error) {
+	srcs := listutil.MapNe(sources, func(t discoverymd.EtcdNode) event.AppSource {
 		return event.AppSource{
 			Id:   t.Id,
 			Name: t.Name,
 			Env:  t.Env,
-		}, nil
+		}
 	})
 	psub.Publish(event.AppSourceTopic, event.AppSourceEvent{
 		BaseTeam: event.BaseTeam{

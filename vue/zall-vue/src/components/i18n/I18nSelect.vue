@@ -1,51 +1,39 @@
 <template>
-  <a-popover v-model:open="visible" trigger="click" placement="bottomRight">
-    <template #content>
-      <div
-        v-for="(val, key) in localeMap"
-        @click="selectLang(key)"
-        v-bind:key="key"
-        class="select-item"
-      >{{val}}</div>
+  <a-dropdown>
+    <template #overlay>
+      <a-menu @click="selectLang">
+        <a-menu-item key="zh">中文</a-menu-item>
+        <a-menu-item key="en">English</a-menu-item>
+      </a-menu>
     </template>
-    <span class="text-btn" :style="props.style">{{localeText}}</span>
-  </a-popover>
+    <div class="lang no-wrap" :style="props.style">{{localeText}}</div>
+  </a-dropdown>
 </template>
 <script setup>
 import { ref, defineProps } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
-const currentRoute = useRoute();
+const props = defineProps(["style"])
+const route = useRoute();
 const { locale } = useI18n();
-const visible = ref(false);
-const props = defineProps(["style", "locale"]);
 const localeMap = {
   zh: "中文",
   en: "English"
 };
-const selectLang = key => {
-  localeText.value = localeMap[key];
-  visible.value = false;
-  locale.value = key;
+// 点击选择语言
+const selectLang = event => {
+  localeText.value = localeMap[event.key];
+  locale.value = event.key;
 };
-if (currentRoute.query.locale) {
-  locale.value = currentRoute.query.locale;
+if (route.query.locale) {
+  locale.value = route.query.locale;
 }
 const localeText = ref(localeMap[locale.value]);
 </script>
 <style scoped>
-.text-btn {
-  color: white;
-  cursor: pointer;
+.lang {
   font-size: 14px;
-}
-.select-item {
-  line-height: 28px;
-  width: 80px;
-  text-align: center;
-  cursor: pointer;
-}
-.select-item:hover {
-  background-color: #f0f0f0;
+  color: white;
+  line-height: 64px;
 }
 </style>

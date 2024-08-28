@@ -199,11 +199,11 @@ func batch(c *gin.Context) {
 		IsUpload: isUpload,
 		RefName:  req.Ref.Name,
 	}
-	reqDTO.Objects, _ = listutil.Map(req.Objects, func(t PointerVO) (lfssrv.PointerDTO, error) {
+	reqDTO.Objects = listutil.MapNe(req.Objects, func(t PointerVO) lfssrv.PointerDTO {
 		return lfssrv.PointerDTO{
 			Oid:  t.Oid,
 			Size: t.Size,
-		}, nil
+		}
 	})
 	respDTO, err := lfssrv.Batch(c, reqDTO)
 	if err != nil {
@@ -223,7 +223,7 @@ func batch(c *gin.Context) {
 	}
 	var resp BatchRespVO
 	repoPath := getRepo(c).Path
-	resp.Objects, _ = listutil.Map(respDTO.ObjectList, func(t lfssrv.ObjectDTO) (ObjectRespVO, error) {
+	resp.Objects = listutil.MapNe(respDTO.ObjectList, func(t lfssrv.ObjectDTO) ObjectRespVO {
 		if t.ErrObjDTO.Code == 0 {
 			var actions map[string]LinkVO
 			if isUpload {
@@ -251,14 +251,14 @@ func batch(c *gin.Context) {
 					Size: t.Size,
 				},
 				Actions: actions,
-			}, nil
+			}
 		} else {
 			return ObjectRespVO{
 				Error: &ObjectErrVO{
 					Code:    t.ErrObjDTO.Code,
 					Message: t.ErrObjDTO.Message,
 				},
-			}, nil
+			}
 		}
 	})
 	c.Header("Content-Type", MediaType)
@@ -339,8 +339,8 @@ func listLock(c *gin.Context) {
 		})
 		return
 	}
-	listVO, _ := listutil.Map(listResp.LockList, func(lock lfssrv.LfsLockDTO) (LockVO, error) {
-		return model2LockVO(lock, operator), nil
+	listVO := listutil.MapNe(listResp.LockList, func(lock lfssrv.LfsLockDTO) LockVO {
+		return model2LockVO(lock, operator)
 	})
 	resp := ListLockRespVO{
 		Locks: listVO,
@@ -414,17 +414,17 @@ func listLockVerify(c *gin.Context) {
 		return
 	}
 	voList := listResp.LockList
-	ours, _ := listutil.Filter(voList, func(l lfssrv.LfsLockDTO) (bool, error) {
-		return l.Owner == operator.Account, nil
+	ours := listutil.FilterNe(voList, func(l lfssrv.LfsLockDTO) bool {
+		return l.Owner == operator.Account
 	})
-	oursRet, _ := listutil.Map(ours, func(l lfssrv.LfsLockDTO) (LockVO, error) {
-		return model2LockVO(l, operator), nil
+	oursRet := listutil.MapNe(ours, func(l lfssrv.LfsLockDTO) LockVO {
+		return model2LockVO(l, operator)
 	})
-	theirs, _ := listutil.Filter(voList, func(l lfssrv.LfsLockDTO) (bool, error) {
-		return l.Owner != operator.Account, nil
+	theirs := listutil.FilterNe(voList, func(l lfssrv.LfsLockDTO) bool {
+		return l.Owner != operator.Account
 	})
-	theirsRet, _ := listutil.Map(theirs, func(l lfssrv.LfsLockDTO) (LockVO, error) {
-		return model2LockVO(l, operator), nil
+	theirsRet := listutil.MapNe(theirs, func(l lfssrv.LfsLockDTO) LockVO {
+		return model2LockVO(l, operator)
 	})
 	respVO := ListLockVerifyRespVO{
 		Ours:   oursRet,

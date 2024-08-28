@@ -160,8 +160,8 @@ func ListGpgKey(ctx context.Context, reqDTO ListGpgKeyReqDTO) ([]GpgKeyDTO, erro
 		return nil, util.InternalError(err)
 	}
 	return listutil.Map(keys, func(t gpgkeymd.GpgKey) (GpgKeyDTO, error) {
-		subKeys, _ := listutil.Map(t.SubKeys, func(t gpgkeymd.GpgSubKey) (string, error) {
-			return t.KeyId, nil
+		subKeys := listutil.MapNe(t.SubKeys, func(t gpgkeymd.GpgSubKey) string {
+			return t.KeyId
 		})
 		return GpgKeyDTO{
 			Id:      t.Id,

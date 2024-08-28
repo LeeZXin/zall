@@ -4,8 +4,13 @@
 <script setup>
 import { defineProps } from "vue";
 import { useI18n } from "vue-i18n";
+/*
+  发布计划状态tag
+*/
 const { t } = useI18n();
+// 状态值
 const props = defineProps(["status"]);
+// 颜色map
 const colorMap = {
   1: "orange",
   2: "green",

@@ -287,8 +287,8 @@ func ListRoleUser(ctx context.Context, reqDTO ListRoleUserReqDTO) ([]RoleUserDTO
 		teamUserMap[teamUser.Account] = teamUser
 	}
 	// 用户姓名信息
-	accounts, _ := listutil.Map(teamUsers, func(t teammd.User) (string, error) {
-		return t.Account, nil
+	accounts := listutil.MapNe(teamUsers, func(t teammd.User) string {
+		return t.Account
 	})
 	users, err := usermd.ListUserByAccounts(ctx, accounts, []string{"account", "name"})
 	if err != nil {
@@ -383,21 +383,19 @@ func CreateUser(ctx context.Context, reqDTO CreateUserReqDTO) error {
 	if b {
 		return util.AlreadyExistsError()
 	}
-	reqList, _ := listutil.Map(accounts, func(t string) (teammd.InsertUserReqDTO, error) {
+	reqList := listutil.MapNe(accounts, func(t string) teammd.InsertUserReqDTO {
 		return teammd.InsertUserReqDTO{
 			TeamId:  role.TeamId,
 			Account: t,
 			RoleId:  reqDTO.RoleId,
-		}, nil
+		}
 	})
 	err = teammd.BatchInsertUser(ctx, reqList)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	userAccountNames, _ := listutil.Map(users, func(t usermd.User) (string, error) {
-		return formatUserAccountName(t), nil
-	})
+	userAccountNames := listutil.MapNe(users, formatUserAccountName)
 	notifyTeamUserEvent(
 		reqDTO.Operator,
 		team,
@@ -538,8 +536,8 @@ func UpdateRole(ctx context.Context, reqDTO UpdateRoleReqDTO) error {
 func checkReqPerm(ctx context.Context, permDetail perm.Detail, teamId int64) error {
 	// 检查仓库id
 	if len(permDetail.RepoPermList) > 0 {
-		repoIdList, _ := listutil.Map(permDetail.RepoPermList, func(t perm.RepoPermWithId) (int64, error) {
-			return t.RepoId, nil
+		repoIdList := listutil.MapNe(permDetail.RepoPermList, func(t perm.RepoPermWithId) int64 {
+			return t.RepoId
 		})
 		repoList, err := repomd.GetRepoByIdList(ctx, repoIdList, []string{"team_id"})
 		if err != nil {
@@ -557,8 +555,8 @@ func checkReqPerm(ctx context.Context, permDetail perm.Detail, teamId int64) err
 	}
 	// 检查应用服务列表
 	if len(permDetail.AppPermList) > 0 {
-		appIdList, _ := listutil.Map(permDetail.AppPermList, func(t perm.AppPermWithId) (string, error) {
-			return t.AppId, nil
+		appIdList := listutil.MapNe(permDetail.AppPermList, func(t perm.AppPermWithId) string {
+			return t.AppId
 		})
 		appList, err := appmd.GetByAppIdList(ctx, appIdList, []string{"team_id"})
 		if err != nil {
@@ -658,8 +656,8 @@ func ListTeam(ctx context.Context, reqDTO ListTeamReqDTO) ([]TeamDTO, error) {
 			logger.Logger.WithContext(ctx).Error(err)
 			return nil, util.InternalError(err)
 		}
-		teamIdList, _ := listutil.Map(puList, func(t teammd.User) (int64, error) {
-			return t.TeamId, nil
+		teamIdList := listutil.MapNe(puList, func(t teammd.User) int64 {
+			return t.TeamId
 		})
 		teamList, err = teammd.ListTeamByIdList(ctx, teamIdList, []string{"id", "name"})
 		if err != nil {

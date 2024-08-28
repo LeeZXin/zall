@@ -149,8 +149,8 @@ func GetAllTags(ctx context.Context, req reqvo.GetAllTagsReq) ([]reqvo.RefVO, er
 }
 
 // Gc 仓库gc
-func Gc(ctx context.Context, req reqvo.GcReq) (int64, error) {
-	var resp ginutil.DataResp[int64]
+func Gc(ctx context.Context, req reqvo.GcReq) (reqvo.GcResp, error) {
+	var resp ginutil.DataResp[reqvo.GcResp]
 	err := postHttp(
 		ctx,
 		"/api/v1/git/store/gc",
@@ -158,10 +158,10 @@ func Gc(ctx context.Context, req reqvo.GcReq) (int64, error) {
 		&resp,
 	)
 	if err != nil {
-		return 0, err
+		return reqvo.GcResp{}, err
 	}
 	if !resp.IsSuccess() {
-		return 0, bizerr.NewBizErr(resp.Code, resp.Message)
+		return reqvo.GcResp{}, bizerr.NewBizErr(resp.Code, resp.Message)
 	}
 	return resp.Data, nil
 }

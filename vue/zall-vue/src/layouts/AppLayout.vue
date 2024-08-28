@@ -11,35 +11,39 @@
         <a-menu theme="dark" mode="inline" @click="onselect" v-model:selectedKeys="selectedKeys">
           <a-menu-item key="/propertyFile/list">
             <ContainerOutlined />
-            <span>配置中心</span>
+            <span>{{t("appMenu.propertyFile")}}</span>
           </a-menu-item>
           <a-menu-item key="/pipeline/list" v-if="appStore.perm?.canManagePipeline">
             <TagOutlined />
-            <span>部署流水线</span>
+            <span>{{t("appMenu.deployPipeline")}}</span>
           </a-menu-item>
           <a-menu-item key="/deployPlan/list">
             <FileOutlined />
-            <span>发布计划</span>
+            <span>{{t("appMenu.deployPlan")}}</span>
           </a-menu-item>
           <a-menu-item key="/serviceStatus/list">
             <ReadOutlined />
-            <span>服务状态</span>
+            <span>{{t("appMenu.serviceStatus")}}</span>
           </a-menu-item>
           <a-menu-item key="/discoveryService/list">
             <BlockOutlined />
-            <span>注册中心</span>
+            <span>{{t("appMenu.registryCenter")}}</span>
           </a-menu-item>
           <a-menu-item key="/product/list">
             <DatabaseOutlined />
-            <span>制品库</span>
+            <span>{{t("appMenu.artifacts")}}</span>
           </a-menu-item>
           <a-menu-item key="/promScrape/list" v-if="teamStore.perm?.canManagePromScrape">
             <AlertOutlined />
-            <span>Prometheus</span>
+            <span>{{t("appMenu.promScrape")}}</span>
+          </a-menu-item>
+          <a-menu-item key="/alertConfig/list">
+            <MonitorOutlined />
+            <span>{{t("appMenu.alertConfig")}}</span>
           </a-menu-item>
           <a-menu-item key="/setting" v-if="teamStore.isAdmin">
             <SettingOutlined />
-            <span>设置</span>
+            <span>{{t("appMenu.setting")}}</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -63,7 +67,8 @@ import {
   BlockOutlined,
   SettingOutlined,
   DatabaseOutlined,
-  AlertOutlined
+  AlertOutlined,
+  MonitorOutlined
 } from "@ant-design/icons-vue";
 import { getAppRequest } from "@/api/app/appApi";
 import { useAppStore } from "@/pinia/appStore";
@@ -73,20 +78,27 @@ const teamStore = useTeamStore();
 const appStore = useAppStore();
 const { t } = useI18n();
 const route = useRoute();
+// 导航栏是否合上
 const collapsed = ref(false);
 const router = useRouter();
+// 导航栏选择的keys
 const selectedKeys = ref([]);
+// appStore数据是否加载完
 const appLoaded = ref(false);
+// 路由前缀
 const routeKey = `/team/${route.params.teamId}/app/${route.params.appId}`;
+// 切换应用服务
 const switchApp = () => {
   router.push(`/team/${route.params.teamId}/app/list`);
 };
+// 导航栏选择
 const onselect = event => {
   router.push({
     path: routeKey + event.key,
     force: true
   });
 };
+// 导航栏选择后触发
 const changeSelectedKey = path => {
   const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
   for (let key in pagesMap) {
@@ -105,8 +117,10 @@ const pagesMap = {
   "/deployPlan": "/deployPlan/list",
   "/serviceStatus": "/serviceStatus/list",
   "/discoveryService": "/discoveryService/list",
+  "/promScrape": "/promScrape/list",
   "/setting": "/setting",
-  "/product": "/product/list"
+  "/product": "/product/list",
+  "/alertConfig": "/alertConfig/list"
 };
 watch(
   () => router.currentRoute.value.path,

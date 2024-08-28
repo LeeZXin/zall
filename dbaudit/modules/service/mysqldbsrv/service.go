@@ -126,7 +126,7 @@ func ListDb(ctx context.Context, reqDTO ListDbReqDTO) ([]DbDTO, int64, error) {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(dbs, func(t mysqldbmd.Db) (DbDTO, error) {
+	data := listutil.MapNe(dbs, func(t mysqldbmd.Db) DbDTO {
 		ret := DbDTO{
 			Id:      t.Id,
 			Name:    t.Name,
@@ -135,7 +135,7 @@ func ListDb(ctx context.Context, reqDTO ListDbReqDTO) ([]DbDTO, int64, error) {
 		if t.Config != nil {
 			ret.Config = t.Config.Data
 		}
-		return ret, nil
+		return ret
 	})
 	return data, total, nil
 }
@@ -210,7 +210,7 @@ func GetReadPermApply(ctx context.Context, reqDTO GetReadPermApplyReqDTO) (ReadP
 	if checkDbaPerm(reqDTO.Operator) != nil && apply.Account != reqDTO.Operator.Account {
 		return ReadPermApplyDTO{}, util.UnauthorizedError()
 	}
-	return readPermApply2Dto(apply)
+	return readPermApply2Dto(apply), nil
 }
 
 // ListReadPermApplyByDba dba查看展示审批列表
@@ -234,11 +234,11 @@ func ListReadPermApplyByDba(ctx context.Context, reqDTO ListReadPermApplyByDbaRe
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(applies, readPermApply2Dto)
+	data := listutil.MapNe(applies, readPermApply2Dto)
 	return data, total, nil
 }
 
-func readPermApply2Dto(t mysqldbmd.ReadPermApply) (ReadPermApplyDTO, error) {
+func readPermApply2Dto(t mysqldbmd.ReadPermApply) ReadPermApplyDTO {
 	return ReadPermApplyDTO{
 		Id:             t.Id,
 		Account:        t.Account,
@@ -253,7 +253,7 @@ func readPermApply2Dto(t mysqldbmd.ReadPermApply) (ReadPermApplyDTO, error) {
 		DisagreeReason: t.DisagreeReason,
 		Created:        t.Created,
 		Updated:        t.Updated,
-	}, nil
+	}
 }
 
 // ListReadPermApplyByOperator 展示申请的审批列表
@@ -273,7 +273,7 @@ func ListReadPermApplyByOperator(ctx context.Context, reqDTO ListReadPermApplyBy
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(applies, readPermApply2Dto)
+	data := listutil.MapNe(applies, readPermApply2Dto)
 	return data, total, nil
 }
 
@@ -308,10 +308,10 @@ func AgreeReadPermApply(ctx context.Context, reqDTO AgreeReadPermApplyReqDTO) er
 		if b2 {
 			// 插入权限表
 			expired := time.Now().Add(time.Duration(apply.ExpireDay) * 24 * time.Hour)
-			tables, _ := listutil.Filter(listutil.Distinct(strings.Split(apply.AccessTables, ";")...), func(t string) (bool, error) {
-				return len(t) > 0, nil
+			tables := listutil.FilterNe(listutil.Distinct(strings.Split(apply.AccessTables, ";")...), func(t string) bool {
+				return len(t) > 0
 			})
-			insertReqs, _ := listutil.Map(tables, func(t string) (mysqldbmd.InsertReadPermReqDTO, error) {
+			insertReqs := listutil.MapNe(tables, func(t string) mysqldbmd.InsertReadPermReqDTO {
 				return mysqldbmd.InsertReadPermReqDTO{
 					Account:     apply.Account,
 					DbId:        apply.DbId,
@@ -319,7 +319,7 @@ func AgreeReadPermApply(ctx context.Context, reqDTO AgreeReadPermApplyReqDTO) er
 					AccessTable: t,
 					ApplyId:     apply.Id,
 					Expired:     expired,
-				}, nil
+				}
 			})
 			return mysqldbmd.BatchInsertReadPerm(ctx, insertReqs)
 		}
@@ -367,8 +367,8 @@ func ListAuthorizedDb(ctx context.Context, reqDTO ListAuthorizedDbReqDTO) ([]Sim
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	dbIdList, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (int64, error) {
-		return t.DbId, nil
+	dbIdList := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) int64 {
+		return t.DbId
 	})
 	dbMap, err := getDbMap(ctx, dbIdList)
 	if err != nil {
@@ -428,8 +428,8 @@ func ListAuthorizedBase(ctx context.Context, reqDTO ListAuthorizedBaseReqDTO) ([
 				ret = append(ret, base[0])
 			}
 		}
-		ret, _ = listutil.Filter(ret, func(t string) (bool, error) {
-			return !defaultBases.Contains(t), nil
+		ret = listutil.FilterNe(ret, func(t string) bool {
+			return !defaultBases.Contains(t)
 		})
 		return ret, nil
 	}
@@ -442,12 +442,12 @@ func ListAuthorizedBase(ctx context.Context, reqDTO ListAuthorizedBaseReqDTO) ([
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (string, error) {
-		return t.AccessBase, nil
+	ret := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) string {
+		return t.AccessBase
 	})
 	ret = listutil.Distinct(ret...)
-	ret, _ = listutil.Filter(ret, func(t string) (bool, error) {
-		return !defaultBases.Contains(t), nil
+	ret = listutil.FilterNe(ret, func(t string) bool {
+		return !defaultBases.Contains(t)
 	})
 	sort.SliceStable(ret, func(i, j int) bool {
 		return ret[i] < ret[j]
@@ -509,8 +509,8 @@ func ListAuthorizedTable(ctx context.Context, reqDTO ListAuthorizedTableReqDTO) 
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	retTables, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (string, error) {
-		return t.AccessTable, nil
+	retTables := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) string {
+		return t.AccessTable
 	})
 	retTables = listutil.Distinct(retTables...)
 	hasStar := false
@@ -749,15 +749,15 @@ func ListReadPermByOperator(ctx context.Context, reqDTO ListReadPermByOperatorRe
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	dbIdList, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (int64, error) {
-		return t.DbId, nil
+	dbIdList := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) int64 {
+		return t.DbId
 	})
 	dbMap, err := getDbMap(ctx, dbIdList)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (ReadPermDTO, error) {
-		return readPerm2Dto(t, dbMap), nil
+	data := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) ReadPermDTO {
+		return readPerm2Dto(t, dbMap)
 	})
 	return data, total, nil
 }
@@ -815,15 +815,15 @@ func ListReadPermByDba(ctx context.Context, reqDTO ListReadPermByDbaReqDTO) ([]R
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	dbIdList, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (int64, error) {
-		return t.DbId, nil
+	dbIdList := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) int64 {
+		return t.DbId
 	})
 	dbMap, err := getDbMap(ctx, dbIdList)
 	if err != nil {
 		return nil, 0, err
 	}
-	data, _ := listutil.Map(perms, func(t mysqldbmd.ReadPerm) (ReadPermDTO, error) {
-		return readPerm2Dto(t, dbMap), nil
+	data := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) ReadPermDTO {
+		return readPerm2Dto(t, dbMap)
 	})
 	return data, total, nil
 }
@@ -967,8 +967,8 @@ func ExplainDataUpdate(ctx context.Context, reqDTO ExplainDataUpdateReqDTO) (str
 			unexplainableSqls = append(unexplainableSqls, result.Sql)
 		}
 	}
-	explainableSqls, _ = listutil.Map(explainableSqls, func(t string) (string, error) {
-		return "explain " + t, nil
+	explainableSqls = listutil.MapNe(explainableSqls, func(t string) string {
+		return "explain " + t
 	})
 	explainableResults, err := util.MysqlQueries(datasourceName, explainableSqls...)
 	if err != nil {
@@ -992,9 +992,9 @@ func ExplainDataUpdate(ctx context.Context, reqDTO ExplainDataUpdateReqDTO) (str
 		} else {
 			m := result.ToMap()
 			if len(m) > 0 {
-				ret.WriteString("rows: " + m[0]["rows"] + "\n")
-				ret.WriteString("type: " + m[0]["type"] + "\n")
-				ret.WriteString("possible_keys: " + m[0]["possible_keys"] + "\n")
+				ret.WriteString("rows: " + m[0]["rows"].(string) + "\n")
+				ret.WriteString("type: " + m[0]["type"].(string) + "\n")
+				ret.WriteString("possible_keys: " + m[0]["possible_keys"].(string) + "\n")
 			}
 		}
 		ret.WriteString(separator)
@@ -1054,14 +1054,14 @@ func ListDataUpdateApplyByOperator(ctx context.Context, reqDTO ListDataUpdateApp
 }
 
 func dataUpdateApplyMd2Dto(ctx context.Context, applies []mysqldbmd.DataUpdateApply) ([]DataUpdateApplyDTO, error) {
-	dbIdList, _ := listutil.Map(applies, func(t mysqldbmd.DataUpdateApply) (int64, error) {
-		return t.DbId, nil
+	dbIdList := listutil.MapNe(applies, func(t mysqldbmd.DataUpdateApply) int64 {
+		return t.DbId
 	})
 	dbMap, err := getDbMap(ctx, dbIdList)
 	if err != nil {
 		return nil, err
 	}
-	data, _ := listutil.Map(applies, func(t mysqldbmd.DataUpdateApply) (DataUpdateApplyDTO, error) {
+	data := listutil.MapNe(applies, func(t mysqldbmd.DataUpdateApply) DataUpdateApplyDTO {
 		ret := DataUpdateApplyDTO{
 			Id:               t.Id,
 			Account:          t.Account,
@@ -1079,7 +1079,7 @@ func dataUpdateApplyMd2Dto(ctx context.Context, applies []mysqldbmd.DataUpdateAp
 			Created:          t.Created,
 			Updated:          t.Updated,
 		}
-		return ret, nil
+		return ret
 	})
 	return data, nil
 }

@@ -2,6 +2,7 @@ package teamhookmd
 
 import (
 	"context"
+	"github.com/LeeZXin/zall/pkg/commonhook"
 	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
@@ -19,7 +20,7 @@ func InsertTeamHook(ctx context.Context, reqDTO InsertTeamHookReqDTO) error {
 				Data: reqDTO.Events,
 			},
 			HookType: reqDTO.HookType,
-			HookCfg: &xormutil.Conversion[teamhook.Cfg]{
+			HookCfg: &xormutil.Conversion[commonhook.Cfg]{
 				Data: reqDTO.HookCfg,
 			},
 		})
@@ -36,7 +37,7 @@ func UpdateTeamHook(ctx context.Context, reqDTO UpdateTeamHookReqDTO) (bool, err
 				Data: reqDTO.Events,
 			},
 			HookType: reqDTO.HookType,
-			HookCfg: &xormutil.Conversion[teamhook.Cfg]{
+			HookCfg: &xormutil.Conversion[commonhook.Cfg]{
 				Data: reqDTO.HookCfg,
 			},
 		})

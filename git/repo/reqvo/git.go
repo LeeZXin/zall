@@ -41,6 +41,10 @@ type GcReq struct {
 	RepoPath string `json:"repoPath"`
 }
 
+type GcResp struct {
+	GitSize int64 `json:"gitSize"`
+}
+
 type DiffRefsReq struct {
 	RepoPath   string      `json:"repoPath"`
 	Target     string      `json:"target"`

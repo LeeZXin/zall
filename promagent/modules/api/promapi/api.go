@@ -101,7 +101,7 @@ func listScrapeBySa(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(scrapes, func(t promsrv.ScrapeBySaDTO) (ScrapeBySaVO, error) {
+		data := listutil.MapNe(scrapes, func(t promsrv.ScrapeBySaDTO) ScrapeBySaVO {
 			return ScrapeBySaVO{
 				Id:         t.Id,
 				Endpoint:   t.Endpoint,
@@ -112,7 +112,7 @@ func listScrapeBySa(c *gin.Context) {
 				Target:     t.Target,
 				TargetType: t.TargetType,
 				Env:        t.Env,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[ScrapeBySaVO]{
 			DataResp: ginutil.DataResp[[]ScrapeBySaVO]{
@@ -139,14 +139,14 @@ func listScrapeByTeam(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(scrapes, func(t promsrv.ScrapeByTeamDTO) (ScrapeByTeamVO, error) {
+		data := listutil.MapNe(scrapes, func(t promsrv.ScrapeByTeamDTO) ScrapeByTeamVO {
 			return ScrapeByTeamVO{
 				Id:         t.Id,
 				Endpoint:   t.Endpoint,
 				Target:     t.Target,
 				TargetType: t.TargetType,
 				Env:        t.Env,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[ScrapeByTeamVO]{
 			DataResp: ginutil.DataResp[[]ScrapeByTeamVO]{

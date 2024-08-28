@@ -76,6 +76,7 @@ logger:
 
 alert:
   enabled: true
+  env: sit
 
 
 zallet:

@@ -26,40 +26,40 @@
           </a-radio-group>
         </div>
       </div>
-      <template v-if="formState.hookType === 1">
-        <div class="section">
-          <div class="section-title">
-            <span>Webhook</span>
-          </div>
-          <div class="section-body">
-            <div>
-              <div style="font-size: 12px;margin-bottom: 6px">hook url</div>
-              <a-input style="width:100%" v-model:value="formState.hookUrl" placeholder="请填写" />
-            </div>
-            <div style="margin-top: 10px">
-              <div style="font-size: 12px;margin-bottom: 6px">签名密钥</div>
-              <a-input style="width:100%" v-model:value="formState.secret" placeholder="请填写" />
-            </div>
-          </div>
+      <div class="section" v-if="formState.hookType === 1">
+        <div class="section-title">
+          <span>Webhook</span>
         </div>
-      </template>
-      <template v-else-if="formState.hookType === 2">
-        <div class="section">
-          <div class="section-title">
-            <span>外部通知模板</span>
+        <div class="section-body">
+          <div>
+            <div style="font-size: 12px;margin-bottom: 6px">hook url</div>
+            <a-input style="width:100%" v-model:value="formState.hookUrl" placeholder="请填写" />
           </div>
-          <div class="section-body">
-            <a-select
-              style="width: 100%"
-              v-model:value="formState.tplId"
-              :options="tplList"
-              show-search
-              :filter-option="filterTplListOption"
-              placeholder="请选择"
+          <div style="margin-top: 10px">
+            <div style="font-size: 12px;margin-bottom: 6px">签名密钥</div>
+            <a-input-password
+              style="width:100%"
+              v-model:value="formState.secret"
+              placeholder="请填写"
             />
           </div>
         </div>
-      </template>
+      </div>
+      <div class="section" v-else-if="formState.hookType === 2">
+        <div class="section-title">
+          <span>外部通知模板</span>
+        </div>
+        <div class="section-body">
+          <a-select
+            style="width: 100%"
+            v-model:value="formState.tplId"
+            :options="tplList"
+            show-search
+            :filter-option="filterTplListOption"
+            placeholder="请选择"
+          />
+        </div>
+      </div>
       <div class="section">
         <div class="section-title">
           <span>代码仓库事件</span>
@@ -186,6 +186,11 @@ const defaultEnvRelated = {
     deleteDownService: false
   },
   appProduct: {
+    delete: false
+  },
+  appPromScrape: {
+    create: false,
+    update: false,
     delete: false
   },
   timer: {
@@ -333,6 +338,24 @@ const envRelatedEvents = [
     key: "appProduct",
     title: "应用制品",
     actions: [
+      {
+        key: "delete",
+        title: "删除"
+      }
+    ]
+  },
+  {
+    key: "appPromScrape",
+    title: "Prometheus抓取任务",
+    actions: [
+      {
+        key: "create",
+        title: "新增"
+      },
+      {
+        key: "update",
+        title: "编辑"
+      },
       {
         key: "delete",
         title: "删除"
@@ -532,6 +555,16 @@ const gitCheckboxes = reactive([
         key: "review",
         title: "评审",
         value: false
+      },
+      {
+        key: "addComment",
+        title: "添加评论",
+        value: false
+      },
+      {
+        key: "deleteComment",
+        title: "删除评论",
+        value: false
       }
     ]
   },
@@ -542,6 +575,11 @@ const gitCheckboxes = reactive([
       {
         key: "create",
         title: "新增",
+        value: false
+      },
+      {
+        key: "update",
+        title: "编辑",
         value: false
       },
       {
@@ -593,6 +631,53 @@ const gitCheckboxes = reactive([
       {
         key: "trigger",
         title: "触发",
+        value: false
+      },
+      {
+        key: "kill",
+        title: "停止任务",
+        value: false
+      }
+    ]
+  },
+  {
+    key: "gitWorkflowVars",
+    title: "git工作流变量",
+    actions: [
+      {
+        key: "create",
+        title: "创建",
+        value: false
+      },
+      {
+        key: "update",
+        title: "编辑",
+        value: false
+      },
+      {
+        key: "delete",
+        title: "删除",
+        value: false
+      }
+    ]
+  },
+  {
+    key: "gitWebhook",
+    title: "git webhook",
+    actions: [
+      {
+        key: "create",
+        title: "创建",
+        value: false
+      },
+      {
+        key: "update",
+        title: "编辑",
+        value: false
+      },
+      {
+        key: "delete",
+        title: "删除",
         value: false
       }
     ]

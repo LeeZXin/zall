@@ -20,8 +20,8 @@
           <span>密钥</span>
         </div>
         <div class="section-body">
-          <a-input style="width:100%" v-model:value="formState.secret" />
-          <div class="input-desc">我们会将通过这个密钥, 经过hmac后, 用于对请求的验证, 具体查看xxx</div>
+          <a-input-password style="width:100%" v-model:value="formState.secret" />
+          <div class="input-desc">我们会将通过这个密钥, 经过hmac后, 用于对请求的验证</div>
         </div>
       </div>
       <div class="section">

@@ -17,13 +17,13 @@ type MysqlQueryResultWithErr struct {
 	Err error
 }
 
-func (r *MysqlQueryResult) ToMap() []map[string]string {
-	ret := make([]map[string]string, 0, len(r.Data))
+func (r *MysqlQueryResult) ToMap() []map[string]any {
+	ret := make([]map[string]any, 0, len(r.Data))
 	for _, datum := range r.Data {
 		if len(datum) != len(r.Columns) {
 			continue
 		}
-		item := make(map[string]string, len(r.Columns))
+		item := make(map[string]any, len(r.Columns))
 		for i := range r.Columns {
 			item[r.Columns[i]] = datum[i]
 		}

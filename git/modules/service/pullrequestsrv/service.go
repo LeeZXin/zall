@@ -8,7 +8,6 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
-	"github.com/LeeZXin/zall/git/modules/service/oplogsrv"
 	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
@@ -18,7 +17,9 @@ import (
 	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/pkg/webhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -59,6 +60,25 @@ func initPsub() {
 					Source:      workflowmd.PullRequestTriggerSource,
 					PrId:        req.PrId,
 				})
+				// 触发teamhook
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					switch req.Action {
+					case event.PullRequestEventSubmitAction:
+						return events.PullRequest.Submit
+					case event.PullRequestEventCloseAction:
+						return events.PullRequest.Close
+					case event.PullRequestEventMergeAction:
+						return events.PullRequest.Merge
+					case event.PullRequestEventReviewAction:
+						return events.PullRequest.Review
+					case event.PullRequestEventAddCommentAction:
+						return events.PullRequest.AddComment
+					case event.PullRequestEventDeleteCommentAction:
+						return events.PullRequest.DeleteComment
+					default:
+						return false
+					}
+				})
 			}
 		})
 	})
@@ -72,7 +92,7 @@ func GetStats(ctx context.Context, reqDTO GetStatsReqDTO) (GetStatsRespDTO, erro
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err := checkAccessRepoPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, _, err := checkAccessRepoPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return GetStatsRespDTO{}, err
 	}
@@ -111,26 +131,27 @@ func ListPullRequest(ctx context.Context, reqDTO ListPullRequestReqDTO) ([]PullR
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err := checkAccessRepoPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, _, err := checkAccessRepoPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return nil, 0, err
 	}
 	requests, totalCount, err := pullrequestmd.ListPullRequest(ctx, pullrequestmd.ListPullRequestReqDTO{
 		RepoId:    reqDTO.RepoId,
 		SearchKey: reqDTO.SearchKey,
-		Page2Req:  reqDTO.Page2Req,
 		Status:    reqDTO.Status,
+		PageNum:   reqDTO.PageNum,
+		PageSize:  10,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, err
 	}
-	data, _ := listutil.Map(requests, pr2Dto)
+	data := listutil.MapNe(requests, pr2Dto)
 	return data, totalCount, nil
 }
 
-func pr2Dto(t pullrequestmd.PullRequest) (PullRequestDTO, error) {
-	ret := PullRequestDTO{
+func pr2Dto(t pullrequestmd.PullRequest) PullRequestDTO {
+	return PullRequestDTO{
 		Id:             t.Id,
 		RepoId:         t.RepoId,
 		Target:         t.Target,
@@ -149,7 +170,6 @@ func pr2Dto(t pullrequestmd.PullRequest) (PullRequestDTO, error) {
 		Closed:         t.Closed,
 		Merged:         t.Merged,
 	}
-	return ret, nil
 }
 
 // SubmitPullRequest 创建合并请求
@@ -160,7 +180,7 @@ func SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequestReqDTO) erro
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	repo, err := checkSubmitPullRequestPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, team, err := checkSubmitPullRequestPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -249,15 +269,8 @@ func SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequestReqDTO) erro
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	// 插入日志
-	oplogsrv.InsertOpLog(oplogsrv.OpLog{
-		RepoId:   repo.Id,
-		Operator: reqDTO.Operator.Account,
-		Log:      oplogsrv.FormatI18n(i18n.PullRequestSrvKeysVO.SubmitPullRequest, pr.Id),
-		Req:      reqDTO,
-	})
 	// 触发webhook
-	notifyEvent(repo, reqDTO.Operator, pr, event.PrSubmitAction)
+	notifyEvent(repo, team, reqDTO.Operator, pr, event.PullRequestEventSubmitAction)
 	return nil
 }
 
@@ -269,39 +282,30 @@ func GetPullRequest(ctx context.Context, reqDTO GetPullRequestReqDTO) (PullReque
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	pr, _, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
+	pr, _, _, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
 	if err != nil {
 		return PullRequestDTO{}, err
 	}
-	return pr2Dto(pr)
+	return pr2Dto(pr), nil
 }
 
-func ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestReqDTO) (statusChange bool, err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestReqDTO) (bool, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return false, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	var (
-		repo repomd.Repo
-		pr   pullrequestmd.PullRequest
-		b    bool
-	)
-	pr, repo, err = checkSubmitPullRequestPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
+	pr, repo, team, err := checkSubmitPullRequestPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
 	if err != nil {
-		return
+		return false, err
 	}
 	// 只允许从open -> closed
 	if pr.PrStatus != pullrequestmd.PrOpenStatus {
-		statusChange = true
-		return
+		return true, nil
 	}
-	var (
-		err2 error
-	)
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		b, err2 = pullrequestmd.ClosePrStatus(ctx, reqDTO.PrId, pullrequestmd.PrOpenStatus, reqDTO.Operator.Account)
+		_, err2 := pullrequestmd.ClosePrStatus(ctx, reqDTO.PrId, pullrequestmd.PrOpenStatus, reqDTO.Operator.Account)
 		if err2 != nil {
 			return err2
 		}
@@ -315,21 +319,11 @@ func ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestReqDTO) (statu
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return false, util.InternalError(err)
 	}
-	if b {
-		// 插入日志
-		oplogsrv.InsertOpLog(oplogsrv.OpLog{
-			RepoId:   repo.Id,
-			Operator: reqDTO.Operator.Account,
-			Log:      oplogsrv.FormatI18n(i18n.PullRequestSrvKeysVO.ClosePullRequest, pr.Id),
-			Req:      reqDTO,
-		})
-		// 触发webhook
-		notifyEvent(repo, reqDTO.Operator, pr, event.PrCloseAction)
-	}
-	return
+	// 触发webhook
+	notifyEvent(repo, team, reqDTO.Operator, pr, event.PullRequestEventCloseAction)
+	return false, nil
 }
 
 // CanMergePullRequest 是否可合并
@@ -340,7 +334,7 @@ func CanMergePullRequest(ctx context.Context, reqDTO CanMergePullRequestReqDTO) 
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	pr, repo, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
+	pr, repo, _, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
 	if err != nil {
 		return CanMergePullRequestRespDTO{}, false, err
 	}
@@ -390,24 +384,24 @@ func CanReviewPullRequest(ctx context.Context, reqDTO CanReviewPullRequestReqDTO
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, _, ret, statusChange, err := canReview(ctx, reqDTO.PrId, reqDTO.Operator)
+	_, _, _, ret, statusChange, err := canReview(ctx, reqDTO.PrId, reqDTO.Operator)
 	return ret, statusChange, err
 }
 
-func canReview(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, CanReviewPullRequestRespDTO, bool, error) {
+func canReview(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, teammd.Team, CanReviewPullRequestRespDTO, bool, error) {
 	// 校验权限
-	pr, repo, err := checkAccessRepoPermByPrId(ctx, prId, operator)
+	pr, repo, team, err := checkAccessRepoPermByPrId(ctx, prId, operator)
 	if err != nil {
-		return pr, repo, CanReviewPullRequestRespDTO{}, false, err
+		return pr, repo, team, CanReviewPullRequestRespDTO{}, false, err
 	}
 	// 只允许从open
 	if pr.PrStatus != pullrequestmd.PrOpenStatus {
-		return pr, repo, CanReviewPullRequestRespDTO{}, true, nil
+		return pr, repo, team, CanReviewPullRequestRespDTO{}, true, nil
 	}
 	protectedBranches, err := branchmd.ListProtectedBranch(ctx, pr.RepoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return pr, repo, CanReviewPullRequestRespDTO{}, false, util.InternalError(err)
+		return pr, repo, team, CanReviewPullRequestRespDTO{}, false, util.InternalError(err)
 	}
 	isProtectedBranch, protectedBranch := protectedBranches.IsProtectedBranch(pr.Head)
 	reviewerList := protectedBranch.GetCfg().ReviewerList
@@ -419,7 +413,7 @@ func canReview(ctx context.Context, prId int64, operator apisession.UserInfo) (p
 	review, b, err := pullrequestmd.GetReview(ctx, prId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return pr, repo, CanReviewPullRequestRespDTO{}, false, util.InternalError(err)
+		return pr, repo, team, CanReviewPullRequestRespDTO{}, false, util.InternalError(err)
 	}
 	hasAgree := b && review.ReviewStatus == pullrequestmd.AgreeReviewStatus
 	/*
@@ -431,9 +425,8 @@ func canReview(ctx context.Context, prId int64, operator apisession.UserInfo) (p
 			当指定了评审白名单，则判断自己是否在白名单里面，若在，可评审 若不在 不可评审
 			当未指定白名单，则可评审
 	*/
-	canReview := !hasAgree && (!isProtectedBranch || len(reviewerList) == 0 || isInReviewerList)
-	return pr, repo, CanReviewPullRequestRespDTO{
-		CanReview:         canReview,
+	return pr, repo, team, CanReviewPullRequestRespDTO{
+		CanReview:         !hasAgree && (!isProtectedBranch || len(reviewerList) == 0 || isInReviewerList),
 		IsProtectedBranch: isProtectedBranch,
 		ReviewerList:      reviewerList,
 		IsInReviewerList:  isInReviewerList,
@@ -442,54 +435,42 @@ func canReview(ctx context.Context, prId int64, operator apisession.UserInfo) (p
 }
 
 // MergePullRequest 提交合并代码
-func MergePullRequest(ctx context.Context, reqDTO MergePullRequestReqDTO) (statusChange bool, err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func MergePullRequest(ctx context.Context, reqDTO MergePullRequestReqDTO) (bool, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return false, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	pr, repo, err := checkSubmitPullRequestPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
+	pr, repo, team, err := checkSubmitPullRequestPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
 	if err != nil {
-		return
+		return false, err
 	}
 	// 只允许从open -> merged
 	if pr.PrStatus != pullrequestmd.PrOpenStatus {
-		statusChange = true
-		return
+		return true, nil
 	}
-	var canMerge bool
-	canMerge, _, _, _, err = detectCanMergePullRequest(ctx, pr)
+	canMerge, _, _, _, err := detectCanMergePullRequest(ctx, pr)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return false, util.InternalError(err)
 	}
 	if !canMerge {
-		err = util.NewBizErr(apicode.PullRequestCannotMergeCode, i18n.PullRequestReviewerCountLowerThanCfg)
-		return
+		return false, util.NewBizErr(apicode.PullRequestCannotMergeCode, i18n.PullRequestReviewerCountLowerThanCfg)
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		return mergeWithTx(ctx, pr, repo, reqDTO.Operator)
 	})
 	if err != nil {
 		if bizerr.IsBizErr(err) {
-			return
+			return false, err
 		}
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return false, util.InternalError(err)
 	}
-	// 插入日志
-	oplogsrv.InsertOpLog(oplogsrv.OpLog{
-		RepoId:   repo.Id,
-		Operator: reqDTO.Operator.Account,
-		Log:      oplogsrv.FormatI18n(i18n.PullRequestSrvKeysVO.MergePullRequest, pr.Id),
-		Req:      reqDTO,
-	})
 	// 触发webhook和工作流
-	notifyEvent(repo, reqDTO.Operator, pr, event.PrMergeAction)
-	return
+	notifyEvent(repo, team, reqDTO.Operator, pr, event.PullRequestEventMergeAction)
+	return false, nil
 }
 
 func detectCanMergePullRequest(ctx context.Context, pr pullrequestmd.PullRequest) (bool, bool, branch.ProtectedBranchCfg, int, error) {
@@ -565,7 +546,7 @@ func AgreeReviewPullRequest(ctx context.Context, reqDTO AgreeReviewPullRequestRe
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	pr, repo, review, statusChange, err := canReview(ctx, reqDTO.PrId, reqDTO.Operator)
+	pr, repo, team, review, statusChange, err := canReview(ctx, reqDTO.PrId, reqDTO.Operator)
 	if err != nil || statusChange {
 		return statusChange, err
 	}
@@ -593,15 +574,8 @@ func AgreeReviewPullRequest(ctx context.Context, reqDTO AgreeReviewPullRequestRe
 		logger.Logger.WithContext(ctx).Error(err)
 		return false, util.InternalError(err)
 	}
-	// 插入日志
-	oplogsrv.InsertOpLog(oplogsrv.OpLog{
-		RepoId:   repo.Id,
-		Operator: reqDTO.Operator.Account,
-		Log:      oplogsrv.FormatI18n(i18n.PullRequestSrvKeysVO.ReviewPullRequest, pr.Id),
-		Req:      reqDTO,
-	})
 	// 触发webhook
-	notifyEvent(repo, reqDTO.Operator, pr, event.PrReviewAction)
+	notifyEvent(repo, team, reqDTO.Operator, pr, event.PullRequestEventReviewAction)
 	return false, nil
 }
 
@@ -612,7 +586,8 @@ func ListTimeline(ctx context.Context, reqDTO ListTimelineReqDTO) ([]TimelineDTO
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, _, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator); err != nil {
+	_, _, _, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
+	if err != nil {
 		return nil, err
 	}
 	timelines, err := pullrequestmd.ListTimeline(ctx, reqDTO.PrId)
@@ -637,22 +612,21 @@ func ListTimeline(ctx context.Context, reqDTO ListTimelineReqDTO) ([]TimelineDTO
 }
 
 // AddComment 添加评论
-func AddComment(ctx context.Context, reqDTO AddCommentReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func AddComment(ctx context.Context, reqDTO AddCommentReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	var (
 		pr pullrequestmd.PullRequest
 	)
-	pr, _, err = checkAddCommentPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
+	pr, repo, team, err := checkAddCommentPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
 	if err != nil {
-		return
+		return err
 	}
 	if pr.PrStatus != pullrequestmd.PrOpenStatus {
-		err = util.InvalidArgsError()
-		return
+		return util.InvalidArgsError()
 	}
 	var action pullrequestmd.Action
 	if reqDTO.HasReply {
@@ -663,27 +637,23 @@ func AddComment(ctx context.Context, reqDTO AddCommentReqDTO) (err error) {
 		timeline, b, err = pullrequestmd.GetTimelineById(ctx, reqDTO.ReplyFrom)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
-			err = util.InternalError(err)
-			return
+			return util.InternalError(err)
 		}
 		if !b || timeline.PrId != reqDTO.PrId ||
 			timeline.Action == nil ||
 			(timeline.Action.ActionType != pullrequestmd.CommentType &&
 				timeline.Action.ActionType != pullrequestmd.ReplyType) {
-			err = util.InvalidArgsError()
-			return
+			return util.InvalidArgsError()
 		}
 		switch timeline.Action.ActionType {
 		case pullrequestmd.CommentType:
 			if timeline.Action.Comment == nil {
-				err = util.InvalidArgsError()
-				return
+				return util.InvalidArgsError()
 			}
 			action = pullrequestmd.NewReplyAction(reqDTO.ReplyFrom, timeline.Account, timeline.Action.Comment.Comment, reqDTO.Comment)
 		case pullrequestmd.ReplyType:
 			if timeline.Action.Reply == nil {
-				err = util.InvalidArgsError()
-				return
+				return util.InvalidArgsError()
 			}
 			action = pullrequestmd.NewReplyAction(reqDTO.ReplyFrom, timeline.Account, timeline.Action.Reply.ReplyComment, reqDTO.Comment)
 		}
@@ -706,42 +676,33 @@ func AddComment(ctx context.Context, reqDTO AddCommentReqDTO) (err error) {
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	// 插入日志
-	oplogsrv.InsertOpLog(oplogsrv.OpLog{
-		RepoId:   pr.RepoId,
-		Operator: reqDTO.Operator.Account,
-		Log:      oplogsrv.FormatI18n(i18n.PullRequestSrvKeysVO.AddComment, reqDTO.Comment),
-		Req:      reqDTO,
-	})
-	return
+	notifyEvent(repo, team, reqDTO.Operator, pr, event.PullRequestEventAddCommentAction)
+	return nil
 }
 
 // DeleteComment 删除评论
-func DeleteComment(ctx context.Context, reqDTO DeleteCommentReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func DeleteComment(ctx context.Context, reqDTO DeleteCommentReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	var (
-		timeline pullrequestmd.Timeline
-		b        bool
-	)
-	timeline, b, err = pullrequestmd.GetTimelineById(ctx, reqDTO.CommentId)
+	timeline, b, err := pullrequestmd.GetTimelineById(ctx, reqDTO.CommentId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if !b ||
 		timeline.Account != reqDTO.Operator.Account ||
 		timeline.Action == nil ||
 		!timeline.Action.ActionType.IsRelatedToComment() {
-		err = util.InvalidArgsError()
-		return
+		return util.InvalidArgsError()
+	}
+	pr, repo, team, err := checkAccessRepoPermByPrId(ctx, timeline.PrId, reqDTO.Operator)
+	if err != nil {
+		return err
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		_, err2 := pullrequestmd.DeleteTimelineById(ctx, reqDTO.CommentId)
@@ -753,26 +714,10 @@ func DeleteComment(ctx context.Context, reqDTO DeleteCommentReqDTO) (err error) 
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	// 插入日志
-	{
-		ctx2, closer2 := xormstore.Context(ctx)
-		defer closer2.Close()
-		pr, b, err := pullrequestmd.GetPullRequestById(ctx2, timeline.PrId)
-		if err != nil {
-			logger.Logger.WithContext(ctx2).Error(err)
-		} else if b {
-			oplogsrv.InsertOpLog(oplogsrv.OpLog{
-				RepoId:   pr.RepoId,
-				Operator: reqDTO.Operator.Account,
-				Log:      oplogsrv.FormatI18n(i18n.PullRequestSrvKeysVO.DeleteComment, timeline.Action.GetCommentText()),
-				Req:      reqDTO,
-			})
-		}
-	}
-	return
+	notifyEvent(repo, team, reqDTO.Operator, pr, event.PullRequestEventDeleteCommentAction)
+	return nil
 }
 
 // ListReview 评审记录
@@ -782,7 +727,8 @@ func ListReview(ctx context.Context, reqDTO ListReviewReqDTO) ([]ReviewDTO, erro
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, _, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator); err != nil {
+	_, _, _, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
+	if err != nil {
 		return nil, err
 	}
 	reviews, err := pullrequestmd.ListReview(ctx, reqDTO.PrId)
@@ -801,123 +747,147 @@ func ListReview(ctx context.Context, reqDTO ListReviewReqDTO) ([]ReviewDTO, erro
 }
 
 // checkSubmitPullRequestPermByPrId 校验权限
-func checkSubmitPullRequestPermByPrId(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, error) {
+func checkSubmitPullRequestPermByPrId(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, teammd.Team, error) {
 	pr, b, err := pullrequestmd.GetPullRequestById(ctx, prId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return pullrequestmd.PullRequest{}, repomd.Repo{}, util.InternalError(err)
+		return pullrequestmd.PullRequest{}, repomd.Repo{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return pullrequestmd.PullRequest{}, repomd.Repo{}, util.InvalidArgsError()
+		return pullrequestmd.PullRequest{}, repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
 	}
-	repo, err := checkSubmitPullRequestPermByRepoId(ctx, pr.RepoId, operator)
-	return pr, repo, err
+	repo, team, err := checkSubmitPullRequestPermByRepoId(ctx, pr.RepoId, operator)
+	return pr, repo, team, err
 }
 
 // checkAccessRepoPermByPrId 校验权限
-func checkAccessRepoPermByPrId(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, error) {
+func checkAccessRepoPermByPrId(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, teammd.Team, error) {
 	pr, b, err := pullrequestmd.GetPullRequestById(ctx, prId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return pullrequestmd.PullRequest{}, repomd.Repo{}, util.InternalError(err)
+		return pullrequestmd.PullRequest{}, repomd.Repo{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return pullrequestmd.PullRequest{}, repomd.Repo{}, util.InvalidArgsError()
+		return pullrequestmd.PullRequest{}, repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
 	}
-	repo, err := checkAccessRepoPermByRepoId(ctx, pr.RepoId, operator)
-	return pr, repo, err
+	repo, team, err := checkAccessRepoPermByRepoId(ctx, pr.RepoId, operator)
+	return pr, repo, team, err
 }
 
 // checkAddCommentPermByPrId 校验权限
-func checkAddCommentPermByPrId(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, error) {
+func checkAddCommentPermByPrId(ctx context.Context, prId int64, operator apisession.UserInfo) (pullrequestmd.PullRequest, repomd.Repo, teammd.Team, error) {
 	pr, b, err := pullrequestmd.GetPullRequestById(ctx, prId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return pullrequestmd.PullRequest{}, repomd.Repo{}, util.InternalError(err)
+		return pullrequestmd.PullRequest{}, repomd.Repo{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return pullrequestmd.PullRequest{}, repomd.Repo{}, util.InvalidArgsError()
+		return pullrequestmd.PullRequest{}, repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
 	}
-	repo, err := checkAddCommentPermByRepoId(ctx, pr.RepoId, operator)
-	return pr, repo, err
+	repo, team, err := checkAddCommentPermByRepoId(ctx, pr.RepoId, operator)
+	return pr, repo, team, err
 }
 
 // checkSubmitPullRequestPermByRepoId 校验权限
-func checkSubmitPullRequestPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
+func checkSubmitPullRequestPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, teammd.Team, error) {
 	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return repo, util.InternalError(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return repo, util.InvalidArgsError()
+		return repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return repomd.Repo{}, teammd.Team{}, util.ThereHasBugErr()
 	}
 	if operator.IsAdmin {
-		return repo, nil
+		return repo, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return repo, util.InternalError(err)
+		return repo, team, util.InternalError(err)
 	}
 	if !b {
-		return repo, util.UnauthorizedError()
+		return repo, team, util.UnauthorizedError()
 	}
 	if !p.IsAdmin && !p.PermDetail.GetRepoPerm(repoId).CanSubmitPullRequest {
-		return repo, util.UnauthorizedError()
+		return repo, team, util.UnauthorizedError()
 	}
-	return repo, nil
+	return repo, team, nil
 }
 
 // checkAccessRepoPermByRepoId 校验权限
-func checkAccessRepoPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
+func checkAccessRepoPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, teammd.Team, error) {
 	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return repo, util.InternalError(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return repo, util.InvalidArgsError()
+		return repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return repomd.Repo{}, teammd.Team{}, util.ThereHasBugErr()
 	}
 	if operator.IsAdmin {
-		return repo, nil
+		return repo, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return repo, util.InternalError(err)
+		return repo, team, util.InternalError(err)
 	}
 	if b && (p.IsAdmin || p.PermDetail.GetRepoPerm(repoId).CanAccessRepo) {
-		return repo, nil
+		return repo, team, nil
 	}
-	return repo, util.UnauthorizedError()
+	return repo, team, util.UnauthorizedError()
 }
 
 // checkAddCommentPermByRepoId 校验权限
-func checkAddCommentPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
+func checkAddCommentPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, teammd.Team, error) {
 	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return repo, util.InternalError(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return repo, util.InvalidArgsError()
+		return repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return repomd.Repo{}, teammd.Team{}, util.ThereHasBugErr()
 	}
 	if operator.IsAdmin {
-		return repo, nil
+		return repo, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return repo, util.InternalError(err)
+		return repo, team, util.InternalError(err)
 	}
-	if b && (p.IsAdmin || (p.PermDetail.GetRepoPerm(repoId).CanAccessRepo && p.PermDetail.GetRepoPerm(repoId).CanAddCommentInPullRequest)) {
-		return repo, nil
+	if b && (p.IsAdmin || p.PermDetail.GetRepoPerm(repoId).CanAddCommentInPullRequest) {
+		return repo, team, nil
 	}
-	return repo, util.UnauthorizedError()
+	return repo, team, util.UnauthorizedError()
 }
 
-func notifyEvent(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action event.PullRequestAction) {
+func notifyEvent(repo repomd.Repo, team teammd.Team, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action event.PullRequestEventAction) {
 	initPsub()
 	psub.Publish(event.PullRequestTopic, event.PullRequestEvent{
 		PrId:    pr.Id,
@@ -926,7 +896,6 @@ func notifyEvent(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestm
 		RefType: pr.TargetType.String(),
 		Action:  action,
 		BaseRepo: event.BaseRepo{
-			TeamId:   repo.TeamId,
 			RepoPath: repo.Path,
 			RepoId:   repo.Id,
 			RepoName: repo.Name,
@@ -935,6 +904,10 @@ func notifyEvent(repo repomd.Repo, operator apisession.UserInfo, pr pullrequestm
 			Operator:     operator.Account,
 			OperatorName: operator.Name,
 			EventTime:    time.Now().Format(time.DateTime),
+		},
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
 		},
 	})
 }

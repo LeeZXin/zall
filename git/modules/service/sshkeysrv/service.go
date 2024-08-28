@@ -22,11 +22,11 @@ func ListAllPubKeyByAccount(ctx context.Context, account string) []InnerSshKeyDT
 		logger.Logger.WithContext(ctx).Error(err)
 		return []InnerSshKeyDTO{}
 	}
-	ret, _ := listutil.Map(keys, func(t sshkeymd.SshKey) (InnerSshKeyDTO, error) {
+	ret := listutil.MapNe(keys, func(t sshkeymd.SshKey) InnerSshKeyDTO {
 		return InnerSshKeyDTO{
 			Fingerprint: t.Fingerprint,
 			Content:     t.Content,
-		}, nil
+		}
 	})
 	return ret
 }

@@ -96,13 +96,13 @@ func ListZalletNode(ctx context.Context, reqDTO ListZalletNodeReqDTO) ([]ZalletN
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(ret, func(t zalletmd.ZalletNode) (ZalletNodeDTO, error) {
+	data := listutil.MapNe(ret, func(t zalletmd.ZalletNode) ZalletNodeDTO {
 		return ZalletNodeDTO{
 			Id:         t.Id,
 			Name:       t.Name,
 			AgentHost:  t.AgentHost,
 			AgentToken: t.AgentToken,
-		}, nil
+		}
 	})
 	return data, total, nil
 }
@@ -119,11 +119,11 @@ func ListAllZalletNode(ctx context.Context, reqDTO ListAllZalletNodeReqDTO) ([]S
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	data, _ := listutil.Map(nodes, func(t zalletmd.ZalletNode) (SimpleZalletNodeDTO, error) {
+	data := listutil.MapNe(nodes, func(t zalletmd.ZalletNode) SimpleZalletNodeDTO {
 		return SimpleZalletNodeDTO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	return data, nil
 }

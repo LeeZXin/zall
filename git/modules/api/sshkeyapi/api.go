@@ -63,14 +63,14 @@ func listSshKey(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(keys, func(t sshkeysrv.SshKeyDTO) (SshKeyVO, error) {
+	data := listutil.MapNe(keys, func(t sshkeysrv.SshKeyDTO) SshKeyVO {
 		return SshKeyVO{
 			Id:           t.Id,
 			Name:         t.Name,
 			Fingerprint:  t.Fingerprint,
 			Created:      t.Created.Format(time.DateOnly),
 			LastOperated: t.LastOperated.Format(time.DateOnly),
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SshKeyVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

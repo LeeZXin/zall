@@ -4,14 +4,19 @@
       <InboxOutlined />
     </div>
     <SlotRender v-if="slots.desc" />
-    <div v-else style="text-align:center;font-size:14px;">
-      <span>暂无数据</span>
+    <div v-else style="text-align:center;font-size:14px;font-weight:bold">
+      <span>{{t("noData")}}</span>
     </div>
   </div>
 </template>
 <script setup>
 import { defineProps, useSlots, h } from "vue";
 import { InboxOutlined } from "@ant-design/icons-vue";
+import { useI18n } from "vue-i18n"; 
+/*
+  无数据展示
+*/
+const { t } = useI18n();
 const slots = useSlots();
 const props = defineProps(["style"]);
 const SlotRender = () => {

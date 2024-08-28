@@ -84,8 +84,8 @@ func (d *Detail) IsValid() bool {
 			return false
 		}
 	}
-	repoIdList, _ := listutil.Map(d.RepoPermList, func(t RepoPermWithId) (int64, error) {
-		return t.RepoId, nil
+	repoIdList := listutil.MapNe(d.RepoPermList, func(t RepoPermWithId) int64 {
+		return t.RepoId
 	})
 	if len(listutil.Distinct(repoIdList...)) != len(repoIdList) {
 		return false
@@ -95,8 +95,8 @@ func (d *Detail) IsValid() bool {
 			return false
 		}
 	}
-	appIdList, _ := listutil.Map(d.AppPermList, func(t AppPermWithId) (string, error) {
-		return t.AppId, nil
+	appIdList := listutil.MapNe(d.AppPermList, func(t AppPermWithId) string {
+		return t.AppId
 	})
 	if len(listutil.Distinct(appIdList...)) != len(appIdList) {
 		return false

@@ -177,9 +177,7 @@ func (c *nodeConverter) ConvertNode(n *NodeCfg) *Node {
 		Content:    n.Content,
 		Vars:       n.Vars,
 	}
-	ret.Next, _ = listutil.Map(n.Next, func(t *ConditionalNodeCfg) (*ConditionalNode, error) {
-		return c.ConvertConditionalNode(t), nil
-	})
+	ret.Next = listutil.MapNe(n.Next, c.ConvertConditionalNode)
 	return ret
 }
 

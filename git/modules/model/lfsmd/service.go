@@ -69,12 +69,12 @@ func InsertMetaObject(ctx context.Context, reqDTO InsertMetaObjectReqDTO) (MetaO
 }
 
 func BatchInsertMetaObject(ctx context.Context, reqDTO []InsertMetaObjectReqDTO) ([]MetaObject, error) {
-	ret, _ := listutil.Map(reqDTO, func(t InsertMetaObjectReqDTO) (MetaObject, error) {
+	ret := listutil.MapNe(reqDTO, func(t InsertMetaObjectReqDTO) MetaObject {
 		return MetaObject{
 			RepoId: t.RepoId,
 			Oid:    t.Oid,
 			Size:   t.Size,
-		}, nil
+		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err

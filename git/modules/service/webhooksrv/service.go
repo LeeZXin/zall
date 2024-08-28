@@ -7,13 +7,44 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/pkg/webhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"sync"
 	"time"
 )
+
+var (
+	initPsubOnce = sync.Once{}
+)
+
+func initPsub() {
+	initPsubOnce.Do(func() {
+		psub.Subscribe(event.GitWebhookTopic, func(data any) {
+			req, ok := data.(event.GitWebhookEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					switch req.Action {
+					case event.GitWebhookEventCreateAction:
+						return events.GitWebhook.Create
+					case event.GitWebhookEventUpdateAction:
+						return events.GitWebhook.Update
+					case event.GitWebhookEventDeleteAction:
+						return events.GitWebhook.Delete
+					default:
+						return false
+					}
+				})
+			}
+		})
+	})
+}
 
 // CreateWebhook 新增webhook
 func CreateWebhook(ctx context.Context, reqDTO CreateWebhookReqDTO) error {
@@ -22,11 +53,11 @@ func CreateWebhook(ctx context.Context, reqDTO CreateWebhookReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkManageWebhookPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, team, err := checkManageWebhookPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
-	err = webhookmd.InsertWebhook(ctx, webhookmd.InsertWebhookReqDTO{
+	w, err := webhookmd.InsertWebhook(ctx, webhookmd.InsertWebhookReqDTO{
 		RepoId:  reqDTO.RepoId,
 		HookUrl: reqDTO.HookUrl,
 		Secret:  reqDTO.Secret,
@@ -36,6 +67,7 @@ func CreateWebhook(ctx context.Context, reqDTO CreateWebhookReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(w, repo, team, reqDTO.Operator, event.GitWebhookEventCreateAction)
 	return nil
 }
 
@@ -46,7 +78,7 @@ func UpdateWebhook(ctx context.Context, reqDTO UpdateWebhookReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkManageWebhookPermByHookId(ctx, reqDTO.Id, reqDTO.Operator)
+	w, repo, team, err := checkManageWebhookPermByHookId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -60,25 +92,28 @@ func UpdateWebhook(ctx context.Context, reqDTO UpdateWebhookReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(w, repo, team, reqDTO.Operator, event.GitWebhookEventUpdateAction)
 	return nil
 }
 
 // DeleteWebhook 删除webhook
-func DeleteWebhook(ctx context.Context, reqDTO DeleteWebhookReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
+func DeleteWebhook(ctx context.Context, reqDTO DeleteWebhookReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if _, err = checkManageWebhookPermByHookId(ctx, reqDTO.Id, reqDTO.Operator); err != nil {
-		return
+	w, repo, team, err := checkManageWebhookPermByHookId(ctx, reqDTO.Id, reqDTO.Operator)
+	if err != nil {
+		return err
 	}
-	if _, err = webhookmd.DeleteById(ctx, reqDTO.Id); err != nil {
+	_, err = webhookmd.DeleteById(ctx, reqDTO.Id)
+	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	notifyEvent(w, repo, team, reqDTO.Operator, event.GitWebhookEventDeleteAction)
+	return nil
 }
 
 // ListWebhook 列表webhook
@@ -88,7 +123,8 @@ func ListWebhook(ctx context.Context, reqDTO ListWebhookReqDTO) ([]WebhookDTO, e
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	if err := checkManageWebhookPerm(ctx, reqDTO.RepoId, reqDTO.Operator); err != nil {
+	_, _, err := checkManageWebhookPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
+	if err != nil {
 		return nil, err
 	}
 	webhookList, err := webhookmd.ListWebhookByRepoId(ctx, reqDTO.RepoId)
@@ -117,7 +153,7 @@ func PingWebhook(ctx context.Context, reqDTO PingWebhookReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	hook, err := checkManageWebhookPermByHookId(ctx, reqDTO.WebhookId, reqDTO.Operator)
+	hook, _, _, err := checkManageWebhookPermByHookId(ctx, reqDTO.WebhookId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -131,37 +167,71 @@ func PingWebhook(ctx context.Context, reqDTO PingWebhookReqDTO) error {
 	return nil
 }
 
-func checkManageWebhookPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) error {
+func checkManageWebhookPermByRepoId(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, teammd.Team, error) {
 	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return repomd.Repo{}, teammd.Team{}, util.ThereHasBugErr()
 	}
 	if operator.IsAdmin {
-		return nil
+		return repo, team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return repo, team, util.InternalError(err)
 	}
 	if !b || (!p.IsAdmin && !p.PermDetail.GetRepoPerm(repo.Id).CanManageWebhook) {
-		return util.UnauthorizedError()
+		return repo, team, util.UnauthorizedError()
 	}
-	return nil
+	return repo, team, nil
 }
 
-func checkManageWebhookPermByHookId(ctx context.Context, hookId int64, operator apisession.UserInfo) (webhookmd.Webhook, error) {
+func checkManageWebhookPermByHookId(ctx context.Context, hookId int64, operator apisession.UserInfo) (webhookmd.Webhook, repomd.Repo, teammd.Team, error) {
 	hook, b, err := webhookmd.GetWebhookById(ctx, hookId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return webhookmd.Webhook{}, util.InternalError(err)
+		return webhookmd.Webhook{}, repomd.Repo{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return webhookmd.Webhook{}, util.InvalidArgsError()
+		return webhookmd.Webhook{}, repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
 	}
-	return hook, checkManageWebhookPerm(ctx, hook.RepoId, operator)
+	repo, team, err := checkManageWebhookPermByRepoId(ctx, hook.RepoId, operator)
+	return hook, repo, team, err
+}
+
+func notifyEvent(w webhookmd.Webhook, repo repomd.Repo, team teammd.Team, operator apisession.UserInfo, action event.GitWebhookEventAction) {
+	initPsub()
+	psub.Publish(event.GitWebhookTopic, event.GitWebhookEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseRepo: event.BaseRepo{
+			RepoId:   repo.Id,
+			RepoPath: repo.Path,
+			RepoName: repo.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		Action:     action,
+		WebhookId:  w.Id,
+		WebhookUrl: w.HookUrl,
+	})
 }

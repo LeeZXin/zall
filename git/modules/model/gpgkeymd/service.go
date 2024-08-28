@@ -21,12 +21,12 @@ func ListValidByAccount(ctx context.Context, account string) ([]GpgKey, error) {
 }
 
 func BatchInsertGpgKeys(ctx context.Context, reqDTOs []InsertGpgKeyReqDTO) error {
-	keys, _ := listutil.Map(reqDTOs, func(reqDTO InsertGpgKeyReqDTO) (GpgKey, error) {
-		subKeys, _ := listutil.Map(reqDTO.SubKeys, func(t InsertGpgSubKeyReqDTO) (GpgSubKey, error) {
+	keys := listutil.MapNe(reqDTOs, func(reqDTO InsertGpgKeyReqDTO) GpgKey {
+		subKeys := listutil.MapNe(reqDTO.SubKeys, func(t InsertGpgSubKeyReqDTO) GpgSubKey {
 			return GpgSubKey{
 				KeyId:   t.KeyId,
 				Content: t.Content,
-			}, nil
+			}
 		})
 		return GpgKey{
 			Account: reqDTO.Account,
@@ -36,7 +36,7 @@ func BatchInsertGpgKeys(ctx context.Context, reqDTOs []InsertGpgKeyReqDTO) error
 			Expired: reqDTO.Expired,
 			Email:   reqDTO.Email,
 			SubKeys: subKeys,
-		}, nil
+		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).Insert(keys)
 	return err

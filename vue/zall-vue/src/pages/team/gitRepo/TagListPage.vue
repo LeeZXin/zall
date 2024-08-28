@@ -18,10 +18,10 @@
       </template>
     </ZNoData>
     <a-pagination
-      v-model:current="currPage"
-      :total="totalCount"
+      v-model:current="dataPage.current"
+      :total="dataPage.totalCount"
       show-less-items
-      :pageSize="pageSize"
+      :pageSize="dataPage.pageSize"
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
@@ -32,20 +32,22 @@
 <script setup>
 import TagItem from "@/components/git/TagItem";
 import ZNoData from "@/components/common/ZNoData";
-import { ref } from "vue";
+import { ref, reactive } from "vue";
 import { useRoute } from "vue-router";
 import { pageTagCommitsRequest } from "@/api/git/repoApi";
 const route = useRoute();
 const dataSource = ref([]);
-const currPage = ref(1);
-const pageSize = 10;
-const totalCount = ref(0);
+const dataPage = reactive({
+  current: 1,
+  totalCount: 0,
+  pageSize: 10
+});
 const listTag = () => {
   pageTagCommitsRequest({
     repoId: route.params.repoId,
-    pageNum: currPage.value
+    pageNum: dataPage.current
   }).then(res => {
-    totalCount.value = res.totalCount;
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.name,
@@ -61,8 +63,8 @@ const listTag = () => {
   });
 };
 const onDelete = () => {
-  if (totalCount.value - 1 <= (currPage.value - 1) * pageSize) {
-    currPage.value -= 1;
+  if (dataPage.totalCount - 1 < (dataPage.current - 1) * dataPage.pageSize) {
+    dataPage.current -= 1;
   }
   listTag();
 };

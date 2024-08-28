@@ -184,7 +184,7 @@ func MergeInputArgsByPlanIdAndLTIndex(ctx context.Context, planId int64, stageIn
 }
 
 func BatchInsertDeployStage(ctx context.Context, reqDTOList ...InsertDeployStageReqDTO) error {
-	stages, _ := listutil.Map(reqDTOList, func(t InsertDeployStageReqDTO) (Stage, error) {
+	stages := listutil.MapNe(reqDTOList, func(t InsertDeployStageReqDTO) Stage {
 		return Stage{
 			PlanId:      t.PlanId,
 			AppId:       t.AppId,
@@ -192,7 +192,7 @@ func BatchInsertDeployStage(ctx context.Context, reqDTOList ...InsertDeployStage
 			Agent:       t.Agent,
 			StageStatus: t.StageStatus,
 			TaskId:      t.TaskId,
-		}, nil
+		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).Insert(stages)
 	return err
@@ -461,12 +461,12 @@ func ExistPipelineVarsByAppIdAndEnvAndName(ctx context.Context, appId, env, name
 }
 
 func BatchInsertAppServiceSourceBind(ctx context.Context, reqDTOs []InsertAppServiceSourceBindReqDTO) error {
-	binds, _ := listutil.Map(reqDTOs, func(t InsertAppServiceSourceBindReqDTO) (AppServiceSourceBind, error) {
+	binds := listutil.MapNe(reqDTOs, func(t InsertAppServiceSourceBindReqDTO) AppServiceSourceBind {
 		return AppServiceSourceBind{
 			SourceId: t.SourceId,
 			AppId:    t.AppId,
 			Env:      t.Env,
-		}, nil
+		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).Insert(binds)
 	return err

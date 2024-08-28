@@ -7,10 +7,60 @@ export default {
     switchTeam: "切换团队",
     notFound: "页面丢失了",
     backToIndex: "回到首页",
-    previousPage: "上一页",
-    nextPage: "下一页",
+    noData: "暂无数据",
+    superAdmin: "超级管理员",
     ztable: {
         noDataText: "暂无数据",
+    },
+    appMenu: {
+        propertyFile: "配置文件",
+        deployPipeline: "部署流水线",
+        deployPlan: "发布计划",
+        serviceStatus: "服务状态",
+        registryCenter: "注册中心",
+        artifacts: "制品库",
+        promScrape: "Prom抓取任务",
+        alertConfig: "告警配置",
+        setting: "设置"
+    },
+    gitRepoMenu: {
+        index: "代码文件",
+        pullRequest: "合并请求",
+        branch: "分支",
+        tag: "标签",
+        commitHistory: "提交历史",
+        workflow: "工作流",
+        protectedBranch: "保护分支",
+        webhook: "Webhook",
+        setting: "设置"
+    },
+    indexMenu: {
+        team: "团队协作",
+        mysqlAudit: "Mysql审计"
+    },
+    mysqlAuditMenu: {
+        databaseSource: "数据源",
+        readPermApply: "读权限申请",
+        readPermAudit: "读权限审批",
+        readPermList: "读权限列表",
+        readPermManage: "读权限管理",
+        dataUpdateApply: "数据修改",
+        dataUpdateAudit: "数据修改审批",
+        dataSearch: "数据查询"
+    },
+    personalSettingMenu: {
+        profile: "个人信息",
+        changePassword: "修改密码",
+        sshAndGpg: "SSH&GPG"
+    },
+    saMenu: {
+        sysCfg: "系统配置",
+        userManage: "用户管理",
+        propertyCenterSource: "配置中心来源",
+        serviceStatusSource: "服务状态来源",
+        registryCenterSource: "注册中心来源",
+        zallet: "Zallet",
+        promScrape: "Prom抓取任务"
     },
     system: {
         requestFailed: "请求发送似乎有点问题, 请稍后重试",

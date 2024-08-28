@@ -56,7 +56,7 @@ func InitTask() {
 			Handler: func(ctx context.Context) {
 				for ctx.Err() == nil {
 					doExecuteTask(ctx)
-					time.Sleep(10 * time.Second)
+					time.Sleep(20 * time.Second)
 				}
 			},
 			Leaser: leaser,
@@ -82,11 +82,10 @@ func doExecuteTask(runCtx context.Context) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	err := timermd.IterateExecute(ctx, time.Now().UnixMilli(), env, func(execute *timermd.Execute) error {
-		rerr := runCtx.Err()
-		if rerr == nil {
-			return handleExecute(execute)
+		if err := runCtx.Err(); err != nil {
+			return err
 		}
-		return rerr
+		return handleExecute(execute)
 	})
 	if err != nil {
 		logger.Logger.Error(err)
@@ -151,15 +150,17 @@ func handleExecute(execute *timermd.Execute) error {
 	return taskExecutor.Execute(func() {
 		ctx, closer := xormstore.Context(context.Background())
 		task, b, err := timermd.GetTimerById(ctx, execute.TimerId)
-		closer.Close()
-		if err == nil && b && resetNextTime(&task, execute.RunVersion) {
+		if err == nil && b && resetNextTime(ctx, &task, execute.RunVersion) {
+			closer.Close()
 			handleTimerTaskAndAppendLog(
 				&task,
 				timer.DefaultTrigger,
 				timer.DefaultTrigger,
 				timer.AutoTriggerType,
 			)
+			return
 		}
+		closer.Close()
 	})
 }
 
@@ -176,9 +177,7 @@ func handleTimerTask(task *timermd.Timer) error {
 	}
 }
 
-func resetNextTime(task *timermd.Timer, runVersion int64) bool {
-	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
+func resetNextTime(ctx context.Context, task *timermd.Timer, runVersion int64) bool {
 	cron, err := ParseCron(task.CronExp)
 	if err != nil {
 		logger.Logger.Errorf("parse cron: %s err: %v", task.CronExp, err)

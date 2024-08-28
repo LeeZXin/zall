@@ -6,6 +6,7 @@ import (
 	"github.com/LeeZXin/zall/notify/modules/model/notifymd"
 	"github.com/LeeZXin/zall/notify/modules/service/notifysrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/commonhook"
 	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/pkg/webhook"
@@ -30,9 +31,9 @@ func TriggerTeamHook(req event.Event, teamId int64, whichEvent func(*teamhook.Ev
 		hookCfg := hook.GetHookCfg()
 		if whichEvent(&events) {
 			switch hook.HookType {
-			case teamhook.NotifyType:
+			case commonhook.NotifyType:
 				notifysrv.SendNotificationByTplId(hookCfg.NotifyTplId, req)
-			case teamhook.WebhookType:
+			case commonhook.WebhookType:
 				webhook.TriggerWebhook(hookCfg.HookUrl, hookCfg.Secret, req)
 			}
 		}
@@ -52,7 +53,7 @@ func CreateTeamHook(ctx context.Context, reqDTO CreateTeamHookReqDTO) error {
 		return err
 	}
 	switch reqDTO.HookType {
-	case teamhook.NotifyType:
+	case commonhook.NotifyType:
 		b, err := notifymd.ExistTplById(ctx, reqDTO.HookCfg.NotifyTplId)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -89,7 +90,7 @@ func UpdateTeamHook(ctx context.Context, reqDTO UpdateTeamHookReqDTO) error {
 		return err
 	}
 	switch reqDTO.HookType {
-	case teamhook.NotifyType:
+	case commonhook.NotifyType:
 		b, err := notifymd.ExistTplById(ctx, reqDTO.HookCfg.NotifyTplId)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)

@@ -111,11 +111,11 @@ func listApp(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(apps, func(t appsrv.AppDTO) (AppVO, error) {
+	data := listutil.MapNe(apps, func(t appsrv.AppDTO) AppVO {
 		return AppVO{
 			AppId: t.AppId,
 			Name:  t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]AppVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -132,11 +132,11 @@ func listAllByAdmin(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(apps, func(t appsrv.AppDTO) (AppVO, error) {
+	data := listutil.MapNe(apps, func(t appsrv.AppDTO) AppVO {
 		return AppVO{
 			AppId: t.AppId,
 			Name:  t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]AppVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -152,11 +152,11 @@ func listAllBySa(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(apps, func(t appsrv.AppDTO) (AppVO, error) {
+	data := listutil.MapNe(apps, func(t appsrv.AppDTO) AppVO {
 		return AppVO{
 			AppId: t.AppId,
 			Name:  t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]AppVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

@@ -72,7 +72,7 @@ func InitSshServer() zsf.LifeCycle {
 			fingerprint := envs["ZGIT_SRC_FINGERPRINT"]
 			if fingerprint == "" {
 				// 找不到用户信息
-				util.ExitWithErrMsg(session, "user not found")
+				util.ExitWithErrMsg(session, "user key not found")
 				return
 			}
 			user, b, err := getUserByFingerprint(session.Context(), fingerprint)

@@ -6,7 +6,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/ginutil"
 	"time"
 )
 
@@ -93,7 +92,7 @@ type ListPullRequestReqDTO struct {
 	Status    pullrequestmd.PrStatus `json:"status"`
 	SearchKey string                 `json:"searchKey"`
 	Operator  apisession.UserInfo    `json:"operator"`
-	ginutil.Page2Req
+	PageNum   int                    `json:"pageNum"`
 }
 
 func (r *ListPullRequestReqDTO) IsValid() error {
@@ -103,7 +102,7 @@ func (r *ListPullRequestReqDTO) IsValid() error {
 	if len(r.SearchKey) > 255 {
 		return util.InvalidArgsError()
 	}
-	if r.PageNum < 1 || r.PageSize < 1 || r.PageSize > 100 {
+	if r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Status.IsValid() {

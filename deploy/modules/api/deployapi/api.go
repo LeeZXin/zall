@@ -156,13 +156,13 @@ func listPipelineVars(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(varsList, func(t deploysrv.PipelineVarsWithoutContentDTO) (PipelineVarsWithoutContentVO, error) {
+	data := listutil.MapNe(varsList, func(t deploysrv.PipelineVarsWithoutContentDTO) PipelineVarsWithoutContentVO {
 		return PipelineVarsWithoutContentVO{
 			Id:    t.Id,
 			Name:  t.Name,
 			AppId: t.AppId,
 			Env:   t.Env,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]PipelineVarsWithoutContentVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -246,7 +246,7 @@ func listServiceSource(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(sources, func(t deploysrv.ServiceSourceDTO) (ServiceSourceVO, error) {
+	data := listutil.MapNe(sources, func(t deploysrv.ServiceSourceDTO) ServiceSourceVO {
 		return ServiceSourceVO{
 			Id:      t.Id,
 			Name:    t.Name,
@@ -254,7 +254,7 @@ func listServiceSource(c *gin.Context) {
 			Host:    t.Host,
 			ApiKey:  t.ApiKey,
 			Created: t.Created.Format(time.DateTime),
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]ServiceSourceVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -271,11 +271,11 @@ func listAllServiceSource(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(sources, func(t deploysrv.SimpleServiceSourceDTO) (SimpleServiceSourceVO, error) {
+	data := listutil.MapNe(sources, func(t deploysrv.SimpleServiceSourceDTO) SimpleServiceSourceVO {
 		return SimpleServiceSourceVO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleServiceSourceVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -444,7 +444,7 @@ func listPlan(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(plans, func(t deploysrv.PlanDTO) (PlanVO, error) {
+		data := listutil.MapNe(plans, func(t deploysrv.PlanDTO) PlanVO {
 			return PlanVO{
 				Id:             t.Id,
 				PipelineId:     t.PipelineId,
@@ -455,7 +455,7 @@ func listPlan(c *gin.Context) {
 				Env:            t.Env,
 				Creator:        t.Creator,
 				Created:        t.Created.Format(time.DateTime),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[PlanVO]{
 			DataResp: ginutil.DataResp[[]PlanVO]{
@@ -503,15 +503,15 @@ func listStages(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(stages, func(t deploysrv.StageDTO) (StageVO, error) {
-		subStages, _ := listutil.Map(t.SubStages, func(t deploysrv.SubStageDTO) (SubStageVO, error) {
+	data := listutil.MapNe(stages, func(t deploysrv.StageDTO) StageVO {
+		subStages := listutil.MapNe(t.SubStages, func(t deploysrv.SubStageDTO) SubStageVO {
 			return SubStageVO{
 				Id:          t.Id,
 				Agent:       t.Agent,
 				AgentHost:   t.AgentHost,
 				StageStatus: t.StageStatus,
 				ExecuteLog:  t.ExecuteLog,
-			}, nil
+			}
 		})
 		return StageVO{
 			Name:                             t.Name,
@@ -527,7 +527,7 @@ func listStages(c *gin.Context) {
 			Script:                           t.Script,
 			Confirm:                          t.Confirm,
 			CanForceRedoUnSuccessAgentStages: t.CanForceRedoUnSuccessAgentStages,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]StageVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -592,14 +592,14 @@ func listPipeline(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(pipelines, func(t deploysrv.PipelineDTO) (PipelineVO, error) {
+	data := listutil.MapNe(pipelines, func(t deploysrv.PipelineDTO) PipelineVO {
 		return PipelineVO{
 			Id:     t.Id,
 			AppId:  t.AppId,
 			Config: t.Config,
 			Env:    t.Env,
 			Name:   t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]PipelineVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -617,12 +617,12 @@ func listPipelineWhenCreatePlan(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(pipelines, func(t deploysrv.SimplePipelineDTO) (SimplePipelineVO, error) {
+	data := listutil.MapNe(pipelines, func(t deploysrv.SimplePipelineDTO) SimplePipelineVO {
 		return SimplePipelineVO{
 			Id:   t.Id,
 			Env:  t.Env,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimplePipelineVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -640,13 +640,13 @@ func listBindServiceSource(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(sources, func(t deploysrv.SimpleBindServiceSourceDTO) (SimpleBindServiceSourceVO, error) {
+	data := listutil.MapNe(sources, func(t deploysrv.SimpleBindServiceSourceDTO) SimpleBindServiceSourceVO {
 		return SimpleBindServiceSourceVO{
 			Id:     t.Id,
 			Name:   t.Name,
 			BindId: t.BindId,
 			Env:    t.Env,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleBindServiceSourceVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

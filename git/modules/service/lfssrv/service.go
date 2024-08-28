@@ -5,7 +5,6 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
 	"github.com/LeeZXin/zall/git/modules/model/lfsmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
-	"github.com/LeeZXin/zall/git/modules/service/oplogsrv"
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
@@ -95,9 +94,7 @@ func ListLock(ctx context.Context, reqDTO ListLockReqDTO) (ListLockRespDTO, erro
 	if len(locks) == reqDTO.Limit {
 		ret.Next = locks[len(locks)-1].Id
 	}
-	ret.LockList, _ = listutil.Map(locks, func(t lfsmd.LfsLock) (LfsLockDTO, error) {
-		return convertDTO(t), nil
-	})
+	ret.LockList = listutil.MapNe(locks, convertDTO)
 	// 查询lock
 	return ret, nil
 }
@@ -181,13 +178,6 @@ func Download(ctx context.Context, reqDTO DownloadReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	// 插入日志
-	oplogsrv.InsertOpLog(oplogsrv.OpLog{
-		RepoId:   reqDTO.Repo.Id,
-		Operator: reqDTO.Operator.Account,
-		Log:      oplogsrv.FormatI18n(i18n.LfsSrvKeysVO.Download, reqDTO.Oid),
-		Req:      reqDTO,
-	})
 	return nil
 }
 
@@ -244,13 +234,6 @@ func Upload(ctx context.Context, reqDTO UploadReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	// 插入日志
-	oplogsrv.InsertOpLog(oplogsrv.OpLog{
-		RepoId:   reqDTO.Repo.Id,
-		Operator: reqDTO.Operator.Account,
-		Log:      oplogsrv.FormatI18n(i18n.LfsSrvKeysVO.Upload, reqDTO.Oid),
-		Req:      reqDTO,
-	})
 	return nil
 }
 

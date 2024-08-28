@@ -332,6 +332,11 @@ const teamPermList = [
     checkbox: "管理Team Hook",
     key: "canManageTeamHook",
     desc: "拥有该权限,则可以对Team Hook新增、查看、编辑、删除"
+  },
+  {
+    checkbox: "管理Prometheus抓取任务",
+    key: "canManagePromScrape",
+    desc: "拥有该权限,则可以对prometheus抓取任务新增、查看、编辑、删除"
   }
 ];
 const repoPermKeys = [

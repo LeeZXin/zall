@@ -2,6 +2,9 @@
   <a-tag :color="colorMap[props.status]">{{convertStatus(props.status)}}</a-tag>
 </template>
 <script setup>
+/*
+  数据库权限申请状态tag
+*/
 import { defineProps } from "vue";
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();

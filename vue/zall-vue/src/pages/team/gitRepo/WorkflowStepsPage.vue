@@ -1,9 +1,5 @@
 <template>
   <div style="padding:10px">
-    <ZNaviBack
-      :url="`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${route.params.workflowId}/tasks`"
-      name="任务列表"
-    />
     <ul class="info-list">
       <li>
         <div class="info-name">触发方式</div>
@@ -132,7 +128,6 @@
 <script setup>
 import RunStatus from "@/components/git/WorkflowRunStatus";
 import PrIdTag from "@/components/git/PrIdTag";
-import ZNaviBack from "@/components/common/ZNaviBack";
 import WorkflowNode from "@/components/vueflow/WorkflowNode";
 import { Codemirror } from "vue-codemirror";
 import { yaml } from "@codemirror/lang-yaml";

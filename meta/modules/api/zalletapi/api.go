@@ -89,13 +89,13 @@ func listZalletNode(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(nodes, func(t zalletsrv.ZalletNodeDTO) (ZalletNodeVO, error) {
+		data := listutil.MapNe(nodes, func(t zalletsrv.ZalletNodeDTO) ZalletNodeVO {
 			return ZalletNodeVO{
 				Id:         t.Id,
 				Name:       t.Name,
 				AgentHost:  t.AgentHost,
 				AgentToken: t.AgentToken,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[ZalletNodeVO]{
 			DataResp: ginutil.DataResp[[]ZalletNodeVO]{
@@ -116,11 +116,11 @@ func listAllZalletNode(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(nodes, func(t zalletsrv.SimpleZalletNodeDTO) (SimpleZalletNodeVO, error) {
+	data := listutil.MapNe(nodes, func(t zalletsrv.SimpleZalletNodeDTO) SimpleZalletNodeVO {
 		return SimpleZalletNodeVO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleZalletNodeVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

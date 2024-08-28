@@ -8,6 +8,8 @@ type Events struct {
 	PullRequest     event.PullRequestEventCfg     `json:"pullRequest"`
 	GitRepo         event.GitRepoEventCfg         `json:"gitRepo"`
 	GitWorkflow     event.GitWorkflowEventCfg     `json:"gitWorkflow"`
+	GitWorkflowVars event.GitWorkflowVarsEventCfg `json:"gitWorkflowVars"`
+	GitWebhook      event.GitWebhookEventCfg      `json:"gitWebhook"`
 	Team            event.TeamEventCfg            `json:"team"`
 	TeamRole        event.TeamRoleEventCfg        `json:"teamRole"`
 	TeamUser        event.TeamUserEventCfg        `json:"teamUser"`

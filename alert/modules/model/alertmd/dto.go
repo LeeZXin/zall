@@ -7,9 +7,9 @@ type InsertConfigReqDTO struct {
 	Alert       alert.Alert
 	AppId       string
 	IntervalSec int
-	SilenceSec  int
-	Enabled     bool
-	NextTime    int64
+	IsEnabled   bool
+	Env         string
+	Creator     string
 }
 
 type UpdateConfigReqDTO struct {
@@ -17,13 +17,18 @@ type UpdateConfigReqDTO struct {
 	Name        string
 	Alert       alert.Alert
 	IntervalSec int
-	SilenceSec  int
-	Enabled     bool
-	NextTime    int64
 }
 
 type ListConfigReqDTO struct {
-	Cursor int64
-	Limit  int
-	AppId  string
+	PageNum  int
+	PageSize int
+	AppId    string
+	Env      string
+}
+
+type InsertExecuteReqDTO struct {
+	ConfigId  int64
+	IsEnabled bool
+	NextTime  int64
+	Env       string
 }

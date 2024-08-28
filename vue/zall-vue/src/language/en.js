@@ -7,10 +7,60 @@ export default {
     switchTeam: "switch team",
     notFound: "The page is lost",
     backToIndex: "Back to index page",
-    previousPage: "Previous",
-    nextPage: "Next",
+    noData: "No data found",
+    superAdmin: "Super Admin",
     ztable: {
         noDataText: "No data found",
+    },
+    appMenu: {
+        propertyFile: "Property file",
+        deployPipeline: "Deploy pipeline",
+        deployPlan: "Deploy plan",
+        serviceStatus: "Service status",
+        registryCenter: "Registry center",
+        artifacts: "Artifacts",
+        promScrape: "Prom Scrape",
+        alertConfig: "Alert config",
+        setting: "Setting"
+    },
+    gitRepoMenu: {
+        index: "Repo code",
+        pullRequest: "PullRequest",
+        branch: "Branch",
+        tag: "Tag",
+        commitHistory: "Commit history",
+        workflow: "Workflow",
+        protectedBranch: "Protected branch",
+        webhook: "Webhook",
+        setting: "Setting"
+    },
+    indexMenu: {
+        team: "Team Collaborate",
+        mysqlAudit: "Mysql Audit"
+    },
+    mysqlAuditMenu: {
+        databaseSource: "Database source",
+        readPermApply: "Apply read perm",
+        readPermAudit: "Audit read perm",
+        readPermList: "Read perm List",
+        readPermManage: "Manage read perm",
+        dataUpdateApply: "Apply data update",
+        dataUpdateAudit: "Audit data update",
+        dataSearch: "Search data"
+    },
+    personalSettingMenu: {
+        profile: "Profile",
+        changePassword: "Change password",
+        sshAndGpg: "SSH&GPG"
+    },
+    saMenu: {
+        sysCfg: "System config",
+        userManage: "Manage users",
+        propertyCenterSource: "Property source",
+        serviceStatusSource: "Service source",
+        registryCenterSource: "Registry source",
+        zallet: "Zallet",
+        promScrape: "Prom scrape"
     },
     system: {
         requestFailed: "something wrong happened, please retry in a while",

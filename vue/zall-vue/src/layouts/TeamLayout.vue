@@ -37,7 +37,7 @@
             <ApiOutlined />
             <span>{{t("teamMenu.teamHook")}}</span>
           </a-menu-item>
-        </a-menu>
+        </a-menu>    
       </a-layout-sider>
       <a-layout-content style="height: calc(100vh - 64px); overflow: scroll;background-color:white">
         <router-view v-if="teamInfoLoaded" />

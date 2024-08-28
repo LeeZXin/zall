@@ -4,6 +4,9 @@
 <script setup>
 import { defineProps } from "vue";
 import { useI18n } from "vue-i18n";
+/*
+  数据修改单状态tag
+*/
 const { t } = useI18n();
 const props = defineProps(["status"]);
 const colorMap = {

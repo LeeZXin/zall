@@ -1,6 +1,5 @@
 <template>
   <div style="padding:10px">
-    <ZNaviBack :url="naviBackUrl" name="合并请求列表" />
     <div class="header">
       <div class="title">Compare changes</div>
       <div class="desc">Compare changes across branches, commits, tags, and more below</div>
@@ -82,7 +81,6 @@ import { submitPullRequestRequest } from "@/api/git/prApi";
 import { useRoute, useRouter } from "vue-router";
 import { prTitleRegexp } from "@/utils/regexp";
 import { message } from "ant-design-vue";
-import ZNaviBack from "@/components/common/ZNaviBack";
 import CommitList from "@/components/git/CommitList";
 import ConflictFiles from "@/components/git/ConflictFiles";
 const router = useRouter();
@@ -91,7 +89,6 @@ const repoId = parseInt(route.params.repoId);
 const canMerge = ref(false);
 const showLoading = ref(false);
 const submitFormVisible = ref(false);
-const naviBackUrl = `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/list`;
 const showSubmitForm = () => {
   submitFormVisible.value = true;
 };

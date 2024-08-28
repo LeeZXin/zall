@@ -64,7 +64,7 @@ func ListService(ctx context.Context, reqDTO status.ListServiceReq) ([]status.Se
 	if err != nil {
 		return nil, util.InternalError(err)
 	}
-	data, _ := listutil.Map(services, func(t statusmd.Service) (status.Service, error) {
+	data := listutil.MapNe(services, func(t statusmd.Service) status.Service {
 		addr, _ := netip.ParseAddrPort(t.AgentHost)
 		return status.Service{
 			Id:         t.ServiceId,
@@ -75,7 +75,7 @@ func ListService(ctx context.Context, reqDTO status.ListServiceReq) ([]status.Se
 			CpuPercent: t.CpuPercent,
 			MemPercent: t.MemPercent,
 			Created:    t.Created.Format(time.DateTime),
-		}, nil
+		}
 	})
 	return data, nil
 }

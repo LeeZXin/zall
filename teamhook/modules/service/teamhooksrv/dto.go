@@ -2,19 +2,17 @@ package teamhooksrv
 
 import (
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/commonhook"
 	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/teamhook/modules/model/teamhookmd"
 	"github.com/LeeZXin/zall/util"
-	"net/url"
-	"strings"
 )
 
 type CreateTeamHookReqDTO struct {
-	Name     string              `json:"name"`
-	TeamId   int64               `json:"teamId"`
-	Events   teamhook.Events     `json:"events"`
-	HookType teamhook.HookType   `json:"hookType"`
-	HookCfg  teamhook.Cfg        `json:"hookCfg"`
+	Name   string          `json:"name"`
+	TeamId int64           `json:"teamId"`
+	Events teamhook.Events `json:"events"`
+	commonhook.TypeAndCfg
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -28,19 +26,8 @@ func (r *CreateTeamHookReqDTO) IsValid() error {
 	if !r.HookType.IsValid() {
 		return util.InvalidArgsError()
 	}
-	switch r.HookType {
-	case teamhook.NotifyType:
-		if r.HookCfg.NotifyTplId <= 0 {
-			return util.InvalidArgsError()
-		}
-	case teamhook.WebhookType:
-		parsedUrl, err := url.Parse(r.HookCfg.HookUrl)
-		if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
-			return util.InvalidArgsError()
-		}
-		if r.HookCfg.Secret == "" {
-			return util.InvalidArgsError()
-		}
+	if !r.TypeAndCfg.IsValid() {
+		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
@@ -49,11 +36,10 @@ func (r *CreateTeamHookReqDTO) IsValid() error {
 }
 
 type UpdateTeamHookReqDTO struct {
-	Id       int64               `json:"id"`
-	Name     string              `json:"name"`
-	Events   teamhook.Events     `json:"events"`
-	HookType teamhook.HookType   `json:"hookType"`
-	HookCfg  teamhook.Cfg        `json:"hookCfg"`
+	Id     int64           `json:"id"`
+	Name   string          `json:"name"`
+	Events teamhook.Events `json:"events"`
+	commonhook.TypeAndCfg
 	Operator apisession.UserInfo `json:"operator"`
 }
 
@@ -64,16 +50,8 @@ func (r *UpdateTeamHookReqDTO) IsValid() error {
 	if !r.HookType.IsValid() {
 		return util.InvalidArgsError()
 	}
-	switch r.HookType {
-	case teamhook.NotifyType:
-		if r.HookCfg.NotifyTplId <= 0 {
-			return util.InvalidArgsError()
-		}
-	case teamhook.WebhookType:
-		parsedUrl, err := url.Parse(r.HookCfg.HookUrl)
-		if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
-			return util.InvalidArgsError()
-		}
+	if !r.TypeAndCfg.IsValid() {
+		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
@@ -116,6 +94,6 @@ type TeamHookDTO struct {
 	Name     string
 	TeamId   int64
 	Events   teamhook.Events
-	HookType teamhook.HookType
-	HookCfg  teamhook.Cfg
+	HookType commonhook.HookType
+	HookCfg  commonhook.Cfg
 }

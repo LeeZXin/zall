@@ -216,13 +216,13 @@ func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]ProductDTO, i
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(products, func(t productmd.Product) (ProductDTO, error) {
+	ret := listutil.MapNe(products, func(t productmd.Product) ProductDTO {
 		return ProductDTO{
 			Id:      t.Id,
 			Name:    t.Name,
 			Creator: t.Creator,
 			Created: t.Created,
-		}, nil
+		}
 	})
 	return ret, total, nil
 }

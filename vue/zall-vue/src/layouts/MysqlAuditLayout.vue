@@ -1,8 +1,8 @@
 <template>
   <a-layout>
     <a-layout-header style="font-size:22px;color:white">
-      <span>Mysql审计</span>
-      <span class="switch-text" @click="switchIndex">返回首页</span>
+      <span>{{t("indexMenu.mysqlAudit")}}</span>
+      <span class="switch-text" @click="switchIndex">{{t("backToIndex")}}</span>
       <AvatarName style="float:right;" />
       <I18nSelect style="float:right;margin-right: 20px" />
     </a-layout-header>
@@ -11,35 +11,35 @@
         <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
           <a-menu-item key="/mysqlDb/list" v-if="userStore.isDba">
             <DatabaseOutlined />
-            <span>数据源</span>
+            <span>{{t("mysqlAuditMenu.databaseSource")}}</span>
           </a-menu-item>
           <a-menu-item key="/mysqlReadPermApply/list">
             <CarryOutOutlined />
-            <span>读权限申请</span>
+            <span>{{t("mysqlAuditMenu.readPermApply")}}</span>
           </a-menu-item>
           <a-menu-item key="/mysqlReadPermAudit/list" v-if="userStore.isDba">
             <AuditOutlined />
-            <span>读权限审批</span>
+            <span>{{t("mysqlAuditMenu.readPermAudit")}}</span>
           </a-menu-item>
           <a-menu-item key="/mysqlReadPermDetail/list">
             <UnorderedListOutlined />
-            <span>读权限列表</span>
+            <span>{{t("mysqlAuditMenu.readPermList")}}</span>
           </a-menu-item>
           <a-menu-item key="/mysqlReadPermManage/list" v-if="userStore.isDba">
             <BlockOutlined />
-            <span>读权限管理</span>
+            <span>{{t("mysqlAuditMenu.readPermManage")}}</span>
           </a-menu-item>
           <a-menu-item key="/mysqlDataUpdateApply/list">
             <BookOutlined />
-            <span>数据修改单</span>
+            <span>{{t("mysqlAuditMenu.dataUpdateApply")}}</span>
           </a-menu-item>
           <a-menu-item key="/mysqlDataUpdateAudit/list" v-if="userStore.isDba">
             <AuditOutlined />
-            <span>数据修改单审批</span>
+            <span>{{t("mysqlAuditMenu.dataUpdateAudit")}}</span>
           </a-menu-item>
           <a-menu-item key="/mysqlSearch">
             <FileSearchOutlined />
-            <span>数据查询</span>
+            <span>{{t("mysqlAuditMenu.dataSearch")}}</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -63,21 +63,27 @@ import {
   BlockOutlined,
   CarryOutOutlined
 } from "@ant-design/icons-vue";
+import { useI18n } from "vue-i18n";
 import { useUserStore } from "@/pinia/userStore";
+const { t } = useI18n();
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
 const selectedKeys = ref([]);
+// 路由前缀
 const routeKey = "/db";
+// 导航栏选择key
 const onselect = event => {
   router.push({
     path: routeKey + event.key,
     force: true
   });
 };
+// 返回首页
 const switchIndex = () => {
   router.push("/index");
 };
+// 选择key变化
 const changeSelectedKey = path => {
   const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
   for (let key in pagesMap) {

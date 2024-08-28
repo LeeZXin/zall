@@ -56,7 +56,7 @@ func listDiscoverySource(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(sources, func(t discoverysrv.DiscoverySourceDTO) (DiscoverySourceVO, error) {
+		data := listutil.MapNe(sources, func(t discoverysrv.DiscoverySourceDTO) DiscoverySourceVO {
 			return DiscoverySourceVO{
 				Id:        t.Id,
 				Name:      t.Name,
@@ -64,7 +64,7 @@ func listDiscoverySource(c *gin.Context) {
 				Username:  t.Username,
 				Password:  t.Password,
 				Env:       t.Env,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[[]DiscoverySourceVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -85,13 +85,13 @@ func listBindDiscoverySource(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(sources, func(t discoverysrv.SimpleBindDiscoverySourceDTO) (SimpleBindDiscoverySourceVO, error) {
+		data := listutil.MapNe(sources, func(t discoverysrv.SimpleBindDiscoverySourceDTO) SimpleBindDiscoverySourceVO {
 			return SimpleBindDiscoverySourceVO{
 				Id:     t.Id,
 				Name:   t.Name,
 				BindId: t.BindId,
 				Env:    t.Env,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleBindDiscoverySourceVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -159,12 +159,12 @@ func listDiscoveryService(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(services, func(t discoverysrv.ServiceDTO) (ServiceVO, error) {
+	data := listutil.MapNe(services, func(t discoverysrv.ServiceDTO) ServiceVO {
 		return ServiceVO{
 			Server:     t.Server,
 			Up:         t.Up,
 			InstanceId: t.InstanceId,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]ServiceVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -246,11 +246,11 @@ func listAllDiscoverySource(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(nodes, func(t discoverysrv.SimpleDiscoverySourceDTO) (SimpleDiscoverySourceVO, error) {
+	data := listutil.MapNe(nodes, func(t discoverysrv.SimpleDiscoverySourceDTO) SimpleDiscoverySourceVO {
 		return SimpleDiscoverySourceVO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleDiscoverySourceVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

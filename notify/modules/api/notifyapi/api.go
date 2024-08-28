@@ -103,11 +103,11 @@ func listAllTplByTeamId(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(tpls, func(t notifysrv.SimpleTplDTO) (SimpleTplVO, error) {
+	data := listutil.MapNe(tpls, func(t notifysrv.SimpleTplDTO) SimpleTplVO {
 		return SimpleTplVO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleTplVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -128,13 +128,13 @@ func listNotifyTpl(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(tpls, func(t notifysrv.TplDTO) (TplVO, error) {
+		data := listutil.MapNe(tpls, func(t notifysrv.TplDTO) TplVO {
 			return TplVO{
 				Id:        t.Id,
 				Name:      t.Name,
 				ApiKey:    t.ApiKey,
 				NotifyCfg: t.NotifyCfg,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[TplVO]{
 			DataResp: ginutil.DataResp[[]TplVO]{

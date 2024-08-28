@@ -2,6 +2,7 @@ package timersrv
 
 import (
 	"context"
+	"errors"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
@@ -145,7 +146,7 @@ func ListTimer(ctx context.Context, reqDTO ListTimerReqDTO) ([]TimerDTO, int64, 
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(timers, func(t timermd.Timer) (TimerDTO, error) {
+	ret := listutil.MapNe(timers, func(t timermd.Timer) TimerDTO {
 		return TimerDTO{
 			Id:        t.Id,
 			Name:      t.Name,
@@ -155,7 +156,7 @@ func ListTimer(ctx context.Context, reqDTO ListTimerReqDTO) ([]TimerDTO, int64, 
 			IsEnabled: t.IsEnabled,
 			Env:       t.Env,
 			Creator:   t.Creator,
-		}, nil
+		}
 	})
 	return ret, total, nil
 }
@@ -181,15 +182,20 @@ func EnableTimer(ctx context.Context, reqDTO EnableTimerReqDTO) error {
 		return util.NewBizErr(apicode.OperationFailedErrCode, i18n.CronExpError)
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		_, err2 := timermd.EnableExecute(ctx,
-			reqDTO.Id,
-			nextTime.UnixMilli(),
-		)
+		b, err2 := timermd.EnableExecute(ctx, reqDTO.Id, nextTime.UnixMilli())
 		if err2 != nil {
 			return err2
 		}
-		_, err2 = timermd.EnableTimer(ctx, reqDTO.Id)
-		return err2
+		if b {
+			b, err2 = timermd.EnableTimer(ctx, reqDTO.Id)
+			if err2 != nil {
+				return err2
+			}
+			if !b {
+				return errors.New("failed")
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -216,12 +222,20 @@ func DisableTimer(ctx context.Context, reqDTO DisableTimerReqDTO) error {
 		return err
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		_, err2 := timermd.DisableExecute(ctx, reqDTO.Id)
+		b, err2 := timermd.DisableExecute(ctx, reqDTO.Id)
 		if err2 != nil {
 			return err2
 		}
-		_, err2 = timermd.DisableTimer(ctx, reqDTO.Id)
-		return err2
+		if b {
+			b, err2 = timermd.DisableTimer(ctx, reqDTO.Id)
+			if err2 != nil {
+				return err2
+			}
+			if !b {
+				return errors.New("failed")
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -326,7 +340,7 @@ func ListLog(ctx context.Context, reqDTO ListLogReqDTO) ([]LogDTO, int64, error)
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(logs, func(t timermd.Log) (LogDTO, error) {
+	ret := listutil.MapNe(logs, func(t timermd.Log) LogDTO {
 		return LogDTO{
 			Task:        t.GetTaskContent(),
 			ErrLog:      t.ErrLog,
@@ -334,7 +348,7 @@ func ListLog(ctx context.Context, reqDTO ListLogReqDTO) ([]LogDTO, int64, error)
 			TriggerBy:   t.TriggerBy,
 			IsSuccess:   t.IsSuccess,
 			Created:     t.Created,
-		}, nil
+		}
 	})
 	return ret, total, nil
 }

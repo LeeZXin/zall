@@ -153,13 +153,13 @@ func listDb(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(dbs, func(t mysqldbsrv.DbDTO) (DbVO, error) {
+		data := listutil.MapNe(dbs, func(t mysqldbsrv.DbDTO) DbVO {
 			return DbVO{
 				Id:      t.Id,
 				Name:    t.Name,
 				Config:  t.Config,
 				Created: t.Created.Format(time.DateTime),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[DbVO]{
 			DataResp: ginutil.DataResp[[]DbVO]{
@@ -180,11 +180,11 @@ func allDb(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(dbs, func(t mysqldbsrv.SimpleDbDTO) (SimpleDbVO, error) {
+	data := listutil.MapNe(dbs, func(t mysqldbsrv.SimpleDbDTO) SimpleDbVO {
 		return SimpleDbVO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleDbVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -260,10 +260,9 @@ func getReadPermApply(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := readPermApply2Vo(apply)
 	c.JSON(http.StatusOK, ginutil.DataResp[ReadPermApplyVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
+		Data:     readPermApply2Vo(apply),
 	})
 }
 
@@ -283,7 +282,7 @@ func listReadPermApplyByDba(c *gin.Context) {
 		c.JSON(http.StatusOK, ginutil.Page2Resp[ReadPermApplyVO]{
 			DataResp: ginutil.DataResp[[]ReadPermApplyVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
-				Data:     readPermApplies2Vo(applies),
+				Data:     listutil.MapNe(applies, readPermApply2Vo),
 			},
 			PageNum:    req.PageNum,
 			TotalCount: total,
@@ -292,11 +291,11 @@ func listReadPermApplyByDba(c *gin.Context) {
 }
 
 func readPermApplies2Vo(applies []mysqldbsrv.ReadPermApplyDTO) []ReadPermApplyVO {
-	data, _ := listutil.Map(applies, readPermApply2Vo)
+	data := listutil.MapNe(applies, readPermApply2Vo)
 	return data
 }
 
-func readPermApply2Vo(t mysqldbsrv.ReadPermApplyDTO) (ReadPermApplyVO, error) {
+func readPermApply2Vo(t mysqldbsrv.ReadPermApplyDTO) ReadPermApplyVO {
 	return ReadPermApplyVO{
 		Id:             t.Id,
 		Account:        t.Account,
@@ -311,7 +310,7 @@ func readPermApply2Vo(t mysqldbsrv.ReadPermApplyDTO) (ReadPermApplyVO, error) {
 		DisagreeReason: t.DisagreeReason,
 		Created:        t.Created.Format(time.DateTime),
 		Updated:        t.Updated.Format(time.DateTime),
-	}, nil
+	}
 }
 
 func listReadPermApplyByOperator(c *gin.Context) {
@@ -361,7 +360,7 @@ func listDataUpdateApplyByDba(c *gin.Context) {
 }
 
 func dataUpdateApplyDto2Vo(orders []mysqldbsrv.DataUpdateApplyDTO) []DataUpdateApplyVO {
-	data, _ := listutil.Map(orders, func(t mysqldbsrv.DataUpdateApplyDTO) (DataUpdateApplyVO, error) {
+	data := listutil.MapNe(orders, func(t mysqldbsrv.DataUpdateApplyDTO) DataUpdateApplyVO {
 		return DataUpdateApplyVO{
 			Id:               t.Id,
 			Account:          t.Account,
@@ -379,7 +378,7 @@ func dataUpdateApplyDto2Vo(orders []mysqldbsrv.DataUpdateApplyDTO) []DataUpdateA
 			Created:          t.Created.Format(time.DateTime),
 			Updated:          t.Updated.Format(time.DateTime),
 			IsUnExecuted:     t.ApplyStatus.IsUnExecuted(),
-		}, nil
+		}
 	})
 	return data
 }
@@ -419,7 +418,7 @@ func listReadPermByOperator(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(perms, func(t mysqldbsrv.ReadPermDTO) (ReadPermVO, error) {
+		data := listutil.MapNe(perms, func(t mysqldbsrv.ReadPermDTO) ReadPermVO {
 			return ReadPermVO{
 				Id:          t.Id,
 				Account:     t.Account,
@@ -430,7 +429,7 @@ func listReadPermByOperator(c *gin.Context) {
 				Created:     t.Created.Format(time.DateTime),
 				Expired:     t.Expired.Format(time.DateTime),
 				ApplyId:     t.ApplyId,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[ReadPermVO]{
 			DataResp: ginutil.DataResp[[]ReadPermVO]{
@@ -468,7 +467,7 @@ func listReadPermByDba(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(perms, func(t mysqldbsrv.ReadPermDTO) (ReadPermVO, error) {
+		data := listutil.MapNe(perms, func(t mysqldbsrv.ReadPermDTO) ReadPermVO {
 			return ReadPermVO{
 				Id:          t.Id,
 				Account:     t.Account,
@@ -479,7 +478,7 @@ func listReadPermByDba(c *gin.Context) {
 				Created:     t.Created.Format(time.DateTime),
 				Expired:     t.Expired.Format(time.DateTime),
 				ApplyId:     t.ApplyId,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[ReadPermVO]{
 			DataResp: ginutil.DataResp[[]ReadPermVO]{
@@ -499,11 +498,11 @@ func listAuthorizedDb(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(dbs, func(t mysqldbsrv.SimpleDbDTO) (SimpleDbVO, error) {
+	data := listutil.MapNe(dbs, func(t mysqldbsrv.SimpleDbDTO) SimpleDbVO {
 		return SimpleDbVO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleDbVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

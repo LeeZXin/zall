@@ -32,12 +32,11 @@ func createTeamHook(c *gin.Context) {
 	var req CreateTeamHookReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := teamhooksrv.CreateTeamHook(c, teamhooksrv.CreateTeamHookReqDTO{
-			Name:     req.Name,
-			TeamId:   req.TeamId,
-			Events:   req.Events,
-			HookType: req.HookType,
-			HookCfg:  req.HookCfg,
-			Operator: apisession.MustGetLoginUser(c),
+			Name:       req.Name,
+			TeamId:     req.TeamId,
+			Events:     req.Events,
+			TypeAndCfg: req.TypeAndCfg,
+			Operator:   apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -51,12 +50,11 @@ func updateTeamHook(c *gin.Context) {
 	var req UpdateTeamHookReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := teamhooksrv.UpdateTeamHook(c, teamhooksrv.UpdateTeamHookReqDTO{
-			Id:       req.Id,
-			Name:     req.Name,
-			Events:   req.Events,
-			HookType: req.HookType,
-			HookCfg:  req.HookCfg,
-			Operator: apisession.MustGetLoginUser(c),
+			Id:         req.Id,
+			Name:       req.Name,
+			Events:     req.Events,
+			TypeAndCfg: req.TypeAndCfg,
+			Operator:   apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -87,7 +85,7 @@ func listTeamHook(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(hooks, func(t teamhooksrv.TeamHookDTO) (TeamHookVO, error) {
+	data := listutil.MapNe(hooks, func(t teamhooksrv.TeamHookDTO) TeamHookVO {
 		return TeamHookVO{
 			Id:       t.Id,
 			Name:     t.Name,
@@ -95,7 +93,7 @@ func listTeamHook(c *gin.Context) {
 			Events:   t.Events,
 			HookType: t.HookType,
 			HookCfg:  t.HookCfg,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]TeamHookVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

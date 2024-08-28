@@ -644,14 +644,14 @@ func (*outerImpl) ListAllGroupProcess(ctx context.Context, reqDTO ListAllGroupPr
 		pl = append(pl, process)
 		processMap[process.GroupId] = pl
 	}
-	groupsRet, _ := listutil.Map(groups, func(t approvalmd.Group) (GroupProcessDTO, error) {
+	groupsRet := listutil.MapNe(groups, func(t approvalmd.Group) GroupProcessDTO {
 		pl := processMap[t.Id]
-		ps, _ := listutil.Map(pl, func(t approvalmd.SimpleProcess) (SimpleProcessDTO, error) {
+		ps := listutil.MapNe(pl, func(t approvalmd.SimpleProcess) SimpleProcessDTO {
 			return SimpleProcessDTO{
 				Id:      t.Id,
 				Name:    t.Name,
 				IconUrl: t.IconUrl,
-			}, nil
+			}
 		})
 		sort.SliceStable(ps, func(i, j int) bool {
 			return ps[i].Id < ps[j].Id
@@ -660,7 +660,7 @@ func (*outerImpl) ListAllGroupProcess(ctx context.Context, reqDTO ListAllGroupPr
 			Id:        t.Id,
 			Name:      t.Name,
 			Processes: ps,
-		}, nil
+		}
 	})
 	sort.SliceStable(groupsRet, func(i, j int) bool {
 		return groupsRet[i].Id < groupsRet[j].Id
@@ -707,8 +707,8 @@ func (*outerImpl) ListOperateFlow(ctx context.Context, reqDTO ListOperateFlowReq
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	flowIds, _ := listutil.Map(notifies, func(t approvalmd.Notify) (int64, error) {
-		return t.FlowId, nil
+	flowIds := listutil.MapNe(notifies, func(t approvalmd.Notify) int64 {
+		return t.FlowId
 	})
 	flows, err := approvalmd.BatchGetFlows(ctx, flowIds)
 	if err != nil {
@@ -796,14 +796,14 @@ func (*outerImpl) GetFlowDetail(ctx context.Context, reqDTO GetFlowDetailReqDTO)
 		Kvs:         kvs,
 		Process:     *process,
 	}
-	ret.NotifyList, _ = listutil.Map(notifies, func(t approvalmd.Notify) (NotifyDTO, error) {
+	ret.NotifyList = listutil.MapNe(notifies, func(t approvalmd.Notify) NotifyDTO {
 		return NotifyDTO{
 			Account:   t.Account,
 			FlowIndex: t.FlowIndex,
 			Done:      t.Done,
 			Op:        t.Op,
 			Updated:   t.Updated,
-		}, nil
+		}
 	})
 	return ret, nil
 }

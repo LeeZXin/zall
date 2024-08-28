@@ -9,20 +9,28 @@ import (
 	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/git/repo/server/store"
+	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/githook"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/pkg/webhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
+)
+
+var (
+	initPsubOnce = sync.Once{}
 )
 
 func doPreReceive(ctx context.Context, opts githook.Opts) error {
@@ -114,10 +122,19 @@ func doPostReceive(ctx context.Context, opts githook.Opts) {
 	defer closer.Close()
 	// 获取仓库信息
 	repo, b, err := repomd.GetByRepoId(ctx, opts.RepoId)
-	if err != nil || !b {
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-		}
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return
+	}
+	if !b {
+		return
+	}
+	team, b, err := teammd.GetByTeamId(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return
+	}
+	if !b {
 		return
 	}
 	// 更新最后操作时间
@@ -125,7 +142,7 @@ func doPostReceive(ctx context.Context, opts githook.Opts) {
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
-	gitSize, lfsSize, err := store.Srv.GetRepoSize(ctx, reqvo.GetRepoSizeReq{
+	gitSize, lfsSize, err := store.GetRepoSize(ctx, reqvo.GetRepoSizeReq{
 		RepoPath: repo.Path,
 	})
 	if err == nil {
@@ -141,11 +158,15 @@ func doPostReceive(ctx context.Context, opts githook.Opts) {
 	for _, revInfo := range opts.RevInfoList {
 		var refType string
 		if strings.HasPrefix(revInfo.Ref, git.BranchPrefix) {
-			refType = "commit"
+			refType = "branch"
 		} else if strings.HasPrefix(revInfo.Ref, git.TagPrefix) {
 			refType = "tag"
 		} else {
 			continue
+		}
+		action := event.GitPushEventCommitAction
+		if revInfo.NewCommitId == git.ZeroCommitId {
+			action = event.GitPushEventDeleteAction
 		}
 		req := event.GitPushEvent{
 			RefType:     refType,
@@ -153,67 +174,88 @@ func doPostReceive(ctx context.Context, opts githook.Opts) {
 			OldCommitId: revInfo.OldCommitId,
 			NewCommitId: revInfo.NewCommitId,
 			BaseRepo: event.BaseRepo{
-				TeamId:   repo.TeamId,
 				RepoId:   repo.Id,
 				RepoPath: repo.Path,
 				RepoName: repo.Name,
+			},
+			BaseTeam: event.BaseTeam{
+				TeamId:   team.Id,
+				TeamName: team.Name,
 			},
 			BaseEvent: event.BaseEvent{
 				Operator:     opts.PusherAccount,
 				OperatorName: opts.PusherName,
 				EventTime:    now.Format(time.DateTime),
+				ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+				ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 			},
+			Action: action,
 		}
 		notifyEvent(req)
 	}
 }
 
 func notifyEvent(req event.GitPushEvent) {
+	initPsub()
 	psub.Publish(event.GitPushTopic, req)
 }
 
-func subscribeEvent() {
-	psub.Subscribe(event.GitPushTopic, func(data any) {
-		req, ok := data.(event.GitPushEvent)
-		if ok {
-			ctx := context.Background()
-			ctx, closer := xormstore.Context(ctx)
-			webhookList, err := webhookmd.ListWebhookByRepoId(ctx, req.RepoId)
-			if err != nil {
-				closer.Close()
-				// 查找webhook
-				logger.Logger.Error(err)
-				return
-			}
-			// 查找工作流
-			workflowList, err := workflowmd.ListWorkflowByRepoId(ctx, req.RepoId)
-			if err != nil {
-				closer.Close()
-				logger.Logger.Error(err)
-				return
-			}
-			closer.Close()
-			// 触发webhook
-			for _, hook := range webhookList {
-				if hook.GetEvents().GitPush {
-					webhook.TriggerWebhook(hook.HookUrl, hook.Secret, &req)
+func initPsub() {
+	initPsubOnce.Do(func() {
+		psub.Subscribe(event.GitPushTopic, func(data any) {
+			req, ok := data.(event.GitPushEvent)
+			if ok {
+				ctx := context.Background()
+				ctx, closer := xormstore.Context(ctx)
+				webhookList, err := webhookmd.ListWebhookByRepoId(ctx, req.RepoId)
+				if err != nil {
+					closer.Close()
+					// 查找webhook
+					logger.Logger.Error(err)
+					return
 				}
-			}
-			// 触发工作流
-			for _, wf := range workflowList {
-				if req.RefType == "commit" {
-					ref := strings.TrimPrefix(req.Ref, git.BranchPrefix)
-					if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, ref) {
-						workflowsrv.Execute(wf, workflowsrv.ExecuteWorkflowReqDTO{
-							RepoPath:    req.RepoPath,
-							Operator:    req.Operator,
-							TriggerType: workflowmd.HookTriggerType,
-							Branch:      ref,
-							PrId:        0,
-						})
+				// 查找工作流
+				workflowList, err := workflowmd.ListWorkflowByRepoId(ctx, req.RepoId)
+				if err != nil {
+					closer.Close()
+					logger.Logger.Error(err)
+					return
+				}
+				closer.Close()
+				// 触发webhook
+				for _, hook := range webhookList {
+					if hook.GetEvents().GitPush {
+						webhook.TriggerWebhook(hook.HookUrl, hook.Secret, &req)
 					}
 				}
+				// 触发工作流
+				for _, wf := range workflowList {
+					if req.RefType == "commit" {
+						ref := strings.TrimPrefix(req.Ref, git.BranchPrefix)
+						if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, ref) {
+							workflowsrv.Execute(wf, workflowsrv.ExecuteWorkflowReqDTO{
+								RepoPath:    req.RepoPath,
+								Operator:    req.Operator,
+								TriggerType: workflowmd.HookTriggerType,
+								Branch:      ref,
+								PrId:        0,
+							})
+						}
+					}
+				}
+				// 触发teamhook
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					switch req.Action {
+					case event.GitPushEventCommitAction:
+						return events.GitPush.Commit
+					case event.GitPushEventDeleteAction:
+						return events.GitPush.Delete
+					default:
+						return false
+					}
+				})
 			}
-		}
+		})
 	})
+
 }

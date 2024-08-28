@@ -364,41 +364,51 @@
 </template>
 <script setup>
 import { ref, reactive, defineEmits, defineProps } from "vue";
+/*
+  Cron表达式获取
+*/
 const props = defineProps(["style", "modelValue"]);
 const emit = defineEmits(["update:modelValue"]);
+// input style
 const istyle = {
   width: "80%"
 };
+// 单选项style
 const radioStyle = {
   display: "flex",
   height: "40px",
   lineHeight: "40px",
   alignItems: "center"
 };
+// 分钟下拉框选项 0-59
 const minuteOptions = ref([]);
 for (let i = 0; i <= 59; i++) {
   minuteOptions.value.push({
     value: `${i}`
   });
 }
+// 小时下拉框选项 0-23
 const hourOptions = ref([]);
 for (let i = 0; i <= 23; i++) {
   hourOptions.value.push({
     value: `${i}`
   });
 }
+// 天下拉框选项 1-31
 const dayOfMonthOptions = ref([]);
 for (let i = 1; i <= 31; i++) {
   dayOfMonthOptions.value.push({
     value: `${i}`
   });
 }
+// 月下拉框选项 1-12
 const monthOptions = ref([]);
 for (let i = 1; i <= 12; i++) {
   monthOptions.value.push({
     value: `${i}`
   });
 }
+// 周x 下拉框 1-7
 const dayOfWeekOptions = ref([]);
 for (let i = 1; i <= 7; i++) {
   dayOfWeekOptions.value.push({
@@ -706,19 +716,19 @@ const dayOfWeekFixChange = () => {
   dayOfWeek.value = dayOfWeek.fix.join(",");
   emitResult();
 };
-
+// 阻止默认事件
 const preventDefault = e => {
   e.preventDefault();
   e.stopPropagation();
 };
-
+// 修改modelValue
 const emitResult = () => {
   let result = `${minute.value} ${hour.value} ${dayOfMonth.value} ${month.value} ${dayOfWeek.value}`;
   emit("update:modelValue", result);
-  console.log(result);
 };
-
+// 解析cron表达式
 const parseCron = () => {
+  // 获取传进来的值
   let cron = props.modelValue;
   if (!cron) {
     return;

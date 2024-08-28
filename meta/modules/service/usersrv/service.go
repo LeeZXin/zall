@@ -299,7 +299,7 @@ func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDTO, int64, err
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(users, func(t usermd.User) (UserDTO, error) {
+	data := listutil.MapNe(users, func(t usermd.User) UserDTO {
 		return UserDTO{
 			Account:      t.Account,
 			Name:         t.Name,
@@ -309,7 +309,7 @@ func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDTO, int64, err
 			AvatarUrl:    t.AvatarUrl,
 			Created:      t.Created,
 			IsDba:        t.IsDba,
-		}, nil
+		}
 	})
 	return data, total, nil
 }

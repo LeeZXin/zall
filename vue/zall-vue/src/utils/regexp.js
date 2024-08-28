@@ -77,6 +77,12 @@ const notifyTplUrlRegexp = /^https?:\/\/.+$/;
 const teamHookUrlRegexp = /^https?:\/\/.+$/;
 const teamHookSecretRegexp = /^.{1,1024}$/;
 const teamHookNameRegexp = /^.{1,32}$/;
+// alert config
+const alertConfigNameRegexp = /^.{1,32}$/;
+const alertConfigHookUrlRegexp = /^https?:\/\/.+$/;
+const alertConfigSecretRegexp = /^.{1,1024}$/;
+const alertMysqlHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
+const alertHttpHostRegexp = /^https?:\/\/.+$/;
 export {
     accountRegexp,
     passwordRegexp,
@@ -131,5 +137,10 @@ export {
     notifyTplUrlRegexp,
     teamHookUrlRegexp,
     teamHookSecretRegexp,
-    teamHookNameRegexp
+    teamHookNameRegexp,
+    alertConfigNameRegexp,
+    alertConfigHookUrlRegexp,
+    alertConfigSecretRegexp,
+    alertMysqlHostRegexp,
+    alertHttpHostRegexp
 }

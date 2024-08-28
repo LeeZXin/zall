@@ -1,6 +1,7 @@
 package teamhookmd
 
 import (
+	"github.com/LeeZXin/zall/pkg/commonhook"
 	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
@@ -15,8 +16,8 @@ type TeamHook struct {
 	Name     string                                `json:"name"`
 	TeamId   int64                                 `json:"teamId"`
 	Events   *xormutil.Conversion[teamhook.Events] `json:"events"`
-	HookType teamhook.HookType                     `json:"hookType"`
-	HookCfg  *xormutil.Conversion[teamhook.Cfg]    `json:"hookCfg"`
+	HookType commonhook.HookType                   `json:"hookType"`
+	HookCfg  *xormutil.Conversion[commonhook.Cfg]  `json:"hookCfg"`
 	Created  time.Time                             `json:"created" xorm:"created"`
 	Updated  time.Time                             `json:"updated" xorm:"updated"`
 }
@@ -32,9 +33,9 @@ func (w *TeamHook) GetEvents() teamhook.Events {
 	return w.Events.Data
 }
 
-func (w *TeamHook) GetHookCfg() teamhook.Cfg {
+func (w *TeamHook) GetHookCfg() commonhook.Cfg {
 	if w.HookCfg == nil {
-		return teamhook.Cfg{}
+		return commonhook.Cfg{}
 	}
 	return w.HookCfg.Data
 }

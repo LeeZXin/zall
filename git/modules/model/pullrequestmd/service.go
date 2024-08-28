@@ -166,12 +166,12 @@ func GroupByPrStatus(ctx context.Context, repoId int64) ([]GroupByPrStatusDTO, e
 }
 
 func BatchInsertTimeline(ctx context.Context, reqDTOs []InsertTimelineReqDTO) error {
-	timelines, _ := listutil.Map(reqDTOs, func(t InsertTimelineReqDTO) (*Timeline, error) {
+	timelines := listutil.MapNe(reqDTOs, func(t InsertTimelineReqDTO) *Timeline {
 		return &Timeline{
 			PrId:    t.PrId,
 			Action:  &t.Action,
 			Account: t.Account,
-		}, nil
+		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(timelines)

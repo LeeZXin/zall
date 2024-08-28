@@ -8,46 +8,42 @@
     </a-layout-header>
     <a-layout>
       <a-layout-sider v-model:collapsed="collapsed" collapsible>
-        <a-menu theme="dark" mode="inline" @click="clickPage" v-model:selectedKeys="selectedKeys">
+        <a-menu theme="dark" mode="inline" @click="selectKey" v-model:selectedKeys="selectedKeys">
           <a-menu-item key="/index">
             <FileOutlined />
-            <span>代码文件</span>
+            <span>{{t("gitRepoMenu.index")}}</span>
           </a-menu-item>
           <a-menu-item key="/pullRequest/list">
             <PullRequestOutlined />
-            <span>合并请求</span>
+            <span>{{t("gitRepoMenu.pullRequest")}}</span>
           </a-menu-item>
           <a-menu-item key="/branch/list">
             <BranchesOutlined />
-            <span>分支列表</span>
+            <span>{{t("gitRepoMenu.branch")}}</span>
           </a-menu-item>
           <a-menu-item key="/tag/list">
             <TagOutlined />
-            <span>标签列表</span>
+            <span>{{t("gitRepoMenu.tag")}}</span>
           </a-menu-item>
           <a-menu-item key="/commit/list">
             <CloudUploadOutlined />
-            <span>提交历史</span>
+            <span>{{t("gitRepoMenu.commitHistory")}}</span>
           </a-menu-item>
           <a-menu-item key="/workflow/list">
             <NodeIndexOutlined />
-            <span>工作流</span>
+            <span>{{t("gitRepoMenu.workflow")}}</span>
           </a-menu-item>
           <a-menu-item key="/protectedBranch/list" v-if="repo.perm?.canManageProtectedBranch">
             <BranchesOutlined />
-            <span>保护分支</span>
+            <span>{{t("gitRepoMenu.protectedBranch")}}</span>
           </a-menu-item>
           <a-menu-item key="/webhook/list" v-if="repo.perm?.canManageWebhook">
             <ApiOutlined />
-            <span>Webhook</span>
+            <span>{{t("gitRepoMenu.webhook")}}</span>
           </a-menu-item>
-          <a-menu-item key="/opLogs" v-if="teamStore.isAdmin">
-            <CalendarOutlined />
-            <span>操作日志</span>
-          </a-menu-item>
-          <a-menu-item key="/config" v-if="teamStore.isAdmin">
+          <a-menu-item key="/setting" v-if="teamStore.isAdmin">
             <SettingOutlined />
-            <span>设置</span>
+            <span>{{t("gitRepoMenu.setting")}}</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -74,7 +70,6 @@ import {
   PullRequestOutlined,
   TagOutlined,
   SettingOutlined,
-  CalendarOutlined,
   CloudUploadOutlined,
   ApiOutlined,
   NodeIndexOutlined
@@ -85,12 +80,16 @@ import { useRepoStore } from "@/pinia/repoStore";
 import { useTeamStore } from "@/pinia/teamStore";
 const teamStore = useTeamStore();
 const { t } = useI18n();
+// 导航栏是否合上
 const collapsed = ref(false);
 const router = useRouter();
 const route = useRoute();
 const repo = useRepoStore();
+// 导航栏选择key
 const selectedKeys = ref([]);
+// 路由前缀
 const routeKey = `/team/${route.params.teamId}/gitRepo/${route.params.repoId}`;
+// 是否展示routerView
 const routerActive = ref(false);
 const container = ref(null);
 // 为了子页面能体现在导航栏
@@ -104,18 +103,20 @@ const pagesMap = {
   "/protectedBranch": "/protectedBranch/list",
   "/webhook": "/webhook/list",
   "/workflow": "/workflow/list",
-  "/config": "/config",
-  "/opLogs": "/opLogs"
+  "/setting": "/setting"
 };
+// 切换仓库
 const switchRepo = () => {
   router.push(`/team/${route.params.teamId}/gitRepo/list`);
 };
-const clickPage = event => {
+// 导航栏点击
+const selectKey = event => {
   router.push({
     path: routeKey + event.key,
     force: true
   });
 };
+// 获取仓库信息和权限
 const getRepo = () => {
   getRepoRequest(route.params.repoId).then(res => {
     repo.repoId = res.data.repoId;
@@ -125,6 +126,7 @@ const getRepo = () => {
     routerActive.value = true;
   });
 };
+// 获取团队信息和权限
 const getTeam = () => {
   getTeamRequest(route.params.teamId).then(res => {
     teamStore.teamId = res.data.teamId;
@@ -133,6 +135,7 @@ const getTeam = () => {
     teamStore.perm = res.data.perm;
   });
 };
+// 导航栏key变化触发
 const changeSelectedKey = path => {
   const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
   for (let key in pagesMap) {
@@ -148,12 +151,14 @@ if (teamStore.teamId === 0) {
 }
 getRepo();
 changeSelectedKey(route.path);
+// 重载页面
 provide("gitRepoLayoutReload", () => {
   routerActive.value = false;
   nextTick(() => {
     routerActive.value = true;
   });
 });
+// 滚动到底部
 provide("gitRepoLayoutScrollToBottom", () => {
   if (container.value) {
     nextTick(() => {
@@ -164,6 +169,7 @@ provide("gitRepoLayoutScrollToBottom", () => {
     });
   }
 });
+// 滚动到指定位置
 provide("gitRepoLayoutScrollToElem", id => {
   let c = container.value;
   let doc = document.getElementById(id);

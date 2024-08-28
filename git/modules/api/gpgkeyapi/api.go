@@ -63,7 +63,7 @@ func listGpgKey(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(keys, func(t gpgkeysrv.GpgKeyDTO) (GpgKeyVO, error) {
+	data := listutil.MapNe(keys, func(t gpgkeysrv.GpgKeyDTO) GpgKeyVO {
 		return GpgKeyVO{
 			Id:      t.Id,
 			Name:    t.Name,
@@ -72,7 +72,7 @@ func listGpgKey(c *gin.Context) {
 			Created: t.Created.Format(time.DateOnly),
 			Email:   t.Email,
 			SubKeys: t.SubKeys,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]GpgKeyVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

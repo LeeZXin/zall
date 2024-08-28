@@ -35,7 +35,7 @@ func UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtectedBranchReqD
 	return rows == 1, err
 }
 
-func DeleteById(ctx context.Context, id int64) (bool, error) {
+func DeleteProtectedBranchById(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		And("id = ?", id).
 		Limit(1).
@@ -43,7 +43,15 @@ func DeleteById(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
-func GetById(ctx context.Context, id int64) (ProtectedBranch, bool, error) {
+func DeleteProtectedBranchByRepoId(ctx context.Context, repoId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).
+		And("repo_id = ?", repoId).
+		Limit(1).
+		Delete(new(ProtectedBranch))
+	return err
+}
+
+func GetProtectedBranchById(ctx context.Context, id int64) (ProtectedBranch, bool, error) {
 	ret := ProtectedBranch{}
 	b, err := xormutil.MustGetXormSession(ctx).
 		And("id = ?", id).

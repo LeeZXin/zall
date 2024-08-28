@@ -139,7 +139,7 @@ func listPropertySource(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(nodes, func(t propertysrv.PropertySourceDTO) (PropertySourceVO, error) {
+	data := listutil.MapNe(nodes, func(t propertysrv.PropertySourceDTO) PropertySourceVO {
 		return PropertySourceVO{
 			Id:        t.Id,
 			Name:      t.Name,
@@ -147,7 +147,7 @@ func listPropertySource(c *gin.Context) {
 			Username:  t.Username,
 			Password:  t.Password,
 			Env:       t.Env,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]PropertySourceVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -171,11 +171,11 @@ func listAllPropertySource(c *gin.Context) {
 }
 
 func sourceDto2SimpleVo(sources []propertysrv.SimplePropertySourceDTO) []SimplePropertySourceVO {
-	data, _ := listutil.Map(sources, func(t propertysrv.SimplePropertySourceDTO) (SimplePropertySourceVO, error) {
+	data := listutil.MapNe(sources, func(t propertysrv.SimplePropertySourceDTO) SimplePropertySourceVO {
 		return SimplePropertySourceVO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	return data
 }
@@ -321,13 +321,13 @@ func listFile(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(contents, func(t propertysrv.FileDTO) (FileVO, error) {
+	data := listutil.MapNe(contents, func(t propertysrv.FileDTO) FileVO {
 		return FileVO{
 			Id:    t.Id,
 			AppId: t.AppId,
 			Name:  t.Name,
 			Env:   t.Env,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]FileVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -347,9 +347,7 @@ func pageHistory(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(histories, func(t propertysrv.HistoryDTO) (HistoryVO, error) {
-			return history2VO(t), nil
-		})
+		data := listutil.MapNe(histories, history2VO)
 		c.JSON(http.StatusOK, ginutil.Page2Resp[HistoryVO]{
 			DataResp: ginutil.DataResp[[]HistoryVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
@@ -384,13 +382,13 @@ func listDeploy(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(deploys, func(t propertysrv.DeployDTO) (DeployVO, error) {
+	data := listutil.MapNe(deploys, func(t propertysrv.DeployDTO) DeployVO {
 		return DeployVO{
 			NodeName:  t.NodeName,
 			Endpoints: t.Endpoints,
 			Created:   t.Created.Format(time.DateTime),
 			Creator:   t.Creator,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]DeployVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

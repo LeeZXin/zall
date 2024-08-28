@@ -5,13 +5,13 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/branchmd"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/model/webhookmd"
-	"github.com/LeeZXin/zall/git/modules/service/oplogsrv"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/event"
-	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/pkg/webhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -42,6 +42,19 @@ func initPsub() {
 						}
 					}
 				}
+				// 触发teamhook
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					switch req.Action {
+					case event.ProtectedBranchEventCreateAction:
+						return events.ProtectedBranch.Create
+					case event.ProtectedBranchEventUpdateAction:
+						return events.ProtectedBranch.Update
+					case event.ProtectedBranchEventDeleteAction:
+						return events.ProtectedBranch.Delete
+					default:
+						return false
+					}
+				})
 			}
 		})
 	})
@@ -54,7 +67,7 @@ func CreateProtectedBranch(ctx context.Context, reqDTO CreateProtectedBranchReqD
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	repo, err := checkManageProtectedBranchPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	repo, team, err := checkManageProtectedBranchPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -81,23 +94,17 @@ func CreateProtectedBranch(ctx context.Context, reqDTO CreateProtectedBranchReqD
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	// 插入日志
-	oplogsrv.InsertOpLog(oplogsrv.OpLog{
-		RepoId:   reqDTO.RepoId,
-		Operator: reqDTO.Operator.Account,
-		Log:      oplogsrv.FormatI18n(i18n.BranchSrvKeysVO.CreateProtectedBranch, reqDTO.Pattern),
-		Req:      reqDTO,
-	})
 	// 通知其他领域
 	notifyEvent(
 		repo,
+		team,
 		reqDTO.Operator,
 		nil,
 		&branch.ProtectedBranch{
 			Pattern:            reqDTO.Pattern,
 			ProtectedBranchCfg: reqDTO.Cfg,
 		},
-		event.PbCreateAction,
+		event.ProtectedBranchEventCreateAction,
 	)
 	return nil
 }
@@ -109,7 +116,7 @@ func UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtectedBranchReqD
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	pb, b, err := branchmd.GetById(ctx, reqDTO.ProtectedBranchId)
+	pb, b, err := branchmd.GetProtectedBranchById(ctx, reqDTO.ProtectedBranchId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -117,7 +124,7 @@ func UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtectedBranchReqD
 	if !b {
 		return util.InvalidArgsError()
 	}
-	repo, err := checkManageProtectedBranchPerm(ctx, pb.RepoId, reqDTO.Operator)
+	repo, team, err := checkManageProtectedBranchPerm(ctx, pb.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -130,16 +137,10 @@ func UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtectedBranchReqD
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	// 插入日志
-	oplogsrv.InsertOpLog(oplogsrv.OpLog{
-		RepoId:   repo.Id,
-		Operator: reqDTO.Operator.Account,
-		Log:      oplogsrv.FormatI18n(i18n.BranchSrvKeysVO.UpdateProtectedBranch, reqDTO.Pattern),
-		Req:      reqDTO,
-	})
 	// 上报事件
 	notifyEvent(
 		repo,
+		team,
 		reqDTO.Operator,
 		&branch.ProtectedBranch{
 			Pattern:            pb.Pattern,
@@ -149,7 +150,7 @@ func UpdateProtectedBranch(ctx context.Context, reqDTO UpdateProtectedBranchReqD
 			Pattern:            reqDTO.Pattern,
 			ProtectedBranchCfg: reqDTO.Cfg,
 		},
-		event.PbUpdateAction,
+		event.ProtectedBranchEventUpdateAction,
 	)
 	return nil
 }
@@ -161,7 +162,7 @@ func DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtectedBranchReqD
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	pb, b, err := branchmd.GetById(ctx, reqDTO.ProtectedBranchId)
+	pb, b, err := branchmd.GetProtectedBranchById(ctx, reqDTO.ProtectedBranchId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -169,40 +170,37 @@ func DeleteProtectedBranch(ctx context.Context, reqDTO DeleteProtectedBranchReqD
 	if !b {
 		return util.InvalidArgsError()
 	}
-	repo, err := checkManageProtectedBranchPerm(ctx, pb.RepoId, reqDTO.Operator)
+	repo, team, err := checkManageProtectedBranchPerm(ctx, pb.RepoId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
-	_, err = branchmd.DeleteById(ctx, reqDTO.ProtectedBranchId)
+	_, err = branchmd.DeleteProtectedBranchById(ctx, reqDTO.ProtectedBranchId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	// 插入日志
-	oplogsrv.InsertOpLog(oplogsrv.OpLog{
-		RepoId:   repo.Id,
-		Operator: reqDTO.Operator.Account,
-		Log:      oplogsrv.FormatI18n(i18n.BranchSrvKeysVO.CreateProtectedBranch, pb.Pattern),
-		Req:      reqDTO,
-	})
 	notifyEvent(
 		repo,
+		team,
 		reqDTO.Operator,
 		&branch.ProtectedBranch{
 			Pattern:            pb.Pattern,
 			ProtectedBranchCfg: pb.GetCfg(),
 		},
 		nil,
-		event.PbDeleteAction,
+		event.ProtectedBranchEventDeleteAction,
 	)
 	return nil
 }
 
-func notifyEvent(repo repomd.Repo, operator apisession.UserInfo, before, after *branch.ProtectedBranch, action event.ProtectedBranchAction) {
+func notifyEvent(repo repomd.Repo, team teammd.Team, operator apisession.UserInfo, before, after *branch.ProtectedBranch, action event.ProtectedBranchEventAction) {
 	initPsub()
 	psub.Publish(event.ProtectedBranchTopic, event.ProtectedBranchEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
 		BaseRepo: event.BaseRepo{
-			TeamId:   repo.TeamId,
 			RepoPath: repo.Path,
 			RepoId:   repo.Id,
 			RepoName: repo.Name,
@@ -225,7 +223,7 @@ func ListProtectedBranch(ctx context.Context, reqDTO ListProtectedBranchReqDTO) 
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, err := checkManageProtectedBranchPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
+	_, _, err := checkManageProtectedBranchPerm(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return nil, err
 	}
@@ -234,37 +232,45 @@ func ListProtectedBranch(ctx context.Context, reqDTO ListProtectedBranchReqDTO) 
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(branchList, func(t branchmd.ProtectedBranch) (ProtectedBranchDTO, error) {
+	ret := listutil.MapNe(branchList, func(t branchmd.ProtectedBranch) ProtectedBranchDTO {
 		return ProtectedBranchDTO{
 			Id:      t.Id,
 			Pattern: t.Pattern,
 			Cfg:     *t.Cfg,
-		}, nil
+		}
 	})
 	return ret, nil
 }
 
 // checkManageProtectedBranchPerm 检查权限
-func checkManageProtectedBranchPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, error) {
+func checkManageProtectedBranchPerm(ctx context.Context, repoId int64, operator apisession.UserInfo) (repomd.Repo, teammd.Team, error) {
 	// 检查仓库是否存在
 	repo, b, err := repomd.GetByRepoId(ctx, repoId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return repo, util.InternalError(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return repo, util.InvalidArgsError()
+		return repomd.Repo{}, teammd.Team{}, util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, repo.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return repomd.Repo{}, teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return repomd.Repo{}, teammd.Team{}, util.ThereHasBugErr()
 	}
 	if operator.IsAdmin {
-		return repo, nil
+		return repo, team, nil
 	}
 	// 如果不是 检查用户组权限
 	p, b, err := teammd.GetUserPermDetail(ctx, repo.TeamId, operator.Account)
 	if err != nil {
-		return repo, util.InternalError(err)
+		return repo, team, util.InternalError(err)
 	}
 	if b && (p.IsAdmin || p.PermDetail.GetRepoPerm(repoId).CanManageProtectedBranch) {
-		return repo, nil
+		return repo, team, nil
 	}
-	return repo, util.UnauthorizedError()
+	return repo, team, util.UnauthorizedError()
 }

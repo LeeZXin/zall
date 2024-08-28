@@ -177,7 +177,7 @@ func listProcess(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(processes, func(t approvalsrv.ProcessDTO) (ProcessVO, error) {
+		data := listutil.MapNe(processes, func(t approvalsrv.ProcessDTO) ProcessVO {
 			return ProcessVO{
 				Id:      t.Id,
 				Pid:     t.Pid,
@@ -186,7 +186,7 @@ func listProcess(c *gin.Context) {
 				Content: t.Content,
 				IconUrl: t.IconUrl,
 				Created: t.Created.Format(time.DateTime),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[[]ProcessVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -203,19 +203,19 @@ func listApproval(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(groups, func(t approvalsrv.GroupProcessDTO) (GroupProcessVO, error) {
-		processes, _ := listutil.Map(t.Processes, func(t approvalsrv.SimpleProcessDTO) (SimpleProcessVO, error) {
+	data := listutil.MapNe(groups, func(t approvalsrv.GroupProcessDTO) GroupProcessVO {
+		processes := listutil.MapNe(t.Processes, func(t approvalsrv.SimpleProcessDTO) SimpleProcessVO {
 			return SimpleProcessVO{
 				Id:      t.Id,
 				Name:    t.Name,
 				IconUrl: t.IconUrl,
-			}, nil
+			}
 		})
 		return GroupProcessVO{
 			Id:        t.Id,
 			Name:      t.Name,
 			Processes: processes,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]GroupProcessVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -243,14 +243,14 @@ func getFlow(c *gin.Context) {
 			Kvs:         flow.Kvs,
 			Process:     &flow.Process,
 		}
-		data.NotifyList, _ = listutil.Map(flow.NotifyList, func(t approvalsrv.NotifyDTO) (NotifyVO, error) {
+		data.NotifyList = listutil.MapNe(flow.NotifyList, func(t approvalsrv.NotifyDTO) NotifyVO {
 			return NotifyVO{
 				Account:   t.Account,
 				FlowIndex: t.FlowIndex,
 				Done:      t.Done,
 				Op:        t.Op.Readable(),
 				Updated:   t.Updated.Format(time.DateTime),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, GetFlowRespVO{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -313,11 +313,11 @@ func listGroup(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(groups, func(t approvalsrv.GroupDTO) (GroupVO, error) {
+	data := listutil.MapNe(groups, func(t approvalsrv.GroupDTO) GroupVO {
 		return GroupVO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]GroupVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -336,14 +336,14 @@ func listFlow(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(flows, func(t approvalsrv.FlowDTO) (FlowVO, error) {
+		data := listutil.MapNe(flows, func(t approvalsrv.FlowDTO) FlowVO {
 			return FlowVO{
 				Id:          t.Id,
 				ProcessName: t.ProcessName,
 				FlowStatus:  t.FlowStatus.Readable(),
 				Creator:     t.Creator,
 				Created:     t.Created.Format(time.DateTime),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[[]FlowVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -364,14 +364,14 @@ func listOperate(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(flows, func(t approvalsrv.FlowDTO) (FlowVO, error) {
+		data := listutil.MapNe(flows, func(t approvalsrv.FlowDTO) FlowVO {
 			return FlowVO{
 				Id:          t.Id,
 				ProcessName: t.ProcessName,
 				FlowStatus:  t.FlowStatus.Readable(),
 				Creator:     t.Creator,
 				Created:     t.Created.Format(time.DateTime),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[[]FlowVO]{
 			BaseResp: ginutil.DefaultSuccessResp,

@@ -1,23 +1,36 @@
 <template>
   <div class="flex-center" :style="props.style">
-    <span style="margin-right:6px">环境:</span>
-    <a-select
-      style="width: 200px"
-      placeholder="选择环境"
-      v-model:value="selectedEnv"
-      :options="envList"
-    />
+    <a-dropdown>
+      <template #overlay>
+        <a-menu @click="handleMenuClick">
+          <a-menu-item v-for="item in envList" v-bind:key="item.value">
+            <span :class="{'item-selected': item.value === selectedEnv}">{{item.label}}</span>
+          </a-menu-item>
+        </a-menu>
+      </template>
+      <a-button :icon="h(EnvironmentOutlined)">
+        <span>{{selectedEnv}}</span>
+      </a-button>
+    </a-dropdown>
   </div>
 </template>
-
 <script setup>
 import { ref, defineProps, watch, defineEmits } from "vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
+import { EnvironmentOutlined } from "@ant-design/icons-vue";
+import { h } from "vue";
+/*
+  环境选择下拉框 
+*/
+// 默认环境值
 const props = defineProps(["defaultEnv"]);
+// 监听@change
 const emit = defineEmits(["change"]);
+// 当前选择的环境
 const selectedEnv = ref("");
+// 环境列表
 const envList = ref([]);
-
+// 获取环境列表
 const getEnvList = () => {
   getEnvCfgRequest().then(res => {
     envList.value = res.data.map(item => {
@@ -33,7 +46,9 @@ const getEnvList = () => {
     }
   });
 };
-
+const handleMenuClick = event => {
+  selectedEnv.value = event.key;
+};
 watch(
   () => selectedEnv.value,
   (newVal, oldVal) => {
@@ -43,9 +58,10 @@ watch(
     });
   }
 );
-
 getEnvList();
 </script>
-
 <style scoped>
+.item-selected {
+  color: #1677ff;
+}
 </style>

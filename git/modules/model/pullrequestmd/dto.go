@@ -2,7 +2,6 @@ package pullrequestmd
 
 import (
 	"github.com/LeeZXin/zall/pkg/git"
-	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
 type InsertPullRequestReqDTO struct {
@@ -41,7 +40,8 @@ type ListPullRequestReqDTO struct {
 	RepoId    int64
 	SearchKey string
 	Status    PrStatus
-	ginutil.Page2Req
+	PageNum   int
+	PageSize  int
 }
 
 type GroupByPrStatusDTO struct {

@@ -10,11 +10,11 @@
         <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
           <a-menu-item key="/index/team/list">
             <TeamOutlined />
-            <span>团队协作</span>
+            <span>{{t("indexMenu.team")}}</span>
           </a-menu-item>
           <a-menu-item key="/db/mysqlReadPermApply/list">
             <DatabaseOutlined />
-            <span>Mysql审计</span>
+            <span>{{t("indexMenu.mysqlAudit")}}</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -35,13 +35,16 @@ const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const selectedKeys = ref([]);
+// 路由前缀
 const routeKey = "/index";
+// 选择key
 const onselect = event => {
   router.push({
     path: event.key,
     force: true
   });
 };
+// key变化后触发
 const changeSelectedKey = path => {
   const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
   for (let key in pagesMap) {

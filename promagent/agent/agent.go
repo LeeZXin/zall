@@ -43,7 +43,7 @@ func StartAgent() {
 		logger.Logger.Fatalf("wrong prom.agent.filesd.path: %v", filePath)
 	}
 	logger.Logger.Infof("prom agent started with endpoint: %v filePath: %v env: %v", endpoint, filePath, env)
-	stopFunc, _ := taskutil.RunPeriodicalTask(0, 10*time.Second, updateFileSd)
+	stopFunc, _ := taskutil.RunPeriodicalTask(0, 30*time.Second, updateFileSd)
 	quit.AddShutdownHook(quit.ShutdownHook(stopFunc), true)
 }
 
@@ -102,16 +102,16 @@ func packFileContent(scrapes []prommd.Scrape) []byte {
 						logger.Logger.Error(err)
 					}
 				} else if len(servers) > 0 {
-					targets, _ := listutil.Map(servers, func(t lb.Server) (string, error) {
-						return fmt.Sprintf("%s:%d", t.Host, prom.DefaultServerPort), nil
+					targets := listutil.MapNe(servers, func(t lb.Server) string {
+						return fmt.Sprintf("%s:%d", t.Host, prom.DefaultServerPort)
 					})
 					appTargets = append(appTargets, targets...)
 				}
 			case prommd.HostTargetType:
 				if scrape.Target != "" {
 					targets := strings.Split(scrape.Target, ";")
-					targets, _ = listutil.Filter(targets, func(t string) (bool, error) {
-						return len(t) > 0, nil
+					targets = listutil.FilterNe(targets, func(t string) bool {
+						return len(t) > 0
 					})
 					appTargets = append(appTargets, targets...)
 				}

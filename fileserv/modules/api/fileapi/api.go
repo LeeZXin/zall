@@ -77,13 +77,13 @@ func listProduct(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(products, func(t filesrv.ProductDTO) (ProductVO, error) {
+		data := listutil.MapNe(products, func(t filesrv.ProductDTO) ProductVO {
 			return ProductVO{
 				Id:      t.Id,
 				Name:    t.Name,
 				Creator: t.Creator,
 				Created: t.Created.Format(time.DateTime),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[ProductVO]{
 			DataResp: ginutil.DataResp[[]ProductVO]{

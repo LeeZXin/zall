@@ -207,8 +207,8 @@ func ListScrapeBySa(ctx context.Context, reqDTO ListScrapeReqDTO) ([]ScrapeBySaD
 	appIdMap := make(map[string]appmd.App)
 	teamIdNameMap := make(map[int64]string)
 	if len(scrapes) > 0 {
-		appIdList, _ := listutil.Map(scrapes, func(t prommd.Scrape) (string, error) {
-			return t.AppId, nil
+		appIdList := listutil.MapNe(scrapes, func(t prommd.Scrape) string {
+			return t.AppId
 		})
 		apps, err := appmd.GetByAppIdList(ctx, listutil.Distinct(appIdList...), []string{"app_id", "name", "team_id"})
 		if err != nil {
@@ -229,7 +229,7 @@ func ListScrapeBySa(ctx context.Context, reqDTO ListScrapeReqDTO) ([]ScrapeBySaD
 			teamIdNameMap[team.Id] = team.Name
 		}
 	}
-	data, _ := listutil.Map(scrapes, func(t prommd.Scrape) (ScrapeBySaDTO, error) {
+	data := listutil.MapNe(scrapes, func(t prommd.Scrape) ScrapeBySaDTO {
 		teamId := appIdMap[t.AppId].TeamId
 		return ScrapeBySaDTO{
 			Id:         t.Id,
@@ -241,7 +241,7 @@ func ListScrapeBySa(ctx context.Context, reqDTO ListScrapeReqDTO) ([]ScrapeBySaD
 			Target:     t.Target,
 			TargetType: t.TargetType,
 			Env:        t.Env,
-		}, nil
+		}
 	})
 	return data, total, nil
 }
@@ -268,14 +268,14 @@ func ListScrapeByTeam(ctx context.Context, reqDTO ListScrapeReqDTO) ([]ScrapeByT
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(scrapes, func(t prommd.Scrape) (ScrapeByTeamDTO, error) {
+	data := listutil.MapNe(scrapes, func(t prommd.Scrape) ScrapeByTeamDTO {
 		return ScrapeByTeamDTO{
 			Id:         t.Id,
 			Endpoint:   t.Endpoint,
 			Target:     t.Target,
 			TargetType: t.TargetType,
 			Env:        t.Env,
-		}, nil
+		}
 	})
 	return data, total, nil
 }

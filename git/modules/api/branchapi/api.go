@@ -84,12 +84,12 @@ func listProtectedBranch(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(branchList, func(t branchsrv.ProtectedBranchDTO) (ProtectedBranchVO, error) {
+	data := listutil.MapNe(branchList, func(t branchsrv.ProtectedBranchDTO) ProtectedBranchVO {
 		return ProtectedBranchVO{
 			Id:      t.Id,
 			Pattern: t.Pattern,
 			Cfg:     t.Cfg,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]ProtectedBranchVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

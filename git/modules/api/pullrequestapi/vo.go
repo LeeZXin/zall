@@ -4,7 +4,6 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/git"
-	"github.com/LeeZXin/zsf-utils/ginutil"
 )
 
 type SubmitPullRequestReqVO struct {
@@ -21,7 +20,7 @@ type ListPullRequestReqVO struct {
 	RepoId    int64                  `json:"repoId"`
 	Status    pullrequestmd.PrStatus `json:"status"`
 	SearchKey string                 `json:"searchKey"`
-	ginutil.Page2Req
+	PageNum   int                    `json:"pageNum"`
 }
 
 type PullRequestVO struct {

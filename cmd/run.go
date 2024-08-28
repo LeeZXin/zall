@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/LeeZXin/zall/alert/modules/api/alertapi"
+	"github.com/LeeZXin/zall/alert/modules/service/alertsrv"
 	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
 	"github.com/LeeZXin/zall/deploy/modules/api/deployapi"
@@ -11,7 +12,6 @@ import (
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
 	"github.com/LeeZXin/zall/git/modules/api/gpgkeyapi"
 	"github.com/LeeZXin/zall/git/modules/api/lfsapi"
-	"github.com/LeeZXin/zall/git/modules/api/oplogapi"
 	"github.com/LeeZXin/zall/git/modules/api/pullrequestapi"
 	"github.com/LeeZXin/zall/git/modules/api/repoapi"
 	"github.com/LeeZXin/zall/git/modules/api/smartapi"
@@ -75,7 +75,6 @@ func runZall(*cli.Context) error {
 		pullrequestapi.InitApi()
 		smartapi.InitApi()
 		repoapi.InitApi()
-		oplogapi.InitApi()
 		sshkeyapi.InitApi()
 		gpgkeyapi.InitApi()
 		webhookapi.InitApi()
@@ -130,7 +129,7 @@ func runZall(*cli.Context) error {
 	{
 		alertapi.InitApi()
 		if static.GetBool("alert.enabled") {
-			//alertsrv.InitTask()
+			alertsrv.InitTask()
 		}
 	}
 	// for zallet

@@ -6,7 +6,7 @@
           placeholder="搜索名称"
           style="width: 240px;margin-right:10px"
           v-model:value="searchName"
-          @pressEnter="()=>listTimer()"
+          @pressEnter="()=>searchTimer()"
         >
           <template #suffix>
             <SearchOutlined />
@@ -162,7 +162,7 @@ const deleteTimerTask = item => {
     onOk() {
       deleteTimerRequest(item.id).then(() => {
         message.success("删除成功");
-        listTimer();
+        searchTimer();
       });
     },
     onCancel() {}
@@ -181,8 +181,7 @@ const triggerTimerTask = item => {
       triggerTimerTaskRequest(item.id).then(() => {
         message.success("触发成功");
       });
-    },
-    onCancel() {}
+    }
   });
 };
 const gotoUpdatePage = item => {
@@ -221,8 +220,12 @@ const viewLog = item => {
 const onEnvChange = e => {
   selectedEnv.value = e.newVal;
   router.replace(`/team/${route.params.teamId}/timer/list/${e.newVal}`);
-  listTimer();
+  searchTimer();
 };
+const searchTimer = () => {
+  dataPage.current = 1;
+  listTimer();
+}
 </script>
 <style scoped>
 </style>

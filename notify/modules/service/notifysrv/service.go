@@ -44,7 +44,10 @@ func SendNotificationByTplId(tplId int64, params any) {
 	if !b {
 		return
 	}
-	sendNotificationWithNotifyTpl(tpl, params)
+	err = sendNotificationWithNotifyTpl(tpl, params)
+	if err != nil {
+		logger.Logger.Errorf("send tplId: %d failed with error: %v", tplId, err)
+	}
 }
 
 // CreateTpl 创建通知模板
@@ -134,7 +137,7 @@ func ListTpl(ctx context.Context, reqDTO ListTplReqDTO) ([]TplDTO, int64, error)
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(tpls, func(t notifymd.Tpl) (TplDTO, error) {
+	ret := listutil.MapNe(tpls, func(t notifymd.Tpl) TplDTO {
 		ret := TplDTO{
 			Id:     t.Id,
 			Name:   t.Name,
@@ -144,7 +147,7 @@ func ListTpl(ctx context.Context, reqDTO ListTplReqDTO) ([]TplDTO, int64, error)
 		if t.NotifyCfg != nil {
 			ret.NotifyCfg = t.NotifyCfg.Data
 		}
-		return ret, nil
+		return ret
 	})
 	return ret, total, nil
 }
@@ -183,7 +186,12 @@ func SendNotificationByApiKey(ctx context.Context, reqDTO SendNotifyByApiKeyReqD
 	if !b {
 		return util.InvalidArgsError()
 	}
-	return sendNotificationWithNotifyTpl(tpl, reqDTO.Params)
+	err = sendNotificationWithNotifyTpl(tpl, reqDTO.Params)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Errorf("send tpl id: %d failed with error: %v", tpl.Id, err)
+		return util.OperationFailedError()
+	}
+	return nil
 }
 
 // ListAllTpl 通过团队获取模板列表
@@ -258,19 +266,15 @@ func sendNotificationWithNotifyTpl(tpl notifymd.Tpl, params any) error {
 	notificationTpl, err := template.New("").Parse(cfg.Template)
 	if err != nil {
 		// 模板错误
-		return util.OperationFailedError()
+		return err
 	}
 	msg := new(bytes.Buffer)
 	err = notificationTpl.Execute(msg, params)
 	if err != nil {
 		// 参数错误
-		return util.OperationFailedError()
+		return err
 	}
-	err = sendNotification(msg.Bytes(), cfg)
-	if err != nil {
-		return util.OperationFailedError()
-	}
-	return nil
+	return sendNotification(msg.Bytes(), cfg)
 }
 
 // 发送通知

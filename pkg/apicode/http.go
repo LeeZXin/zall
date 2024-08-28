@@ -18,6 +18,7 @@ const (
 	PullRequestCannotMergeCode
 	ForcePushForbiddenCode
 	ProtectedBranchNotAllowPushCode
+	DefaultBranchNotAllowDeleteCode
 	MethodUnImplementedCode
 	ThereHasBugErrCode
 	OperationFailedErrCode

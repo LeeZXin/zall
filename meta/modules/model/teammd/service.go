@@ -69,12 +69,12 @@ func InsertUser(ctx context.Context, reqDTO InsertUserReqDTO) error {
 }
 
 func BatchInsertUser(ctx context.Context, reqDTOList []InsertUserReqDTO) error {
-	userList, _ := listutil.Map(reqDTOList, func(t InsertUserReqDTO) (*User, error) {
+	userList := listutil.MapNe(reqDTOList, func(t InsertUserReqDTO) *User {
 		return &User{
 			TeamId:  t.TeamId,
 			Account: t.Account,
 			RoleId:  t.RoleId,
-		}, nil
+		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).Insert(userList)
 	return err

@@ -120,14 +120,14 @@ func listWebhook(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(hookList, func(t webhooksrv.WebhookDTO) (WebhookVO, error) {
+	data := listutil.MapNe(hookList, func(t webhooksrv.WebhookDTO) WebhookVO {
 		return WebhookVO{
 			Id:      t.Id,
 			RepoId:  t.RepoId,
 			HookUrl: t.HookUrl,
 			Secret:  t.Secret,
 			Events:  t.Events,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]WebhookVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

@@ -517,7 +517,7 @@ func ListPlan(ctx context.Context, reqDTO ListPlanReqDTO) ([]PlanDTO, int64, err
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data, _ := listutil.Map(plans, func(t deploymd.Plan) (PlanDTO, error) {
+	data := listutil.MapNe(plans, func(t deploymd.Plan) PlanDTO {
 		return PlanDTO{
 			Id:             t.Id,
 			PipelineId:     t.PipelineId,
@@ -528,7 +528,7 @@ func ListPlan(ctx context.Context, reqDTO ListPlanReqDTO) ([]PlanDTO, int64, err
 			Env:            t.Env,
 			Creator:        t.Creator,
 			Created:        t.Created,
-		}, nil
+		}
 	})
 	return data, total, nil
 }
@@ -682,14 +682,14 @@ func ListPipeline(ctx context.Context, reqDTO ListPipelineReqDTO) ([]PipelineDTO
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	data, _ := listutil.Map(pipelines, func(t deploymd.Pipeline) (PipelineDTO, error) {
+	data := listutil.MapNe(pipelines, func(t deploymd.Pipeline) PipelineDTO {
 		return PipelineDTO{
 			Id:     t.Id,
 			AppId:  t.AppId,
 			Config: t.Config,
 			Env:    t.Env,
 			Name:   t.Name,
-		}, nil
+		}
 	})
 	return data, nil
 }
@@ -715,12 +715,12 @@ func ListPipelineWhenCreatePlan(ctx context.Context, reqDTO ListPipelineWhenCrea
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	data, _ := listutil.Map(pipelines, func(t deploymd.Pipeline) (SimplePipelineDTO, error) {
+	data := listutil.MapNe(pipelines, func(t deploymd.Pipeline) SimplePipelineDTO {
 		return SimplePipelineDTO{
 			Id:   t.Id,
 			Env:  t.Env,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	return data, nil
 }
@@ -1010,7 +1010,7 @@ func ListServiceSource(ctx context.Context, reqDTO ListServiceSourceReqDTO) ([]S
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	data, _ := listutil.Map(sources, func(t deploymd.ServiceSource) (ServiceSourceDTO, error) {
+	data := listutil.MapNe(sources, func(t deploymd.ServiceSource) ServiceSourceDTO {
 		return ServiceSourceDTO{
 			Id:      t.Id,
 			Name:    t.Name,
@@ -1018,7 +1018,7 @@ func ListServiceSource(ctx context.Context, reqDTO ListServiceSourceReqDTO) ([]S
 			Host:    t.Host,
 			ApiKey:  t.ApiKey,
 			Created: t.Created,
-		}, nil
+		}
 	})
 	return data, nil
 }
@@ -1038,11 +1038,11 @@ func ListAllServiceSource(ctx context.Context, reqDTO ListAllServiceSourceReqDTO
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	data, _ := listutil.Map(sources, func(t deploymd.ServiceSource) (SimpleServiceSourceDTO, error) {
+	data := listutil.MapNe(sources, func(t deploymd.ServiceSource) SimpleServiceSourceDTO {
 		return SimpleServiceSourceDTO{
 			Id:   t.Id,
 			Name: t.Name,
-		}, nil
+		}
 	})
 	return data, nil
 }
@@ -1386,9 +1386,9 @@ func ListBindServiceSource(ctx context.Context, reqDTO ListBindServiceSourceReqD
 		return []SimpleBindServiceSourceDTO{}, nil
 	}
 	bindMap := make(map[int64]deploymd.AppServiceSourceBind, len(binds))
-	sourceIdList, _ := listutil.Map(binds, func(t deploymd.AppServiceSourceBind) (int64, error) {
+	sourceIdList := listutil.MapNe(binds, func(t deploymd.AppServiceSourceBind) int64 {
 		bindMap[t.SourceId] = t
-		return t.SourceId, nil
+		return t.SourceId
 	})
 	sources, err := deploymd.BatchGetServiceSourceByIdList(ctx, sourceIdList, []string{"id", "name"})
 	if err != nil {
@@ -1446,12 +1446,12 @@ func BindAppAndServiceSource(ctx context.Context, reqDTO BindAppAndServiceSource
 			return util.InvalidArgsError()
 		}
 	}
-	insertReqs, _ := listutil.Map(reqDTO.SourceIdList, func(t int64) (deploymd.InsertAppServiceSourceBindReqDTO, error) {
+	insertReqs := listutil.MapNe(reqDTO.SourceIdList, func(t int64) deploymd.InsertAppServiceSourceBindReqDTO {
 		return deploymd.InsertAppServiceSourceBindReqDTO{
 			SourceId: t,
 			AppId:    reqDTO.AppId,
 			Env:      reqDTO.Env,
-		}, nil
+		}
 	})
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 先删除
@@ -1524,12 +1524,12 @@ func notifyDeployServiceEvent(operator apisession.UserInfo, team teammd.Team, ap
 
 func notifyServiceSourceEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, sources []deploymd.ServiceSource, env string) {
 	initPsub()
-	srcs, _ := listutil.Map(sources, func(t deploymd.ServiceSource) (event.AppSource, error) {
+	srcs := listutil.MapNe(sources, func(t deploymd.ServiceSource) event.AppSource {
 		return event.AppSource{
 			Id:   t.Id,
 			Name: t.Name,
 			Env:  t.Env,
-		}, nil
+		}
 	})
 	psub.Publish(event.AppSourceTopic, event.AppSourceEvent{
 		BaseTeam: event.BaseTeam{

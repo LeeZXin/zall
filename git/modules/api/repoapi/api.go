@@ -94,12 +94,12 @@ func listRepoByAdmin(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(repos, func(t reposrv.SimpleRepoDTO) (SimpleRepoVO, error) {
+	data := listutil.MapNe(repos, func(t reposrv.SimpleRepoDTO) SimpleRepoVO {
 		return SimpleRepoVO{
 			RepoId: t.RepoId,
 			Name:   t.Name,
 			TeamId: t.TeamId,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleRepoVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -268,7 +268,7 @@ func pageBranchCommits(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(branches, func(t reposrv.BranchCommitDTO) (BranchCommitVO, error) {
+		data := listutil.MapNe(branches, func(t reposrv.BranchCommitDTO) BranchCommitVO {
 			ret := BranchCommitVO{
 				Name:              t.Name,
 				IsProtectedBranch: t.IsProtectedBranch,
@@ -282,7 +282,7 @@ func pageBranchCommits(c *gin.Context) {
 					Created:  t.LastPullRequest.Created.Format(time.DateTime),
 				}
 			}
-			return ret, nil
+			return ret
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[BranchCommitVO]{
 			DataResp: ginutil.DataResp[[]BranchCommitVO]{
@@ -307,11 +307,11 @@ func pageTagCommits(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(tags, func(t reposrv.TagCommitDTO) (TagCommitVO, error) {
+		data := listutil.MapNe(tags, func(t reposrv.TagCommitDTO) TagCommitVO {
 			return TagCommitVO{
 				Name:   t.Name,
 				Commit: commitDto2Vo(t.Commit),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[TagCommitVO]{
 			DataResp: ginutil.DataResp[[]TagCommitVO]{
@@ -401,12 +401,12 @@ func entriesRepo(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(blobs, func(t reposrv.BlobDTO) (BlobVO, error) {
+		data := listutil.MapNe(blobs, func(t reposrv.BlobDTO) BlobVO {
 			return BlobVO{
 				Mode:    t.Mode,
 				RawPath: t.RawPath,
 				Path:    t.Path,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[[]BlobVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -456,15 +456,14 @@ func commitDto2Vo(d reposrv.CommitDTO) CommitVO {
 }
 
 func fileDto2Vo(list []reposrv.FileDTO) []FileVO {
-	ret, _ := listutil.Map(list, func(t reposrv.FileDTO) (FileVO, error) {
+	return listutil.MapNe(list, func(t reposrv.FileDTO) FileVO {
 		return FileVO{
 			Mode:    t.Mode,
 			RawPath: t.RawPath,
 			Path:    t.Path,
 			Commit:  commitDto2Vo(t.Commit),
-		}, nil
+		}
 	})
-	return ret
 }
 
 func createRepo(c *gin.Context) {
@@ -532,9 +531,7 @@ func listRepo(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(repoList, func(t reposrv.RepoDTO) (RepoVO, error) {
-		return repo2VO(t), nil
-	})
+	data := listutil.MapNe(repoList, repo2VO)
 	c.JSON(http.StatusOK, ginutil.DataResp[[]RepoVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     data,
@@ -550,11 +547,11 @@ func listDeletedRepo(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(repoList, func(t reposrv.DeletedRepoDTO) (DeletedRepoVO, error) {
+	data := listutil.MapNe(repoList, func(t reposrv.DeletedRepoDTO) DeletedRepoVO {
 		return DeletedRepoVO{
 			RepoVO:  repo2VO(t.RepoDTO),
 			Deleted: t.Deleted.Format(time.DateTime),
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]DeletedRepoVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -620,11 +617,11 @@ func blame(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(lines, func(t reposrv.BlameLineDTO) (BlameLineVO, error) {
+		data := listutil.MapNe(lines, func(t reposrv.BlameLineDTO) BlameLineVO {
 			return BlameLineVO{
 				Number: t.Number,
 				Commit: commitDto2Vo(t.Commit),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[[]BlameLineVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -659,13 +656,13 @@ func diffFile(c *gin.Context) {
 			CopyFrom:    respDTO.CopyFrom,
 			CopyTo:      respDTO.CopyTo,
 		}
-		ret.Lines, _ = listutil.Map(respDTO.Lines, func(t reposrv.DiffLineDTO) (DiffLineVO, error) {
+		ret.Lines = listutil.MapNe(respDTO.Lines, func(t reposrv.DiffLineDTO) DiffLineVO {
 			return DiffLineVO{
 				LeftNo:  t.LeftNo,
 				Prefix:  t.Prefix,
 				RightNo: t.RightNo,
 				Text:    t.Text,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[DiffFileVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -719,16 +716,14 @@ func diffRefs(c *gin.Context) {
 			ConflictFiles: respDTO.ConflictFiles,
 			CanMerge:      respDTO.CanMerge,
 		}
-		respVO.Commits, _ = listutil.Map(respDTO.Commits, func(t reposrv.CommitDTO) (CommitVO, error) {
-			return commitDto2Vo(t), nil
-		})
-		respVO.DiffNumsStats.Stats, _ = listutil.Map(respDTO.DiffNumsStats.Stats, func(t reposrv.DiffNumsStatDTO) (DiffNumsStatVO, error) {
+		respVO.Commits = listutil.MapNe(respDTO.Commits, commitDto2Vo)
+		respVO.DiffNumsStats.Stats = listutil.MapNe(respDTO.DiffNumsStats.Stats, func(t reposrv.DiffNumsStatDTO) DiffNumsStatVO {
 			return DiffNumsStatVO{
 				RawPath:    t.RawPath,
 				Path:       t.Path,
 				InsertNums: t.InsertNums,
 				DeleteNums: t.DeleteNums,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[DiffRefsVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -758,13 +753,13 @@ func diffCommits(c *gin.Context) {
 				DeleteNums:     respDTO.DiffNumsStats.DeleteNums,
 			},
 		}
-		respVO.DiffNumsStats.Stats, _ = listutil.Map(respDTO.DiffNumsStats.Stats, func(t reposrv.DiffNumsStatDTO) (DiffNumsStatVO, error) {
+		respVO.DiffNumsStats.Stats = listutil.MapNe(respDTO.DiffNumsStats.Stats, func(t reposrv.DiffNumsStatDTO) DiffNumsStatVO {
 			return DiffNumsStatVO{
 				RawPath:    t.RawPath,
 				Path:       t.Path,
 				InsertNums: t.InsertNums,
 				DeleteNums: t.DeleteNums,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.DataResp[DiffCommitsVO]{
 			BaseResp: ginutil.DefaultSuccessResp,
@@ -789,9 +784,7 @@ func historyCommits(c *gin.Context) {
 		ret := HistoryCommitsRespVO{
 			Cursor: respDTO.Cursor,
 		}
-		ret.Data, _ = listutil.Map(respDTO.Data, func(t reposrv.CommitDTO) (CommitVO, error) {
-			return commitDto2Vo(t), nil
-		})
+		ret.Data = listutil.MapNe(respDTO.Data, commitDto2Vo)
 		c.JSON(http.StatusOK, ret)
 	}
 }

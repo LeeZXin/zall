@@ -216,7 +216,7 @@ func BatchGetDbByIdList(ctx context.Context, idList []int64, cols []string) ([]D
 }
 
 func BatchInsertReadPerm(ctx context.Context, reqDTOs []InsertReadPermReqDTO) error {
-	perms, _ := listutil.Map(reqDTOs, func(reqDTO InsertReadPermReqDTO) (ReadPerm, error) {
+	perms := listutil.MapNe(reqDTOs, func(reqDTO InsertReadPermReqDTO) ReadPerm {
 		return ReadPerm{
 			Account:     reqDTO.Account,
 			DbId:        reqDTO.DbId,
@@ -224,7 +224,7 @@ func BatchInsertReadPerm(ctx context.Context, reqDTOs []InsertReadPermReqDTO) er
 			AccessTable: reqDTO.AccessTable,
 			ApplyId:     reqDTO.ApplyId,
 			Expired:     reqDTO.Expired,
-		}, nil
+		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(perms)

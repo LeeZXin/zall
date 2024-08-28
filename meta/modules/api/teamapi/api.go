@@ -106,11 +106,11 @@ func listUserByTeamId(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(users, func(t teamsrv.UserDTO) (UserVO, error) {
+	data := listutil.MapNe(users, func(t teamsrv.UserDTO) UserVO {
 		return UserVO{
 			Account: t.Account,
 			Name:    t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]UserVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -141,11 +141,11 @@ func listTeam(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(teamList, func(t teamsrv.TeamDTO) (TeamVO, error) {
+	data := listutil.MapNe(teamList, func(t teamsrv.TeamDTO) TeamVO {
 		return TeamVO{
 			TeamId: t.Id,
 			Name:   t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]TeamVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -161,11 +161,11 @@ func listAllTeamByAdmin(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(teamList, func(t teamsrv.TeamDTO) (TeamVO, error) {
+	data := listutil.MapNe(teamList, func(t teamsrv.TeamDTO) TeamVO {
 		return TeamVO{
 			TeamId: t.Id,
 			Name:   t.Name,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]TeamVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -226,14 +226,14 @@ func listRoleUser(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(users, func(t teamsrv.RoleUserDTO) (RoleUserVO, error) {
+	data := listutil.MapNe(users, func(t teamsrv.RoleUserDTO) RoleUserVO {
 		return RoleUserVO{
 			Id:       t.Id,
 			Account:  t.Account,
 			Name:     t.Name,
 			RoleId:   t.RoleId,
 			RoleName: t.RoleName,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]RoleUserVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -308,14 +308,14 @@ func listRole(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	ret, _ := listutil.Map(groups, func(t teamsrv.RoleDTO) (RoleVO, error) {
+	ret := listutil.MapNe(groups, func(t teamsrv.RoleDTO) RoleVO {
 		return RoleVO{
 			RoleId:  t.RoleId,
 			TeamId:  t.TeamId,
 			Name:    t.Name,
 			Perm:    t.Perm,
 			IsAdmin: t.IsAdmin,
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]RoleVO]{
 		BaseResp: ginutil.DefaultSuccessResp,

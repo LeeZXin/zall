@@ -176,8 +176,8 @@ func ListBindPropertySource(ctx context.Context, reqDTO ListBindPropertySourceRe
 	if len(binds) == 0 {
 		return []SimplePropertySourceDTO{}, nil
 	}
-	nodeIdList, _ := listutil.Map(binds, func(t propertymd.AppEtcdNodeBind) (int64, error) {
-		return t.NodeId, nil
+	nodeIdList := listutil.MapNe(binds, func(t propertymd.AppEtcdNodeBind) int64 {
+		return t.NodeId
 	})
 	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, nodeIdList, []string{"id", "name"})
 	if err != nil {
@@ -207,8 +207,8 @@ func ListPropertySourceByFileId(ctx context.Context, reqDTO ListPropertySourceBy
 	if len(binds) == 0 {
 		return []SimplePropertySourceDTO{}, nil
 	}
-	nodeIdList, _ := listutil.Map(binds, func(t propertymd.AppEtcdNodeBind) (int64, error) {
-		return t.NodeId, nil
+	nodeIdList := listutil.MapNe(binds, func(t propertymd.AppEtcdNodeBind) int64 {
+		return t.NodeId
 	})
 	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, nodeIdList, nil)
 	if err != nil {
@@ -258,12 +258,12 @@ func BindAppAndPropertySource(ctx context.Context, reqDTO BindAppAndPropertySour
 			return util.InvalidArgsError()
 		}
 	}
-	insertReqs, _ := listutil.Map(nodes, func(t propertymd.EtcdNode) (propertymd.InsertAppEtcdNodeBindReqDTO, error) {
+	insertReqs := listutil.MapNe(nodes, func(t propertymd.EtcdNode) propertymd.InsertAppEtcdNodeBindReqDTO {
 		return propertymd.InsertAppEtcdNodeBindReqDTO{
 			NodeId: t.Id,
 			AppId:  reqDTO.AppId,
 			Env:    reqDTO.Env,
-		}, nil
+		}
 	})
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		// 先删除
@@ -581,8 +581,8 @@ func DeployHistory(ctx context.Context, reqDTO DeployHistoryReqDTO) error {
 	if len(binds) == 0 {
 		return util.InvalidArgsError()
 	}
-	nodeIdList, _ := listutil.Map(binds, func(t propertymd.AppEtcdNodeBind) (int64, error) {
-		return t.NodeId, nil
+	nodeIdList := listutil.MapNe(binds, func(t propertymd.AppEtcdNodeBind) int64 {
+		return t.NodeId
 	})
 	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, nodeIdList, nil)
 	if err != nil {
@@ -633,7 +633,7 @@ func ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]HistoryDTO, i
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(histories, func(t propertymd.History) (HistoryDTO, error) {
+	ret := listutil.MapNe(histories, func(t propertymd.History) HistoryDTO {
 		return HistoryDTO{
 			Id:          t.Id,
 			FileName:    file.Name,
@@ -644,7 +644,7 @@ func ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]HistoryDTO, i
 			Created:     t.Created,
 			Creator:     t.Creator,
 			Env:         file.Env,
-		}, nil
+		}
 	})
 	return ret, total, nil
 }
@@ -664,13 +664,13 @@ func ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]DeployDTO, erro
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(deploys, func(t propertymd.Deploy) (DeployDTO, error) {
+	ret := listutil.MapNe(deploys, func(t propertymd.Deploy) DeployDTO {
 		return DeployDTO{
 			NodeName:  t.NodeName,
 			Endpoints: t.Endpoints,
 			Created:   t.Created,
 			Creator:   t.Creator,
-		}, nil
+		}
 	})
 	return ret, nil
 }
@@ -727,8 +727,8 @@ func deleteFromEtcd(file propertymd.File) {
 		logger.Logger.Error(err)
 		return
 	}
-	nodeIdList, _ := listutil.Map(binds, func(t propertymd.AppEtcdNodeBind) (int64, error) {
-		return t.NodeId, nil
+	nodeIdList := listutil.MapNe(binds, func(t propertymd.AppEtcdNodeBind) int64 {
+		return t.NodeId
 	})
 	nodes, err := propertymd.BatchGetEtcdNodesById(ctx, nodeIdList, nil)
 	if err != nil {
@@ -991,12 +991,12 @@ func notifyPropertyFileEvent(operator apisession.UserInfo, team teammd.Team, app
 
 func notifyPropertySourceEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, sources []propertymd.EtcdNode, env string) {
 	initPsub()
-	srcs, _ := listutil.Map(sources, func(t propertymd.EtcdNode) (event.AppSource, error) {
+	srcs := listutil.MapNe(sources, func(t propertymd.EtcdNode) event.AppSource {
 		return event.AppSource{
 			Id:   t.Id,
 			Name: t.Name,
 			Env:  t.Env,
-		}, nil
+		}
 	})
 	psub.Publish(event.AppSourceTopic, event.AppSourceEvent{
 		BaseTeam: event.BaseTeam{

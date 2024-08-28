@@ -1,12 +1,15 @@
 package alert
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/LeeZXin/zall/pkg/commonhook"
+	"github.com/LeeZXin/zall/pkg/loki"
 	"github.com/LeeZXin/zall/pkg/mysqltool"
 	"github.com/LeeZXin/zall/pkg/mysqltool/parser"
 	"github.com/LeeZXin/zall/pkg/mysqltool/parser/ast"
+	"github.com/LeeZXin/zall/pkg/prom"
 	"github.com/LeeZXin/zall/util"
 	"github.com/pingcap/errors"
 	promapi "github.com/prometheus/client_golang/api/prometheus/v1"
@@ -14,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -22,6 +26,7 @@ type SourceType int
 const (
 	MysqlType SourceType = iota + 1
 	PromType
+	LokiType
 )
 
 func (t SourceType) Readable() string {
@@ -47,11 +52,12 @@ type MysqlConfig struct {
 func (c *MysqlConfig) IsValid() bool {
 	return util.GenIpPortPattern().MatchString(c.Host) &&
 		c.Username != "" && c.Password != "" &&
-		validateMysqlSelectSql(c.SelectSql) && c.Database != "" &&
+		validateMysqlSelectSql(c.SelectSql) &&
+		c.Database != "" &&
 		c.Condition != ""
 }
 
-func (c *MysqlConfig) Execute() (map[string]string, error) {
+func (c *MysqlConfig) Execute(endTime time.Time) (map[string]any, error) {
 	datasourceName := fmt.Sprintf(
 		"%s:%s@tcp(%s)/%s?charset=utf8",
 		url.QueryEscape(c.Username),
@@ -59,7 +65,18 @@ func (c *MysqlConfig) Execute() (map[string]string, error) {
 		c.Host,
 		c.Database,
 	)
-	result, err := util.MysqlQuery(datasourceName, strings.TrimSuffix(c.SelectSql, ";")+" limit 1")
+	selectSql := c.SelectSql
+	tpl, err := template.New("").Parse(c.SelectSql)
+	if err == nil {
+		msg := new(bytes.Buffer)
+		err = tpl.Execute(msg, map[string]any{
+			"EndTime": endTime.Format(time.DateTime),
+		})
+		if err == nil {
+			selectSql = msg.String()
+		}
+	}
+	result, err := util.MysqlQuery(datasourceName, strings.TrimSuffix(selectSql, ";")+" limit 1")
 	if err != nil {
 		return nil, err
 	}
@@ -71,26 +88,25 @@ func (c *MysqlConfig) Execute() (map[string]string, error) {
 }
 
 type PromConfig struct {
-	HostUrl   string `json:"HostUrl"`
+	Host      string `json:"host"`
 	PromQl    string `json:"promQl"`
 	Condition string `json:"condition"`
 }
 
 func (c *PromConfig) IsValid() bool {
-	parsedUrl, err := url.Parse(c.HostUrl)
+	parsedUrl, err := url.Parse(c.Host)
 	if err != nil {
 		return false
 	}
 	return strings.HasPrefix(parsedUrl.Scheme, "http") && c.PromQl != "" && c.Condition != ""
 }
 
-func (c *PromConfig) Execute(httpClient *http.Client) (*model.Sample, error) {
-	client, err := util.NewPromHttpClient(c.HostUrl, httpClient)
+func (c *PromConfig) Execute(httpClient *http.Client, endTime time.Time) (*model.Sample, error) {
+	client, err := prom.NewPromHttpClient(c.Host, httpClient)
 	if err != nil {
 		return nil, err
 	}
-	api := promapi.NewAPI(client)
-	result, _, err := api.Query(context.Background(), c.PromQl, time.Now())
+	result, _, err := promapi.NewAPI(client).Query(context.Background(), c.PromQl, endTime)
 	if err != nil {
 		return nil, err
 	}
@@ -106,33 +122,80 @@ func (c *PromConfig) Execute(httpClient *http.Client) (*model.Sample, error) {
 	}
 }
 
-type Alert struct {
-	Source SourceType   `json:"source"`
-	Mysql  *MysqlConfig `json:"mysql"`
-	Prom   *PromConfig  `json:"prom"`
-	Api    util.Api     `json:"api"`
+type LokiConfig struct {
+	Host         string `json:"host"`
+	LogQl        string `json:"logQl"`
+	OrgId        string `json:"orgId"`
+	LastDuration string `json:"lastDuration"`
+	Step         int    `json:"step"`
+	Condition    string `json:"condition"`
 }
 
-func (a *Alert) FromDB(content []byte) error {
-	if a == nil {
-		*a = Alert{}
+func (c *LokiConfig) IsValid() bool {
+	parsedUrl, err := url.Parse(c.Host)
+	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
+		return false
 	}
-	return json.Unmarshal(content, a)
+	if c.LogQl == "" {
+		return false
+	}
+	duration, err := time.ParseDuration(c.LastDuration)
+	if err != nil || duration <= 0 || duration > time.Hour {
+		return false
+	}
+	if c.Step <= 0 || c.Step > 3600 {
+		return false
+	}
+	if c.Condition == "" {
+		return false
+	}
+	return true
 }
 
-func (a *Alert) ToDB() ([]byte, error) {
-	return json.Marshal(a)
+func (c *LokiConfig) Execute(httpClient *http.Client, endTime time.Time) (time.Time, float64, error) {
+	duration, err := time.ParseDuration(c.LastDuration)
+	if err != nil {
+		return time.Time{}, 0, err
+	}
+	startTime := endTime.Add(-duration)
+	query := loki.MatrixRangeQuery{
+		Start: startTime,
+		End:   endTime,
+		Step:  c.Step,
+		Query: c.LogQl,
+		Limit: 1,
+	}
+	response, err := query.DoRequest(
+		context.Background(),
+		httpClient,
+		strings.TrimSuffix(c.Host, "/")+"/loki/api/v1/query_range",
+		c.OrgId,
+	)
+	if err != nil {
+		return startTime, 0, err
+	}
+	return startTime, response.SumAllValue(), nil
+}
+
+type Alert struct {
+	SourceType SourceType   `json:"sourceType"`
+	Mysql      *MysqlConfig `json:"mysql,omitempty"`
+	Prom       *PromConfig  `json:"prom,omitempty"`
+	Loki       *LokiConfig  `json:"loki,omitempty"`
+	commonhook.TypeAndCfg
 }
 
 func (a *Alert) IsValid() bool {
-	if !a.Api.IsValid() {
+	if !a.TypeAndCfg.IsValid() {
 		return false
 	}
-	switch a.Source {
+	switch a.SourceType {
 	case MysqlType:
 		return a.Mysql != nil && a.Mysql.IsValid()
 	case PromType:
 		return a.Prom != nil && a.Prom.IsValid()
+	case LokiType:
+		return a.Loki != nil && a.Loki.IsValid()
 	default:
 		return false
 	}

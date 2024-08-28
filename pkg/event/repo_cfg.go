@@ -1,10 +1,12 @@
 package event
 
 type PullRequestEventCfg struct {
-	Submit bool `json:"submit"`
-	Close  bool `json:"close"`
-	Merge  bool `json:"merge"`
-	Review bool `json:"review"`
+	Submit        bool `json:"submit"`
+	Close         bool `json:"close"`
+	Merge         bool `json:"merge"`
+	Review        bool `json:"review"`
+	AddComment    bool `json:"addComment"`
+	DeleteComment bool `json:"deleteComment"`
 }
 
 type GitPushEventCfg struct {
@@ -20,6 +22,7 @@ type ProtectedBranchEventCfg struct {
 
 type GitRepoEventCfg struct {
 	Create             bool `json:"create"`
+	Update             bool `json:"update"`
 	DeleteTemporarily  bool `json:"deleteTemporarily"`
 	DeletePermanently  bool `json:"deletePermanently"`
 	Archived           bool `json:"archived"`
@@ -32,4 +35,17 @@ type GitWorkflowEventCfg struct {
 	Update  bool `json:"update"`
 	Delete  bool `json:"delete"`
 	Trigger bool `json:"trigger"`
+	Kill    bool `json:"kill"`
+}
+
+type GitWorkflowVarsEventCfg struct {
+	Create bool `json:"create"`
+	Update bool `json:"update"`
+	Delete bool `json:"delete"`
+}
+
+type GitWebhookEventCfg struct {
+	Create bool `json:"create"`
+	Update bool `json:"update"`
+	Delete bool `json:"delete"`
 }

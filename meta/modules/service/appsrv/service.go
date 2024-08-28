@@ -113,8 +113,8 @@ func DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) error {
 		if role.Perm != nil {
 			appPermList := role.Perm.AppPermList[:]
 			// 去除appId
-			role.Perm.AppPermList, _ = listutil.Filter(appPermList, func(appPerm perm.AppPermWithId) (bool, error) {
-				return appPerm.AppId != reqDTO.AppId, nil
+			role.Perm.AppPermList = listutil.FilterNe(appPermList, func(appPerm perm.AppPermWithId) bool {
+				return appPerm.AppId != reqDTO.AppId
 			})
 			if len(role.Perm.AppPermList) != len(appPermList) {
 				needUpdateRoles = append(needUpdateRoles, role)
@@ -249,11 +249,11 @@ func ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, error) {
 		// 管理员可访问所有app
 		apps, err = appmd.ListAppByTeamId(ctx, reqDTO.TeamId)
 	} else if len(permDetail.AppPermList) > 0 {
-		appList, _ := listutil.Filter(permDetail.AppPermList, func(t perm.AppPermWithId) (bool, error) {
-			return t.CanDevelop, nil
+		appList := listutil.FilterNe(permDetail.AppPermList, func(t perm.AppPermWithId) bool {
+			return t.CanDevelop
 		})
-		appIdList, _ := listutil.Map(appList, func(t perm.AppPermWithId) (string, error) {
-			return t.AppId, nil
+		appIdList := listutil.MapNe(appList, func(t perm.AppPermWithId) string {
+			return t.AppId
 		})
 		if len(appIdList) > 0 {
 			apps, err = appmd.GetByAppIdList(ctx, appIdList, []string{"app_id", "name"})
@@ -270,11 +270,11 @@ func ListApp(ctx context.Context, reqDTO ListAppReqDTO) ([]AppDTO, error) {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(apps, func(t appmd.App) (AppDTO, error) {
+	ret := listutil.MapNe(apps, func(t appmd.App) AppDTO {
 		return AppDTO{
 			AppId: t.AppId,
 			Name:  t.Name,
-		}, nil
+		}
 	})
 	return ret, nil
 }
@@ -299,11 +299,11 @@ func ListAllAppByAdmin(ctx context.Context, reqDTO ListAllAppByAdminReqDTO) ([]A
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(apps, func(t appmd.App) (AppDTO, error) {
+	ret := listutil.MapNe(apps, func(t appmd.App) AppDTO {
 		return AppDTO{
 			AppId: t.AppId,
 			Name:  t.Name,
-		}, nil
+		}
 	})
 	return ret, nil
 }
@@ -323,11 +323,11 @@ func ListAllAppBySa(ctx context.Context, reqDTO ListAllAppBySaReqDTO) ([]AppDTO,
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	ret, _ := listutil.Map(apps, func(t appmd.App) (AppDTO, error) {
+	ret := listutil.MapNe(apps, func(t appmd.App) AppDTO {
 		return AppDTO{
 			AppId: t.AppId,
 			Name:  t.Name,
-		}, nil
+		}
 	})
 	return ret, nil
 }

@@ -16,12 +16,12 @@
         </tr>
         <tr v-if="props?.dataSource?.length === 0">
           <td :colspan="props.columns.length">
-            <div class="z-no-data">
+            <div class="no-data">
               <div style="font-size:30px;text-align:center;margin-bottom:14px">
                 <InboxOutlined />
               </div>
               <NoDataRender v-if="slots.noData" />
-              <div v-else style="text-align:center;font-size:14px;">
+              <div v-else style="text-align:center;font-size:16px;">
                 <span>{{t("ztable.noDataText")}}</span>
               </div>
             </div>
@@ -35,6 +35,9 @@
 import { defineProps, h, useSlots } from "vue";
 import { InboxOutlined } from "@ant-design/icons-vue";
 import { useI18n } from "vue-i18n";
+/*
+  table表格 支持i18n转换
+*/
 const { t } = useI18n();
 const props = defineProps(["columns", "dataSource", "style", "label"]);
 const slots = useSlots();
@@ -96,22 +99,27 @@ const NoDataRender = () => {
   line-height: 20px;
   font-size: 14px;
 }
+
 .z-table > table > tr + tr {
   border-top: 1px solid #d9d9d9;
 }
+
 .z-table > table > tr:first-child {
   line-height: 20px;
   font-size: 14px;
   font-weight: bold;
 }
-.z-label {
+
+.label {
   font-size: 16px;
   font-weight: bold;
   margin-bottom: 10px;
 }
-.z-no-data {
+
+.no-data {
   width: 100%;
   padding: 20px 0;
   border-radius: 4px;
+  color: #555555;
 }
 </style>

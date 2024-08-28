@@ -258,7 +258,7 @@ type Graph struct {
 }
 
 func (g *Graph) ListJobInfo() []JobInfo {
-	ret, _ := listutil.Map(g.allJobs, func(t *job) (JobInfo, error) {
+	ret := listutil.MapNe(g.allJobs, func(t *job) JobInfo {
 		steps := make([]StepInfo, 0, len(t.steps))
 		for i, s := range t.steps {
 			steps = append(steps, StepInfo{
@@ -269,7 +269,7 @@ func (g *Graph) ListJobInfo() []JobInfo {
 		return JobInfo{
 			Name:  t.name,
 			Steps: steps,
-		}, nil
+		}
 	})
 	return ret
 }
@@ -286,11 +286,11 @@ func (g *Graph) Run(opts RunOpts) error {
 	}
 	futures := make(map[string]completable.Future[any])
 	// 找到最后一层节点
-	layers, _ := listutil.Filter(g.allJobs, func(j *job) (bool, error) {
-		return j.next.Size() == 0, nil
+	layers := listutil.FilterNe(g.allJobs, func(j *job) bool {
+		return j.next.Size() == 0
 	})
-	finalFutures, _ := listutil.Map(layers, func(t *job) (completable.IBase, error) {
-		return loadJob(futures, t, &opts), nil
+	finalFutures := listutil.MapNe(layers, func(t *job) completable.IBase {
+		return loadJob(futures, t, &opts)
 	})
 	if len(finalFutures) > 0 {
 		// 最后一层的节点就可以不用异步

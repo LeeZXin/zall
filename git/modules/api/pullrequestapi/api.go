@@ -132,14 +132,14 @@ func listTimeline(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(timelines, func(t pullrequestsrv.TimelineDTO) (TimelineVO, error) {
+	data := listutil.MapNe(timelines, func(t pullrequestsrv.TimelineDTO) TimelineVO {
 		return TimelineVO{
 			Id:      t.Id,
 			PrId:    t.PrId,
 			Action:  t.Action,
 			Account: t.Account,
 			Created: t.Created.Format(time.DateTime),
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]TimelineVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -156,13 +156,13 @@ func listReview(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := listutil.Map(reviews, func(t pullrequestsrv.ReviewDTO) (ReviewVO, error) {
+	data := listutil.MapNe(reviews, func(t pullrequestsrv.ReviewDTO) ReviewVO {
 		return ReviewVO{
 			Id:           t.Id,
 			Reviewer:     t.Reviewer,
 			ReviewStatus: t.ReviewStatus.Readable(),
 			Updated:      t.Updated.Format(time.DateTime),
-		}, nil
+		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]ReviewVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
@@ -179,10 +179,9 @@ func getPullRequest(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	data, _ := pr2Vo(request)
 	c.JSON(http.StatusOK, ginutil.DataResp[PullRequestVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     data,
+		Data:     pr2Vo(request),
 	})
 }
 
@@ -214,14 +213,14 @@ func listPullRequest(c *gin.Context) {
 			RepoId:    req.RepoId,
 			Status:    req.Status,
 			SearchKey: req.SearchKey,
-			Page2Req:  req.Page2Req,
+			PageNum:   req.PageNum,
 			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(requests, pr2Vo)
+		data := listutil.MapNe(requests, pr2Vo)
 		c.JSON(http.StatusOK, ginutil.Page2Resp[PullRequestVO]{
 			DataResp: ginutil.DataResp[[]PullRequestVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
@@ -233,7 +232,7 @@ func listPullRequest(c *gin.Context) {
 	}
 }
 
-func pr2Vo(t pullrequestsrv.PullRequestDTO) (PullRequestVO, error) {
+func pr2Vo(t pullrequestsrv.PullRequestDTO) PullRequestVO {
 	ret := PullRequestVO{
 		Id:             t.Id,
 		RepoId:         t.RepoId,
@@ -257,7 +256,7 @@ func pr2Vo(t pullrequestsrv.PullRequestDTO) (PullRequestVO, error) {
 	if t.Merged != nil {
 		ret.Merged = t.Merged.Format(time.DateTime)
 	}
-	return ret, nil
+	return ret
 }
 
 func submitPullRequest(c *gin.Context) {

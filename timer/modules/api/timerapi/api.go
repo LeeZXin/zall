@@ -108,7 +108,7 @@ func listTimer(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(tasks, func(t timersrv.TimerDTO) (TimerVO, error) {
+		data := listutil.MapNe(tasks, func(t timersrv.TimerDTO) TimerVO {
 			return TimerVO{
 				Id:        t.Id,
 				Name:      t.Name,
@@ -118,7 +118,7 @@ func listTimer(c *gin.Context) {
 				IsEnabled: t.IsEnabled,
 				Env:       t.Env,
 				Creator:   t.Creator,
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[TimerVO]{
 			DataResp: ginutil.DataResp[[]TimerVO]{
@@ -144,7 +144,7 @@ func listLog(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data, _ := listutil.Map(logs, func(t timersrv.LogDTO) (TaskLogVO, error) {
+		data := listutil.MapNe(logs, func(t timersrv.LogDTO) TaskLogVO {
 			return TaskLogVO{
 				Task:        t.Task,
 				ErrLog:      t.ErrLog,
@@ -152,7 +152,7 @@ func listLog(c *gin.Context) {
 				TriggerBy:   t.TriggerBy,
 				IsSuccess:   t.IsSuccess,
 				Created:     t.Created.Format("2006-01-02 15:04"),
-			}, nil
+			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[TaskLogVO]{
 			DataResp: ginutil.DataResp[[]TaskLogVO]{

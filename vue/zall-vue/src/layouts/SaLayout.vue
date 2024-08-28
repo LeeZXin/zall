@@ -1,8 +1,8 @@
 <template>
   <a-layout>
     <a-layout-header style="font-size:22px;color:white">
-      <span>超级管理员</span>
-      <span class="switch-text" @click="switchIndex">返回首页</span>
+      <span>{{t("superAdmin")}}</span>
+      <span class="switch-text" @click="switchIndex">{{t("backToIndex")}}</span>
       <AvatarName style="float:right;" />
       <I18nSelect style="float:right;margin-right: 20px" />
     </a-layout-header>
@@ -11,31 +11,31 @@
         <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
           <a-menu-item key="/cfg/list">
             <SettingOutlined />
-            <span>系统配置</span>
+            <span>{{t("saMenu.sysCfg")}}</span>
           </a-menu-item>
           <a-menu-item key="/user/list">
             <UserOutlined />
-            <span>用户管理</span>
+            <span>{{t("saMenu.userManage")}}</span>
           </a-menu-item>
           <a-menu-item key="/propertySource/list">
             <BookOutlined />
-            <span>配置中心来源</span>
+            <span>{{t("saMenu.propertyCenterSource")}}</span>
           </a-menu-item>
           <a-menu-item key="/serviceSource/list">
             <BookOutlined />
-            <span>服务状态来源</span>
+            <span>{{t("saMenu.serviceStatusSource")}}</span>
           </a-menu-item>
           <a-menu-item key="/discoverySource/list">
             <BookOutlined />
-            <span>注册中心来源</span>
+            <span>{{t("saMenu.registryCenterSource")}}</span>
           </a-menu-item>
           <a-menu-item key="/zalletNode/list">
             <ClusterOutlined />
-            <span>Zallet代理节点</span>
+            <span>{{t("saMenu.zallet")}}</span>
           </a-menu-item>
           <a-menu-item key="/promScrape/list">
             <AlertOutlined />
-            <span>Prometheus</span>
+            <span>{{t("saMenu.promScrape")}}</span>
           </a-menu-item>
         </a-menu>
       </a-layout-sider>
@@ -57,19 +57,25 @@ import {
   ClusterOutlined,
   AlertOutlined
 } from "@ant-design/icons-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const selectedKeys = ref([]);
+// 路由前缀
 const routeKey = "/sa";
+// 选择key
 const onselect = event => {
   router.push({
     path: routeKey + event.key,
     force: true
   });
 };
+// 返回首页
 const switchIndex = () => {
   router.push("/index");
 };
+// key变化
 const changeSelectedKey = path => {
   const routeSuffix = path.replace(new RegExp(`^${routeKey}`), "");
   for (let key in pagesMap) {

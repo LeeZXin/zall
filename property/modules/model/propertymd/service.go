@@ -216,12 +216,12 @@ func ListDeployByHistoryId(ctx context.Context, historyId int64) ([]Deploy, erro
 }
 
 func BatchInsertAppEtcdNodeBind(ctx context.Context, reqDTOs []InsertAppEtcdNodeBindReqDTO) error {
-	binds, _ := listutil.Map(reqDTOs, func(t InsertAppEtcdNodeBindReqDTO) (AppEtcdNodeBind, error) {
+	binds := listutil.MapNe(reqDTOs, func(t InsertAppEtcdNodeBindReqDTO) AppEtcdNodeBind {
 		return AppEtcdNodeBind{
 			NodeId: t.NodeId,
 			AppId:  t.AppId,
 			Env:    t.Env,
-		}, nil
+		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).Insert(binds)
 	return err

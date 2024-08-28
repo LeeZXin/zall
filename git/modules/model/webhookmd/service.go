@@ -6,8 +6,8 @@ import (
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
-func InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) error {
-	hook := Webhook{
+func InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) (Webhook, error) {
+	ret := Webhook{
 		RepoId:  reqDTO.RepoId,
 		HookUrl: reqDTO.HookUrl,
 		Secret:  reqDTO.Secret,
@@ -15,8 +15,8 @@ func InsertWebhook(ctx context.Context, reqDTO InsertWebhookReqDTO) error {
 			Data: reqDTO.Events,
 		},
 	}
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&hook)
-	return err
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	return ret, err
 }
 
 func UpdateWebhook(ctx context.Context, reqDTO UpdateWebhookReqDTO) (bool, error) {
