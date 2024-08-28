@@ -1,19 +1,19 @@
-package productmd
+package artifactmd
 
-type InsertProductReqDTO struct {
+type InsertArtifactReqDTO struct {
 	AppId   string
 	Name    string
 	Creator string
 	Env     string
 }
 
-type GetProductReqDTO struct {
+type GetArtifactReqDTO struct {
 	AppId string
 	Name  string
 	Env   string
 }
 
-type ListProductReqDTO struct {
+type ListArtifactReqDTO struct {
 	AppId    string
 	Env      string
 	PageNum  int

@@ -6,7 +6,7 @@
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
-        <div class="op-icon" @click="deleteProduct(dataItem)" v-else>
+        <div class="op-icon" @click="deleteArtifact(dataItem)" v-else>
           <a-tooltip placement="top">
             <template #title>
               <span>Delete File</span>
@@ -24,7 +24,7 @@
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
-      @change="()=>listProduct()"
+      @change="()=>listArtifact()"
     />
   </div>
 </template>
@@ -37,7 +37,7 @@ import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
 import { ref, createVNode, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { listProductRequest, deleteProductRequest } from "@/api/app/productApi";
+import { listArtifactRequest, deleteArtifactRequest } from "@/api/app/artifactApi";
 import { message, Modal } from "ant-design-vue";
 const route = useRoute();
 const selectedEnv = ref("");
@@ -70,8 +70,8 @@ const columns = [
     key: "operation"
   }
 ];
-const listProduct = () => {
-  listProductRequest(
+const listArtifact = () => {
+  listArtifactRequest(
     {
       appId: route.params.appId,
       env: selectedEnv.value,
@@ -89,15 +89,15 @@ const listProduct = () => {
   });
 };
 
-const deleteProduct = item => {
+const deleteArtifact = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      deleteProductRequest(item.id, item.env).then(() => {
+      deleteArtifactRequest(item.id, item.env).then(() => {
         message.success("删除成功");
         dataPage.current = 1;
-        listProduct();
+        listArtifact();
       });
     },
     onCancel() {}
@@ -106,10 +106,10 @@ const deleteProduct = item => {
 
 const onEnvChange = e => {
   router.replace(
-    `/team/${route.params.teamId}/app/${route.params.appId}/product/list/${e.newVal}`
+    `/team/${route.params.teamId}/app/${route.params.appId}/artifact/list/${e.newVal}`
   );
   selectedEnv.value = e.newVal;
-  listProduct();
+  listArtifact();
 };
 </script>
 <style scoped>

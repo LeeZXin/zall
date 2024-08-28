@@ -29,7 +29,7 @@
             <BlockOutlined />
             <span>{{t("appMenu.registryCenter")}}</span>
           </a-menu-item>
-          <a-menu-item key="/product/list">
+          <a-menu-item key="/artifact/list">
             <DatabaseOutlined />
             <span>{{t("appMenu.artifacts")}}</span>
           </a-menu-item>
@@ -119,7 +119,7 @@ const pagesMap = {
   "/discoveryService": "/discoveryService/list",
   "/promScrape": "/promScrape/list",
   "/setting": "/setting",
-  "/product": "/product/list",
+  "/artifact": "/artifact/list",
   "/alertConfig": "/alertConfig/list"
 };
 watch(

@@ -115,17 +115,17 @@ func (*AppDeployPlanEvent) EventType() string {
 	return "app-deploy-plan-event"
 }
 
-type AppProductEvent struct {
+type AppArtifactEvent struct {
 	BaseTeam
 	BaseApp
 	BaseEvent
-	ProductId   int64                 `json:"productId"`
-	ProductName string                `json:"productName"`
-	Env         string                `json:"env"`
-	Action      AppProductEventAction `json:"action"`
+	ArtifactId   int64                  `json:"productId"`
+	ArtifactName string                 `json:"productName"`
+	Env          string                 `json:"env"`
+	Action       AppArtifactEventAction `json:"action"`
 }
 
-func (*AppProductEvent) EventType() string {
+func (*AppArtifactEvent) EventType() string {
 	return "app-product-event"
 }
 

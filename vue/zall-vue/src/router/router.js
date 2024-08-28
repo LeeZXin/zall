@@ -482,9 +482,9 @@ const router = createRouter({
                     import ("../pages/team/app/AppSettingPage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/product/list/:env?",
+                path: "/team/:teamId(\\d+)/app/:appId/artifact/list/:env?",
                 component: () =>
-                    import ("../pages/team/app/ProductListPage")
+                    import ("../pages/team/app/ArtifactListPage")
 
             }, {
                 path: "/team/:teamId(\\d+)/app/:appId/promScrape/list/:env?",

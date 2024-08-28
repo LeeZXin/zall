@@ -185,7 +185,7 @@ const defaultEnvRelated = {
     reRegister: false,
     deleteDownService: false
   },
-  appProduct: {
+  appArtifact: {
     delete: false
   },
   appPromScrape: {
@@ -335,7 +335,7 @@ const envRelatedEvents = [
     ]
   },
   {
-    key: "appProduct",
+    key: "appArtifact",
     title: "应用制品",
     actions: [
       {

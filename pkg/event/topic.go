@@ -24,6 +24,6 @@ const (
 	AppDeployPipelineTopic     = "app-deploy-pipeline"
 	AppDeployPipelineVarsTopic = "app-deploy-pipeline-vars"
 	AppDeployPlanTopic         = "app-deploy-plan"
-	AppProductTopic            = "app-product"
+	AppArtifactTopic           = "app-artifact"
 	AppPromScrapeTopic         = "app-prom-scrape"
 )

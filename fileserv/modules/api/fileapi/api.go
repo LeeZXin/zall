@@ -18,11 +18,11 @@ import (
 )
 
 var (
-	productToken string
+	artifactToken string
 )
 
 func InitApi() {
-	productToken = static.GetString("files.product.token")
+	artifactToken = static.GetString("files.artifact.token")
 	filesrv.InitStorage()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/files/avatar", apisession.CheckLogin)
@@ -33,29 +33,29 @@ func InitApi() {
 			group.GET("/get/:name", getAvatar)
 		}
 		// 简单制品库
-		group = e.Group("/api/files/product", checkProductToken)
+		group = e.Group("/api/files/artifact", checkArtifactToken)
 		{
 			// 上传制品
-			// curl -F "file=@/Users/lizexin/Desktop/etcd/etcd/README.md" http://127.0.0.1/api/files/product/upload/zall/fuck.md/sit?creator=zxjcli3 -v
-			group.POST("/upload/:app/:name/:env", uploadProduct)
+			// curl -F "file=@/Users/lizexin/Desktop/etcd/etcd/README.md" http://127.0.0.1/api/files/artifact/upload/zall/fuck.md/sit?creator=zxjcli3 -v
+			group.POST("/upload/:app/:name/:env", uploadArtifact)
 			// 下载制品
-			group.GET("/get/:app/:name/:env", getProduct)
+			group.GET("/get/:app/:name/:env", getArtifact)
 		}
 		// 简单制品库
-		group = e.Group("/api/product", apisession.CheckLogin)
+		group = e.Group("/api/artifact", apisession.CheckLogin)
 		{
 			// 制品库列表
-			group.GET("/list", listProduct)
+			group.GET("/list", listArtifact)
 			// 删除制品
-			group.DELETE("/delete/:productId", deleteProduct)
+			group.DELETE("/delete/:artifactId", deleteArtifact)
 		}
 	})
 }
 
-func deleteProduct(c *gin.Context) {
-	err := filesrv.DeleteProduct(c, filesrv.DeleteProductReqDTO{
-		ProductId: cast.ToInt64(c.Param("productId")),
-		Operator:  apisession.MustGetLoginUser(c),
+func deleteArtifact(c *gin.Context) {
+	err := filesrv.DeleteArtifact(c, filesrv.DeleteArtifactReqDTO{
+		Id:       cast.ToInt64(c.Param("artifactId")),
+		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
 		util.HandleApiErr(err, c)
@@ -64,10 +64,10 @@ func deleteProduct(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func listProduct(c *gin.Context) {
-	var req ListProductReqVO
+func listArtifact(c *gin.Context) {
+	var req ListArtifactReqVO
 	if util.ShouldBindQuery(&req, c) {
-		products, total, err := filesrv.ListProduct(c, filesrv.ListProductReqDTO{
+		artifacts, total, err := filesrv.ListArtifact(c, filesrv.ListArtifactReqDTO{
 			AppId:    req.AppId,
 			Env:      req.Env,
 			PageNum:  req.PageNum,
@@ -77,16 +77,16 @@ func listProduct(c *gin.Context) {
 			util.HandleApiErr(err, c)
 			return
 		}
-		data := listutil.MapNe(products, func(t filesrv.ProductDTO) ProductVO {
-			return ProductVO{
+		data := listutil.MapNe(artifacts, func(t filesrv.ArtifactDTO) ArtifactVO {
+			return ArtifactVO{
 				Id:      t.Id,
 				Name:    t.Name,
 				Creator: t.Creator,
 				Created: t.Created.Format(time.DateTime),
 			}
 		})
-		c.JSON(http.StatusOK, ginutil.Page2Resp[ProductVO]{
-			DataResp: ginutil.DataResp[[]ProductVO]{
+		c.JSON(http.StatusOK, ginutil.Page2Resp[ArtifactVO]{
+			DataResp: ginutil.DataResp[[]ArtifactVO]{
 				BaseResp: ginutil.DefaultSuccessResp,
 				Data:     data,
 			},
@@ -96,11 +96,11 @@ func listProduct(c *gin.Context) {
 	}
 }
 
-func checkProductToken(c *gin.Context) {
-	if c.Query("t") != productToken {
+func checkArtifactToken(c *gin.Context) {
+	if c.Query("t") != artifactToken {
 		c.JSON(http.StatusUnauthorized, ginutil.BaseResp{
 			Code:    apicode.UnauthorizedCode.Int(),
-			Message: "invalid normalToken",
+			Message: "invalid token",
 		})
 		c.Abort()
 	}
@@ -154,7 +154,7 @@ func getAvatar(c *gin.Context) {
 	c.File(path)
 }
 
-func uploadProduct(c *gin.Context) {
+func uploadArtifact(c *gin.Context) {
 	body, b, err := ginutil.GetFile(c)
 	if err != nil {
 		logger.Logger.WithContext(c).Error(err)
@@ -164,7 +164,7 @@ func uploadProduct(c *gin.Context) {
 	if b {
 		defer body.Close()
 	}
-	path, err := filesrv.UploadProduct(c, filesrv.UploadProductReqDTO{
+	path, err := filesrv.UploadArtifact(c, filesrv.UploadArtifactReqDTO{
 		AppId:   c.Param("app"),
 		Name:    c.Param("name"),
 		Creator: c.Query("creator"),
@@ -181,9 +181,9 @@ func uploadProduct(c *gin.Context) {
 	})
 }
 
-func getProduct(c *gin.Context) {
+func getArtifact(c *gin.Context) {
 	name := c.Param("name")
-	path, err := filesrv.GetProduct(c, filesrv.GetProductReqDTO{
+	path, err := filesrv.GetArtifact(c, filesrv.GetArtifactReqDTO{
 		AppId: c.Param("app"),
 		Env:   c.Param("env"),
 		Name:  name,

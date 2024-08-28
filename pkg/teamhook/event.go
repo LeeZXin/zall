@@ -24,7 +24,7 @@ type EnvRelatedCfg struct {
 	AppDeployPipeline     event.AppDeployPipelineEventCfg  `json:"appDeployPipeline"`
 	AppDeployPipelineVars event.AppPipelineVarsEventCfg    `json:"appDeployPipelineVars"`
 	AppDeployPlan         event.AppDeployPlanEventCfg      `json:"appDeployPlan"`
-	AppProduct            event.AppProductEventCfg         `json:"appProduct"`
+	AppArtifact           event.AppArtifactEventCfg        `json:"appArtifact"`
 	AppDiscovery          event.AppDiscoveryEventCfg       `json:"appDiscovery"`
 	AppDeployService      event.AppDeployServiceEventCfg   `json:"appDeployService"`
 	AppPromScrape         event.AppPromScrapeEventCfg      `json:"appPromScrape"`

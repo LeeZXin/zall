@@ -39,7 +39,7 @@ func (r *GetAvatarReqDTO) IsValid() error {
 	return nil
 }
 
-type UploadProductReqDTO struct {
+type UploadArtifactReqDTO struct {
 	AppId   string    `json:"appId"`
 	Name    string    `json:"name"`
 	Creator string    `json:"creator"`
@@ -47,7 +47,7 @@ type UploadProductReqDTO struct {
 	Body    io.Reader `json:"-"`
 }
 
-func (r *UploadProductReqDTO) IsValid() error {
+func (r *UploadArtifactReqDTO) IsValid() error {
 	if r.Name == "" || !appmd.IsAppIdValid(r.AppId) {
 		return util.InvalidArgsError()
 	}
@@ -60,27 +60,27 @@ func (r *UploadProductReqDTO) IsValid() error {
 	return nil
 }
 
-type GetProductReqDTO struct {
+type GetArtifactReqDTO struct {
 	AppId string `json:"appId"`
 	Name  string `json:"name"`
 	Env   string `json:"env"`
 }
 
-func (r *GetProductReqDTO) IsValid() error {
+func (r *GetArtifactReqDTO) IsValid() error {
 	if r.Name == "" || !appmd.IsAppIdValid(r.AppId) || r.Env == "" {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
-type ListProductReqDTO struct {
+type ListArtifactReqDTO struct {
 	AppId    string              `json:"appId"`
 	Env      string              `json:"env"`
 	PageNum  int                 `json:"pageNum"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListProductReqDTO) IsValid() error {
+func (r *ListArtifactReqDTO) IsValid() error {
 	if r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -96,20 +96,20 @@ func (r *ListProductReqDTO) IsValid() error {
 	return nil
 }
 
-type ProductDTO struct {
+type ArtifactDTO struct {
 	Id      int64
 	Name    string
 	Creator string
 	Created time.Time
 }
 
-type DeleteProductReqDTO struct {
-	ProductId int64               `json:"productId"`
-	Operator  apisession.UserInfo `json:"operator"`
+type DeleteArtifactReqDTO struct {
+	Id       int64               `json:"id"`
+	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeleteProductReqDTO) IsValid() error {
-	if r.ProductId <= 0 {
+func (r *DeleteArtifactReqDTO) IsValid() error {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

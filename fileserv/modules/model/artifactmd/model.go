@@ -1,12 +1,12 @@
-package productmd
+package artifactmd
 
 import "time"
 
 const (
-	ProductTableName = "zfile_product"
+	ArtifactTableName = "zfile_artifact"
 )
 
-type Product struct {
+type Artifact struct {
 	Id      int64     `json:"id" xorm:"pk autoincr"`
 	AppId   string    `json:"appId"`
 	Env     string    `json:"env"`
@@ -15,6 +15,6 @@ type Product struct {
 	Created time.Time `json:"created" xorm:"created"`
 }
 
-func (*Product) TableName() string {
-	return ProductTableName
+func (*Artifact) TableName() string {
+	return ArtifactTableName
 }

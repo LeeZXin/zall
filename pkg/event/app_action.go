@@ -83,14 +83,14 @@ const (
 	AppDeployPlanCloseAction  AppDeployPlanEventAction = "close"
 )
 
-type AppProductEventAction string
+type AppArtifactEventAction string
 
-func (a AppProductEventAction) GetI18nValue() string {
-	return "appProductEvent." + string(a)
+func (a AppArtifactEventAction) GetI18nValue() string {
+	return "appArtifactEvent." + string(a)
 }
 
 const (
-	AppProductDeleteAction AppProductEventAction = "delete"
+	AppArtifactDeleteAction AppArtifactEventAction = "delete"
 )
 
 type AppDiscoveryEventAction string

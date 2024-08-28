@@ -1,13 +1,13 @@
-package productmd
+package artifactmd
 
 import (
 	"context"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
-func InsertProduct(ctx context.Context, reqDTO InsertProductReqDTO) error {
+func InsertArtifact(ctx context.Context, reqDTO InsertArtifactReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&Product{
+		Insert(&Artifact{
 			Env:     reqDTO.Env,
 			AppId:   reqDTO.AppId,
 			Name:    reqDTO.Name,
@@ -16,8 +16,8 @@ func InsertProduct(ctx context.Context, reqDTO InsertProductReqDTO) error {
 	return err
 }
 
-func GetProductByAppIdAndNameAndEnv(ctx context.Context, reqDTO GetProductReqDTO) (Product, bool, error) {
-	var ret Product
+func GetArtifactByAppIdAndNameAndEnv(ctx context.Context, reqDTO GetArtifactReqDTO) (Artifact, bool, error) {
+	var ret Artifact
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("app_id = ?", reqDTO.AppId).
 		And("name = ?", reqDTO.Name).
@@ -26,23 +26,23 @@ func GetProductByAppIdAndNameAndEnv(ctx context.Context, reqDTO GetProductReqDTO
 	return ret, b, err
 }
 
-func GetProductById(ctx context.Context, id int64) (Product, bool, error) {
-	var ret Product
+func GetArtifactById(ctx context.Context, id int64) (Artifact, bool, error) {
+	var ret Artifact
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
 		Get(&ret)
 	return ret, b, err
 }
 
-func DeleteProductById(ctx context.Context, id int64) (bool, error) {
+func DeleteArtifactById(ctx context.Context, id int64) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
-		Delete(new(Product))
+		Delete(new(Artifact))
 	return rows == 1, err
 }
 
-func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]Product, int64, error) {
-	ret := make([]Product, 0)
+func ListArtifact(ctx context.Context, reqDTO ListArtifactReqDTO) ([]Artifact, int64, error) {
+	ret := make([]Artifact, 0)
 	total, err := xormutil.MustGetXormSession(ctx).
 		Where("app_id = ?", reqDTO.AppId).
 		And("env = ?", reqDTO.Env).

@@ -41,7 +41,7 @@ type AppDeployPlanEventCfg struct {
 	Start  bool `json:"start"`
 }
 
-type AppProductEventCfg struct {
+type AppArtifactEventCfg struct {
 	Delete bool `json:"delete"`
 }
 

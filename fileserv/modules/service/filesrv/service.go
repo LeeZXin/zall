@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/LeeZXin/zall/fileserv/modules/model/productmd"
+	"github.com/LeeZXin/zall/fileserv/modules/model/artifactmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apicode"
@@ -33,10 +33,10 @@ import (
 )
 
 var (
-	avatarStorage  files.Storage
-	productStorage files.Storage
-	domain         string
-	initPsubOnce   = sync.Once{}
+	avatarStorage   files.Storage
+	artifactStorage files.Storage
+	domain          string
+	initPsubOnce    = sync.Once{}
 )
 
 func InitStorage() {
@@ -46,22 +46,22 @@ func InitStorage() {
 	}
 	dataDir := filepath.Join(pwd, "data")
 	avatarDir := filepath.Join(dataDir, "avatar")
-	productDir := filepath.Join(dataDir, "product")
+	artifactDir := filepath.Join(dataDir, "artifact")
 	avatarTempDir := filepath.Join(avatarDir, "temp")
-	productTempDir := filepath.Join(productDir, "temp")
+	artifactTempDir := filepath.Join(artifactDir, "temp")
 	util.MkdirAll(
-		avatarDir, productDir,
-		avatarTempDir, productTempDir,
+		avatarDir, artifactDir,
+		avatarTempDir, artifactTempDir,
 	)
 	avatarStorage, _ = files.NewLocalStorage(avatarDir, avatarTempDir)
-	productStorage, _ = files.NewLocalStorage(productDir, productTempDir)
+	artifactStorage, _ = files.NewLocalStorage(artifactDir, artifactTempDir)
 	domain = static.GetString("files.domain")
 }
 
 func initPsub() {
 	initPsubOnce.Do(func() {
-		psub.Subscribe(event.AppProductTopic, func(data any) {
-			req, ok := data.(event.AppProductEvent)
+		psub.Subscribe(event.AppArtifactTopic, func(data any) {
+			req, ok := data.(event.AppArtifactEvent)
 			if ok {
 				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
 					if events.EnvRelated == nil {
@@ -70,8 +70,8 @@ func initPsub() {
 					cfg, ok := events.EnvRelated[req.Env]
 					if ok {
 						switch req.Action {
-						case event.AppProductDeleteAction:
-							return cfg.AppProduct.Delete
+						case event.AppArtifactDeleteAction:
+							return cfg.AppArtifact.Delete
 						default:
 							return false
 						}
@@ -135,13 +135,13 @@ func GetAvatar(ctx context.Context, reqDTO GetAvatarReqDTO) (string, error) {
 	return filepath.Join(avatarStorage.StoreDir(), avatarPath), nil
 }
 
-func UploadProduct(ctx context.Context, reqDTO UploadProductReqDTO) (string, error) {
+func UploadArtifact(ctx context.Context, reqDTO UploadArtifactReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return "", err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, b, err := productmd.GetProductByAppIdAndNameAndEnv(ctx, productmd.GetProductReqDTO{
+	_, b, err := artifactmd.GetArtifactByAppIdAndNameAndEnv(ctx, artifactmd.GetArtifactReqDTO{
 		AppId: reqDTO.AppId,
 		Name:  reqDTO.Name,
 		Env:   reqDTO.Env,
@@ -161,7 +161,7 @@ func UploadProduct(ctx context.Context, reqDTO UploadProductReqDTO) (string, err
 	if !b {
 		return "", util.InvalidArgsError()
 	}
-	err = productmd.InsertProduct(ctx, productmd.InsertProductReqDTO{
+	err = artifactmd.InsertArtifact(ctx, artifactmd.InsertArtifactReqDTO{
 		AppId:   reqDTO.AppId,
 		Name:    reqDTO.Name,
 		Creator: reqDTO.Creator,
@@ -171,20 +171,20 @@ func UploadProduct(ctx context.Context, reqDTO UploadProductReqDTO) (string, err
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
 	}
-	_, err = productStorage.Save(ctx, filepath.Join(reqDTO.Env, reqDTO.AppId, reqDTO.Name), reqDTO.Body)
+	_, err = artifactStorage.Save(ctx, filepath.Join(reqDTO.Env, reqDTO.AppId, reqDTO.Name), reqDTO.Body)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
 	}
-	return domain + fmt.Sprintf("/api/files/product/get/%s/%s/%s", reqDTO.AppId, url.QueryEscape(reqDTO.Name), reqDTO.Env), nil
+	return domain + fmt.Sprintf("/api/files/artifact/get/%s/%s/%s", reqDTO.AppId, url.QueryEscape(reqDTO.Name), reqDTO.Env), nil
 }
 
-func GetProduct(ctx context.Context, reqDTO GetProductReqDTO) (string, error) {
+func GetArtifact(ctx context.Context, reqDTO GetArtifactReqDTO) (string, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return "", err
 	}
-	productPath := filepath.Join(reqDTO.Env, reqDTO.AppId, reqDTO.Name)
-	b, err := productStorage.Exists(ctx, productPath)
+	artifactPath := filepath.Join(reqDTO.Env, reqDTO.AppId, reqDTO.Name)
+	b, err := artifactStorage.Exists(ctx, artifactPath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
@@ -192,11 +192,11 @@ func GetProduct(ctx context.Context, reqDTO GetProductReqDTO) (string, error) {
 	if !b {
 		return "", nil
 	}
-	return filepath.Join(productStorage.StoreDir(), productPath), nil
+	return filepath.Join(artifactStorage.StoreDir(), artifactPath), nil
 }
 
-// ListProduct 制品库列表
-func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]ProductDTO, int64, error) {
+// ListArtifact 制品库列表
+func ListArtifact(ctx context.Context, reqDTO ListArtifactReqDTO) ([]ArtifactDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
@@ -206,7 +206,7 @@ func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]ProductDTO, i
 	if err != nil {
 		return nil, 0, err
 	}
-	products, total, err := productmd.ListProduct(ctx, productmd.ListProductReqDTO{
+	artifacts, total, err := artifactmd.ListArtifact(ctx, artifactmd.ListArtifactReqDTO{
 		AppId:    reqDTO.AppId,
 		Env:      reqDTO.Env,
 		PageNum:  reqDTO.PageNum,
@@ -216,8 +216,8 @@ func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]ProductDTO, i
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	ret := listutil.MapNe(products, func(t productmd.Product) ProductDTO {
-		return ProductDTO{
+	ret := listutil.MapNe(artifacts, func(t artifactmd.Artifact) ArtifactDTO {
+		return ArtifactDTO{
 			Id:      t.Id,
 			Name:    t.Name,
 			Creator: t.Creator,
@@ -227,34 +227,34 @@ func ListProduct(ctx context.Context, reqDTO ListProductReqDTO) ([]ProductDTO, i
 	return ret, total, nil
 }
 
-// DeleteProduct 删除制品
-func DeleteProduct(ctx context.Context, reqDTO DeleteProductReqDTO) error {
+// DeleteArtifact 删除制品
+func DeleteArtifact(ctx context.Context, reqDTO DeleteArtifactReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	product, app, team, err := checkAppDevelopPermByProductId(ctx, reqDTO.ProductId, reqDTO.Operator)
+	artifact, app, team, err := checkAppDevelopPermByArtifactId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		_, err2 := productmd.DeleteProductById(ctx, reqDTO.ProductId)
+		_, err2 := artifactmd.DeleteArtifactById(ctx, reqDTO.Id)
 		if err2 != nil {
 			return err2
 		}
-		return productStorage.Delete(ctx, filepath.Join(product.Env, product.AppId, product.Name))
+		return artifactStorage.Delete(ctx, filepath.Join(artifact.Env, artifact.AppId, artifact.Name))
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	notifyProductEvent(
+	notifyArtifactEvent(
 		reqDTO.Operator,
 		team,
 		app,
-		product,
-		event.AppProductDeleteAction,
+		artifact,
+		event.AppArtifactDeleteAction,
 	)
 	return nil
 }
@@ -292,22 +292,22 @@ func checkAppDevelopPermByAppId(ctx context.Context, appId string, operator apis
 	return app, team, util.UnauthorizedError()
 }
 
-func checkAppDevelopPermByProductId(ctx context.Context, productId int64, operator apisession.UserInfo) (productmd.Product, appmd.App, teammd.Team, error) {
-	product, b, err := productmd.GetProductById(ctx, productId)
+func checkAppDevelopPermByArtifactId(ctx context.Context, artifactId int64, operator apisession.UserInfo) (artifactmd.Artifact, appmd.App, teammd.Team, error) {
+	artifact, b, err := artifactmd.GetArtifactById(ctx, artifactId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return productmd.Product{}, appmd.App{}, teammd.Team{}, util.InternalError(err)
+		return artifactmd.Artifact{}, appmd.App{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return productmd.Product{}, appmd.App{}, teammd.Team{}, util.InvalidArgsError()
+		return artifactmd.Artifact{}, appmd.App{}, teammd.Team{}, util.InvalidArgsError()
 	}
-	app, team, err := checkAppDevelopPermByAppId(ctx, product.AppId, operator)
-	return product, app, team, err
+	app, team, err := checkAppDevelopPermByAppId(ctx, artifact.AppId, operator)
+	return artifact, app, team, err
 }
 
-func notifyProductEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, product productmd.Product, action event.AppProductEventAction) {
+func notifyArtifactEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, artifact artifactmd.Artifact, action event.AppArtifactEventAction) {
 	initPsub()
-	psub.Publish(event.AppProductTopic, event.AppProductEvent{
+	psub.Publish(event.AppArtifactTopic, event.AppArtifactEvent{
 		BaseTeam: event.BaseTeam{
 			TeamId:   team.Id,
 			TeamName: team.Name,
@@ -323,9 +323,9 @@ func notifyProductEvent(operator apisession.UserInfo, team teammd.Team, app appm
 			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
 			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 		},
-		ProductId:   product.Id,
-		ProductName: product.Name,
-		Env:         product.Env,
-		Action:      action,
+		ArtifactId:   artifact.Id,
+		ArtifactName: artifact.Name,
+		Env:          artifact.Env,
+		Action:       action,
 	})
 }
