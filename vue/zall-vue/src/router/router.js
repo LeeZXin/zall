@@ -132,9 +132,9 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/personalSetting/ProfilePage")
             }, {
-                path: "/personalSetting/updatePassword",
+                path: "/personalSetting/changePassword",
                 component: () =>
-                    import ("../pages/personalSetting/UpdatePasswordPage")
+                    import ("../pages/personalSetting/ChangePasswordPage")
             }, {
                 path: "/personalSetting/sshAndGpg/list",
                 component: () =>

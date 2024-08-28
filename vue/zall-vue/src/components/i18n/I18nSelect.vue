@@ -35,5 +35,6 @@ const localeText = ref(localeMap[locale.value]);
   font-size: 14px;
   color: white;
   line-height: 64px;
+  cursor: pointer;
 }
 </style>
