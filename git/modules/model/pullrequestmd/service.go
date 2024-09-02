@@ -153,18 +153,6 @@ func ListPullRequest(ctx context.Context, reqDTO ListPullRequestReqDTO) ([]PullR
 	return ret, total, err
 }
 
-func GroupByPrStatus(ctx context.Context, repoId int64) ([]GroupByPrStatusDTO, error) {
-	ret := make([]GroupByPrStatusDTO, 0)
-	session := xormutil.MustGetXormSession(ctx)
-	err := session.
-		Where("repo_id = ?", repoId).
-		GroupBy("pr_status").
-		Select("pr_status, count(*) as total_count").
-		Table(PullRequestTableName).
-		Find(&ret)
-	return ret, err
-}
-
 func BatchInsertTimeline(ctx context.Context, reqDTOs []InsertTimelineReqDTO) error {
 	timelines := listutil.MapNe(reqDTOs, func(t InsertTimelineReqDTO) *Timeline {
 		return &Timeline{

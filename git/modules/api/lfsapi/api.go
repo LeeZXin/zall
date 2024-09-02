@@ -93,7 +93,7 @@ func packRepoPath(c *gin.Context) {
 			return
 		}
 	} else {
-		cfg, err := cfgsrv.GetGitCfgFromDB()
+		cfg, err := cfgsrv.GetGitCfgFromDB(c)
 		if err != nil {
 			logger.Logger.WithContext(c).Error(err)
 			c.JSON(http.StatusInternalServerError, ErrVO{
@@ -184,7 +184,7 @@ func batch(c *gin.Context) {
 		})
 		return
 	}
-	cfg, err := cfgsrv.GetGitCfgFromDB()
+	cfg, err := cfgsrv.GetGitCfgFromDB(c)
 	if err != nil {
 		logger.Logger.WithContext(c).Error(err)
 		c.JSON(http.StatusInternalServerError, ErrVO{

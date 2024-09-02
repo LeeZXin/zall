@@ -30,6 +30,130 @@
         </div>
       </div>
       <div class="section">
+        <div class="section-title">登录配置</div>
+        <div class="section-body">
+          <div>
+            <a-checkbox v-model:checked="loginCfgState.allowAccountPassword">允许账号密码登录</a-checkbox>
+            <div class="checkbox-desc">使用账号密码登录</div>
+          </div>
+          <div style="margin-top:10px;">
+            <a-checkbox v-model:checked="loginCfgState.allowWework">允许企业微信登录</a-checkbox>
+            <div class="checkbox-desc">使用企业微信扫码登录</div>
+            <ul class="login-inputs">
+              <li>
+                <div class="login-input-title">appId</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.weworkAppId"
+                    :disabled="!loginCfgState.allowWework"
+                  />
+                </div>
+              </li>
+              <li>
+                <div class="login-input-title">agentId</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.weworkAgentId"
+                    :disabled="!loginCfgState.allowWework"
+                  />
+                </div>
+              </li>
+              <li>
+                <div class="login-input-title">secret</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.weworkSecret"
+                    :disabled="!loginCfgState.allowWework"
+                  />
+                </div>
+              </li>
+              <li>
+                <div class="login-input-title">state</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.weworkState"
+                    :disabled="!loginCfgState.allowWework"
+                  />
+                </div>
+              </li>
+              <li>
+                <div class="login-input-title">redirect_url</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.weworkRedirectUrl"
+                    :disabled="!loginCfgState.allowWework"
+                  />
+                </div>
+              </li>
+              <li>
+                <div class="login-input-title">lang</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.weworkLang"
+                    :disabled="!loginCfgState.allowWework"
+                  />
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div style="margin-top:10px;">
+            <a-checkbox v-model:checked="loginCfgState.allowFeishu">允许飞书登录</a-checkbox>
+            <div class="checkbox-desc">使用飞书扫码登录</div>
+            <ul class="login-inputs">
+              <li>
+                <div class="login-input-title">clientId</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.feishuClientId"
+                    :disabled="!loginCfgState.allowFeishu"
+                  />
+                </div>
+              </li>
+              <li>
+                <div class="login-input-title">secret</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.feishuSecret"
+                    :disabled="!loginCfgState.allowFeishu"
+                  />
+                </div>
+              </li>
+              <li>
+                <div class="login-input-title">state</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.feishuState"
+                    :disabled="!loginCfgState.allowFeishu"
+                  />
+                </div>
+              </li>
+              <li>
+                <div class="login-input-title">redirect_url</div>
+                <div>
+                  <a-input
+                    style="width:100%"
+                    v-model:value="loginCfgState.feishuRedirectUrl"
+                    :disabled="!loginCfgState.allowFeishu"
+                  />
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div style="margin-top: 10px">
+            <a-button type="primary" @click="updateLoginCfg">保存登录配置</a-button>
+          </div>
+        </div>
+      </div>
+      <div class="section">
         <div class="section-title">GIT配置</div>
         <div class="section-body">
           <div>
@@ -89,7 +213,9 @@ import {
   getGitRepoServerCfgRequest,
   updateGitRepoServerCfgRequest,
   getGitCfgRequest,
-  updateGitCfgRequest
+  updateGitCfgRequest,
+  getLoginCfgBySaRequest,
+  updateLoginCfgRequest
 } from "@/api/cfg/cfgApi";
 import { reactive } from "vue";
 import { message } from "ant-design-vue";
@@ -109,6 +235,22 @@ const gitCfgState = reactive({
   sshUrl: "",
   lfsJwtExpiry: 600,
   lfsJwtSecret: ""
+});
+// 登录配置
+const loginCfgState = reactive({
+  allowAccountPassword: false,
+  allowWework: false,
+  allowFeishu: false,
+  weworkAppId: "",
+  weworkAgentId: "",
+  weworkSecret: "",
+  weworkState: "",
+  weworkRedirectUrl: "",
+  weworkLang: "zh",
+  feishuClientId: "",
+  feishuSecret: "",
+  feishuState: "",
+  feishuRedirectUrl: ""
 });
 // 仓库位置配置
 const gitRepoServerCfgState = reactive({
@@ -200,11 +342,120 @@ const updateGitCfg = () => {
     message.success("编辑成功");
   });
 };
+// 获取登录配置
+const getLoginCfg = () => {
+  getLoginCfgBySaRequest().then(res => {
+    loginCfgState.allowAccountPassword = res.data.accountPassword.isEnabled;
+    loginCfgState.allowWework = res.data.wework.isEnabled;
+    loginCfgState.allowFeishu = res.data.feishu.isEnabled;
+    // wework
+    loginCfgState.weworkAppId = res.data.wework.appId;
+    loginCfgState.weworkAgentId = res.data.wework.agentId;
+    loginCfgState.weworkState = res.data.wework.state;
+    loginCfgState.weworkSecret = res.data.wework.secret;
+    loginCfgState.weworkRedirectUrl = res.data.wework.redirectUrl;
+    loginCfgState.weworkLang = res.data.wework.lang;
+    // feishu
+    loginCfgState.feishuClientId = res.data.feishu.clientId;
+    loginCfgState.feishuSecret = res.data.feishu.secret;
+    loginCfgState.feishuState = res.data.feishu.state;
+    loginCfgState.feishuRedirectUrl = res.data.feishu.redirectUrl;
+  });
+};
+// 编辑登录配置
+const updateLoginCfg = () => {
+  if (
+    !loginCfgState.allowAccountPassword &&
+    !loginCfgState.allowWework &&
+    !loginCfgState.allowFeishu
+  ) {
+    message.warn("至少选择一种登录方式");
+    return;
+  }
+  let req = {};
+  req.accountPassword = {
+    isEnabled: loginCfgState.allowAccountPassword
+  };
+  req.wework = {
+    appId: loginCfgState.weworkAppId,
+    agentId: loginCfgState.weworkAgentId,
+    state: loginCfgState.weworkState,
+    secret: loginCfgState.weworkSecret,
+    redirectUrl: loginCfgState.weworkRedirectUrl,
+    lang: loginCfgState.weworkLang
+  };
+  req.feishu = {
+    clientId: loginCfgState.feishuClientId,
+    secret: loginCfgState.feishuSecret,
+    state: loginCfgState.feishuState,
+    redirectUrl: loginCfgState.feishuRedirectUrl
+  };
+  if (loginCfgState.allowWework) {
+    if (!loginCfgState.weworkAppId) {
+      message.warn("请填写appId");
+      return;
+    }
+    if (!loginCfgState.weworkAgentId) {
+      message.warn("请填写agentId");
+      return;
+    }
+    if (!loginCfgState.weworkSecret) {
+      message.warn("请填写secret");
+      return;
+    }
+    if (!loginCfgState.weworkState) {
+      message.warn("请填写state");
+      return;
+    }
+    if (!loginCfgState.weworkRedirectUrl) {
+      message.warn("请填写redirect_url");
+      return;
+    }
+    req.wework.isEnabled = true;
+  }
+  if (loginCfgState.allowFeishu) {
+    if (!loginCfgState.feishuClientId) {
+      message.warn("请填写clientId");
+      return;
+    }
+    if (!loginCfgState.feishuSecret) {
+      message.warn("请填写secret");
+      return;
+    }
+    if (!loginCfgState.feishuState) {
+      message.warn("请填写state");
+      return;
+    }
+    if (!loginCfgState.feishuRedirectUrl) {
+      message.warn("请填写redirect_url");
+      return;
+    }
+    req.feishu.isEnabled = true;
+  }
+  updateLoginCfgRequest(req).then(() => {
+    message.success("编辑成功");
+  });
+};
 getSysCfg();
 getEnvCfg();
 getGitCfg();
+getLoginCfg();
 getGitRepoServerCfg();
 </script>
 
 <style scoped>
+.login-inputs {
+  padding-left: 24px;
+  margin-top: 4px;
+}
+.login-inputs > li + li {
+  margin-top: 4px;
+}
+.login-input-title {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.login-input-title-gray {
+  color: gray;
+}
 </style>

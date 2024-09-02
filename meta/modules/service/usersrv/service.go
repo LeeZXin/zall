@@ -7,10 +7,15 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/feishuapi"
 	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/weworkapi"
+	"github.com/LeeZXin/zall/thirdpart/modules/model/tpfeishumd"
+	"github.com/LeeZXin/zall/thirdpart/modules/model/tpweworkmd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"time"
 )
@@ -49,35 +54,36 @@ func CheckAccountAndPassword(ctx context.Context, reqDTO CheckAccountAndPassword
 	return user.ToUserInfo(), true
 }
 
-func Login(ctx context.Context, reqDTO LoginReqDTO) (session apisession.Session, err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func Login(ctx context.Context, reqDTO LoginReqDTO) (apisession.Session, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return apisession.Session{}, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	var (
-		b    bool
-		user usermd.User
-	)
-	user, b, err = usermd.GetByAccount(ctx, reqDTO.Account)
+	loginCfg, err := cfgsrv.GetLoginCfgFromDB(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return apisession.Session{}, util.InternalError(err)
+	}
+	if !loginCfg.AccountPassword.IsEnabled {
+		return apisession.Session{}, util.UnauthorizedError()
+	}
+	user, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
 	}
 	if !b {
-		err = util.NewBizErr(apicode.DataNotExistsCode, i18n.UserNotFound)
-		return
+		return apisession.Session{}, util.NewBizErr(apicode.DataNotExistsCode, i18n.UserNotFound)
 	}
 	// 校验密码
 	if user.Password != util.EncryptUserPassword(reqDTO.Password) {
-		err = util.NewBizErr(apicode.WrongLoginPasswordCode, i18n.UserWrongPassword)
-		return
+		return apisession.Session{}, util.NewBizErr(apicode.WrongLoginPasswordCode, i18n.UserWrongPassword)
+
 	}
 	// 检查是否被全局禁用
 	if user.IsProhibited {
-		err = util.UnauthorizedError()
-		return
+		return apisession.Session{}, util.UnauthorizedError()
 	}
 	sessionStore := apisession.GetStore()
 	// 删除原有的session
@@ -88,7 +94,7 @@ func Login(ctx context.Context, reqDTO LoginReqDTO) (session apisession.Session,
 	// 生成sessionId
 	sessionId := apisession.GenSessionId()
 	expireAt := time.Now().Add(LoginSessionExpiry).UnixMilli()
-	session = apisession.Session{
+	session := apisession.Session{
 		SessionId: sessionId,
 		UserInfo: apisession.UserInfo{
 			Account:      user.Account,
@@ -104,9 +110,160 @@ func Login(ctx context.Context, reqDTO LoginReqDTO) (session apisession.Session,
 	err = sessionStore.PutSession(session)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
+		return apisession.Session{}, util.InternalError(err)
 	}
-	return
+	return session, nil
+}
+
+func WeworkLogin(ctx context.Context, reqDTO WeworkLoginReqDTO) (apisession.Session, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return apisession.Session{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	loginCfg, err := cfgsrv.GetLoginCfgFromDB(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	if !loginCfg.Wework.IsEnabled {
+		return apisession.Session{}, util.UnauthorizedError()
+	}
+	cfg := loginCfg.Wework
+	if cfg.State != reqDTO.State {
+		return apisession.Session{}, util.InvalidArgsError()
+	}
+	at, b, err := tpweworkmd.GetAccessTokenByCorpIdAndSecret(ctx, cfg.AppId, cfg.Secret)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	if !b {
+		return apisession.Session{}, util.OperationFailedError()
+	}
+	account, err := weworkapi.GetAuthWeworkUserInfo(ctx, static.GetString("wework.auth.getUserInfoUrl"), at.Token, reqDTO.Code)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	user, b, err := usermd.GetByAccount(ctx, account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	if !b {
+		return apisession.Session{}, util.NewBizErr(apicode.DataNotExistsCode, i18n.UserNotFound)
+	}
+	// 检查是否被全局禁用
+	if user.IsProhibited {
+		return apisession.Session{}, util.UnauthorizedError()
+	}
+	sessionStore := apisession.GetStore()
+	// 删除原有的session
+	err = sessionStore.DeleteByAccount(user.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+	}
+	// 生成sessionId
+	sessionId := apisession.GenSessionId()
+	expireAt := time.Now().Add(LoginSessionExpiry).UnixMilli()
+	session := apisession.Session{
+		SessionId: sessionId,
+		UserInfo: apisession.UserInfo{
+			Account:      user.Account,
+			Name:         user.Name,
+			Email:        user.Email,
+			IsProhibited: user.IsProhibited,
+			AvatarUrl:    user.AvatarUrl,
+			IsAdmin:      user.IsAdmin,
+			IsDba:        user.IsDba,
+		},
+		ExpireAt: expireAt,
+	}
+	err = sessionStore.PutSession(session)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	return session, nil
+}
+
+func FeishuLogin(ctx context.Context, reqDTO FeishuLoginReqDTO) (apisession.Session, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return apisession.Session{}, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	loginCfg, err := cfgsrv.GetLoginCfgFromDB(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	if !loginCfg.Feishu.IsEnabled {
+		return apisession.Session{}, util.UnauthorizedError()
+	}
+	cfg := loginCfg.Feishu
+	if cfg.State != reqDTO.State {
+		return apisession.Session{}, util.InvalidArgsError()
+	}
+	at, b, err := tpfeishumd.GetAccessTokenByAppIdAndSecret(ctx, cfg.ClientId, cfg.Secret)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	if !b {
+		return apisession.Session{}, util.OperationFailedError()
+	}
+	ut, err := feishuapi.GetUserAccessToken(ctx, static.GetString("feishu.auth.getUserAccessTokenUrl"), at.Token, reqDTO.Code)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	userInfo, err := feishuapi.GetUserInfo(ctx, static.GetString("feishu.auth.getUserInfoUrl"), ut.AccessToken)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	user, b, err := usermd.GetByAccount(ctx, userInfo.UserId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	if !b {
+		return apisession.Session{}, util.NewBizErr(apicode.DataNotExistsCode, i18n.UserNotFound)
+	}
+	// 检查是否被全局禁用
+	if user.IsProhibited {
+		return apisession.Session{}, util.UnauthorizedError()
+	}
+	sessionStore := apisession.GetStore()
+	// 删除原有的session
+	err = sessionStore.DeleteByAccount(user.Account)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+	}
+	// 生成sessionId
+	sessionId := apisession.GenSessionId()
+	expireAt := time.Now().Add(LoginSessionExpiry).UnixMilli()
+	session := apisession.Session{
+		SessionId: sessionId,
+		UserInfo: apisession.UserInfo{
+			Account:      user.Account,
+			Name:         user.Name,
+			Email:        user.Email,
+			IsProhibited: user.IsProhibited,
+			AvatarUrl:    user.AvatarUrl,
+			IsAdmin:      user.IsAdmin,
+			IsDba:        user.IsDba,
+		},
+		ExpireAt: expireAt,
+	}
+	err = sessionStore.PutSession(session)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return apisession.Session{}, util.InternalError(err)
+	}
+	return session, nil
 }
 
 func Refresh(ctx context.Context, reqDTO RefreshReqDTO) (string, int64, error) {

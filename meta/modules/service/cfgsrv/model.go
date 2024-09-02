@@ -3,8 +3,8 @@ package cfgsrv
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/LeeZXin/zall/pkg/login"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/idutil"
 	"net/url"
 	"regexp"
 	"time"
@@ -14,15 +14,6 @@ var (
 	DefaultSysCfg = &SysCfg{
 		DisableSelfRegisterUser: false,
 		AllowUserCreateTeam:     true,
-	}
-	DefaultGitCfg = &GitCfg{
-		LfsJwtExpiry: 3600,
-		LfsJwtSecret: idutil.RandomUuid(),
-	}
-	DefaultEnvCfg = &EnvCfg{
-		Envs: []string{
-			"prd",
-		},
 	}
 )
 
@@ -154,6 +145,16 @@ type GitRepoServerCfg struct {
 	SshHost  string `json:"sshHost"`
 }
 
+func (c *GitRepoServerCfg) IsValid() bool {
+	if !util.GenIpPortPattern().MatchString(c.HttpHost) {
+		return false
+	}
+	if !util.GenIpPortPattern().MatchString(c.SshHost) {
+		return false
+	}
+	return true
+}
+
 func (*GitRepoServerCfg) Key() string {
 	return "git_repo_server_cfg"
 }
@@ -164,5 +165,22 @@ func (c *GitRepoServerCfg) Val() string {
 }
 
 func (c *GitRepoServerCfg) FromStore(val string) error {
+	return json.Unmarshal([]byte(val), c)
+}
+
+type LoginCfg struct {
+	login.Cfg
+}
+
+func (*LoginCfg) Key() string {
+	return "login"
+}
+
+func (c *LoginCfg) Val() string {
+	ret, _ := json.Marshal(c)
+	return string(ret)
+}
+
+func (c *LoginCfg) FromStore(val string) error {
 	return json.Unmarshal([]byte(val), c)
 }

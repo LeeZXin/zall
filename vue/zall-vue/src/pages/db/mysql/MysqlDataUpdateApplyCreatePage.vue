@@ -7,7 +7,13 @@
       <div class="section">
         <div class="section-title">选择数据库</div>
         <div class="section-body">
-          <a-select style="width: 100%" v-model:value="formState.dbId" :options="dbList" />
+          <a-select
+            style="width: 100%"
+            v-model:value="formState.dbId"
+            :options="dbList"
+            show-search
+            :filter-option="filterDbListOption"
+          />
           <div class="input-desc">选择一个数据库</div>
         </div>
       </div>
@@ -124,6 +130,9 @@ const getAllDb = () => {
       formState.dbId = res.data[0].id;
     }
   });
+};
+const filterDbListOption = (input, option) => {
+  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
 getAllDb();
 </script>

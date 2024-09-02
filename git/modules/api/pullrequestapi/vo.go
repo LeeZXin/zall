@@ -43,13 +43,6 @@ type PullRequestVO struct {
 	Merged         string                 `json:"merged"`
 }
 
-type StatsPullRequestVO struct {
-	TotalCount  int64 `json:"totalCount"`
-	OpenCount   int64 `json:"openCount"`
-	ClosedCount int64 `json:"closedCount"`
-	MergedCount int64 `json:"mergedCount"`
-}
-
 type TimelineVO struct {
 	Id      int64                `json:"id"`
 	PrId    int64                `json:"prId"`

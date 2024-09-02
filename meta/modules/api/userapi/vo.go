@@ -10,6 +10,11 @@ type LoginReqVO struct {
 	Password string `json:"password"`
 }
 
+type WeworkLoginReqVO struct {
+	State string `json:"state"`
+	Code  string `json:"code"`
+}
+
 type LoginRespVO struct {
 	ginutil.BaseResp
 	Session apisession.Session `json:"session"`

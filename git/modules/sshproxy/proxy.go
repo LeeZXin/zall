@@ -1,6 +1,7 @@
 package sshproxy
 
 import (
+	"context"
 	"fmt"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/pkg/git"
@@ -52,7 +53,7 @@ func InitProxy() zsf.LifeCycle {
 func handleGitCommand(session ssh.Session) error {
 	fingerprint := gossh.FingerprintSHA256(session.PublicKey())
 	// 寻找仓库存储节点
-	sshHost, err := pickRepoSshHost()
+	sshHost, err := pickRepoSshHost(session.Context())
 	if err != nil {
 		logger.Logger.Error(err)
 		return err
@@ -66,8 +67,8 @@ func handleGitCommand(session ssh.Session) error {
 	return nil
 }
 
-func pickRepoSshHost() (string, error) {
-	cfg, err := cfgsrv.GetGitRepoServerCfgFromDB()
+func pickRepoSshHost(ctx context.Context) (string, error) {
+	cfg, err := cfgsrv.GetGitRepoServerCfgFromDB(ctx)
 	if err != nil {
 		return "", fmt.Errorf("git repo server ssh host is not set: %w", err)
 	}

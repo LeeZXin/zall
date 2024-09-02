@@ -20,6 +20,10 @@ func InitApi() {
 			group.POST("/login", login)
 			// 注册用户
 			group.POST("/register", register)
+			// 企微登录
+			group.POST("/weworkLogin", weworkLogin)
+			// 飞书登录
+			group.GET("/feishuLogin", feishuLogin)
 			// 获取登录信息
 			group.Any("/userInfo", apisession.CheckLogin, getUserInfo)
 			// 刷新token
@@ -91,6 +95,38 @@ func login(c *gin.Context) {
 			Session:  session,
 		})
 	}
+}
+
+func weworkLogin(c *gin.Context) {
+	var req WeworkLoginReqVO
+	if util.ShouldBindJSON(&req, c) {
+		session, err := usersrv.WeworkLogin(c, usersrv.WeworkLoginReqDTO{
+			Code:  req.Code,
+			State: req.State,
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		c.SetCookie(apisession.LoginCookie, session.SessionId, int(usersrv.LoginSessionExpiry.Seconds()), "/", "", false, true)
+		c.JSON(http.StatusOK, LoginRespVO{
+			BaseResp: ginutil.DefaultSuccessResp,
+			Session:  session,
+		})
+	}
+}
+
+func feishuLogin(c *gin.Context) {
+	session, err := usersrv.FeishuLogin(c, usersrv.FeishuLoginReqDTO{
+		Code:  c.Query("code"),
+		State: c.Query("state"),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.SetCookie(apisession.LoginCookie, session.SessionId, int(usersrv.LoginSessionExpiry.Seconds()), "/", "", false, true)
+	c.Redirect(http.StatusFound, "/")
 }
 
 func getUserInfo(c *gin.Context) {

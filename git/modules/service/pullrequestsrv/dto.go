@@ -149,28 +149,6 @@ func (r *GetPullRequestReqDTO) IsValid() error {
 	return nil
 }
 
-type GetStatsReqDTO struct {
-	RepoId   int64               `json:"repoId"`
-	Operator apisession.UserInfo `json:"operator"`
-}
-
-func (r *GetStatsReqDTO) IsValid() error {
-	if r.RepoId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type GetStatsRespDTO struct {
-	TotalCount  int64 `json:"totalCount"`
-	OpenCount   int64 `json:"openCount"`
-	ClosedCount int64 `json:"closedCount"`
-	MergedCount int64 `json:"mergedCount"`
-}
-
 type ListTimelineReqDTO struct {
 	PrId     int64               `json:"prId"`
 	Operator apisession.UserInfo `json:"operator"`

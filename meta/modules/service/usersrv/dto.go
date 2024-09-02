@@ -79,6 +79,30 @@ func (r *LoginReqDTO) IsValid() error {
 	return nil
 }
 
+type FeishuLoginReqDTO struct {
+	Code  string `json:"code"`
+	State string `json:"state"`
+}
+
+func (r *FeishuLoginReqDTO) IsValid() error {
+	if r.Code == "" || r.State == "" {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type WeworkLoginReqDTO struct {
+	Code  string `json:"code"`
+	State string `json:"state"`
+}
+
+func (r *WeworkLoginReqDTO) IsValid() error {
+	if r.Code == "" || r.State == "" {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type RefreshReqDTO struct {
 	SessionId string              `json:"sessionId"`
 	Operator  apisession.UserInfo `json:"operator"`

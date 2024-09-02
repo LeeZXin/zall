@@ -8,8 +8,6 @@ const listPullRequestRequest = (data) => request.get("/api/pullRequest/list", { 
 const getPullRequestRequest = (prId) => request.get("/api/pullRequest/get/" + prId);
 // 关闭合并请求
 const closePullRequestRequest = (prId) => request.put("/api/pullRequest/close/" + prId);
-// 统计数据
-const statsPullRequestRequest = (repoId) => request.get("/api/pullRequest/stats/" + repoId);
 // 展示时间轴
 const listTimelineRequest = (prId) => request.get("/api/pullRequest/listTimeline/" + prId);
 // 提交评论
@@ -31,7 +29,6 @@ export {
     listPullRequestRequest,
     getPullRequestRequest,
     closePullRequestRequest,
-    statsPullRequestRequest,
     listTimelineRequest,
     addCommentRequest,
     deleteCommentRequest,

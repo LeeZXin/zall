@@ -33,6 +33,8 @@ import (
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
 	"github.com/LeeZXin/zall/teamhook/modules/api/teamhookapi"
+	"github.com/LeeZXin/zall/thirdpart/modules/service/tpfeishusrv"
+	"github.com/LeeZXin/zall/thirdpart/modules/service/tpweworksrv"
 	"github.com/LeeZXin/zall/timer/modules/api/timerapi"
 	"github.com/LeeZXin/zall/timer/modules/service/timersrv"
 	"github.com/LeeZXin/zsf/http/httpserver"
@@ -66,6 +68,12 @@ func runZall(*cli.Context) error {
 		teamapi.InitApi()
 		cfgapi.InitApi()
 		appapi.InitApi()
+	}
+	// for cfg
+	{
+		// 初始化全局配置
+		cfgsrv.InitSysCfg()
+		cfgsrv.InitLoginCfg()
 	}
 	// for git
 	{
@@ -151,6 +159,20 @@ func runZall(*cli.Context) error {
 	// for team hook
 	{
 		teamhookapi.InitApi()
+	}
+	// for wework access token
+	{
+		if static.GetBool("wework.accessToken.task.enabled") {
+			logger.Logger.Info("wework access token task enabled")
+			tpweworksrv.InitGetAccessTokenTask()
+		}
+	}
+	// for feishu access token
+	{
+		if static.GetBool("feishu.accessToken.task.enabled") {
+			logger.Logger.Info("feishu access token task enabled")
+			tpfeishusrv.InitGetAccessTokenTask()
+		}
 	}
 	lifeCycles = append(lifeCycles, httpserver.NewServer(), prom.NewServer())
 	zsf.Run(

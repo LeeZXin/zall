@@ -4,7 +4,7 @@
       <InboxOutlined />
     </div>
     <SlotRender v-if="slots.desc" />
-    <div v-else style="text-align:center;font-size:14px;font-weight:bold">
+    <div v-else style="text-align:center;font-size:16px;">
       <span>{{t("noData")}}</span>
     </div>
   </div>
@@ -29,5 +29,6 @@ const SlotRender = () => {
   padding: 40px 0;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
+  color: #555555;
 }
 </style>

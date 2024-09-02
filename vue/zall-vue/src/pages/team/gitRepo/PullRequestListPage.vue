@@ -4,19 +4,15 @@
       <a-radio-group v-model:value="prStatus" @change="selectPrStatus">
         <a-radio-button value="0">
           <span>所有</span>
-          <span>({{stats.totalCount}})</span>
         </a-radio-button>
         <a-radio-button value="1">
           <span>已打开</span>
-          <span>({{stats.openCount}})</span>
         </a-radio-button>
         <a-radio-button value="3">
           <span>已合并</span>
-          <span>({{stats.mergedCount}})</span>
         </a-radio-button>
         <a-radio-button value="2">
           <span>已关闭</span>
-          <span>({{stats.closedCount}})</span>
         </a-radio-button>
       </a-radio-group>
     </div>
@@ -79,10 +75,7 @@ import {
 import ZNoData from "@/components/common/ZNoData";
 import PrStatusTag from "@/components/git/PrStatusTag";
 import { ref, reactive, h } from "vue";
-import {
-  listPullRequestRequest,
-  statsPullRequestRequest
-} from "@/api/git/prApi";
+import { listPullRequestRequest } from "@/api/git/prApi";
 import { useRoute, useRouter } from "vue-router";
 import { readableTimeComparingNow } from "@/utils/time";
 import { useRepoStore } from "@/pinia/repoStore";
@@ -97,12 +90,6 @@ const dataPage = reactive({
   current: 1,
   pageSize: 10,
   totalCount: 0
-});
-const stats = reactive({
-  totalCount: 0,
-  openCount: 0,
-  closedCount: 0,
-  mergedCount: 0
 });
 // 搜索
 const listPullRequest = () => {
@@ -134,12 +121,6 @@ const toDetail = item => {
   );
 };
 listPullRequest();
-statsPullRequestRequest(repoId).then(res => {
-  stats.totalCount = res.data.totalCount;
-  stats.openCount = res.data.openCount;
-  stats.closedCount = res.data.closedCount;
-  stats.mergedCount = res.data.mergedCount;
-});
 </script>
 <style scoped>
 .header {

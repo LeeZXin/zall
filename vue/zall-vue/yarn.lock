@@ -2629,6 +2629,11 @@
     "@webassemblyjs/ast" "1.12.1"
     "@xtuc/long" "4.2.2"
 
+"@wecom/jssdk@^2.0.2":
+  version "2.0.2"
+  resolved "https://registry.npmmirror.com/@wecom/jssdk/-/jssdk-2.0.2.tgz"
+  integrity sha512-/tS/1cp1A+7ruICjCT6FSqXR/n/WfpOtNtwPAy4leWgrFzuYXvmdanPKxdg3IjY8i7Xx8r1xxqfaDI0uc79IwQ==
+
 "@xtuc/ieee754@^1.2.0":
   version "1.2.0"
   resolved "https://registry.npmmirror.com/@xtuc/ieee754/-/ieee754-1.2.0.tgz"

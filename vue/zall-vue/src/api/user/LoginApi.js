@@ -2,6 +2,8 @@ import request from '@/utils/request.js'
 
 // 登录
 const loginRequest = (data) => request.post("/api/login/login", data);
+// 企微登录
+const weworkLoginRequest = (data) => request.post("/api/login/weworkLogin", data);
 // 注册
 const registerRequest = (data) => request.post("/api/login/register", data);
 // 退出登录
@@ -13,5 +15,6 @@ export {
     loginRequest,
     registerRequest,
     logoutRequest,
-    getUserInfoRequest
+    getUserInfoRequest,
+    weworkLoginRequest
 }

@@ -124,8 +124,15 @@ func handleExecute(execute *alertmd.Execute) error {
 					result, err := alertCfg.Prom.Execute(httpClient, endTime)
 					if err != nil {
 						logger.Logger.Errorf("alert cfg: %v execute failed with err: %v", cfg.Id, err)
-					} else if result != nil {
-						args := metric2Map(result)
+					} else {
+						var args map[string]any
+						if result != nil {
+							args = metric2Map(result)
+						} else {
+							args = map[string]any{
+								"metric_value": 0,
+							}
+						}
 						evaluate, err := gval.Evaluate(alertCfg.Prom.Condition, args)
 						if err != nil {
 							logger.Logger.Errorf("alert cfg: %v compile condition: %v failed with err: %v", cfg.Id, alertCfg.Prom.Condition, err)

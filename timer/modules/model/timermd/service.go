@@ -105,10 +105,7 @@ func IterateExecute(ctx context.Context, nextTime int64, env string, fn func(*Ex
 		And("env = ?", env).
 		And("is_enabled = 1").
 		Iterate(new(Execute), func(idx int, obj interface{}) error {
-			if err := fn(obj.(*Execute)); err != nil {
-				return err
-			}
-			return nil
+			return fn(obj.(*Execute))
 		})
 }
 

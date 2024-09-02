@@ -84,45 +84,6 @@ func initPsub() {
 	})
 }
 
-// GetStats 获取统计详情
-func GetStats(ctx context.Context, reqDTO GetStatsReqDTO) (GetStatsRespDTO, error) {
-	if err := reqDTO.IsValid(); err != nil {
-		return GetStatsRespDTO{}, err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	// 校验权限
-	_, _, err := checkAccessRepoPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
-	if err != nil {
-		return GetStatsRespDTO{}, err
-	}
-	rets, err := pullrequestmd.GroupByPrStatus(ctx, reqDTO.RepoId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return GetStatsRespDTO{}, err
-	}
-	var (
-		totalCount, openCount, closedCount, mergedCount int64
-	)
-	for _, ret := range rets {
-		totalCount += ret.TotalCount
-		switch ret.PrStatus {
-		case pullrequestmd.PrOpenStatus:
-			openCount += ret.TotalCount
-		case pullrequestmd.PrClosedStatus:
-			closedCount += ret.TotalCount
-		case pullrequestmd.PrMergedStatus:
-			mergedCount += ret.TotalCount
-		}
-	}
-	return GetStatsRespDTO{
-		TotalCount:  totalCount,
-		OpenCount:   openCount,
-		ClosedCount: closedCount,
-		MergedCount: mergedCount,
-	}, nil
-}
-
 // ListPullRequest 查询合并请求列表
 func ListPullRequest(ctx context.Context, reqDTO ListPullRequestReqDTO) ([]PullRequestDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {

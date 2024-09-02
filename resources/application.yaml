@@ -83,3 +83,13 @@ zallet:
   enabled: true
   cmd: /Users/lizexin/go/src/zallet/zallet
   sock: /Users/lizexin/go/src/zallet/duck/zallet.sock
+
+wework:
+  accessToken:
+    task:
+      enabled: true
+
+feishu:
+  accessToken:
+    task:
+      enabled: true

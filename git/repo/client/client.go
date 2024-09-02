@@ -500,7 +500,7 @@ func CanMerge(ctx context.Context, req reqvo.CanMergeReq) (bool, error) {
 }
 
 func postHttp(ctx context.Context, path string, req, resp any) error {
-	httpUrl, err := getHttpUrl()
+	httpUrl, err := getHttpUrl(ctx)
 	if err != nil {
 		return err
 	}
@@ -521,7 +521,7 @@ func postHttp(ctx context.Context, path string, req, resp any) error {
 }
 
 func proxyHttp(path string, ctx *gin.Context, headers map[string]string) error {
-	httpUrl, err := getHttpUrl()
+	httpUrl, err := getHttpUrl(ctx)
 	if err != nil {
 		return err
 	}
@@ -549,8 +549,8 @@ func proxyHttp(path string, ctx *gin.Context, headers map[string]string) error {
 	return nil
 }
 
-func getHttpUrl() (string, error) {
-	cfg, err := cfgsrv.GetGitRepoServerCfgFromDB()
+func getHttpUrl(ctx context.Context) (string, error) {
+	cfg, err := cfgsrv.GetGitRepoServerCfgFromDB(ctx)
 	if err != nil {
 		logger.Logger.Error(err)
 		return "", bizerr.NewBizErr(apicode.OperationFailedErrCode.Int(), "git repo server url is not set")

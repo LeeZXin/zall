@@ -11,8 +11,6 @@ import (
 )
 
 func InitApi() {
-	// 初始化全局配置
-	cfgsrv.InitSysCfg()
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
 		group := e.Group("/api/sysCfg")
 		{
@@ -41,6 +39,14 @@ func InitApi() {
 			group.GET("/get", getGitRepoServerCfg)
 			// 编辑git仓库服务url
 			group.POST("/update", updateGitRepoServerCfg)
+		}
+		group = e.Group("/api/loginCfg")
+		{
+			group.GET("/get", getLoginCfg)
+			// 超级管理员获取登录配置
+			group.GET("/getBySa", apisession.CheckLogin, getLoginCfgBySa)
+			// 编辑登录配置
+			group.POST("/update", apisession.CheckLogin, updateLoginCfg)
 		}
 	})
 }
@@ -144,12 +150,53 @@ func getGitRepoServerCfg(c *gin.Context) {
 	})
 }
 
+func getLoginCfgBySa(c *gin.Context) {
+	cfg, err := cfgsrv.GetLoginCfgBySa(c, cfgsrv.GetLoginCfgBySaReqDTO{
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[cfgsrv.LoginCfg]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     cfg,
+	})
+}
+
+func getLoginCfg(c *gin.Context) {
+	cfg, err := cfgsrv.GetLoginCfg(c)
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	c.JSON(http.StatusOK, ginutil.DataResp[cfgsrv.LoginCfg]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     cfg,
+	})
+}
+
 func updateGitRepoServerCfg(c *gin.Context) {
 	var req UpdateGitRepoServerCfgReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := cfgsrv.UpdateGitRepoServerCfg(c, cfgsrv.UpdateGitRepoServerCfgReqDTO{
 			GitRepoServerCfg: req.GitRepoServerCfg,
 			Operator:         apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
+}
+
+func updateLoginCfg(c *gin.Context) {
+	var req UpdateLoginCfgReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := cfgsrv.UpdateLoginCfg(c, cfgsrv.UpdateLoginCfgReqDTO{
+			LoginCfg: req.LoginCfg,
+			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)

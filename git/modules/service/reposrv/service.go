@@ -424,7 +424,7 @@ func GetSimpleInfo(ctx context.Context, reqDTO GetSimpleInfoReqDTO) (SimpleInfoD
 	ret.Tags = listutil.MapNe(tags, func(t reqvo.RefVO) string {
 		return t.Name
 	})
-	cfg, err := cfgsrv.GetGitCfgFromDB()
+	cfg, err := cfgsrv.GetGitCfgFromDB(ctx)
 	if err == nil {
 		if cfg.HttpUrl != "" {
 			ret.CloneHttpUrl = strings.TrimSuffix(cfg.HttpUrl, "/") + "/" + repo.Path

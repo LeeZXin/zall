@@ -44,11 +44,6 @@ type ListPullRequestReqDTO struct {
 	PageSize  int
 }
 
-type GroupByPrStatusDTO struct {
-	PrStatus   PrStatus
-	TotalCount int64
-}
-
 type InsertTimelineReqDTO struct {
 	PrId    int64
 	Action  Action

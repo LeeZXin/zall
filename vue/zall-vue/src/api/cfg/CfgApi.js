@@ -16,6 +16,12 @@ const updateGitRepoServerCfgRequest = (data) => request.post("/api/gitRepoServer
 const getGitCfgRequest = () => request.get("/api/gitCfg/get");
 // 编辑git配置
 const updateGitCfgRequest = (data) => request.post("/api/gitCfg/update", data);
+// 获取登录配置
+const getLoginCfgRequest = () => request.get("/api/loginCfg/get");
+// 获取登录配置 超级管理员
+const getLoginCfgBySaRequest = () => request.get("/api/loginCfg/getBySa");
+// 编辑登录配置
+const updateLoginCfgRequest = (data) => request.post("/api/loginCfg/update", data);
 export {
     getSysCfgRequest,
     updateSysCfgRequest,
@@ -24,5 +30,8 @@ export {
     getGitRepoServerCfgRequest,
     updateGitRepoServerCfgRequest,
     getGitCfgRequest,
-    updateGitCfgRequest
+    updateGitCfgRequest,
+    getLoginCfgRequest,
+    updateLoginCfgRequest,
+    getLoginCfgBySaRequest
 }

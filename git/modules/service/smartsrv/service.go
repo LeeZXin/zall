@@ -19,11 +19,11 @@ const (
 	updateRepo
 )
 
-func UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
+func UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	cfg, err := cfgsrv.GetGitCfgFromDB()
+	cfg, err := cfgsrv.GetGitCfgFromDB(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(errors.New("can not get git config"))
@@ -31,7 +31,7 @@ func UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) (err error) {
 	// 获取权限
 	err = checkRepoPerm(ctx, reqDTO.Repo, reqDTO.Operator, accessRepo)
 	if err != nil {
-		return
+		return err
 	}
 	err = client.UploadPack(reqvo.UploadPackReq{
 		RepoPath: reqDTO.Repo.Path,
@@ -39,17 +39,16 @@ func UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) (err error) {
 	}, reqDTO.Repo.Id, reqDTO.Operator.Account, reqDTO.Operator.Email, cfg.HttpUrl)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
 func ReceivePack(ctx context.Context, reqDTO ReceivePackReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
-	cfg, err := cfgsrv.GetGitCfgFromDB()
+	cfg, err := cfgsrv.GetGitCfgFromDB(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(errors.New("can not get git config"))

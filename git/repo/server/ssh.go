@@ -101,7 +101,7 @@ func InitSshServer() zsf.LifeCycle {
 
 func handleGitCommand(user usermd.UserInfo, session ssh.Session) error {
 	ctx := session.Context()
-	gitCfg, err := cfgsrv.GetGitCfgFromDB()
+	gitCfg, err := cfgsrv.GetGitCfgFromDB(session.Context())
 	if err != nil {
 		logger.Logger.Error(err)
 		return errors.New(i18n.GetByKey(i18n.SystemInternalError))

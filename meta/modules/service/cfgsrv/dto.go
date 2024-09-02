@@ -89,12 +89,35 @@ type UpdateGitRepoServerCfgReqDTO struct {
 }
 
 func (r *UpdateGitRepoServerCfgReqDTO) IsValid() error {
-	if !util.GenIpPortPattern().MatchString(r.HttpHost) {
+	if !r.GitRepoServerCfg.IsValid() {
 		return util.InvalidArgsError()
 	}
-	if !util.GenIpPortPattern().MatchString(r.SshHost) {
+	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
+	return nil
+}
+
+type UpdateLoginCfgReqDTO struct {
+	LoginCfg
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *UpdateLoginCfgReqDTO) IsValid() error {
+	if !r.LoginCfg.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
+type GetLoginCfgBySaReqDTO struct {
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *GetLoginCfgBySaReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}

@@ -19,8 +19,6 @@ func InitApi() {
 		{
 			// 获取合并请求
 			group.GET("/get/:prId", getPullRequest)
-			// 合并请求详情
-			group.GET("/stats/:repoId", statsPullRequest)
 			// 合并请求列表
 			group.GET("/list", listPullRequest)
 			// 创建合并请求
@@ -182,27 +180,6 @@ func getPullRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, ginutil.DataResp[PullRequestVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data:     pr2Vo(request),
-	})
-}
-
-func statsPullRequest(c *gin.Context) {
-	repoId := cast.ToInt64(c.Param("repoId"))
-	stats, err := pullrequestsrv.GetStats(c, pullrequestsrv.GetStatsReqDTO{
-		RepoId:   repoId,
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	c.JSON(http.StatusOK, ginutil.DataResp[StatsPullRequestVO]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data: StatsPullRequestVO{
-			TotalCount:  stats.TotalCount,
-			OpenCount:   stats.OpenCount,
-			ClosedCount: stats.ClosedCount,
-			MergedCount: stats.MergedCount,
-		},
 	})
 }
 

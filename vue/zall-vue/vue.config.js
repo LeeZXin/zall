@@ -3,11 +3,12 @@ module.exports = defineConfig({
     transpileDependencies: true,
     devServer: {
         host: "0.0.0.0",
-        port: 8080,
-        https: false,
+        port: 7501,
+        https: true,
         open: false,
+        allowedHosts: "all",
         client: {
-            webSocketURL: "ws://0.0.0.0:8080/ws",
+            webSocketURL: "wss://0.0.0.0:7501/ws",
             overlay: false
         },
         proxy: {
@@ -15,6 +16,6 @@ module.exports = defineConfig({
                 target: "http://127.0.0.1:80",
                 changeOrigin: true
             },
-        }
+        },
     }
 })
