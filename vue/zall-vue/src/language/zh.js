@@ -103,9 +103,11 @@ export default {
         dbAudit: "数据库审计",
         promScrape: "Prometheus监控",
         roleAndMembers: "角色&成员",
-        setting: "设置",
+        setting: "团队设置",
         notifyTpl: "外部通知",
-        teamHook: "Team Hook"
+        teamHook: "Team Hook",
+        weworkAccessToken: "企微AccessToken",
+        feishuAccessToken: "飞书AccessToken"
     },
     roleListPage: {
         roleList: "角色列表",

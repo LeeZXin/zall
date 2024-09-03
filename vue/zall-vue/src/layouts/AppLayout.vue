@@ -1,57 +1,61 @@
 <template>
-  <a-layout>
-    <a-layout-header style="font-size:22px;color:white">
-      <span>{{route.params.appId}}</span>
-      <span class="switch-app-text" @click="switchApp">{{t("appService.switchApp")}}</span>
-      <AvatarName style="float:right;" />
-      <I18nSelect style="float:right;margin-right: 20px" />
-    </a-layout-header>
+  <a-watermark :content="`${userStore.name}${userStore.account}`" :gap="[200,200]">
     <a-layout>
-      <a-layout-sider v-model:collapsed="collapsed" collapsible>
-        <a-menu theme="dark" mode="inline" @click="onselect" v-model:selectedKeys="selectedKeys">
-          <a-menu-item key="/propertyFile/list">
-            <ContainerOutlined />
-            <span>{{t("appMenu.propertyFile")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/pipeline/list" v-if="appStore.perm?.canManagePipeline">
-            <TagOutlined />
-            <span>{{t("appMenu.deployPipeline")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/deployPlan/list">
-            <FileOutlined />
-            <span>{{t("appMenu.deployPlan")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/serviceStatus/list">
-            <ReadOutlined />
-            <span>{{t("appMenu.serviceStatus")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/discoveryService/list">
-            <BlockOutlined />
-            <span>{{t("appMenu.registryCenter")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/artifact/list">
-            <DatabaseOutlined />
-            <span>{{t("appMenu.artifacts")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/promScrape/list" v-if="teamStore.perm?.canManagePromScrape">
-            <AlertOutlined />
-            <span>{{t("appMenu.promScrape")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/alertConfig/list">
-            <MonitorOutlined />
-            <span>{{t("appMenu.alertConfig")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/setting" v-if="teamStore.isAdmin">
-            <SettingOutlined />
-            <span>{{t("appMenu.setting")}}</span>
-          </a-menu-item>
-        </a-menu>
-      </a-layout-sider>
-      <a-layout-content style="height: calc(100vh - 64px); overflow: scroll;background-color:white">
-        <router-view v-if="appLoaded" />
-      </a-layout-content>
+      <a-layout-header style="font-size:22px;color:white">
+        <span>{{route.params.appId}}</span>
+        <span class="switch-app-text" @click="switchApp">{{t("appService.switchApp")}}</span>
+        <AvatarName style="float:right;" />
+        <I18nSelect style="float:right;margin-right: 20px" />
+      </a-layout-header>
+      <a-layout>
+        <a-layout-sider v-model:collapsed="collapsed" collapsible>
+          <a-menu theme="dark" mode="inline" @click="onselect" v-model:selectedKeys="selectedKeys">
+            <a-menu-item key="/propertyFile/list">
+              <ContainerOutlined />
+              <span>{{t("appMenu.propertyFile")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/pipeline/list" v-if="appStore.perm?.canManagePipeline">
+              <TagOutlined />
+              <span>{{t("appMenu.deployPipeline")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/deployPlan/list">
+              <FileOutlined />
+              <span>{{t("appMenu.deployPlan")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/serviceStatus/list">
+              <ReadOutlined />
+              <span>{{t("appMenu.serviceStatus")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/discoveryService/list">
+              <BlockOutlined />
+              <span>{{t("appMenu.registryCenter")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/artifact/list">
+              <DatabaseOutlined />
+              <span>{{t("appMenu.artifacts")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/promScrape/list" v-if="teamStore.perm?.canManagePromScrape">
+              <AlertOutlined />
+              <span>{{t("appMenu.promScrape")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/alertConfig/list">
+              <MonitorOutlined />
+              <span>{{t("appMenu.alertConfig")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/setting" v-if="teamStore.isAdmin">
+              <SettingOutlined />
+              <span>{{t("appMenu.setting")}}</span>
+            </a-menu-item>
+          </a-menu>
+        </a-layout-sider>
+        <a-layout-content
+          style="height: calc(100vh - 64px); overflow: scroll;background-color:white"
+        >
+          <router-view v-if="appLoaded" />
+        </a-layout-content>
+      </a-layout>
     </a-layout>
-  </a-layout>
+  </a-watermark>
 </template>
 <script setup>
 import I18nSelect from "../components/i18n/I18nSelect";
@@ -74,6 +78,8 @@ import { getAppRequest } from "@/api/app/appApi";
 import { useAppStore } from "@/pinia/appStore";
 import { useTeamStore } from "@/pinia/teamStore";
 import { getTeamRequest } from "@/api/team/teamApi";
+import { useUserStore } from "@/pinia/userStore";
+const userStore = useUserStore();
 const teamStore = useTeamStore();
 const appStore = useAppStore();
 const { t } = useI18n();

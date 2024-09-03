@@ -27,7 +27,7 @@ func InitGetAccessTokenTask() {
 			Handler: func(ctx context.Context) {
 				for ctx.Err() == nil {
 					doExecuteTask(ctx)
-					time.Sleep(30 * time.Second)
+					time.Sleep(time.Minute)
 				}
 			},
 			Leaser: leaser,
@@ -54,17 +54,21 @@ func doExecuteTask(runCtx context.Context) {
 	defer closer.Close()
 	// 未来十分钟内要过期的token
 	err := tpfeishumd.IterateAccessToken(ctx, time.Now().Add(10*time.Minute).UnixMilli(), func(at *tpfeishumd.AccessToken) error {
-		token, tenantToken, expireIn, err := feishuapi.GetAppAccessToken(runCtx, static.GetString("feishu.accessToken.url"), at.AppId, at.Secret)
-		if err != nil {
-			// 忽略api错误
-			logger.Logger.Errorf("feishu access token appId: %v failed with err: %v", at.AppId, err)
-			return nil
-		}
-		return updateAppAccessToken(at.Id, token, tenantToken, expireIn)
+		return refreshAccessToken(runCtx, at)
 	})
 	if err != nil {
 		logger.Logger.Error(err)
 	}
+}
+
+func refreshAccessToken(ctx context.Context, at *tpfeishumd.AccessToken) error {
+	token, tenantToken, expireIn, err := feishuapi.GetAppAccessToken(ctx, static.GetString("feishu.accessToken.url"), at.AppId, at.Secret)
+	if err != nil {
+		// 忽略api错误
+		logger.Logger.Errorf("feishu access token appId: %v failed with err: %v", at.AppId, err)
+		return nil
+	}
+	return updateAppAccessToken(at.Id, token, tenantToken, expireIn)
 }
 
 func updateAppAccessToken(id int64, token, tenantToken string, expireIn int) error {

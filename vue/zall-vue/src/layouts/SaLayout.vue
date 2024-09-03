@@ -1,54 +1,59 @@
 <template>
-  <a-layout>
-    <a-layout-header style="font-size:22px;color:white">
-      <span>{{t("superAdmin")}}</span>
-      <span class="switch-text" @click="switchIndex">{{t("backToIndex")}}</span>
-      <AvatarName style="float:right;" />
-      <I18nSelect style="float:right;margin-right: 20px" />
-    </a-layout-header>
+  <a-watermark :content="`${userStore.name}${userStore.account}`" :gap="[200,200]">
     <a-layout>
-      <a-layout-sider collapsible>
-        <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
-          <a-menu-item key="/cfg/list">
-            <SettingOutlined />
-            <span>{{t("saMenu.sysCfg")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/user/list">
-            <UserOutlined />
-            <span>{{t("saMenu.userManage")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/propertySource/list">
-            <BookOutlined />
-            <span>{{t("saMenu.propertyCenterSource")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/serviceSource/list">
-            <BookOutlined />
-            <span>{{t("saMenu.serviceStatusSource")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/discoverySource/list">
-            <BookOutlined />
-            <span>{{t("saMenu.registryCenterSource")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/zalletNode/list">
-            <ClusterOutlined />
-            <span>{{t("saMenu.zallet")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/promScrape/list">
-            <AlertOutlined />
-            <span>{{t("saMenu.promScrape")}}</span>
-          </a-menu-item>
-        </a-menu>
-      </a-layout-sider>
-      <a-layout-content style="height: calc(100vh - 64px); overflow: scroll;background-color:white">
-        <router-view />
-      </a-layout-content>
+      <a-layout-header style="font-size:22px;color:white">
+        <span>{{t("superAdmin")}}</span>
+        <span class="switch-text" @click="switchIndex">{{t("backToIndex")}}</span>
+        <AvatarName style="float:right;" />
+        <I18nSelect style="float:right;margin-right: 20px" />
+      </a-layout-header>
+      <a-layout>
+        <a-layout-sider collapsible>
+          <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
+            <a-menu-item key="/cfg/list">
+              <SettingOutlined />
+              <span>{{t("saMenu.sysCfg")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/user/list">
+              <UserOutlined />
+              <span>{{t("saMenu.userManage")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/propertySource/list">
+              <BookOutlined />
+              <span>{{t("saMenu.propertyCenterSource")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/serviceSource/list">
+              <BookOutlined />
+              <span>{{t("saMenu.serviceStatusSource")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/discoverySource/list">
+              <BookOutlined />
+              <span>{{t("saMenu.registryCenterSource")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/zalletNode/list">
+              <ClusterOutlined />
+              <span>{{t("saMenu.zallet")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/promScrape/list">
+              <AlertOutlined />
+              <span>{{t("saMenu.promScrape")}}</span>
+            </a-menu-item>
+          </a-menu>
+        </a-layout-sider>
+        <a-layout-content
+          style="height: calc(100vh - 64px); overflow: scroll;background-color:white"
+        >
+          <router-view />
+        </a-layout-content>
+      </a-layout>
     </a-layout>
-  </a-layout>
+  </a-watermark>
 </template>
 <script setup>
 import I18nSelect from "../components/i18n/I18nSelect";
 import AvatarName from "../components/user/AvatarName";
 import { useRouter, useRoute } from "vue-router";
+import { useUserStore } from "@/pinia/userStore";
 import { ref, watch } from "vue";
 import {
   UserOutlined,
@@ -58,6 +63,7 @@ import {
   AlertOutlined
 } from "@ant-design/icons-vue";
 import { useI18n } from "vue-i18n";
+const userStore = useUserStore();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();

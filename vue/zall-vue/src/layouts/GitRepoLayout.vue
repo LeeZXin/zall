@@ -1,62 +1,64 @@
 <template>
-  <a-layout>
-    <a-layout-header style="font-size:22px;color:white">
-      <span>{{repo.name}}</span>
-      <span class="switch-repo-text" @click="switchRepo">{{t("gitRepo.switchRepo")}}</span>
-      <AvatarName style="float:right;" />
-      <I18nSelect style="float:right;margin-right: 20px" />
-    </a-layout-header>
+  <a-watermark :content="`${userStore.name}${userStore.account}`" :gap="[200,200]">
     <a-layout>
-      <a-layout-sider v-model:collapsed="collapsed" collapsible>
-        <a-menu theme="dark" mode="inline" @click="selectKey" v-model:selectedKeys="selectedKeys">
-          <a-menu-item key="/index">
-            <FileOutlined />
-            <span>{{t("gitRepoMenu.index")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/pullRequest/list">
-            <PullRequestOutlined />
-            <span>{{t("gitRepoMenu.pullRequest")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/branch/list">
-            <BranchesOutlined />
-            <span>{{t("gitRepoMenu.branch")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/tag/list">
-            <TagOutlined />
-            <span>{{t("gitRepoMenu.tag")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/commit/list">
-            <CloudUploadOutlined />
-            <span>{{t("gitRepoMenu.commitHistory")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/workflow/list">
-            <NodeIndexOutlined />
-            <span>{{t("gitRepoMenu.workflow")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/protectedBranch/list" v-if="repo.perm?.canManageProtectedBranch">
-            <BranchesOutlined />
-            <span>{{t("gitRepoMenu.protectedBranch")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/webhook/list" v-if="repo.perm?.canManageWebhook">
-            <ApiOutlined />
-            <span>{{t("gitRepoMenu.webhook")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/setting" v-if="teamStore.isAdmin">
-            <SettingOutlined />
-            <span>{{t("gitRepoMenu.setting")}}</span>
-          </a-menu-item>
-        </a-menu>
-      </a-layout-sider>
-      <a-layout-content>
-        <div
-          style="height: calc(100vh - 64px); overflow: scroll;background-color:white; width: 100%"
-          ref="container"
-        >
-          <router-view v-if="routerActive" />
-        </div>
-      </a-layout-content>
+      <a-layout-header style="font-size:22px;color:white">
+        <span>{{repo.name}}</span>
+        <span class="switch-repo-text" @click="switchRepo">{{t("gitRepo.switchRepo")}}</span>
+        <AvatarName style="float:right;" />
+        <I18nSelect style="float:right;margin-right: 20px" />
+      </a-layout-header>
+      <a-layout>
+        <a-layout-sider v-model:collapsed="collapsed" collapsible>
+          <a-menu theme="dark" mode="inline" @click="selectKey" v-model:selectedKeys="selectedKeys">
+            <a-menu-item key="/index">
+              <FileOutlined />
+              <span>{{t("gitRepoMenu.index")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/pullRequest/list">
+              <PullRequestOutlined />
+              <span>{{t("gitRepoMenu.pullRequest")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/branch/list">
+              <BranchesOutlined />
+              <span>{{t("gitRepoMenu.branch")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/tag/list">
+              <TagOutlined />
+              <span>{{t("gitRepoMenu.tag")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/commit/list">
+              <CloudUploadOutlined />
+              <span>{{t("gitRepoMenu.commitHistory")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/workflow/list">
+              <NodeIndexOutlined />
+              <span>{{t("gitRepoMenu.workflow")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/protectedBranch/list" v-if="repo.perm?.canManageProtectedBranch">
+              <BranchesOutlined />
+              <span>{{t("gitRepoMenu.protectedBranch")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/webhook/list" v-if="repo.perm?.canManageWebhook">
+              <ApiOutlined />
+              <span>{{t("gitRepoMenu.webhook")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/setting" v-if="teamStore.isAdmin">
+              <SettingOutlined />
+              <span>{{t("gitRepoMenu.setting")}}</span>
+            </a-menu-item>
+          </a-menu>
+        </a-layout-sider>
+        <a-layout-content>
+          <div
+            style="height: calc(100vh - 64px); overflow: scroll;background-color:white; width: 100%"
+            ref="container"
+          >
+            <router-view v-if="routerActive" />
+          </div>
+        </a-layout-content>
+      </a-layout>
     </a-layout>
-  </a-layout>
+  </a-watermark>
 </template>
 <script setup>
 import I18nSelect from "../components/i18n/I18nSelect";
@@ -78,6 +80,8 @@ import { getRepoRequest } from "@/api/git/repoApi";
 import { getTeamRequest } from "@/api/team/teamApi";
 import { useRepoStore } from "@/pinia/repoStore";
 import { useTeamStore } from "@/pinia/teamStore";
+import { useUserStore } from "@/pinia/userStore";
+const userStore = useUserStore();
 const teamStore = useTeamStore();
 const { t } = useI18n();
 // 导航栏是否合上

@@ -21,7 +21,7 @@
                 <InboxOutlined />
               </div>
               <NoDataRender v-if="slots.noData" />
-              <div v-else style="text-align:center;font-size:16px;">
+              <div v-else style="text-align:center;font-size:14px;">
                 <span>{{t("ztable.noDataText")}}</span>
               </div>
             </div>
@@ -111,7 +111,7 @@ const NoDataRender = () => {
 }
 
 .label {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
   margin-bottom: 10px;
 }

@@ -157,6 +157,18 @@ func handleExecute(execute *alertmd.Execute) error {
 							executeHook(cfg, params, startTime.Format(time.DateTime), endTime.Format(time.DateTime))
 						}
 					}
+				case alert.HttpType:
+					err := alertCfg.Http.Execute(httpClient)
+					if err != nil {
+						// 执行hook
+						executeHook(cfg, nil, "", endTime.Format(time.DateTime))
+					}
+				case alert.TcpType:
+					err := alertCfg.Tcp.Execute()
+					if err != nil {
+						// 执行hook
+						executeHook(cfg, nil, "", endTime.Format(time.DateTime))
+					}
 				}
 			}
 		}

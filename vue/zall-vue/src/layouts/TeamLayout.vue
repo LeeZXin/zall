@@ -1,54 +1,73 @@
 <template>
-  <a-layout>
-    <a-layout-header style="font-size:22px;color:white">
-      <span>{{teamStore.name}}</span>
-      <span class="switch-text" @click="switchTeam">{{t("switchTeam")}}</span>
-      <AvatarName style="float:right;" />
-      <I18nSelect style="float:right;margin-right: 20px" />
-    </a-layout-header>
+  <a-watermark :content="`${userStore.name}${userStore.account}`" :gap="[200,200]">
     <a-layout>
-      <a-layout-sider v-model:collapsed="collapsed" collapsible>
-        <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
-          <a-menu-item key="/gitRepo/list">
-            <BranchesOutlined />
-            <span>{{t("teamMenu.gitRepo")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/app/list">
-            <AppstoreOutlined />
-            <span>{{t("teamMenu.app")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/timer/list" v-if="teamStore.perm?.canManageTimer">
-            <ClockCircleOutlined />
-            <span>{{t("teamMenu.timer")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/role/list" v-if="teamStore.isAdmin">
-            <UserOutlined />
-            <span>{{t("teamMenu.roleAndMembers")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/setting" v-if="teamStore.isAdmin">
-            <SettingOutlined />
-            <span>{{t("teamMenu.setting")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/notifyTpl/list" v-if="teamStore.perm?.canManageNotifyTpl">
-            <NotificationOutlined />
-            <span>{{t("teamMenu.notifyTpl")}}</span>
-          </a-menu-item>
-          <a-menu-item key="/teamHook/list" v-if="teamStore.perm?.canManageTeamHook">
-            <ApiOutlined />
-            <span>{{t("teamMenu.teamHook")}}</span>
-          </a-menu-item>
-        </a-menu>    
-      </a-layout-sider>
-      <a-layout-content style="height: calc(100vh - 64px); overflow: scroll;background-color:white">
-        <router-view v-if="teamInfoLoaded" />
-      </a-layout-content>
+      <a-layout-header style="font-size:22px;color:white">
+        <span>{{teamStore.name}}</span>
+        <span class="switch-text" @click="switchTeam">{{t("switchTeam")}}</span>
+        <AvatarName style="float:right;" />
+        <I18nSelect style="float:right;margin-right: 20px" />
+      </a-layout-header>
+      <a-layout>
+        <a-layout-sider v-model:collapsed="collapsed" collapsible>
+          <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" @click="onselect">
+            <a-menu-item key="/gitRepo/list">
+              <BranchesOutlined />
+              <span>{{t("teamMenu.gitRepo")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/app/list">
+              <AppstoreOutlined />
+              <span>{{t("teamMenu.app")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/timer/list" v-if="teamStore.perm?.canManageTimer">
+              <ClockCircleOutlined />
+              <span>{{t("teamMenu.timer")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/role/list" v-if="teamStore.isAdmin">
+              <UserOutlined />
+              <span>{{t("teamMenu.roleAndMembers")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/setting" v-if="teamStore.isAdmin">
+              <SettingOutlined />
+              <span>{{t("teamMenu.setting")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/notifyTpl/list" v-if="teamStore.perm?.canManageNotifyTpl">
+              <NotificationOutlined />
+              <span>{{t("teamMenu.notifyTpl")}}</span>
+            </a-menu-item>
+            <a-menu-item key="/teamHook/list" v-if="teamStore.perm?.canManageTeamHook">
+              <ApiOutlined />
+              <span>{{t("teamMenu.teamHook")}}</span>
+            </a-menu-item>
+            <a-menu-item
+              key="/weworkAccessToken/list"
+              v-if="teamStore.perm?.canManageWeworkAccessToken"
+            >
+              <KeyOutlined />
+              <span>{{t("teamMenu.weworkAccessToken")}}</span>
+            </a-menu-item>
+            <a-menu-item
+              key="/feishuAccessToken/list"
+              v-if="teamStore.perm?.canManageFeishuAccessToken"
+            >
+              <KeyOutlined />
+              <span>{{t("teamMenu.feishuAccessToken")}}</span>
+            </a-menu-item>
+          </a-menu>
+        </a-layout-sider>
+        <a-layout-content
+          style="height: calc(100vh - 64px); overflow: scroll;background-color:white"
+        >
+          <router-view v-if="teamInfoLoaded" />
+        </a-layout-content>
+      </a-layout>
     </a-layout>
-  </a-layout>
+  </a-watermark>
 </template>
 <script setup>
-import I18nSelect from "../components/i18n/I18nSelect";
-import AvatarName from "../components/user/AvatarName";
-import { useTeamStore } from "../pinia/teamStore";
+import I18nSelect from "@/components/i18n/I18nSelect";
+import AvatarName from "@/components/user/AvatarName";
+import { useTeamStore } from "@/pinia/teamStore";
+import { useUserStore } from "@/pinia/userStore";
 import { useI18n } from "vue-i18n";
 import { ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
@@ -59,9 +78,11 @@ import {
   SettingOutlined,
   UserOutlined,
   NotificationOutlined,
-  ApiOutlined
+  ApiOutlined,
+  KeyOutlined
 } from "@ant-design/icons-vue";
 import { getTeamRequest } from "@/api/team/teamApi";
+const userStore = useUserStore();
 const teamStore = useTeamStore();
 const teamInfoLoaded = ref(false);
 const router = useRouter();
@@ -97,7 +118,9 @@ const pagesMap = {
   "/app": "/app/list",
   "/setting": "/setting",
   "/notifyTpl": "/notifyTpl/list",
-  "/teamHook": "/teamHook/list"
+  "/teamHook": "/teamHook/list",
+  "/weworkAccessToken": "/weworkAccessToken/list",
+  "/feishuAccessToken": "/feishuAccessToken/list"
 };
 changeSelectedKey(route.path);
 getTeamRequest(route.params.teamId).then(res => {

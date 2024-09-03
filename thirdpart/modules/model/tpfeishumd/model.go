@@ -3,12 +3,12 @@ package tpfeishumd
 import "time"
 
 const (
-	AccessTokenTableName  = "zall_feishu_access_token"
-	CollaboratorTableName = "zall_feishu_access_token_collaborator"
+	AccessTokenTableName = "zall_feishu_access_token"
 )
 
 type AccessToken struct {
 	Id          int64     `json:"id" xorm:"pk autoincr"`
+	TeamId      int64     `json:"teamId"`
 	Name        string    `json:"name"`
 	AppId       string    `json:"appId"`
 	Secret      string    `json:"secret"`
@@ -16,6 +16,7 @@ type AccessToken struct {
 	TenantToken string    `json:"tenantToken"`
 	ExpireTime  int64     `json:"expireTime"`
 	ApiKey      string    `json:"apiKey"`
+	Creator     string    `json:"creator"`
 	Created     time.Time `json:"created" xorm:"created"`
 	Updated     time.Time `json:"updated" xorm:"updated"`
 }
@@ -26,17 +27,4 @@ func (*AccessToken) TableName() string {
 
 func (t *AccessToken) IsNotExpired() bool {
 	return t.ExpireTime >= time.Now().UnixMilli()
-}
-
-type Collaborator struct {
-	Id        int64     `json:"id" xorm:"pk autoincr"`
-	TokenId   int64     `json:"tokenId"`
-	Account   string    `json:"account"`
-	IsCreator bool      `json:"isCreator"`
-	Created   time.Time `json:"created" xorm:"created"`
-	Updated   time.Time `json:"updated" xorm:"updated"`
-}
-
-func (*Collaborator) TableName() string {
-	return CollaboratorTableName
 }

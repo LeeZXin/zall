@@ -33,6 +33,8 @@ import (
 	"github.com/LeeZXin/zall/promagent/modules/api/promapi"
 	"github.com/LeeZXin/zall/property/modules/api/propertyapi"
 	"github.com/LeeZXin/zall/teamhook/modules/api/teamhookapi"
+	"github.com/LeeZXin/zall/thirdpart/modules/api/tpfeishuapi"
+	"github.com/LeeZXin/zall/thirdpart/modules/api/tpweworkapi"
 	"github.com/LeeZXin/zall/thirdpart/modules/service/tpfeishusrv"
 	"github.com/LeeZXin/zall/thirdpart/modules/service/tpweworksrv"
 	"github.com/LeeZXin/zall/timer/modules/api/timerapi"
@@ -162,6 +164,7 @@ func runZall(*cli.Context) error {
 	}
 	// for wework access token
 	{
+		tpweworkapi.InitApi()
 		if static.GetBool("wework.accessToken.task.enabled") {
 			logger.Logger.Info("wework access token task enabled")
 			tpweworksrv.InitGetAccessTokenTask()
@@ -169,6 +172,7 @@ func runZall(*cli.Context) error {
 	}
 	// for feishu access token
 	{
+		tpfeishuapi.InitApi()
 		if static.GetBool("feishu.accessToken.task.enabled") {
 			logger.Logger.Info("feishu access token task enabled")
 			tpfeishusrv.InitGetAccessTokenTask()

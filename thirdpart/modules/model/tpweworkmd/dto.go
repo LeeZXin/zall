@@ -1,11 +1,14 @@
 package tpweworkmd
 
 type InsertAccessTokenReqDTO struct {
+	Name       string
+	TeamId     int64
 	CorpId     string
 	Secret     string
 	Token      string
 	ExpireTime int64
 	ApiKey     string
+	Creator    string
 }
 
 type UpdateAccessTokenTokenReqDTO struct {
@@ -14,14 +17,16 @@ type UpdateAccessTokenTokenReqDTO struct {
 	ExpireTime int64
 }
 
-type InsertCollaboratorReqDTO struct {
-	TokenId   int64
-	Account   string
-	IsCreator bool
-}
-
-type ListCollaboratorReqDTO struct {
+type ListAccessTokenReqDTO struct {
 	PageNum  int
 	PageSize int
-	Account  string
+	Key      string
+	TeamId   int64
+}
+
+type UpdateAccessTokenReqDTO struct {
+	Id     int64
+	Name   string
+	CorpId string
+	Secret string
 }

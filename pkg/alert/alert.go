@@ -14,6 +14,7 @@ import (
 	"github.com/pingcap/errors"
 	promapi "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -27,18 +28,9 @@ const (
 	MysqlType SourceType = iota + 1
 	PromType
 	LokiType
+	HttpType
+	TcpType
 )
-
-func (t SourceType) Readable() string {
-	switch t {
-	case MysqlType:
-		return "mysql"
-	case PromType:
-		return "prom"
-	default:
-		return "unknown"
-	}
-}
 
 type MysqlConfig struct {
 	Host      string `json:"host"`
@@ -177,11 +169,57 @@ func (c *LokiConfig) Execute(httpClient *http.Client, endTime time.Time) (time.T
 	return startTime, response.SumAllValue(), nil
 }
 
+type HttpConfig struct {
+	GetUrl string `json:"getUrl"`
+}
+
+func (c *HttpConfig) IsValid() bool {
+	parsedUrl, err := url.Parse(c.GetUrl)
+	if err != nil || !strings.HasPrefix(parsedUrl.Scheme, "http") {
+		return false
+	}
+	return true
+}
+
+func (c *HttpConfig) Execute(httpClient *http.Client) error {
+	resp, err := httpClient.Get(c.GetUrl)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("status code: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+type TcpConfig struct {
+	Host string `json:"host"`
+}
+
+func (c *TcpConfig) IsValid() bool {
+	if !util.GenIpPortPattern().MatchString(c.Host) {
+		return false
+	}
+	return true
+}
+
+func (c *TcpConfig) Execute() error {
+	conn, err := net.DialTimeout("tcp", c.Host, time.Second)
+	if err != nil {
+		return err
+	}
+	conn.Close()
+	return nil
+}
+
 type Alert struct {
 	SourceType SourceType   `json:"sourceType"`
 	Mysql      *MysqlConfig `json:"mysql,omitempty"`
 	Prom       *PromConfig  `json:"prom,omitempty"`
 	Loki       *LokiConfig  `json:"loki,omitempty"`
+	Tcp        *TcpConfig   `json:"tcp,omitempty"`
+	Http       *HttpConfig  `json:"http"`
 	commonhook.TypeAndCfg
 }
 
@@ -196,6 +234,10 @@ func (a *Alert) IsValid() bool {
 		return a.Prom != nil && a.Prom.IsValid()
 	case LokiType:
 		return a.Loki != nil && a.Loki.IsValid()
+	case TcpType:
+		return a.Tcp != nil && a.Tcp.IsValid()
+	case HttpType:
+		return a.Http != nil && a.Http.IsValid()
 	default:
 		return false
 	}

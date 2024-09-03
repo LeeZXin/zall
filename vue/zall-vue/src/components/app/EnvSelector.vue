@@ -8,8 +8,8 @@
           </a-menu-item>
         </a-menu>
       </template>
-      <a-button :icon="h(EnvironmentOutlined)">
-        <span>{{selectedEnv}}</span>
+      <a-button :icon="h(SwapOutlined)">
+        <span>切换环境</span>
       </a-button>
     </a-dropdown>
   </div>
@@ -17,7 +17,7 @@
 <script setup>
 import { ref, defineProps, watch, defineEmits } from "vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
-import { EnvironmentOutlined } from "@ant-design/icons-vue";
+import { SwapOutlined } from "@ant-design/icons-vue";
 import { h } from "vue";
 /*
   环境选择下拉框 

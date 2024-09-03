@@ -288,6 +288,30 @@ const router = createRouter({
                 path: "/team/:teamId(\\d+)/teamHook/:hookId(\\d+)/update",
                 component: () =>
                     import ("../pages/team/team/TeamHookHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/weworkAccessToken/list",
+                component: () =>
+                    import ("../pages/team/team/WeworkAccessTokenListPage")
+            }, {
+                path: "/team/:teamId(\\d+)/weworkAccessToken/create",
+                component: () =>
+                    import ("../pages/team/team/WeworkAccessTokenHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/weworkAccessToken/:tokenId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/team/WeworkAccessTokenHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/feishuAccessToken/list",
+                component: () =>
+                    import ("../pages/team/team/FeishuAccessTokenListPage")
+            }, {
+                path: "/team/:teamId(\\d+)/feishuAccessToken/create",
+                component: () =>
+                    import ("../pages/team/team/FeishuAccessTokenHandlePage")
+            }, {
+                path: "/team/:teamId(\\d+)/feishuAccessToken/:tokenId(\\d+)/update",
+                component: () =>
+                    import ("../pages/team/team/FeishuAccessTokenHandlePage")
             }]
         },
         {

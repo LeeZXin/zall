@@ -337,6 +337,16 @@ const teamPermList = [
     checkbox: "管理Prometheus抓取任务",
     key: "canManagePromScrape",
     desc: "拥有该权限,则可以对prometheus抓取任务新增、查看、编辑、删除"
+  },
+  {
+    checkbox: "管理企微AccessToken",
+    key: "canManageWeworkAccessToken",
+    desc: "拥有该权限,则可以对企微AccessToken获取任务新增、查看、编辑、删除"
+  },
+  {
+    checkbox: "管理飞书AccessToken",
+    key: "canManageFeishuAccessToken",
+    desc: "拥有该权限,则可以对飞书AccessToken获取任务新增、查看、编辑、删除"
   }
 ];
 const repoPermKeys = [

@@ -1,12 +1,15 @@
 package tpfeishumd
 
 type InsertAccessTokenReqDTO struct {
+	TeamId      int64
+	Name        string
 	AppId       string
 	Secret      string
 	Token       string
 	ExpireTime  int64
 	ApiKey      string
 	TenantToken string
+	Creator     string
 }
 
 type UpdateAccessTokenTokenReqDTO struct {
@@ -16,14 +19,16 @@ type UpdateAccessTokenTokenReqDTO struct {
 	ExpireTime  int64
 }
 
-type InsertCollaboratorReqDTO struct {
-	TokenId   int64
-	Account   string
-	IsCreator bool
+type UpdateAccessTokenReqDTO struct {
+	Id     int64
+	Name   string
+	AppId  string
+	Secret string
 }
 
-type ListCollaboratorReqDTO struct {
+type ListAccessTokenReqDTO struct {
 	PageNum  int
 	PageSize int
-	Account  string
+	Key      string
+	TeamId   int64
 }

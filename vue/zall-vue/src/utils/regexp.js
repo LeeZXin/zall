@@ -83,6 +83,15 @@ const alertConfigHookUrlRegexp = /^https?:\/\/.+$/;
 const alertConfigSecretRegexp = /^.{1,1024}$/;
 const alertMysqlHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
 const alertHttpHostRegexp = /^https?:\/\/.+$/;
+const alertIpPortHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
+// wework access token
+const weworkAccessTokenNameRegexp = /^.{1,32}$/;
+const weworkAccessTokenCorpIdRegexp = /^\S{1,32}$/
+const weworkAccessTokenSecretRegexp = /^\S{1,64}$/
+    // feishu access token
+const feishuAccessTokenNameRegexp = /^.{1,32}$/;
+const feishuAccessTokenAppIdRegexp = /^\S{1,32}$/
+const feishuAccessTokenSecretRegexp = /^\S{1,64}$/
 export {
     accountRegexp,
     passwordRegexp,
@@ -142,5 +151,12 @@ export {
     alertConfigHookUrlRegexp,
     alertConfigSecretRegexp,
     alertMysqlHostRegexp,
-    alertHttpHostRegexp
+    alertHttpHostRegexp,
+    alertIpPortHostRegexp,
+    weworkAccessTokenNameRegexp,
+    weworkAccessTokenCorpIdRegexp,
+    weworkAccessTokenSecretRegexp,
+    feishuAccessTokenNameRegexp,
+    feishuAccessTokenAppIdRegexp,
+    feishuAccessTokenSecretRegexp,
 }

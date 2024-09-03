@@ -103,9 +103,11 @@ export default {
         dbAudit: "Database audit",
         promScrape: "Prometheus scrape",
         roleAndMembers: "Role&Member",
-        setting: "Setting",
+        setting: "Team setting",
         notifyTpl: "Notification",
-        teamHook: "Team hook"
+        teamHook: "Team hook",
+        weworkAccessToken: "Wework token",
+        feishuAccessToken: "Feishu token"
     },
     roleListPage: {
         roleList: "Role List",

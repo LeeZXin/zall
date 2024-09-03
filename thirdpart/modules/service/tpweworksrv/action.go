@@ -27,7 +27,7 @@ func InitGetAccessTokenTask() {
 			Handler: func(ctx context.Context) {
 				for ctx.Err() == nil {
 					doExecuteTask(ctx)
-					time.Sleep(30 * time.Second)
+					time.Sleep(time.Minute)
 				}
 			},
 			Leaser: leaser,
@@ -54,17 +54,21 @@ func doExecuteTask(runCtx context.Context) {
 	defer closer.Close()
 	// 未来十分钟内要过期的token
 	err := tpweworkmd.IterateAccessToken(ctx, time.Now().Add(10*time.Minute).UnixMilli(), func(at *tpweworkmd.AccessToken) error {
-		token, expireIn, err := weworkapi.GetAccessToken(runCtx, static.GetString("wework.accessToken.url"), at.CorpId, at.Secret)
-		if err != nil {
-			// 忽略api错误
-			logger.Logger.Errorf("wework access token corpId: %v failed with err: %v", at.CorpId, err)
-			return nil
-		}
-		return updateAccessToken(at.Id, token, expireIn)
+		return refreshAccessToken(runCtx, at)
 	})
 	if err != nil {
 		logger.Logger.Error(err)
 	}
+}
+
+func refreshAccessToken(ctx context.Context, at *tpweworkmd.AccessToken) error {
+	token, expireIn, err := weworkapi.GetAccessToken(ctx, static.GetString("wework.accessToken.url"), at.CorpId, at.Secret)
+	if err != nil {
+		// 忽略api错误
+		logger.Logger.Errorf("wework access token corpId: %v failed with err: %v", at.CorpId, err)
+		return nil
+	}
+	return updateAccessToken(at.Id, token, expireIn)
 }
 
 func updateAccessToken(id int64, token string, expireIn int) error {

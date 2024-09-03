@@ -95,6 +95,8 @@
             <a-radio :value="1">Mysql</a-radio>
             <a-radio :value="2">Prometheus</a-radio>
             <a-radio :value="3">Loki</a-radio>
+            <a-radio :value="4">Http</a-radio>
+            <a-radio :value="5">Tcp</a-radio>
           </a-radio-group>
         </div>
       </div>
@@ -199,6 +201,30 @@
           </ul>
         </div>
       </div>
+      <div class="section" v-if="formState.sourceType === 4">
+        <div class="section-title">Http配置</div>
+        <div class="section-body">
+          <ul class="input-ul">
+            <li>
+              <div class="input-name">GetUrl</div>
+              <a-input v-model:value="formState.httpGetUrl" />
+              <div class="input-desc">http Get url http开头</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="section" v-if="formState.sourceType === 5">
+        <div class="section-title">Tcp配置</div>
+        <div class="section-body">
+          <ul class="input-ul">
+            <li>
+              <div class="input-name">host</div>
+              <a-input v-model:value="formState.tcpHost" />
+              <div class="input-desc">主机 ip:port格式</div>
+            </li>
+          </ul>
+        </div>
+      </div>
       <div class="save-btn-line">
         <a-button type="primary" @click="saveOrUpdateTimerTask">立即保存</a-button>
       </div>
@@ -216,7 +242,8 @@ import {
   alertConfigHookUrlRegexp,
   alertConfigSecretRegexp,
   alertMysqlHostRegexp,
-  alertHttpHostRegexp
+  alertHttpHostRegexp,
+  alertIpPortHostRegexp
 } from "@/utils/regexp";
 import { useAlertConfigStore } from "@/pinia/alertConfigStore";
 import {
@@ -249,7 +276,9 @@ const formState = reactive({
   hookUrl: "",
   secret: "",
   tplId: null,
-  hookType: 1
+  hookType: 1,
+  httpGetUrl: "",
+  tcpHost: ""
 });
 const envList = ref([]);
 const route = useRoute();
@@ -393,6 +422,22 @@ const saveOrUpdateTimerTask = () => {
       step: formState.lokiStep,
       condition: formState.lokiCondition
     };
+  } else if (formState.sourceType === 4) {
+    if (!alertHttpHostRegexp.test(formState.httpGetUrl)) {
+      message.warn("http get url格式錯誤");
+      return;
+    }
+    alert.http = {
+      getUrl: formState.httpGetUrl
+    };
+  } else if (formState.sourceType === 5) {
+    if (!alertIpPortHostRegexp.test(formState.tcpHost)) {
+      message.warn("http get url格式錯誤");
+      return;
+    }
+    alert.tcp = {
+      host: formState.tcpHost
+    };
   } else {
     return;
   }
@@ -440,8 +485,10 @@ const filterTplListOption = (input, option) => {
 // 限制intervalsec输入
 const limitIntervalSecInput = () => {
   setTimeout(() => {
-    formState.intervalSec = parseInt(formState.intervalSec / 10) * 10;
-  }, 1000);
+    if (formState.intervalSec > 9 && formState.intervalSec < 3601) {
+      formState.intervalSec = parseInt(formState.intervalSec / 10) * 10;
+    }
+  }, 2000);
 };
 if (mode === "create") {
   getEnvCfg();
@@ -473,6 +520,10 @@ if (mode === "create") {
       formState.lokiLastDuration = alertConfigStore.content?.loki?.lastDuration;
       formState.lokiStep = alertConfigStore.content?.loki?.step;
       formState.lokiCondition = alertConfigStore.content?.loki?.condition;
+    } else if (formState.sourceType === 4) {
+      formState.httpGetUrl = alertConfigStore.content?.http?.getUrl;
+    } else if (formState.sourceType === 5) {
+      formState.tcpHost = alertConfigStore.content?.tcp?.host;
     }
     formState.hookType = alertConfigStore.content?.hookType;
     if (formState.hookType === 1) {

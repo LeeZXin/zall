@@ -13,5 +13,5 @@
 <script setup>
 import I18nSelect from "../components/i18n/I18nSelect";
 import { useI18n } from "vue-i18n";
-const {t} = useI18n();
+const { t } = useI18n();
 </script>

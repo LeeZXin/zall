@@ -35,14 +35,6 @@
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
-                <li @click="hideApiKey(dataItem)" v-if="dataItem['showApiKey']">
-                  <EyeInvisibleOutlined />
-                  <span style="margin-left:4px">隐藏api密钥</span>
-                </li>
-                <li @click="showApiKey(dataItem)" v-else>
-                  <EyeOutlined />
-                  <span style="margin-left:4px">查看api密钥</span>
-                </li>
                 <li @click="changeApiKey(dataItem)">
                   <KeyOutlined />
                   <span style="margin-left:4px">变更api密钥</span>
@@ -81,9 +73,7 @@ import {
   EllipsisOutlined,
   ExclamationCircleOutlined,
   KeyOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined
+  DeleteOutlined
 } from "@ant-design/icons-vue";
 import {
   deleteNotifyTplRequest,
@@ -95,8 +85,6 @@ import { useRouter, useRoute } from "vue-router";
 import { useNotifyTplStore } from "@/pinia/notifyTplStore";
 import { Modal, message } from "ant-design-vue";
 const notifyTplStore = useNotifyTplStore();
-// 密钥展示****
-const sensitiveStr = "********************************";
 // 分页数据
 const dataPage = reactive({
   current: 1,
@@ -123,8 +111,8 @@ const columns = [
   },
   {
     title: "Api密钥",
-    dataIndex: "sensitiveApiKey",
-    key: "sensitiveApiKey"
+    dataIndex: "apiKey",
+    key: "apiKey"
   },
   {
     title: "操作",
@@ -160,9 +148,6 @@ const listTpl = () => {
         name: item.name,
         notifyType: item.notifyCfg?.notifyType,
         apiKey: item.apiKey,
-        sensitiveApiKey: sensitiveStr,
-        // 是否展示api密钥
-        showApiKey: false,
         // 原始数据
         origin: item
       };
@@ -182,16 +167,6 @@ const changeApiKey = item => {
       });
     }
   });
-};
-// 查看api密钥
-const showApiKey = item => {
-  item.showApiKey = true;
-  item.sensitiveApiKey = item.apiKey;
-};
-// 隐藏密钥
-const hideApiKey = item => {
-  item.showApiKey = false;
-  item.sensitiveApiKey = sensitiveStr;
 };
 // 删除模板
 const deleteTpl = item => {
