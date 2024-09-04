@@ -84,13 +84,16 @@ import {
 import { getTeamRequest } from "@/api/team/teamApi";
 const userStore = useUserStore();
 const teamStore = useTeamStore();
+// 获取团队信息完才开始加载页面
 const teamInfoLoaded = ref(false);
 const router = useRouter();
 const { t } = useI18n();
 const collapsed = ref(false);
 const route = useRoute();
 const selectedKeys = ref([]);
+// 路由前缀
 const routeKey = `/team/${route.params.teamId}`;
+// 切换团队
 const switchTeam = () => {
   router.push("/index");
 };
@@ -122,18 +125,22 @@ const pagesMap = {
   "/weworkAccessToken": "/weworkAccessToken/list",
   "/feishuAccessToken": "/feishuAccessToken/list"
 };
-changeSelectedKey(route.path);
-getTeamRequest(route.params.teamId).then(res => {
-  teamStore.teamId = res.data.teamId;
-  teamStore.name = res.data.name;
-  teamStore.isAdmin = res.data.isAdmin;
-  teamStore.perm = res.data.perm;
-  teamInfoLoaded.value = true;
-});
+// 获取团队信息
+const getTeamInfo = () => {
+  getTeamRequest(route.params.teamId).then(res => {
+    teamStore.teamId = res.data.teamId;
+    teamStore.name = res.data.name;
+    teamStore.isAdmin = res.data.isAdmin;
+    teamStore.perm = res.data.perm;
+    teamInfoLoaded.value = true;
+  });
+};
 watch(
   () => router.currentRoute.value.path,
   newPath => changeSelectedKey(newPath)
 );
+changeSelectedKey(route.path);
+getTeamInfo();
 </script>
 <style scoped>
 </style>

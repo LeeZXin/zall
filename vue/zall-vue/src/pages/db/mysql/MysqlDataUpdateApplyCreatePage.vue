@@ -1,11 +1,11 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span>申请数据库修改单</span>
+      <div class="header">
+        <span>{{t("mysqlDataUpdateApply.title")}}</span>
       </div>
       <div class="section">
-        <div class="section-title">选择数据库</div>
+        <div class="section-title">{{t("mysqlDataUpdateApply.selectHost")}}</div>
         <div class="section-body">
           <a-select
             style="width: 100%"
@@ -14,31 +14,27 @@
             show-search
             :filter-option="filterDbListOption"
           />
-          <div class="input-desc">选择一个数据库</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">申请库</div>
+        <div class="section-title">{{t("mysqlDataUpdateApply.fillAccessBaseName")}}</div>
         <div class="section-body">
-          <a-input v-model:value="formState.accessBase" placeholder="请填写" />
-          <div class="input-desc">填写申请库</div>
+          <a-input v-model:value="formState.accessBase" />
         </div>
       </div>
       <div class="section">
-        <div class="section-title">申请原因</div>
+        <div class="section-title">{{t("mysqlDataUpdateApply.fillApplyReason")}}</div>
         <div class="section-body">
           <a-textarea
             style="width:100%"
             v-model:value="formState.applyReason"
             :auto-size="{ minRows: 3, maxRows: 3 }"
             :maxlength="255"
-            placeholder="请填写"
           />
-          <div class="input-desc">填写申请原因</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">执行sql</div>
+        <div class="section-title">{{t("mysqlDataUpdateApply.fillSql")}}</div>
         <div class="section-body">
           <Codemirror
             v-model="formState.cmd"
@@ -48,21 +44,24 @@
         </div>
       </div>
       <div class="form-item">
-        <a-checkbox v-model:checked="formState.executeWhenApply">
-          <div>是否立即执行</div>
+        <a-checkbox v-model:checked="formState.executeImmediatelyAfterApproval">
+          <div>{{t("mysqlDataUpdateApply.executeImmediatelyAfterApproval")}}</div>
         </a-checkbox>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="applyDataUpdate">立即申请</a-button>
+        <a-button type="primary" @click="applyDataUpdate">{{t("mysqlDataUpdateApply.apply")}}</a-button>
       </div>
     </div>
   </div>
 </template>
 <script setup>
+/*
+  数据库修改单申请页面
+*/
 import { reactive, ref } from "vue";
 import {
   dbAccessBaseRegexp,
-  dbDatUpdateCmdRegexp,
+  dbDataUpdateCmdRegexp,
   dbApplyReasonRegexp
 } from "@/utils/regexp";
 import { message } from "ant-design-vue";
@@ -73,28 +72,32 @@ import {
 import { useRouter } from "vue-router";
 import { Codemirror } from "vue-codemirror";
 import { sql } from "@codemirror/lang-sql";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const extensions = [sql()];
 const router = useRouter();
+// 数据库列表
 const dbList = ref([]);
+// 表单数据
 const formState = reactive({
   dbId: 0,
   accessBase: "",
   cmd: "",
   applyReason: "",
-  executeWhenApply: false
+  executeImmediatelyAfterApproval: false
 });
-
+// 提交申请
 const applyDataUpdate = () => {
   if (!dbAccessBaseRegexp.test(formState.accessBase)) {
-    message.warn("申请库格式错误");
+    message.warn(t("mysqlDataUpdateApply.accessBaseFormatErr"));
     return;
   }
-  if (!dbDatUpdateCmdRegexp.test(formState.accessTables)) {
-    message.warn("申请表格式错误");
+  if (!dbDataUpdateCmdRegexp.test(formState.cmd)) {
+    message.warn(t("mysqlDataUpdateApply.sqlFormatErr"));
     return;
   }
   if (!dbApplyReasonRegexp.test(formState.applyReason)) {
-    message.warn("申请原因格式错误");
+    message.warn(t("mysqlDataUpdateApply.applyReasonFormatErr"));
     return;
   }
   applyDataUpdateRequest({
@@ -102,10 +105,10 @@ const applyDataUpdate = () => {
     accessBase: formState.accessBase,
     cmd: formState.cmd,
     applyReason: formState.applyReason,
-    executeWhenApply: formState.executeWhenApply
+    executeImmediatelyAfterApproval: formState.executeImmediatelyAfterApproval
   }).then(res => {
     if (res.data.allPass) {
-      message.success("申请成功");
+      message.success(t("operationSuccess"));
       router.push(`/db/mysqlDataUpdateApply/list`);
       return;
     }
@@ -118,6 +121,7 @@ const applyDataUpdate = () => {
     }
   });
 };
+// 获取所有数据库列表
 const getAllDb = () => {
   getAllMysqlDbRequest().then(res => {
     dbList.value = res.data.map(item => {
@@ -131,6 +135,7 @@ const getAllDb = () => {
     }
   });
 };
+// 下拉框过滤
 const filterDbListOption = (input, option) => {
   return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };

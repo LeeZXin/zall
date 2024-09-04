@@ -57,7 +57,7 @@ const dbUsernameRegexp = /^.+$/;
 const dbAccessBaseRegexp = /^.+$/;
 const dbAccessTablesRegexp = /^.+$/;
 const dbApplyReasonRegexp = /^.{1,255}$/;
-const dbDatUpdateCmdRegexp = /^.{1,10240}$/;
+const dbDataUpdateCmdRegexp = /^.{1,10240}$/;
 // git repo server
 const gitRepoServerHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
 // env
@@ -134,7 +134,7 @@ export {
     dbAccessBaseRegexp,
     dbAccessTablesRegexp,
     dbApplyReasonRegexp,
-    dbDatUpdateCmdRegexp,
+    dbDataUpdateCmdRegexp,
     gitRepoServerHostRegexp,
     envRegexp,
     sshKeyNameRegexp,

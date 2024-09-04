@@ -81,13 +81,13 @@ type ExistReadPermReqDTO struct {
 }
 
 type InsertDataUpdateApplyReqDTO struct {
-	Account          string
-	DbId             int64
-	AccessBase       string
-	UpdateCmd        string
-	ApplyStatus      DataUpdateApplyStatus
-	ApplyReason      string
-	ExecuteWhenApply bool
+	Account                         string
+	DbId                            int64
+	AccessBase                      string
+	UpdateCmd                       string
+	ApplyStatus                     DataUpdateApplyStatus
+	ApplyReason                     string
+	ExecuteImmediatelyAfterApproval bool
 }
 
 type PageDbReqDTO struct {

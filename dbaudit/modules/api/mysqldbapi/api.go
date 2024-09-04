@@ -362,22 +362,22 @@ func listDataUpdateApplyByDba(c *gin.Context) {
 func dataUpdateApplyDto2Vo(orders []mysqldbsrv.DataUpdateApplyDTO) []DataUpdateApplyVO {
 	data := listutil.MapNe(orders, func(t mysqldbsrv.DataUpdateApplyDTO) DataUpdateApplyVO {
 		return DataUpdateApplyVO{
-			Id:               t.Id,
-			Account:          t.Account,
-			DbId:             t.DbId,
-			DbName:           t.DbName,
-			AccessBase:       t.AccessBase,
-			UpdateCmd:        t.UpdateCmd,
-			ApplyStatus:      t.ApplyStatus,
-			Executor:         t.Executor,
-			Auditor:          t.Auditor,
-			ApplyReason:      t.ApplyReason,
-			DisagreeReason:   t.DisagreeReason,
-			ExecuteLog:       t.ExecuteLog,
-			ExecuteWhenApply: t.ExecuteWhenApply,
-			Created:          t.Created.Format(time.DateTime),
-			Updated:          t.Updated.Format(time.DateTime),
-			IsUnExecuted:     t.ApplyStatus.IsUnExecuted(),
+			Id:                              t.Id,
+			Account:                         t.Account,
+			DbId:                            t.DbId,
+			DbName:                          t.DbName,
+			AccessBase:                      t.AccessBase,
+			UpdateCmd:                       t.UpdateCmd,
+			ApplyStatus:                     t.ApplyStatus,
+			Executor:                        t.Executor,
+			Auditor:                         t.Auditor,
+			ApplyReason:                     t.ApplyReason,
+			DisagreeReason:                  t.DisagreeReason,
+			ExecuteLog:                      t.ExecuteLog,
+			ExecuteImmediatelyAfterApproval: t.ExecuteImmediatelyAfterApproval,
+			Created:                         t.Created.Format(time.DateTime),
+			Updated:                         t.Updated.Format(time.DateTime),
+			IsUnExecuted:                    t.ApplyStatus.IsUnExecuted(),
 		}
 	})
 	return data
@@ -624,12 +624,12 @@ func applyDataUpdate(c *gin.Context) {
 	var req ApplyDataUpdateReqVO
 	if util.ShouldBindJSON(&req, c) {
 		results, allPass, err := mysqldbsrv.ApplyDataUpdate(c, mysqldbsrv.ApplyDataUpdateReqDTO{
-			DbId:             req.DbId,
-			AccessBase:       req.AccessBase,
-			Cmd:              req.Cmd,
-			ApplyReason:      req.ApplyReason,
-			ExecuteWhenApply: req.ExecuteWhenApply,
-			Operator:         apisession.MustGetLoginUser(c),
+			DbId:                            req.DbId,
+			AccessBase:                      req.AccessBase,
+			Cmd:                             req.Cmd,
+			ApplyReason:                     req.ApplyReason,
+			ExecuteImmediatelyAfterApproval: req.ExecuteImmediatelyAfterApproval,
+			Operator:                        apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)

@@ -145,20 +145,20 @@ func (s DataUpdateApplyStatus) IsValid() bool {
 }
 
 type DataUpdateApply struct {
-	Id               int64                 `json:"id" xorm:"pk autoincr"`
-	Account          string                `json:"account"`
-	DbId             int64                 `json:"dbId"`
-	AccessBase       string                `json:"accessBase"`
-	UpdateCmd        string                `json:"updateCmd"`
-	ApplyStatus      DataUpdateApplyStatus `json:"applyStatus"`
-	Auditor          string                `json:"auditor"`
-	Executor         string                `json:"executor"`
-	ApplyReason      string                `json:"applyReason"`
-	DisagreeReason   string                `json:"disagreeReason"`
-	ExecuteLog       string                `json:"executeLog"`
-	ExecuteWhenApply bool                  `json:"executeWhenApply"`
-	Created          time.Time             `json:"created" xorm:"created"`
-	Updated          time.Time             `json:"updated" xorm:"updated"`
+	Id                              int64                 `json:"id" xorm:"pk autoincr"`
+	Account                         string                `json:"account"`
+	DbId                            int64                 `json:"dbId"`
+	AccessBase                      string                `json:"accessBase"`
+	UpdateCmd                       string                `json:"updateCmd"`
+	ApplyStatus                     DataUpdateApplyStatus `json:"applyStatus"`
+	Auditor                         string                `json:"auditor"`
+	Executor                        string                `json:"executor"`
+	ApplyReason                     string                `json:"applyReason"`
+	DisagreeReason                  string                `json:"disagreeReason"`
+	ExecuteLog                      string                `json:"executeLog"`
+	ExecuteImmediatelyAfterApproval bool                  `json:"executeImmediatelyAfterApproval"`
+	Created                         time.Time             `json:"created" xorm:"created"`
+	Updated                         time.Time             `json:"updated" xorm:"updated"`
 }
 
 func (*DataUpdateApply) TableName() string {

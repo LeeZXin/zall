@@ -2,40 +2,38 @@
   <div style="padding:10px">
     <div style="margin-bottom:10px">
       <a-select
-        style="width: 300px"
+        v-model:value="applyStatus"
+        @change="selectApplyStatus"
+        style="margin-right:6px;width:180px"
+      >
+        <a-select-option :value="1">{{t("mysqlDataUpdateApply.pendingStatus")}}</a-select-option>
+        <a-select-option :value="2">{{t("mysqlDataUpdateApply.agreeStatus")}}</a-select-option>
+        <a-select-option :value="3">{{t("mysqlDataUpdateApply.disagreeStatus")}}</a-select-option>
+        <a-select-option :value="4">{{t("mysqlDataUpdateApply.canceledStatus")}}</a-select-option>
+        <a-select-option :value="5">{{t("mysqlDataUpdateApply.askToExecuteStatus")}}</a-select-option>
+        <a-select-option :value="6">{{t("mysqlDataUpdateApply.executedStatus")}}</a-select-option>
+      </a-select>
+      <a-select
         v-model:value="selectedDbId"
-        :options="dbList"
         show-search
         :filter-option="filterDbListOption"
-        @change="selectDbIdChange"
-      />
-    </div>
-    <div>
-      <a-radio-group v-model:value="applyStatus" @change="selectApplyStatus">
-        <a-radio-button :value="1">
-          <span>等待审批</span>
-        </a-radio-button>
-        <a-radio-button :value="2">
-          <span>同意</span>
-        </a-radio-button>
-        <a-radio-button :value="3">
-          <span>不同意</span>
-        </a-radio-button>
-        <a-radio-button :value="4">
-          <span>已取消</span>
-        </a-radio-button>
-        <a-radio-button :value="5">
-          <span>请求执行</span>
-        </a-radio-button>
-        <a-radio-button :value="6">
-          <span>已执行</span>
-        </a-radio-button>v
-      </a-radio-group>
+        @change="searchApply"
+        style="width:180px"
+      >
+        <a-select-option :value="0">{{t("mysqlDataUpdateApply.allDatabases")}}</a-select-option>
+        <a-select-option
+          :value="item.value"
+          v-for="item in dbList"
+          v-bind:key="item.value"
+        >{{item.label}}</a-select-option>
+      </a-select>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <StatusTag v-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
-        <span v-else-if="dataIndex === 'executeWhenApply'">{{dataItem[dataIndex]?"是": "否"}}</span>
+        <span
+          v-else-if="dataIndex === 'executeImmediatelyAfterApproval'"
+        >{{dataItem[dataIndex]?t("mysqlDataUpdateApply.yes"): t("mysqlDataUpdateApply.no")}}</span>
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <a-popover placement="bottomRight" trigger="hover">
@@ -44,28 +42,28 @@
                 <template v-if="applyStatus === 1">
                   <li @click="agreeApply(dataItem)">
                     <CheckOutlined />
-                    <span style="margin-left:4px">同意</span>
+                    <span style="margin-left:4px">{{t("mysqlDataUpdateApply.agree")}}</span>
                   </li>
                   <li @click="showDisagreeModal(dataItem)">
                     <CloseOutlined />
-                    <span style="margin-left:4px">不同意</span>
+                    <span style="margin-left:4px">{{t("mysqlDataUpdateApply.disagree")}}</span>
                   </li>
                 </template>
-                <li @click="checkExplain(dataItem)" v-if="dataItem.isUnExecuted">
+                <li @click="viewExplain(dataItem)" v-if="dataItem.isUnExecuted">
                   <EyeOutlined />
-                  <span style="margin-left:4px">执行计划</span>
+                  <span style="margin-left:4px">{{t("mysqlDataUpdateApply.viewExplain")}}</span>
                 </li>
                 <li @click="executeApply(dataItem)" v-if="applyStatus === 5 || applyStatus === 2">
                   <CloudUploadOutlined />
-                  <span style="margin-left:4px">执行修改</span>
+                  <span style="margin-left:4px">{{t("mysqlDataUpdateApply.executeApply")}}</span>
                 </li>
-                <li @click="checkSql(dataItem)">
+                <li @click="viewSql(dataItem)">
                   <EyeOutlined />
-                  <span style="margin-left:4px">查看sql</span>
+                  <span style="margin-left:4px">{{t("mysqlDataUpdateApply.viewSql")}}</span>
                 </li>
-                <li @click="checkLog(dataItem)" v-if="applyStatus === 6">
+                <li @click="viewLog(dataItem)" v-if="applyStatus === 6">
                   <EyeOutlined />
-                  <span style="margin-left:4px">查看执行日志</span>
+                  <span style="margin-left:4px">{{t("mysqlDataUpdateApply.viewLog")}}</span>
                 </li>
               </ul>
             </template>
@@ -77,16 +75,16 @@
       </template>
     </ZTable>
     <a-pagination
-      v-model:current="currPage"
-      :total="totalCount"
+      v-model:current="dataPage.current"
+      :total="dataPage.totalCount"
       show-less-items
-      :pageSize="pageSize"
+      :pageSize="dataPage.pageSize"
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
       @change="()=>listApply()"
     />
-    <a-modal v-model:open="sqlModal.open" title="sql" :footer="null">
+    <a-modal v-model:open="sqlModal.open" :title="t('mysqlDataUpdateApply.viewSql')" :footer="null">
       <Codemirror
         v-model="sqlModal.sql"
         style="height:280px;width:100%"
@@ -94,7 +92,12 @@
         :disabled="true"
       />
     </a-modal>
-    <a-modal v-model:open="explainModal.open" title="执行计划" :footer="null" :width="800">
+    <a-modal
+      v-model:open="explainModal.open"
+      :title="t('mysqlDataUpdateApply.viewExplain')"
+      :footer="null"
+      :width="800"
+    >
       <Codemirror
         v-model="explainModal.content"
         style="height:280px;width:100%"
@@ -102,7 +105,7 @@
         :disabled="true"
       />
     </a-modal>
-    <a-modal v-model:open="logModal.open" title="执行日志" :footer="null">
+    <a-modal v-model:open="logModal.open" :title="t('mysqlDataUpdateApply.viewLog')" :footer="null">
       <Codemirror
         v-model="logModal.content"
         style="height:280px;width:100%"
@@ -110,7 +113,11 @@
         :disabled="true"
       />
     </a-modal>
-    <a-modal v-model:open="disagreeModal.open" title="填写不同意原因" @ok="disagreeApply">
+    <a-modal
+      v-model:open="disagreeModal.open"
+      :title="t('mysqlDataUpdateApply.fillDisagreeReason')"
+      @ok="disagreeApply"
+    >
       <a-textarea
         style="width:100%"
         v-model:value="disagreeModal.reason"
@@ -121,6 +128,9 @@
   </div>
 </template>
 <script setup>
+/*
+  数据更新申请审批页
+*/
 import ZTable from "@/components/common/ZTable";
 import StatusTag from "@/components/db/MysqlDataUpdateApplyStatutsTag";
 import {
@@ -143,120 +153,127 @@ import { ref, createVNode, reactive } from "vue";
 import { Modal, message } from "ant-design-vue";
 import { Codemirror } from "vue-codemirror";
 import { sql } from "@codemirror/lang-sql";
-import { dbApplyReasonRegexp } from "../../../utils/regexp";
+import { dbApplyReasonRegexp } from "@/utils/regexp";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const extensions = [sql()];
+// sql modal
 const sqlModal = reactive({
   open: false,
   sql: ""
 });
+// 执行计划modal
 const explainModal = reactive({
   open: false,
   content: ""
 });
+// 执行日志modal
 const logModal = reactive({
   open: false,
   content: ""
 });
+// 不同意modal
 const disagreeModal = reactive({
   open: false,
   reason: ""
 });
 const dataSource = ref([]);
+// 审批状态
 const applyStatus = ref(1);
-const currPage = ref(1);
-const pageSize = 10;
-const totalCount = ref(0);
+// 分页数据
+const dataPage = reactive({
+  current: 1,
+  totalCount: 0,
+  pageSize: 10
+});
+// 选择数据库id
 const selectedDbId = ref(0);
-const dbList = ref([
-  {
-    value: 0,
-    label: "所有数据库"
-  }
-]);
+// 数据库列表
+const dbList = ref([]);
 const columns = ref([
   {
-    title: "数据库名称",
+    i18nTitle: "mysqlDataUpdateApply.dbName",
     dataIndex: "dbName",
     key: "dbName"
   },
   {
-    title: "申请库",
+    i18nTitle: "mysqlDataUpdateApply.accessBase",
     dataIndex: "accessBase",
     key: "accessBase"
   },
   {
-    title: "状态",
+    i18nTitle: "mysqlDataUpdateApply.applyStatus",
     dataIndex: "applyStatus",
     key: "applyStatus"
   },
   {
-    title: "申请原因",
+    i18nTitle: "mysqlDataUpdateApply.applyReason",
     dataIndex: "applyReason",
     key: "applyReason"
   },
   {
-    title: "是否立即执行",
-    dataIndex: "executeWhenApply",
-    key: "executeWhenApply"
+    i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
+    dataIndex: "executeImmediatelyAfterApproval",
+    key: "executeImmediatelyAfterApproval"
   },
   {
-    title: "申请时间",
+    i18nTitle: "mysqlDataUpdateApply.created",
     dataIndex: "created",
     key: "created"
   },
   {
-    title: "申请人",
+    i18nTitle: "mysqlDataUpdateApply.account",
     dataIndex: "account",
     key: "account"
   },
   {
-    title: "操作",
+    i18nTitle: "mysqlDataUpdateApply.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ]);
-
+// 下拉框变动审批状态
 const selectApplyStatus = () => {
   switch (applyStatus.value) {
     case 1:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlDataUpdateApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlDataUpdateApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlDataUpdateApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "是否立即执行",
-          dataIndex: "executeWhenApply",
-          key: "executeWhenApply"
+          i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
+          dataIndex: "executeImmediatelyAfterApproval",
+          key: "executeImmediatelyAfterApproval"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlDataUpdateApply.created",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "申请人",
+          i18nTitle: "mysqlDataUpdateApply.account",
           dataIndex: "account",
           key: "account"
         },
         {
-          title: "操作",
+          i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
           key: "operation"
         }
@@ -265,52 +282,52 @@ const selectApplyStatus = () => {
     case 2:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlDataUpdateApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlDataUpdateApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlDataUpdateApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "是否立即执行",
-          dataIndex: "executeWhenApply",
-          key: "executeWhenApply"
+          i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
+          dataIndex: "executeImmediatelyAfterApproval",
+          key: "executeImmediatelyAfterApproval"
         },
         {
-          title: "审批人",
+          i18nTitle: "mysqlDataUpdateApply.auditor",
           dataIndex: "auditor",
           key: "auditor"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlDataUpdateApply.created",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "申请人",
+          i18nTitle: "mysqlDataUpdateApply.account",
           dataIndex: "account",
           key: "account"
         },
         {
-          title: "审批时间",
+          i18nTitle: "mysqlDataUpdateApply.auditTime",
           dataIndex: "updated",
           key: "updated"
         },
         {
-          title: "操作",
+          i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
           key: "operation"
         }
@@ -319,57 +336,57 @@ const selectApplyStatus = () => {
     case 3:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlDataUpdateApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlDataUpdateApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlDataUpdateApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "是否立即执行",
-          dataIndex: "executeWhenApply",
-          key: "executeWhenApply"
+          i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
+          dataIndex: "executeImmediatelyAfterApproval",
+          key: "executeImmediatelyAfterApproval"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "不同意原因",
+          i18nTitle: "mysqlDataUpdateApply.disagreeReason",
           dataIndex: "disagreeReason",
           key: "disagreeReason"
         },
         {
-          title: "审批人",
+          i18nTitle: "mysqlDataUpdateApply.auditor",
           dataIndex: "auditor",
           key: "auditor"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlDataUpdateApply.created",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "申请人",
+          i18nTitle: "mysqlDataUpdateApply.account",
           dataIndex: "account",
           key: "account"
         },
         {
-          title: "审批时间",
+          i18nTitle: "mysqlDataUpdateApply.auditTime",
           dataIndex: "updated",
           key: "updated"
         },
         {
-          title: "操作",
+          i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
           key: "operation"
         }
@@ -378,47 +395,47 @@ const selectApplyStatus = () => {
     case 4:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlDataUpdateApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlDataUpdateApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlDataUpdateApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "是否立即执行",
-          dataIndex: "executeWhenApply",
-          key: "executeWhenApply"
+          i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
+          dataIndex: "executeImmediatelyAfterApproval",
+          key: "executeImmediatelyAfterApproval"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlDataUpdateApply.created",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "申请人",
+          i18nTitle: "mysqlDataUpdateApply.account",
           dataIndex: "account",
           key: "account"
         },
         {
-          title: "取消时间",
+          i18nTitle: "mysqlDataUpdateApply.cancelTime",
           dataIndex: "updated",
           key: "updated"
         },
         {
-          title: "操作",
+          i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
           key: "operation"
         }
@@ -427,52 +444,52 @@ const selectApplyStatus = () => {
     case 5:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlDataUpdateApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlDataUpdateApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlDataUpdateApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "是否立即执行",
-          dataIndex: "executeWhenApply",
-          key: "executeWhenApply"
+          i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
+          dataIndex: "executeImmediatelyAfterApproval",
+          key: "executeImmediatelyAfterApproval"
         },
         {
-          title: "申请人",
+          i18nTitle: "mysqlDataUpdateApply.account",
           dataIndex: "account",
           key: "account"
         },
         {
-          title: "审批人",
+          i18nTitle: "mysqlDataUpdateApply.auditor",
           dataIndex: "auditor",
           key: "auditor"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlDataUpdateApply.created",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "请求时间",
+          i18nTitle: "mysqlDataUpdateApply.applyTime",
           dataIndex: "updated",
           key: "updated"
         },
         {
-          title: "操作",
+          i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
           key: "operation"
         }
@@ -481,82 +498,77 @@ const selectApplyStatus = () => {
     case 6:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlDataUpdateApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlDataUpdateApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlDataUpdateApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "是否立即执行",
-          dataIndex: "executeWhenApply",
-          key: "executeWhenApply"
+          i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
+          dataIndex: "executeImmediatelyAfterApproval",
+          key: "executeImmediatelyAfterApproval"
         },
         {
-          title: "申请人",
+          i18nTitle: "mysqlDataUpdateApply.account",
           dataIndex: "account",
           key: "account"
         },
         {
-          title: "审批人",
+          i18nTitle: "mysqlDataUpdateApply.auditor",
           dataIndex: "auditor",
           key: "auditor"
         },
         {
-          title: "执行人",
+          i18nTitle: "mysqlDataUpdateApply.executor",
           dataIndex: "executor",
           key: "executor"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlDataUpdateApply.created",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "执行时间",
+          i18nTitle: "mysqlDataUpdateApply.executeTime",
           dataIndex: "updated",
           key: "updated"
         },
         {
-          title: "操作",
+          i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
           key: "operation"
         }
       ];
       break;
   }
-  listApply();
+  searchApply();
 };
-
-const selectDbIdChange = () => {
-  currPage.value = 1;
-  listApply();
-};
-
+// 过滤数据库列表
 const filterDbListOption = (input, option) => {
   return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
-
+// 申请列表
 const listApply = () => {
   listDataUpdateApplyByDbaRequest({
-    pageNum: currPage.value,
+    pageNum: dataPage.current,
     dbId: selectedDbId.value,
     applyStatus: applyStatus.value
   }).then(res => {
-    totalCount.value = res.totalCount;
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -565,70 +577,73 @@ const listApply = () => {
     });
   });
 };
-
+// 搜索列表
+const searchApply = () => {
+  dataPage.current = 1;
+  listApply();
+};
+// 同意申请
 const agreeApply = item => {
   Modal.confirm({
-    title: `你确定要同意${item.account}的申请吗?`,
+    title: `${t("mysqlDataUpdateApply.confirmAgree")} ${item.account}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       agreeDataUpdateApplyRequest(item.id).then(() => {
-        message.success("操作成功");
-        currPage.value = 1;
-        listApply();
+        message.success(t("operationSuccess"));
+        searchApply();
       });
     },
     onCancel() {}
   });
 };
-
+// 执行申请
 const executeApply = item => {
   Modal.confirm({
-    title: `你确定要执行${item.account}的申请吗?`,
+    title: `${t("mysqlDataUpdateApply.confirmExecute")} ${item.account}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       executeDataUpdateApplyRequest(item.id).then(() => {
-        message.success("操作成功");
-        currPage.value = 1;
-        listApply();
+        message.success(t("operationSuccess"));
+        searchApply();
       });
     },
     onCancel() {}
   });
 };
-
+// 展示不同意modal
 const showDisagreeModal = item => {
   disagreeModal.id = item.id;
   disagreeModal.open = true;
   disagreeModal.reason = "";
 };
-
+// 不同意申请
 const disagreeApply = () => {
   if (!dbApplyReasonRegexp.test(disagreeModal.reason)) {
-    message.warn("原因格式错误");
+    message.warn(t("mysqlDataUpdateApply.disagreeReasonFormatErr"));
     return;
   }
   disagreedataUpdateApplyRequest({
     applyId: disagreeModal.id,
     disagreeReason: disagreeModal.reason
   }).then(() => {
-    message.success("操作成功");
-    currPage.value = 1;
+    message.success(t("operationSuccess"));
     disagreeModal.open = false;
-    listApply();
+    searchApply();
   });
 };
-const checkSql = item => {
+// 展示sql
+const viewSql = item => {
   sqlModal.open = true;
   sqlModal.sql = item.updateCmd;
 };
-
-const checkExplain = item => {
+// 展示执行计划
+const viewExplain = item => {
   explainDataUpdateApplyRequest(item.id).then(res => {
     explainModal.open = true;
     explainModal.content = res.data;
   });
 };
-
+// 获取所有数据库列表
 const getAllDb = () => {
   getAllMysqlDbRequest().then(res => {
     dbList.value = dbList.value.concat(
@@ -641,14 +656,12 @@ const getAllDb = () => {
     );
   });
 };
-
-const checkLog = item => {
+// 查看日志
+const viewLog = item => {
   logModal.open = true;
   logModal.content = item.executeLog;
 };
-
 getAllDb();
-
 listApply();
 </script>
 <style scoped>

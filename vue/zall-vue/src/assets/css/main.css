@@ -33,12 +33,6 @@ ul {
     margin: auto;
 }
 
-.container>.title {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 20px;
-}
-
 .form {
     width: 100%;
 }
@@ -133,7 +127,7 @@ ul {
 
 .section>.section-body {
     border-top: 1px solid #d9d9d9;
-    padding: 10px 14px;
+    padding: 14px;
 }
 
 .section+.section {

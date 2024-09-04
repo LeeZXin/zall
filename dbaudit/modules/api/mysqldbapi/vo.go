@@ -91,22 +91,22 @@ type ListDataUpdateApplyByOperatorReqVO struct {
 }
 
 type DataUpdateApplyVO struct {
-	Id               int64                           `json:"id"`
-	Account          string                          `json:"account"`
-	DbId             int64                           `json:"dbId"`
-	DbName           string                          `json:"dbName"`
-	AccessBase       string                          `json:"accessBase"`
-	UpdateCmd        string                          `json:"updateCmd"`
-	ApplyStatus      mysqldbmd.DataUpdateApplyStatus `json:"applyStatus"`
-	Executor         string                          `json:"executor"`
-	Auditor          string                          `json:"auditor"`
-	ApplyReason      string                          `json:"applyReason"`
-	DisagreeReason   string                          `json:"disagreeReason"`
-	ExecuteLog       string                          `json:"executeLog"`
-	ExecuteWhenApply bool                            `json:"executeWhenApply"`
-	Created          string                          `json:"created"`
-	Updated          string                          `json:"updated"`
-	IsUnExecuted     bool                            `json:"isUnExecuted"`
+	Id                              int64                           `json:"id"`
+	Account                         string                          `json:"account"`
+	DbId                            int64                           `json:"dbId"`
+	DbName                          string                          `json:"dbName"`
+	AccessBase                      string                          `json:"accessBase"`
+	UpdateCmd                       string                          `json:"updateCmd"`
+	ApplyStatus                     mysqldbmd.DataUpdateApplyStatus `json:"applyStatus"`
+	Executor                        string                          `json:"executor"`
+	Auditor                         string                          `json:"auditor"`
+	ApplyReason                     string                          `json:"applyReason"`
+	DisagreeReason                  string                          `json:"disagreeReason"`
+	ExecuteLog                      string                          `json:"executeLog"`
+	ExecuteImmediatelyAfterApproval bool                            `json:"executeImmediatelyAfterApproval"`
+	Created                         string                          `json:"created"`
+	Updated                         string                          `json:"updated"`
+	IsUnExecuted                    bool                            `json:"isUnExecuted"`
 }
 
 type ReadPermVO struct {
@@ -135,11 +135,11 @@ type ExecuteSelectSqlResultVO struct {
 }
 
 type ApplyDataUpdateReqVO struct {
-	DbId             int64  `json:"dbId"`
-	AccessBase       string `json:"accessBase"`
-	Cmd              string `json:"cmd"`
-	ExecuteWhenApply bool   `json:"executeWhenApply"`
-	ApplyReason      string `json:"applyReason"`
+	DbId                            int64  `json:"dbId"`
+	AccessBase                      string `json:"accessBase"`
+	Cmd                             string `json:"cmd"`
+	ExecuteImmediatelyAfterApproval bool   `json:"executeImmediatelyAfterApproval"`
+	ApplyReason                     string `json:"applyReason"`
 }
 
 type ApplyDbUpdateResultVO struct {

@@ -300,13 +300,13 @@ func ExistReadPerm(ctx context.Context, reqDTO ExistReadPermReqDTO) (bool, error
 func InsertDataUpdateApply(ctx context.Context, reqDTO InsertDataUpdateApplyReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&DataUpdateApply{
-			Account:          reqDTO.Account,
-			DbId:             reqDTO.DbId,
-			AccessBase:       reqDTO.AccessBase,
-			UpdateCmd:        reqDTO.UpdateCmd,
-			ApplyStatus:      reqDTO.ApplyStatus,
-			ApplyReason:      reqDTO.ApplyReason,
-			ExecuteWhenApply: reqDTO.ExecuteWhenApply,
+			Account:                         reqDTO.Account,
+			DbId:                            reqDTO.DbId,
+			AccessBase:                      reqDTO.AccessBase,
+			UpdateCmd:                       reqDTO.UpdateCmd,
+			ApplyStatus:                     reqDTO.ApplyStatus,
+			ApplyReason:                     reqDTO.ApplyReason,
+			ExecuteImmediatelyAfterApproval: reqDTO.ExecuteImmediatelyAfterApproval,
 		})
 	return err
 }

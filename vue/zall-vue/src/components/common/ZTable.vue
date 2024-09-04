@@ -70,6 +70,7 @@ const NoDataRender = () => {
   background-color: white;
 }
 .z-table > table > tr:first-child > td {
+  padding: 11px;
   background-color: #f0f0f0;
 }
 
@@ -96,7 +97,6 @@ const NoDataRender = () => {
 }
 
 .z-table > table > tr {
-  line-height: 20px;
   font-size: 14px;
 }
 
@@ -105,7 +105,6 @@ const NoDataRender = () => {
 }
 
 .z-table > table > tr:first-child {
-  line-height: 20px;
   font-size: 14px;
   font-weight: bold;
 }

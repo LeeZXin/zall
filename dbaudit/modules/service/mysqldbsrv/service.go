@@ -904,13 +904,13 @@ func ApplyDataUpdate(ctx context.Context, reqDTO ApplyDataUpdateReqDTO) ([]comma
 	if allPass {
 		// 插入数据库
 		err = mysqldbmd.InsertDataUpdateApply(ctx, mysqldbmd.InsertDataUpdateApplyReqDTO{
-			Account:          reqDTO.Operator.Account,
-			DbId:             reqDTO.DbId,
-			AccessBase:       reqDTO.AccessBase,
-			UpdateCmd:        reqDTO.Cmd,
-			ApplyReason:      reqDTO.ApplyReason,
-			ApplyStatus:      mysqldbmd.PendingDataUpdateApplyStatus,
-			ExecuteWhenApply: reqDTO.ExecuteWhenApply,
+			Account:                         reqDTO.Operator.Account,
+			DbId:                            reqDTO.DbId,
+			AccessBase:                      reqDTO.AccessBase,
+			UpdateCmd:                       reqDTO.Cmd,
+			ApplyReason:                     reqDTO.ApplyReason,
+			ApplyStatus:                     mysqldbmd.PendingDataUpdateApplyStatus,
+			ExecuteImmediatelyAfterApproval: reqDTO.ExecuteImmediatelyAfterApproval,
 		})
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
@@ -1063,21 +1063,21 @@ func dataUpdateApplyMd2Dto(ctx context.Context, applies []mysqldbmd.DataUpdateAp
 	}
 	data := listutil.MapNe(applies, func(t mysqldbmd.DataUpdateApply) DataUpdateApplyDTO {
 		ret := DataUpdateApplyDTO{
-			Id:               t.Id,
-			Account:          t.Account,
-			DbId:             t.DbId,
-			DbName:           dbMap[t.DbId].Name,
-			AccessBase:       t.AccessBase,
-			UpdateCmd:        t.UpdateCmd,
-			ApplyStatus:      t.ApplyStatus,
-			Auditor:          t.Auditor,
-			Executor:         t.Executor,
-			ApplyReason:      t.ApplyReason,
-			DisagreeReason:   t.DisagreeReason,
-			ExecuteLog:       t.ExecuteLog,
-			ExecuteWhenApply: t.ExecuteWhenApply,
-			Created:          t.Created,
-			Updated:          t.Updated,
+			Id:                              t.Id,
+			Account:                         t.Account,
+			DbId:                            t.DbId,
+			DbName:                          dbMap[t.DbId].Name,
+			AccessBase:                      t.AccessBase,
+			UpdateCmd:                       t.UpdateCmd,
+			ApplyStatus:                     t.ApplyStatus,
+			Auditor:                         t.Auditor,
+			Executor:                        t.Executor,
+			ApplyReason:                     t.ApplyReason,
+			DisagreeReason:                  t.DisagreeReason,
+			ExecuteLog:                      t.ExecuteLog,
+			ExecuteImmediatelyAfterApproval: t.ExecuteImmediatelyAfterApproval,
+			Created:                         t.Created,
+			Updated:                         t.Updated,
 		}
 		return ret
 	})
@@ -1159,7 +1159,9 @@ func CancelDataUpdateApply(ctx context.Context, reqDTO CancelDataUpdateApplyReqD
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || apply.ApplyStatus != mysqldbmd.PendingDataUpdateApplyStatus {
+	if !b || (apply.ApplyStatus != mysqldbmd.PendingDataUpdateApplyStatus &&
+		apply.ApplyStatus != mysqldbmd.AgreeDataUpdateApplyStatus &&
+		apply.ApplyStatus != mysqldbmd.AskToExecuteDataUpdateApplyStatus) {
 		return util.InvalidArgsError()
 	}
 	if apply.Account != reqDTO.Operator.Account {

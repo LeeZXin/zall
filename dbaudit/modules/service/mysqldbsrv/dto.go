@@ -471,12 +471,12 @@ func (r *ExplainDbReqDTO) IsValid() error {
 }
 
 type ApplyDataUpdateReqDTO struct {
-	DbId             int64               `json:"dbId"`
-	AccessBase       string              `json:"accessBase"`
-	Cmd              string              `json:"cmd"`
-	ApplyReason      string              `json:"applyReason"`
-	ExecuteWhenApply bool                `json:"executeWhenApply"`
-	Operator         apisession.UserInfo `json:"operator"`
+	DbId                            int64               `json:"dbId"`
+	AccessBase                      string              `json:"accessBase"`
+	Cmd                             string              `json:"cmd"`
+	ApplyReason                     string              `json:"applyReason"`
+	ExecuteImmediatelyAfterApproval bool                `json:"executeImmediatelyAfterApproval"`
+	Operator                        apisession.UserInfo `json:"operator"`
 }
 
 func (r *ApplyDataUpdateReqDTO) IsValid() error {
@@ -556,21 +556,21 @@ func (r *ListDataUpdateApplyByOperatorReqDTO) IsValid() error {
 }
 
 type DataUpdateApplyDTO struct {
-	Id               int64
-	Account          string
-	DbId             int64
-	DbName           string
-	AccessBase       string
-	UpdateCmd        string
-	ApplyStatus      mysqldbmd.DataUpdateApplyStatus
-	Auditor          string
-	Executor         string
-	ApplyReason      string
-	DisagreeReason   string
-	ExecuteLog       string
-	ExecuteWhenApply bool
-	Created          time.Time
-	Updated          time.Time
+	Id                              int64
+	Account                         string
+	DbId                            int64
+	DbName                          string
+	AccessBase                      string
+	UpdateCmd                       string
+	ApplyStatus                     mysqldbmd.DataUpdateApplyStatus
+	Auditor                         string
+	Executor                        string
+	ApplyReason                     string
+	DisagreeReason                  string
+	ExecuteLog                      string
+	ExecuteImmediatelyAfterApproval bool
+	Created                         time.Time
+	Updated                         time.Time
 }
 
 type AgreeDbUpdateReqDTO struct {
