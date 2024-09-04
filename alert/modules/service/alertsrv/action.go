@@ -11,7 +11,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zsf-utils/executor"
-	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/lease"
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
@@ -22,19 +21,16 @@ import (
 	"github.com/PaesslerAG/gval"
 	"github.com/prometheus/common/model"
 	"github.com/spf13/cast"
-	"net/http"
 	"time"
 )
 
 var (
 	taskExecutor *executor.Executor
-	httpClient   *http.Client
 	env          string
 )
 
 func InitTask() {
 	logger.Logger.Info("start alert task service")
-	httpClient = httputil.NewRetryableHttpClient()
 	poolSize := static.GetInt("alert.poolSize")
 	if poolSize <= 0 {
 		poolSize = 20
@@ -121,7 +117,7 @@ func handleExecute(execute *alertmd.Execute) error {
 						}
 					}
 				case alert.PromType:
-					result, err := alertCfg.Prom.Execute(httpClient, endTime)
+					result, err := alertCfg.Prom.Execute(endTime)
 					if err != nil {
 						logger.Logger.Errorf("alert cfg: %v execute failed with err: %v", cfg.Id, err)
 					} else {
@@ -142,7 +138,7 @@ func handleExecute(execute *alertmd.Execute) error {
 						}
 					}
 				case alert.LokiType:
-					startTime, result, err := alertCfg.Loki.Execute(httpClient, endTime)
+					startTime, result, err := alertCfg.Loki.Execute(endTime)
 					if err != nil {
 						logger.Logger.Errorf("alert cfg: %v execute failed with err: %v", cfg.Id, err)
 					} else {
@@ -158,7 +154,7 @@ func handleExecute(execute *alertmd.Execute) error {
 						}
 					}
 				case alert.HttpType:
-					err := alertCfg.Http.Execute(httpClient)
+					err := alertCfg.Http.Execute()
 					if err != nil {
 						// 执行hook
 						executeHook(cfg, nil, "", endTime.Format(time.DateTime))

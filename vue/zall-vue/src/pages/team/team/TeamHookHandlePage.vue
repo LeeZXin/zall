@@ -193,6 +193,13 @@ const defaultEnvRelated = {
     update: false,
     delete: false
   },
+  appAlertConfig: {
+    create: false,
+    update: false,
+    delete: false,
+    enable: false,
+    disable: false
+  },
   timer: {
     create: false,
     delete: false,
@@ -363,6 +370,32 @@ const envRelatedEvents = [
     ]
   },
   {
+    key: "appAlertConfig",
+    title: "告警配置",
+    actions: [
+      {
+        key: "create",
+        title: "新增"
+      },
+      {
+        key: "update",
+        title: "编辑"
+      },
+      {
+        key: "delete",
+        title: "删除"
+      },
+      {
+        key: "enable",
+        title: "启用"
+      },
+      {
+        key: "disable",
+        title: "停用"
+      }
+    ]
+  },
+  {
     key: "timer",
     title: "定时任务",
     actions: [
@@ -384,7 +417,7 @@ const envRelatedEvents = [
       },
       {
         key: "disable",
-        title: "禁用"
+        title: "停用"
       },
       {
         key: "manuallyTrigger",
@@ -489,6 +522,94 @@ const teamCheckboxes = reactive([
       {
         key: "transfer",
         title: "迁移",
+        value: false
+      }
+    ]
+  },
+  {
+    key: "notifyTpl",
+    title: "外部通知",
+    actions: [
+      {
+        key: "create",
+        title: "新增",
+        value: false
+      },
+      {
+        key: "update",
+        title: "编辑",
+        value: false
+      },
+      {
+        key: "delete",
+        title: "删除",
+        value: false
+      },
+      {
+        key: "changeApiKey",
+        title: "变更apiKey",
+        value: false
+      }
+    ]
+  },
+  {
+    key: "weworkAccessToken",
+    title: "企微AccessToken",
+    actions: [
+      {
+        key: "create",
+        title: "新增",
+        value: false
+      },
+      {
+        key: "update",
+        title: "编辑",
+        value: false
+      },
+      {
+        key: "delete",
+        title: "删除",
+        value: false
+      },
+      {
+        key: "changeApiKey",
+        title: "变更apiKey",
+        value: false
+      },
+      {
+        key: "refresh",
+        title: "手动刷新token",
+        value: false
+      }
+    ]
+  },
+  {
+    key: "feishuAccessToken",
+    title: "飞书AccessToken",
+    actions: [
+      {
+        key: "create",
+        title: "新增",
+        value: false
+      },
+      {
+        key: "update",
+        title: "编辑",
+        value: false
+      },
+      {
+        key: "delete",
+        title: "删除",
+        value: false
+      },
+      {
+        key: "changeApiKey",
+        title: "变更apiKey",
+        value: false
+      },
+      {
+        key: "refresh",
+        title: "手动刷新token",
         value: false
       }
     ]

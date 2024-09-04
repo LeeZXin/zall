@@ -60,3 +60,11 @@ type AppPromScrapeEventCfg struct {
 	Update bool `json:"update"`
 	Delete bool `json:"delete"`
 }
+
+type AppAlertConfigEventCfg struct {
+	Create  bool `json:"create"`
+	Update  bool `json:"update"`
+	Delete  bool `json:"delete"`
+	Enable  bool `json:"enable"`
+	Disable bool `json:"disable"`
+}

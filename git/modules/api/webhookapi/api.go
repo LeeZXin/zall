@@ -17,7 +17,7 @@ import (
 
 func InitApi() {
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/api/webhook", apisession.CheckLogin)
+		group := e.Group("/api/gitWebhook", apisession.CheckLogin)
 		{
 			// 展示webhook列表
 			group.GET("/list/:repoId", listWebhook)
@@ -30,7 +30,7 @@ func InitApi() {
 			// ping
 			group.PUT("/ping/:webhookId", pingWebhook)
 		}
-		group = e.Group("/api/webhook")
+		group = e.Group("/api/gitWebhook")
 		{
 			group.POST("/demo", demoWebhook)
 		}

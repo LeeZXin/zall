@@ -10,16 +10,17 @@ func IsTplNameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
 }
 
-func InsertTpl(ctx context.Context, reqDTO InsertTplReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).Insert(&Tpl{
+func InsertTpl(ctx context.Context, reqDTO InsertTplReqDTO) (Tpl, error) {
+	ret := Tpl{
 		Name:   reqDTO.Name,
 		ApiKey: reqDTO.ApiKey,
 		NotifyCfg: &xormutil.Conversion[notify.Cfg]{
 			Data: reqDTO.NotifyCfg,
 		},
 		TeamId: reqDTO.TeamId,
-	})
-	return err
+	}
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	return ret, err
 }
 
 func UpdateTpl(ctx context.Context, reqDTO UpdateTplReqDTO) (bool, error) {

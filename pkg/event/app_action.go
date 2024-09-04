@@ -126,3 +126,17 @@ const (
 	AppPromScrapeUpdateAction AppPromScrapeEventAction = "update"
 	AppPromScrapeDeleteAction AppPromScrapeEventAction = "delete"
 )
+
+type AppAlertConfigEventAction string
+
+func (a AppAlertConfigEventAction) GetI18nValue() string {
+	return "appAlertConfigEvent." + string(a)
+}
+
+const (
+	AppAlertConfigCreateAction  AppAlertConfigEventAction = "create"
+	AppAlertConfigUpdateAction  AppAlertConfigEventAction = "update"
+	AppAlertConfigDeleteAction  AppAlertConfigEventAction = "delete"
+	AppAlertConfigEnableAction  AppAlertConfigEventAction = "enable"
+	AppAlertConfigDisableAction AppAlertConfigEventAction = "disable"
+)

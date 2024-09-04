@@ -84,6 +84,7 @@ func login(c *gin.Context) {
 		session, err := usersrv.Login(c, usersrv.LoginReqDTO{
 			Account:  req.Account,
 			Password: req.Password,
+			A:        req.A,
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)

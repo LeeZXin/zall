@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/LeeZXin/zall/alert/modules/api/alertapi"
 	"github.com/LeeZXin/zall/alert/modules/service/alertsrv"
-	"github.com/LeeZXin/zall/approval/modules/api/approvalapi"
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
 	"github.com/LeeZXin/zall/deploy/modules/api/deployapi"
 	"github.com/LeeZXin/zall/deploy/modules/api/statusapi"
@@ -107,10 +106,6 @@ func runZall(*cli.Context) error {
 	// for property
 	{
 		propertyapi.InitApi()
-	}
-	// for approval
-	{
-		approvalapi.InitApi()
 	}
 	// for files server
 	{

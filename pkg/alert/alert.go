@@ -93,8 +93,8 @@ func (c *PromConfig) IsValid() bool {
 	return strings.HasPrefix(parsedUrl.Scheme, "http") && c.PromQl != "" && c.Condition != ""
 }
 
-func (c *PromConfig) Execute(httpClient *http.Client, endTime time.Time) (*model.Sample, error) {
-	client, err := prom.NewPromHttpClient(c.Host, httpClient)
+func (c *PromConfig) Execute(endTime time.Time) (*model.Sample, error) {
+	client, err := prom.NewPromHttpClient(c.Host, http.DefaultClient)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (c *LokiConfig) IsValid() bool {
 	return true
 }
 
-func (c *LokiConfig) Execute(httpClient *http.Client, endTime time.Time) (time.Time, float64, error) {
+func (c *LokiConfig) Execute(endTime time.Time) (time.Time, float64, error) {
 	duration, err := time.ParseDuration(c.LastDuration)
 	if err != nil {
 		return time.Time{}, 0, err
@@ -159,7 +159,7 @@ func (c *LokiConfig) Execute(httpClient *http.Client, endTime time.Time) (time.T
 	}
 	response, err := query.DoRequest(
 		context.Background(),
-		httpClient,
+		http.DefaultClient,
 		strings.TrimSuffix(c.Host, "/")+"/loki/api/v1/query_range",
 		c.OrgId,
 	)
@@ -181,8 +181,8 @@ func (c *HttpConfig) IsValid() bool {
 	return true
 }
 
-func (c *HttpConfig) Execute(httpClient *http.Client) error {
-	resp, err := httpClient.Get(c.GetUrl)
+func (c *HttpConfig) Execute() error {
+	resp, err := http.Get(c.GetUrl)
 	if err != nil {
 		return err
 	}

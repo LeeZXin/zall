@@ -4,10 +4,10 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/notify/modules/model/notifymd"
-	"github.com/LeeZXin/zall/notify/modules/service/notifysrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/commonhook"
 	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/notify/notify"
 	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/pkg/webhook"
 	"github.com/LeeZXin/zall/teamhook/modules/model/teamhookmd"
@@ -32,7 +32,12 @@ func TriggerTeamHook(req event.Event, teamId int64, whichEvent func(*teamhook.Ev
 		if whichEvent(&events) {
 			switch hook.HookType {
 			case commonhook.NotifyType:
-				notifysrv.SendNotificationByTplId(hookCfg.NotifyTplId, req)
+				tpl, b, err := notifymd.GetTplById(ctx, hookCfg.NotifyTplId, []string{"notify_cfg"})
+				if err != nil {
+					logger.Logger.Error(err)
+				} else if b {
+					notify.SendNotification(tpl.GetNotifyCfg(), req)
+				}
 			case commonhook.WebhookType:
 				webhook.TriggerWebhook(hookCfg.HookUrl, hookCfg.Secret, req)
 			}

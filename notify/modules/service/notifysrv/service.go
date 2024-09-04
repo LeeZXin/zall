@@ -1,34 +1,50 @@
 package notifysrv
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/notify/modules/model/notifymd"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/pkg/notify/feishu"
+	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/notify/notify"
-	"github.com/LeeZXin/zall/pkg/notify/wework"
+	"github.com/LeeZXin/zall/pkg/teamhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/executor"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
 	"sync"
-	"text/template"
 	"time"
 )
 
 var (
-	sendExecutor     *executor.Executor
-	initExecutorOnce = sync.Once{}
+	initPsubOnce = sync.Once{}
 )
 
-func initSendExecutor() {
-	initExecutorOnce.Do(func() {
-		sendExecutor, _ = executor.NewExecutor(10, 1024, time.Minute, executor.AbortStrategy)
+func initPsub() {
+	initPsubOnce.Do(func() {
+		psub.Subscribe(event.NotifyTplTopic, func(data any) {
+			req, ok := data.(event.NotifyTplEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					switch req.Action {
+					case event.NotifyTplCreateAction:
+						return events.NotifyTpl.Create
+					case event.NotifyTplUpdateAction:
+						return events.NotifyTpl.Update
+					case event.NotifyTplDeleteAction:
+						return events.NotifyTpl.Delete
+					case event.NotifyTplChangeApiKeyAction:
+						return events.NotifyTpl.ChangeApiKey
+					default:
+						return false
+					}
+				})
+			}
+		})
 	})
 }
 
@@ -38,13 +54,13 @@ func SendNotificationByTplId(tplId int64, params any) {
 	defer closer.Close()
 	tpl, b, err := notifymd.GetTplById(ctx, tplId, nil)
 	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
+		logger.Logger.Error(err)
 		return
 	}
 	if !b {
 		return
 	}
-	err = sendNotificationWithNotifyTpl(tpl, params)
+	err = notify.SendNotification(tpl.GetNotifyCfg(), params)
 	if err != nil {
 		logger.Logger.Errorf("send tplId: %d failed with error: %v", tplId, err)
 	}
@@ -57,11 +73,11 @@ func CreateTpl(ctx context.Context, reqDTO CreateTplReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkManageNotifyTplPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId)
+	team, err := checkManageNotifyTplPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId)
 	if err != nil {
 		return err
 	}
-	err = notifymd.InsertTpl(ctx, notifymd.InsertTplReqDTO{
+	tpl, err := notifymd.InsertTpl(ctx, notifymd.InsertTplReqDTO{
 		Name:      reqDTO.Name,
 		ApiKey:    idutil.RandomUuid(),
 		NotifyCfg: reqDTO.Cfg,
@@ -71,6 +87,7 @@ func CreateTpl(ctx context.Context, reqDTO CreateTplReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, tpl, reqDTO.Cfg, reqDTO.Operator, event.NotifyTplCreateAction)
 	return nil
 }
 
@@ -81,7 +98,7 @@ func UpdateTpl(ctx context.Context, reqDTO UpdateTplReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkManageNotifyTplPermByTplId(ctx, reqDTO.Operator, reqDTO.Id)
+	tpl, team, err := checkManageNotifyTplPermByTplId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
 		return err
 	}
@@ -94,6 +111,7 @@ func UpdateTpl(ctx context.Context, reqDTO UpdateTplReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, tpl, reqDTO.Cfg, reqDTO.Operator, event.NotifyTplUpdateAction)
 	return nil
 }
 
@@ -104,7 +122,7 @@ func DeleteTpl(ctx context.Context, reqDTO DeleteTplReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkManageNotifyTplPermByTplId(ctx, reqDTO.Operator, reqDTO.Id)
+	tpl, team, err := checkManageNotifyTplPermByTplId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
 		return err
 	}
@@ -113,6 +131,7 @@ func DeleteTpl(ctx context.Context, reqDTO DeleteTplReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, tpl, tpl.GetNotifyCfg(), reqDTO.Operator, event.NotifyTplDeleteAction)
 	return nil
 }
 
@@ -123,7 +142,7 @@ func ListTpl(ctx context.Context, reqDTO ListTplReqDTO) ([]TplDTO, int64, error)
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkManageNotifyTplPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId)
+	_, err := checkManageNotifyTplPermByTeamId(ctx, reqDTO.Operator, reqDTO.TeamId)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -159,7 +178,7 @@ func ChangeTplApiKey(ctx context.Context, reqDTO ChangeTplApiKeyReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := checkManageNotifyTplPermByTplId(ctx, reqDTO.Operator, reqDTO.Id)
+	tpl, team, err := checkManageNotifyTplPermByTplId(ctx, reqDTO.Operator, reqDTO.Id)
 	if err != nil {
 		return err
 	}
@@ -168,6 +187,7 @@ func ChangeTplApiKey(ctx context.Context, reqDTO ChangeTplApiKeyReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, tpl, tpl.GetNotifyCfg(), reqDTO.Operator, event.NotifyTplChangeApiKeyAction)
 	return nil
 }
 
@@ -186,7 +206,7 @@ func SendNotificationByApiKey(ctx context.Context, reqDTO SendNotifyByApiKeyReqD
 	if !b {
 		return util.InvalidArgsError()
 	}
-	err = sendNotificationWithNotifyTpl(tpl, reqDTO.Params)
+	err = notify.SendNotification(tpl.GetNotifyCfg(), reqDTO.Params)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Errorf("send tpl id: %d failed with error: %v", tpl.Id, err)
 		return util.OperationFailedError()
@@ -225,86 +245,61 @@ func ListAllTpl(ctx context.Context, reqDTO ListAllTplReqDTO) ([]SimpleTplDTO, e
 	})
 }
 
-func checkManageNotifyTplPermByTeamId(ctx context.Context, operator apisession.UserInfo, teamId int64) error {
+func checkManageNotifyTplPermByTeamId(ctx context.Context, operator apisession.UserInfo, teamId int64) (teammd.Team, error) {
+	team, b, err := teammd.GetByTeamId(ctx, teamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return teammd.Team{}, util.InternalError(err)
+	}
+	if !b {
+		return teammd.Team{}, util.InvalidArgsError()
+	}
 	if operator.IsAdmin {
-		return nil
+		return team, nil
 	}
 	p, b, err := teammd.GetUserPermDetail(ctx, teamId, operator.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return team, util.InternalError(err)
 	}
 	if !b {
-		return util.UnauthorizedError()
+		return team, util.UnauthorizedError()
 	}
 	if p.IsAdmin || p.PermDetail.TeamPerm.CanManageNotifyTpl {
-		return nil
+		return team, nil
 	}
-	return util.UnauthorizedError()
+	return team, util.UnauthorizedError()
 }
 
-func checkManageNotifyTplPermByTplId(ctx context.Context, operator apisession.UserInfo, tplId int64) error {
+func checkManageNotifyTplPermByTplId(ctx context.Context, operator apisession.UserInfo, tplId int64) (notifymd.Tpl, teammd.Team, error) {
 	tpl, b, err := notifymd.GetTplById(ctx, tplId, []string{"team_id"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
+		return notifymd.Tpl{}, teammd.Team{}, util.InternalError(err)
 	}
 	if !b {
-		return util.InvalidArgsError()
+		return notifymd.Tpl{}, teammd.Team{}, util.InvalidArgsError()
 	}
-	return checkManageNotifyTplPermByTeamId(ctx, operator, tpl.TeamId)
+	team, err := checkManageNotifyTplPermByTeamId(ctx, operator, tpl.TeamId)
+	return tpl, team, err
 }
 
-func sendNotificationWithNotifyTpl(tpl notifymd.Tpl, params any) error {
-	if tpl.NotifyCfg == nil {
-		return util.InvalidArgsError()
-	}
-	if !tpl.NotifyCfg.Data.IsValid() {
-		return util.ThereHasBugErr()
-	}
-	cfg := tpl.NotifyCfg.Data
-	notificationTpl, err := template.New("").Parse(cfg.Template)
-	if err != nil {
-		// 模板错误
-		return err
-	}
-	msg := new(bytes.Buffer)
-	err = notificationTpl.Execute(msg, params)
-	if err != nil {
-		// 参数错误
-		return err
-	}
-	return sendNotification(msg.Bytes(), cfg)
-}
-
-// 发送通知
-func sendNotification(msgBytes []byte, cfg notify.Cfg) error {
-	initSendExecutor()
-	switch cfg.NotifyType {
-	case notify.Wework:
-		var msg wework.Message
-		err := json.Unmarshal(msgBytes, &msg)
-		if err != nil {
-			return err
-		}
-		if err = msg.IsValid(); err != nil {
-			return err
-		}
-		return sendExecutor.Execute(func() {
-			wework.SendMessage(cfg.Url, msg)
-		})
-	case notify.Feishu:
-		var msg feishu.Message
-		err := json.Unmarshal(msgBytes, &msg)
-		if err != nil {
-			return err
-		}
-		if err = msg.IsValid(); err != nil {
-			return err
-		}
-		return sendExecutor.Execute(func() {
-			feishu.SendMessage(cfg.Url, cfg.FeishuSignKey, msg)
-		})
-	}
-	return nil
+func notifyEvent(team teammd.Team, tpl notifymd.Tpl, cfg notify.Cfg, operator apisession.UserInfo, action event.NotifyTplEventAction) {
+	initPsub()
+	psub.Publish(event.NotifyTplTopic, event.NotifyTplEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		Action: action,
+		Name:   tpl.Name,
+		Type:   cfg.NotifyType,
+	})
 }

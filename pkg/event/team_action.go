@@ -60,3 +60,44 @@ const (
 	TeamUserChangeRoleAction TeamUserEventAction = "changeRole"
 	TeamUserDeleteAction     TeamUserEventAction = "delete"
 )
+
+type WeworkAccessTokenEventAction string
+
+func (t WeworkAccessTokenEventAction) GetI18nValue() string {
+	return "weworkAccessTokenEvent." + string(t)
+}
+
+const (
+	WeworkAccessTokenCreateAction       WeworkAccessTokenEventAction = "create"
+	WeworkAccessTokenUpdateAction       WeworkAccessTokenEventAction = "update"
+	WeworkAccessTokenDeleteAction       WeworkAccessTokenEventAction = "delete"
+	WeworkAccessTokenChangeApiKeyAction WeworkAccessTokenEventAction = "changeApiKey"
+	WeworkAccessTokenRefreshAction      WeworkAccessTokenEventAction = "refresh"
+)
+
+type FeishuAccessTokenEventAction string
+
+func (t FeishuAccessTokenEventAction) GetI18nValue() string {
+	return "feishuAccessTokenEvent." + string(t)
+}
+
+const (
+	FeishuAccessTokenCreateAction       FeishuAccessTokenEventAction = "create"
+	FeishuAccessTokenUpdateAction       FeishuAccessTokenEventAction = "update"
+	FeishuAccessTokenDeleteAction       FeishuAccessTokenEventAction = "delete"
+	FeishuAccessTokenChangeApiKeyAction FeishuAccessTokenEventAction = "changeApiKey"
+	FeishuAccessTokenRefreshAction      FeishuAccessTokenEventAction = "refresh"
+)
+
+type NotifyTplEventAction string
+
+func (t NotifyTplEventAction) GetI18nValue() string {
+	return "notifyTplEvent." + string(t)
+}
+
+const (
+	NotifyTplCreateAction       NotifyTplEventAction = "create"
+	NotifyTplUpdateAction       NotifyTplEventAction = "update"
+	NotifyTplDeleteAction       NotifyTplEventAction = "delete"
+	NotifyTplChangeApiKeyAction NotifyTplEventAction = "changeApiKey"
+)

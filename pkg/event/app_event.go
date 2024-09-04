@@ -166,3 +166,16 @@ type AppPromScrapeEvent struct {
 func (*AppPromScrapeEvent) EventType() string {
 	return "app-prom-scrape-event"
 }
+
+type AppAlertConfigEvent struct {
+	BaseTeam
+	BaseApp
+	BaseEvent
+	Action AppAlertConfigEventAction `json:"action"`
+	Name   string                    `json:"name"`
+	Env    string                    `json:"env"`
+}
+
+func (*AppAlertConfigEvent) EventType() string {
+	return "app-alert-config-event"
+}

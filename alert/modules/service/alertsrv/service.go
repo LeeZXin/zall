@@ -7,12 +7,55 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/teamhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"sync"
 	"time"
 )
+
+var (
+	initPsubOnce = sync.Once{}
+)
+
+func initPsub() {
+	initPsubOnce.Do(func() {
+		psub.Subscribe(event.AppAlertConfigTopic, func(data any) {
+			req, ok := data.(event.AppAlertConfigEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					if events.EnvRelated == nil {
+						return false
+					}
+					cfg, ok := events.EnvRelated[req.Env]
+					if ok {
+						switch req.Action {
+						case event.AppAlertConfigCreateAction:
+							return cfg.AppAlertConfig.Create
+						case event.AppAlertConfigUpdateAction:
+							return cfg.AppAlertConfig.Update
+						case event.AppAlertConfigDeleteAction:
+							return cfg.AppAlertConfig.Delete
+						case event.AppAlertConfigEnableAction:
+							return cfg.AppAlertConfig.Enable
+						case event.AppAlertConfigDisableAction:
+							return cfg.AppAlertConfig.Disable
+						default:
+							return false
+						}
+					}
+					return false
+				})
+			}
+		})
+	})
+}
 
 // CreateConfig 新增配置
 func CreateConfig(ctx context.Context, reqDTO CreateConfigReqDTO) error {
@@ -21,12 +64,14 @@ func CreateConfig(ctx context.Context, reqDTO CreateConfigReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, _, err := checkAppDevelopPermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
+	app, team, err := checkAppDevelopPermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
+	var cfg alertmd.Config
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		cfg, err2 := alertmd.InsertConfig(ctx, alertmd.InsertConfigReqDTO{
+		var err2 error
+		cfg, err2 = alertmd.InsertConfig(ctx, alertmd.InsertConfigReqDTO{
 			Name:        reqDTO.Name,
 			Alert:       reqDTO.Alert,
 			AppId:       reqDTO.AppId,
@@ -49,6 +94,7 @@ func CreateConfig(ctx context.Context, reqDTO CreateConfigReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, app, cfg, reqDTO.Operator, event.AppAlertConfigCreateAction)
 	return nil
 }
 
@@ -59,7 +105,7 @@ func UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, _, _, err := checkAppDevelopPermByConfigId(ctx, reqDTO.Id, reqDTO.Operator)
+	cfg, app, team, err := checkAppDevelopPermByConfigId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -73,6 +119,7 @@ func UpdateConfig(ctx context.Context, reqDTO UpdateConfigReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, app, cfg, reqDTO.Operator, event.AppAlertConfigUpdateAction)
 	return nil
 }
 
@@ -83,7 +130,7 @@ func DeleteConfig(ctx context.Context, reqDTO DeleteConfigReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, _, _, err := checkAppDevelopPermByConfigId(ctx, reqDTO.Id, reqDTO.Operator)
+	cfg, app, team, err := checkAppDevelopPermByConfigId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -99,6 +146,7 @@ func DeleteConfig(ctx context.Context, reqDTO DeleteConfigReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, app, cfg, reqDTO.Operator, event.AppAlertConfigDeleteAction)
 	return nil
 }
 
@@ -144,7 +192,7 @@ func EnableConfig(ctx context.Context, reqDTO EnableConfigReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, _, _, err := checkAppDevelopPermByConfigId(ctx, reqDTO.Id, reqDTO.Operator)
+	cfg, app, team, err := checkAppDevelopPermByConfigId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -168,6 +216,7 @@ func EnableConfig(ctx context.Context, reqDTO EnableConfigReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, app, cfg, reqDTO.Operator, event.AppAlertConfigEnableAction)
 	return nil
 }
 
@@ -177,7 +226,7 @@ func DisableConfig(ctx context.Context, reqDTO DisableConfigReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, _, _, err := checkAppDevelopPermByConfigId(ctx, reqDTO.Id, reqDTO.Operator)
+	cfg, app, team, err := checkAppDevelopPermByConfigId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -201,6 +250,7 @@ func DisableConfig(ctx context.Context, reqDTO DisableConfigReqDTO) error {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, app, cfg, reqDTO.Operator, event.AppAlertConfigDisableAction)
 	return nil
 }
 
@@ -249,4 +299,28 @@ func checkAppDevelopPermByAppId(ctx context.Context, appId string, operator apis
 		return app, team, nil
 	}
 	return app, team, util.UnauthorizedError()
+}
+
+func notifyEvent(team teammd.Team, app appmd.App, cfg alertmd.Config, operator apisession.UserInfo, action event.AppAlertConfigEventAction) {
+	initPsub()
+	psub.Publish(event.AppAlertConfigTopic, event.AppAlertConfigEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseApp: event.BaseApp{
+			AppId:   app.AppId,
+			AppName: app.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		Action: action,
+		Name:   cfg.Name,
+		Env:    cfg.Env,
+	})
 }

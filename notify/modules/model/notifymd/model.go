@@ -23,3 +23,10 @@ type Tpl struct {
 func (*Tpl) TableName() string {
 	return TplTableName
 }
+
+func (t *Tpl) GetNotifyCfg() notify.Cfg {
+	if t.NotifyCfg == nil {
+		return notify.Cfg{}
+	}
+	return t.NotifyCfg.Data
+}

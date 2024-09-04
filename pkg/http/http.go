@@ -1,10 +1,7 @@
 package http
 
 import (
-	"context"
 	"fmt"
-	"github.com/LeeZXin/zsf/services/discovery"
-	"github.com/LeeZXin/zsf/services/lb"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,25 +26,8 @@ func (t *Task) IsValid() bool {
 	return true
 }
 
-func (t *Task) DoRequest(httpClient *http.Client) error {
-	httpUrl := t.Url
-	parsedUrl, err := url.Parse(httpUrl)
-	if err != nil {
-		return err
-	}
-	// 走服务发现
-	if strings.HasSuffix(parsedUrl.Host, "-http") {
-		servers, err := discovery.Discover(context.Background(), parsedUrl.Host)
-		if err != nil {
-			return err
-		}
-		if len(servers) == 0 {
-			return lb.ServerNotFound
-		}
-		server := discovery.ChooseRandomServer(servers)
-		httpUrl = fmt.Sprintf("%s://%s:%d/%s", parsedUrl.Scheme, server.Host, server.Port, parsedUrl.RequestURI())
-	}
-	req, err := http.NewRequest(t.Method, httpUrl, strings.NewReader(t.BodyStr))
+func (t *Task) DoRequest() error {
+	req, err := http.NewRequest(t.Method, t.Url, strings.NewReader(t.BodyStr))
 	if err != nil {
 		return fmt.Errorf("http request failed: %v", err)
 	}
@@ -57,12 +37,12 @@ func (t *Task) DoRequest(httpClient *http.Client) error {
 	for k, v := range t.Headers {
 		req.Header.Set(k, v)
 	}
-	resp, err := httpClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("http request failed: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode >= http.StatusBadRequest {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("http request return code: %v", resp.StatusCode)
 	}
 	return nil

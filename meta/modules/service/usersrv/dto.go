@@ -67,6 +67,7 @@ func (r *RegisterUserReqDTO) IsValid() error {
 type LoginReqDTO struct {
 	Account  string `json:"account"`
 	Password string `json:"-"`
+	A        string `json:"a"`
 }
 
 func (r *LoginReqDTO) IsValid() error {

@@ -9,12 +9,15 @@ const (
 	GitWorkflowVarsTopic = "git-workflow-vars"
 	GitWebhookTopic      = "git-webhook"
 
-	AppTopic       = "app"
-	TeamTopic      = "team"
-	TeamRoleTopic  = "team-role"
-	TeamUserTopic  = "team-user"
-	TimerTopic     = "timer"
-	TimerTaskTopic = "timer-task"
+	AppTopic               = "app"
+	TeamTopic              = "team"
+	TeamRoleTopic          = "team-role"
+	TeamUserTopic          = "team-user"
+	TimerTopic             = "timer"
+	TimerTaskTopic         = "timer-task"
+	WeworkAccessTokenTopic = "wework-access-token"
+	FeishuAccessTokenTopic = "feishu-access-token"
+	NotifyTplTopic         = "notify-tpl"
 
 	AppPropertyFileTopic       = "app-property-file"
 	AppPropertyVersionTopic    = "app-property-version"
@@ -26,4 +29,5 @@ const (
 	AppDeployPlanTopic         = "app-deploy-plan"
 	AppArtifactTopic           = "app-artifact"
 	AppPromScrapeTopic         = "app-prom-scrape"
+	AppAlertConfigTopic        = "app-alert-config"
 )

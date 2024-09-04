@@ -30,3 +30,26 @@ type TeamUserEventCfg struct {
 	Delete     bool `json:"delete"`
 	ChangeRole bool `json:"changeRole"`
 }
+
+type WeworkAccessTokenEventCfg struct {
+	Create       bool `json:"create"`
+	Delete       bool `json:"delete"`
+	Update       bool `json:"update"`
+	Refresh      bool `json:"refresh"`
+	ChangeApiKey bool `json:"changeApiKey"`
+}
+
+type FeishuAccessTokenEventCfg struct {
+	Create       bool `json:"create"`
+	Delete       bool `json:"delete"`
+	Update       bool `json:"update"`
+	Refresh      bool `json:"refresh"`
+	ChangeApiKey bool `json:"changeApiKey"`
+}
+
+type NotifyTplEventCfg struct {
+	Create       bool `json:"create"`
+	Delete       bool `json:"delete"`
+	Update       bool `json:"update"`
+	ChangeApiKey bool `json:"changeApiKey"`
+}

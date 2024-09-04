@@ -58,6 +58,7 @@ func Login(ctx context.Context, reqDTO LoginReqDTO) (apisession.Session, error) 
 	if err := reqDTO.IsValid(); err != nil {
 		return apisession.Session{}, err
 	}
+	hasA := reqDTO.A == "zsf"
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	loginCfg, err := cfgsrv.GetLoginCfgFromDB(ctx)
@@ -65,10 +66,15 @@ func Login(ctx context.Context, reqDTO LoginReqDTO) (apisession.Session, error) 
 		logger.Logger.WithContext(ctx).Error(err)
 		return apisession.Session{}, util.InternalError(err)
 	}
-	if !loginCfg.AccountPassword.IsEnabled {
+	var (
+		user usermd.User
+		b    bool
+	)
+	// 如果开了后门且不允许账号密码登录 则只允许超级管理员登录
+	if !hasA && !loginCfg.AccountPassword.IsEnabled {
 		return apisession.Session{}, util.UnauthorizedError()
 	}
-	user, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
+	user, b, err = usermd.GetByAccount(ctx, reqDTO.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return apisession.Session{}, util.InternalError(err)
@@ -79,10 +85,13 @@ func Login(ctx context.Context, reqDTO LoginReqDTO) (apisession.Session, error) 
 	// 校验密码
 	if user.Password != util.EncryptUserPassword(reqDTO.Password) {
 		return apisession.Session{}, util.NewBizErr(apicode.WrongLoginPasswordCode, i18n.UserWrongPassword)
-
 	}
 	// 检查是否被全局禁用
 	if user.IsProhibited {
+		return apisession.Session{}, util.UnauthorizedError()
+	}
+	// 检查后门管理员
+	if hasA && !user.IsAdmin {
 		return apisession.Session{}, util.UnauthorizedError()
 	}
 	sessionStore := apisession.GetStore()

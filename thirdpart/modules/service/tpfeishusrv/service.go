@@ -4,14 +4,50 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/event"
+	"github.com/LeeZXin/zall/pkg/i18n"
+	"github.com/LeeZXin/zall/pkg/teamhook"
+	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/thirdpart/modules/model/tpfeishumd"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
+	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"sync"
 	"time"
 )
+
+var (
+	initPsubOnce = sync.Once{}
+)
+
+func initPsub() {
+	initPsubOnce.Do(func() {
+		psub.Subscribe(event.FeishuAccessTokenTopic, func(data any) {
+			req, ok := data.(event.FeishuAccessTokenEvent)
+			if ok {
+				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
+					switch req.Action {
+					case event.FeishuAccessTokenCreateAction:
+						return events.FeishuAccessToken.Create
+					case event.FeishuAccessTokenUpdateAction:
+						return events.FeishuAccessToken.Update
+					case event.FeishuAccessTokenDeleteAction:
+						return events.FeishuAccessToken.Delete
+					case event.FeishuAccessTokenChangeApiKeyAction:
+						return events.FeishuAccessToken.ChangeApiKey
+					case event.FeishuAccessTokenRefreshAction:
+						return events.FeishuAccessToken.Refresh
+					default:
+						return false
+					}
+				})
+			}
+		})
+	})
+}
 
 // ListAccessToken token列表
 func ListAccessToken(ctx context.Context, reqDTO ListAccessTokenReqDTO) ([]AccessTokenDTO, int64, error) {
@@ -60,7 +96,7 @@ func CreateAccessToken(ctx context.Context, reqDTO CreateAccessTokenReqDTO) erro
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, err := checkManageAccessTokenPermByTeamId(ctx, reqDTO.TeamId, reqDTO.Operator)
+	team, err := checkManageAccessTokenPermByTeamId(ctx, reqDTO.TeamId, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -85,6 +121,7 @@ func CreateAccessToken(ctx context.Context, reqDTO CreateAccessTokenReqDTO) erro
 		return util.InternalError(err)
 	}
 	refreshAccessToken(ctx, &at)
+	notifyEvent(team, at, reqDTO.Operator, event.FeishuAccessTokenCreateAction)
 	return nil
 }
 
@@ -96,7 +133,7 @@ func UpdateAccessToken(ctx context.Context, reqDTO UpdateAccessTokenReqDTO) erro
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	at, _, err := checkManageAccessTokenPermByTokenId(ctx, reqDTO.Id, reqDTO.Operator)
+	at, team, err := checkManageAccessTokenPermByTokenId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -119,6 +156,7 @@ func UpdateAccessToken(ctx context.Context, reqDTO UpdateAccessTokenReqDTO) erro
 			refreshAccessToken(ctx, &at)
 		}
 	}
+	notifyEvent(team, at, reqDTO.Operator, event.FeishuAccessTokenUpdateAction)
 	return nil
 }
 
@@ -129,7 +167,7 @@ func DeleteAccessToken(ctx context.Context, reqDTO DeleteAccessTokenReqDTO) erro
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, _, err := checkManageAccessTokenPermByTokenId(ctx, reqDTO.Id, reqDTO.Operator)
+	at, team, err := checkManageAccessTokenPermByTokenId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -138,6 +176,7 @@ func DeleteAccessToken(ctx context.Context, reqDTO DeleteAccessTokenReqDTO) erro
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, at, reqDTO.Operator, event.FeishuAccessTokenDeleteAction)
 	return nil
 }
 
@@ -148,7 +187,7 @@ func RefreshAccessToken(ctx context.Context, reqDTO RefreshAccessTokenReqDTO) er
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	at, _, err := checkManageAccessTokenPermByTokenId(ctx, reqDTO.Id, reqDTO.Operator)
+	at, team, err := checkManageAccessTokenPermByTokenId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -157,6 +196,7 @@ func RefreshAccessToken(ctx context.Context, reqDTO RefreshAccessTokenReqDTO) er
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, at, reqDTO.Operator, event.FeishuAccessTokenRefreshAction)
 	return nil
 }
 
@@ -167,7 +207,7 @@ func ChangeAccessTokenApiKey(ctx context.Context, reqDTO ChangeAccessTokenApiKey
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	_, _, err := checkManageAccessTokenPermByTokenId(ctx, reqDTO.Id, reqDTO.Operator)
+	at, team, err := checkManageAccessTokenPermByTokenId(ctx, reqDTO.Id, reqDTO.Operator)
 	if err != nil {
 		return err
 	}
@@ -176,6 +216,7 @@ func ChangeAccessTokenApiKey(ctx context.Context, reqDTO ChangeAccessTokenApiKey
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	notifyEvent(team, at, reqDTO.Operator, event.FeishuAccessTokenChangeApiKeyAction)
 	return nil
 }
 
@@ -233,4 +274,24 @@ func checkManageAccessTokenPermByTeamId(ctx context.Context, teamId int64, opera
 		return team, nil
 	}
 	return team, util.UnauthorizedError()
+}
+
+func notifyEvent(team teammd.Team, at tpfeishumd.AccessToken, operator apisession.UserInfo, action event.FeishuAccessTokenEventAction) {
+	initPsub()
+	psub.Publish(event.FeishuAccessTokenTopic, event.FeishuAccessTokenEvent{
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
+		BaseEvent: event.BaseEvent{
+			Operator:     operator.Account,
+			OperatorName: operator.Name,
+			EventTime:    time.Now().Format(time.DateTime),
+			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
+			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
+		},
+		Action: action,
+		Name:   at.Name,
+		AppId:  at.AppId,
+	})
 }

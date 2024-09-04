@@ -35,9 +35,9 @@ func initTrigger() {
 	})
 }
 
-func TriggerWebhook(url, secret string, req event.Event) {
+func TriggerWebhook(url, secret string, req event.Event) error {
 	initTrigger()
-	apiExecutor.Execute(func() {
+	return apiExecutor.Execute(func() {
 		err := Post(context.Background(), url, secret, req)
 		if err != nil {
 			logger.Logger.Error(err)

@@ -10,7 +10,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/timer"
 	"github.com/LeeZXin/zall/timer/modules/model/timermd"
 	"github.com/LeeZXin/zsf-utils/executor"
-	"github.com/LeeZXin/zsf-utils/httputil"
 	"github.com/LeeZXin/zsf-utils/lease"
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
@@ -18,18 +17,15 @@ import (
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
-	"net/http"
 	"time"
 )
 
 var (
 	taskExecutor *executor.Executor
 	env          string
-	httpClient   *http.Client
 )
 
 func InitTask() {
-	httpClient = httputil.NewRetryableHttpClient()
 	env = static.GetString("timer.env")
 	if env == "" {
 		logger.Logger.Fatal("timer task started with empty env")
@@ -171,7 +167,7 @@ func handleTimerTask(task *timermd.Timer) error {
 		if t.HttpTask == nil {
 			return errors.New("empty http task")
 		}
-		return t.HttpTask.DoRequest(httpClient)
+		return t.HttpTask.DoRequest()
 	default:
 		return fmt.Errorf("unsupported task type: %s", t.TaskType)
 	}
