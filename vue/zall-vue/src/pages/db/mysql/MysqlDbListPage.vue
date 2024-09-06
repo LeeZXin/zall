@@ -3,7 +3,7 @@
     <div style="margin-bottom:10px">
       <a-input
         v-model:value="searchName"
-        placeholder="搜索Mysql数据源"
+        :placeholder="t('mysqlSource.searchPlaceholder')"
         style="width:240px;margin-right:10px"
         @pressEnter="()=>searchDb()"
       >
@@ -11,26 +11,25 @@
           <SearchOutlined />
         </template>
       </a-input>
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建Mysql数据源</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('mysqlSource.createSource')}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deleteDb(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete Source</span>
-              </template>
-              <delete-outlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
-                  <edit-outlined />
-                  <span style="margin-left:4px">编辑数据源</span>
+                  <EditOutlined />
+                  <span style="margin-left:4px">{{t('mysqlSource.updateSource')}}</span>
                 </li>
               </ul>
             </template>
@@ -42,10 +41,10 @@
       </template>
     </ZTable>
     <a-pagination
-      v-model:current="currPage"
-      :total="totalCount"
+      v-model:current="dataPage.current"
+      :total="dataPage.totalCount"
       show-less-items
-      :pageSize="pageSize"
+      :pageSize="dataPage.pageSize"
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
@@ -64,44 +63,52 @@ import {
   SearchOutlined
 } from "@ant-design/icons-vue";
 import { listMysqlDbRequest, deleteMysqlDbRequest } from "@/api/db/mysqlApi";
-import { ref, h, createVNode } from "vue";
+import { ref, h, createVNode, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { Modal, message } from "ant-design-vue";
 import { useMysqldbStore } from "@/pinia/mysqldbStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const dbStore = useMysqldbStore();
 const router = useRouter();
+// 搜索key
 const searchName = ref("");
+// 数据列表
 const dataSource = ref([]);
-const currPage = ref(1);
-const pageSize = 10;
-const totalCount = ref(0);
+// 分页数据
+const dataPage = reactive({
+  current: 1,
+  pageSize: 10,
+  totalCount: 0
+});
+// 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "mysqlSource.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "写节点",
+    i18nTitle: "mysqlSource.writeHost",
     dataIndex: "writeHost",
     key: "writeHost"
   },
   {
-    title: "读节点",
+    i18nTitle: "mysqlSource.readHost",
     dataIndex: "readHost",
     key: "readHost"
   },
   {
-    title: "操作",
+    i18nTitle: "mysqlSource.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ];
-
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(`/db/mysqlDb/create`);
 };
-
+// 跳转编辑页面
 const gotoUpdatePage = item => {
   dbStore.id = item.id;
   dbStore.name = item.name;
@@ -113,18 +120,18 @@ const gotoUpdatePage = item => {
   dbStore.readPassword = item.config.readNode.password;
   router.push(`/db/mysqlDb/${item.id}/update`);
 };
-
+// 搜索数据库
 const searchDb = () => {
-  currPage.value = 1;
+  dataPage.current = 1;
   listDb();
 };
-
+// 获取数据库列表
 const listDb = () => {
   listMysqlDbRequest({
-    pageNum: currPage.value,
+    pageNum: dataPage.current,
     name: searchName.value
   }).then(res => {
-    totalCount.value = res.totalCount;
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -137,14 +144,14 @@ const listDb = () => {
     });
   });
 };
-
+// 删除数据库
 const deleteDb = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("mysqlSource.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteMysqlDbRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         searchDb();
       });
     },
@@ -155,11 +162,4 @@ const deleteDb = item => {
 listDb();
 </script>
 <style scoped>
-.check-btn {
-  font-size: 14px;
-}
-.check-btn:hover {
-  color: #1677ff;
-  cursor: pointer;
-}
 </style>

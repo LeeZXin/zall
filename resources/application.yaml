@@ -47,9 +47,6 @@ idserver:
 httptask:
   token: 123
 
-discovery:
-  type: static
-
 files:
   enabled: true
 

@@ -3,7 +3,7 @@
     <div style="margin-bottom:10px">
       <a-input
         v-model:value="searchApp"
-        placeholder="搜索应用服务"
+        :placeholder="t('appService.searchApp')"
         style="width:240px;margin-right:10px"
         @change="searchChange"
       >
@@ -16,13 +16,13 @@
         @click="gotoCreatePage"
         :icon="h(PlusOutlined)"
         v-if="teamStore.isAdmin"
-      >创建应用服务</a-button>
+      >{{t('appService.createApp')}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
-          <span class="check-btn" @click="gotoAppPage(dataItem)">查看</span>
+          <span class="check-btn" @click="gotoAppPage(dataItem)">{{t('appService.viewApp')}}</span>
         </div>
       </template>
     </ZTable>
@@ -35,34 +35,38 @@ import { listAppRequest } from "@/api/app/appApi";
 import { ref, h } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useTeamStore } from "@/pinia/teamStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const teamStore = useTeamStore();
 const router = useRouter();
 const route = useRoute();
 const searchApp = ref("");
 const dataSource = ref([]);
+// 所有应用服务列表
 const allAppList = ref([]);
+// 数据项
 const columns = [
   {
-    title: "AppId",
+    i18nTitle: "appService.appId",
     dataIndex: "appId",
     key: "appId"
   },
   {
-    title: "应用名称",
+    i18nTitle: "appService.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "操作",
+    i18nTitle: "appService.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ];
-
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(`/team/${route.params.teamId}/app/create`);
 };
-
+// app应用
 const listApp = () => {
   listAppRequest(route.params.teamId).then(res => {
     dataSource.value = res.data.map(item => {
@@ -74,7 +78,7 @@ const listApp = () => {
     allAppList.value = dataSource.value;
   });
 };
-
+// 搜索框搜索
 const searchChange = () => {
   if (!searchApp.value || searchApp.value === "") {
     dataSource.value = allAppList.value;
@@ -87,7 +91,7 @@ const searchChange = () => {
     });
   }
 };
-
+// 进入应用服务layout
 const gotoAppPage = item => {
   router.push(
     `/team/${route.params.teamId}/app/${item.appId}/propertyFile/list`

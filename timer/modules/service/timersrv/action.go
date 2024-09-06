@@ -22,26 +22,21 @@ import (
 
 var (
 	taskExecutor *executor.Executor
-	env          string
 )
 
 func InitTask() {
-	env = static.GetString("timer.env")
-	if env == "" {
-		logger.Logger.Fatal("timer task started with empty env")
-	}
 	poolSize := static.GetInt("timer.poolSize")
 	if poolSize <= 0 {
-		poolSize = 10
+		poolSize = 20
 	}
 	queueSize := static.GetInt("timer.queueSize")
 	if queueSize <= 0 {
 		queueSize = 1024
 	}
-	logger.Logger.Infof("start timer task service with env: %s poolSize: %v queueSize: %v", env, poolSize, queueSize)
+	logger.Logger.Infof("start timer task service with poolSize: %v queueSize: %v", poolSize, queueSize)
 	taskExecutor, _ = executor.NewExecutor(poolSize, queueSize, time.Minute, executor.AbortStrategy)
 	leaser, _ := lease.NewDbLease(
-		"timer-lock-"+env,
+		"timer-lock",
 		common.GetInstanceId(),
 		"zall_lock",
 		xormstore.GetEngine(),
@@ -77,7 +72,7 @@ func InitTask() {
 func doExecuteTask(runCtx context.Context) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	err := timermd.IterateExecute(ctx, time.Now().UnixMilli(), env, func(execute *timermd.Execute) error {
+	err := timermd.IterateExecute(ctx, time.Now().UnixMilli(), func(execute *timermd.Execute) error {
 		if err := runCtx.Err(); err != nil {
 			return err
 		}

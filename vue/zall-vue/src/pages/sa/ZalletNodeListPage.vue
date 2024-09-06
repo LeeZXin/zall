@@ -84,7 +84,11 @@ const router = useRouter();
 // 数据
 const dataSource = ref([]);
 // 数据项
-const columns = [
+const columns = [{
+    title: "nodeId",
+    dataIndex: "nodeId",
+    key: "nodeId"
+  },
   {
     title: "名称",
     dataIndex: "name",
@@ -108,6 +112,7 @@ const gotoCreatePage = () => {
 // 跳转编辑节点界面
 const gotoUpdatePage = item => {
   zalletNodeStore.id = item.id;
+  zalletNodeStore.nodeId = item.nodeId;
   zalletNodeStore.name = item.name;
   zalletNodeStore.agentHost = item.agentHost;
   zalletNodeStore.agentToken = item.agentToken;

@@ -7,6 +7,7 @@ import (
 )
 
 type CreateZalletNodeReqDTO struct {
+	NodeId     string              `json:"nodeId"`
 	Name       string              `json:"name"`
 	AgentHost  string              `json:"agentHost"`
 	AgentToken string              `json:"agentToken"`
@@ -14,13 +15,16 @@ type CreateZalletNodeReqDTO struct {
 }
 
 func (r *CreateZalletNodeReqDTO) IsValid() error {
-	if !zalletmd.IsZalletNodeNameValid(r.Name) {
+	if !zalletmd.IsZalletNodeIdValid(r.NodeId) {
 		return util.InvalidArgsError()
 	}
-	if !zalletmd.IsZalletNodeAgentHostValid(r.AgentHost) {
+	if !zalletmd.IsZalletNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if !zalletmd.IsZalletNodeAgentTokenValid(r.AgentToken) {
+	if !zalletmd.IsZalletAgentHostValid(r.AgentHost) {
+		return util.InvalidArgsError()
+	}
+	if !zalletmd.IsZalletAgentTokenValid(r.AgentToken) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -36,7 +40,7 @@ type ListZalletNodeReqDTO struct {
 }
 
 func (r *ListZalletNodeReqDTO) IsValid() error {
-	if len(r.Name) > 0 && !zalletmd.IsZalletNodeNameValid(r.Name) {
+	if len(r.Name) > 0 && !zalletmd.IsZalletNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
 	if r.PageNum <= 0 {
@@ -64,7 +68,7 @@ func (r *DeleteZalletNodeReqDTO) IsValid() error {
 }
 
 type UpdateZalletNodeReqDTO struct {
-	NodeId     int64               `json:"nodeId"`
+	Id         int64               `json:"id"`
 	Name       string              `json:"name"`
 	AgentHost  string              `json:"agentHost"`
 	AgentToken string              `json:"agentToken"`
@@ -72,16 +76,16 @@ type UpdateZalletNodeReqDTO struct {
 }
 
 func (r *UpdateZalletNodeReqDTO) IsValid() error {
-	if r.NodeId <= 0 {
+	if r.Id <= 0 {
 		return util.InvalidArgsError()
 	}
-	if !zalletmd.IsZalletNodeNameValid(r.Name) {
+	if !zalletmd.IsZalletNameValid(r.Name) {
 		return util.InvalidArgsError()
 	}
-	if !zalletmd.IsZalletNodeAgentHostValid(r.AgentHost) {
+	if !zalletmd.IsZalletAgentHostValid(r.AgentHost) {
 		return util.InvalidArgsError()
 	}
-	if !zalletmd.IsZalletNodeAgentTokenValid(r.AgentToken) {
+	if !zalletmd.IsZalletAgentTokenValid(r.AgentToken) {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -92,6 +96,7 @@ func (r *UpdateZalletNodeReqDTO) IsValid() error {
 
 type ZalletNodeDTO struct {
 	Id         int64  `json:"id"`
+	NodeId     string `json:"nodeId"`
 	Name       string `json:"name"`
 	AgentHost  string `json:"agentHost"`
 	AgentToken string `json:"agentToken"`
@@ -109,6 +114,7 @@ func (r *ListAllZalletNodeReqDTO) IsValid() error {
 }
 
 type SimpleZalletNodeDTO struct {
-	Id   int64  `json:"id"`
-	Name string `json:"name"`
+	Id     int64
+	NodeId string
+	Name   string
 }

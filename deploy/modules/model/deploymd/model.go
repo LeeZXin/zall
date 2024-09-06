@@ -8,9 +8,7 @@ import (
 
 const (
 	StageTableName         = "zservice_deploy_stage"
-	DeployLogTableName     = "zservice_deploy_log"
 	PlanTableName          = "zservice_deploy_plan"
-	OpLogTableName         = "zservice_op_log"
 	PipelineTableName      = "zservice_pipeline"
 	PipelineVarsTableName  = "zservice_pipeline_vars"
 	SourceTableName        = "zservice_source"
@@ -35,37 +33,19 @@ func (s PlanStatus) IsFinalStatus() bool {
 	}
 }
 
-// DeployLog 部署日志
-type DeployLog struct {
-	Id       int64 `json:"id" xorm:"pk autoincr"`
-	ConfigId int64 `json:"configId"`
-	// 发布计划id
-	PlanId         int64     `json:"planId"`
-	AppId          string    `json:"appId"`
-	ServiceConfig  string    `json:"serviceConfig"`
-	ProductVersion string    `json:"productVersion"`
-	Operator       string    `json:"operator"`
-	DeployOutput   string    `json:"deployOutput"`
-	Created        time.Time `json:"created" xorm:"created"`
-}
-
-func (*DeployLog) TableName() string {
-	return DeployLogTableName
-}
-
 // Plan 发布计划
 type Plan struct {
-	Id             int64      `json:"id" xorm:"pk autoincr"`
-	AppId          string     `json:"appId"`
-	PipelineId     int64      `json:"pipelineId"`
-	PipelineName   string     `json:"pipelineName"`
-	Name           string     `json:"name"`
-	ProductVersion string     `json:"productVersion"`
-	PlanStatus     PlanStatus `json:"planStatus"`
-	Env            string     `json:"env"`
-	Creator        string     `json:"creator"`
-	PipelineConfig string     `json:"pipelineConfig"`
-	Created        time.Time  `json:"created" xorm:"created"`
+	Id              int64      `json:"id" xorm:"pk autoincr"`
+	AppId           string     `json:"appId"`
+	PipelineId      int64      `json:"pipelineId"`
+	PipelineName    string     `json:"pipelineName"`
+	Name            string     `json:"name"`
+	ArtifactVersion string     `json:"artifactVersion"`
+	PlanStatus      PlanStatus `json:"planStatus"`
+	Env             string     `json:"env"`
+	Creator         string     `json:"creator"`
+	PipelineConfig  string     `json:"pipelineConfig"`
+	Created         time.Time  `json:"created" xorm:"created"`
 }
 
 func (*Plan) TableName() string {
@@ -90,20 +70,6 @@ func (o Op) Readable() string {
 	}
 }
 
-type OpLog struct {
-	Id             int64     `json:"id" xorm:"pk autoincr"`
-	ConfigId       int64     `json:"configId"`
-	Op             Op        `json:"op"`
-	Operator       string    `json:"operator"`
-	ScriptOutput   string    `json:"scriptOutput"`
-	ProductVersion string    `json:"productVersion"`
-	Created        time.Time `json:"created" xorm:"created"`
-}
-
-func (*OpLog) TableName() string {
-	return OpLogTableName
-}
-
 type StageStatus int
 
 const (
@@ -118,10 +84,13 @@ type Stage struct {
 	PlanId      int64                                   `json:"planId"`
 	AppId       string                                  `json:"appId"`
 	Agent       string                                  `json:"agent"`
+	AgentHost   string                                  `json:"agentHost"`
+	AgentToken  string                                  `json:"agentToken"`
 	InputArgs   *xormutil.Conversion[map[string]string] `json:"inputArgs"`
 	StageIndex  int                                     `json:"stageIndex"`
 	ExecuteLog  string                                  `json:"executeLog"`
 	StageStatus StageStatus                             `json:"stageStatus"`
+	Script      string                                  `json:"script"`
 	TaskId      string                                  `json:"taskId"`
 	Created     time.Time                               `json:"created" xorm:"created"`
 	Updated     time.Time                               `json:"updated" xorm:"updated"`

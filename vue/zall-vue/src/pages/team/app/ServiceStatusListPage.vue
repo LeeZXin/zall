@@ -7,23 +7,30 @@
           :icon="h(SettingOutlined)"
           @click="showBindServiceSourceModal"
           v-if="appStore.perm?.canManageServiceSource"
-        >管理服务状态来源绑定</a-button>
+        >{{t('serviceStatus.manageSource')}}</a-button>
       </div>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="sourceColumns" :dataSource="sourceDataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
-        <span v-else class="check-btn" @click="listAndShowStatusList(dataItem)">查看</span>
+        <span
+          v-else
+          class="check-btn"
+          @click="listAndShowStatusList(dataItem)"
+        >{{t('serviceStatus.view')}}</span>
       </template>
     </ZTable>
   </div>
   <div style="padding:10px;height:100%" v-if="showStatusList">
     <div style="margin-bottom:10px;">
-      <span class="check-btn" @click="backToSource">返回集群选择</span>
+      <span class="check-btn" @click="backToSource">
+        <LeftOutlined />
+        <span style="margin-left:4px">{{t('serviceStatus.backToSelectSource')}}</span>
+      </span>
     </div>
-    <div style="margin-bottom:10px;font-weight:bold">
-      <span>{{selectedSource?selectedSource.name:""}}</span>
+    <div style="margin-bottom:10px;">
+      <span style="font-weight:bold">{{selectedSource?selectedSource.name:""}}</span>
       <a-tag color="orange" style="margin-left:10px">{{selectedSource.env}}</a-tag>
     </div>
     <ZTable :columns="statusColumns" :dataSource="statusDataSource">
@@ -39,16 +46,19 @@
       </template>
     </ZTable>
   </div>
-  <a-modal v-model:open="bindModal.open" title="绑定配置来源" @ok="handleBindModalOk">
+  <a-modal
+    v-model:open="bindModal.open"
+    :title="t('serviceStatus.bindSource')"
+    @ok="handleBindModalOk"
+  >
     <div>
-      <div style="font-size:12px;margin-bottom:3px">已选环境</div>
+      <div style="font-size:12px;margin-bottom:3px">{{t('serviceStatus.selectedEnv')}}</div>
       <div>{{selectedEnv}}</div>
     </div>
     <div style="margin-top: 10px">
-      <div style="font-size:12px;margin-bottom:3px">配置来源</div>
+      <div style="font-size:12px;margin-bottom:3px">{{t('serviceStatus.source')}}</div>
       <a-select
         style="width: 100%"
-        placeholder="请选择"
         v-model:value="bindModal.selectIdList"
         :options="bindModal.sourceList"
         show-search
@@ -61,7 +71,8 @@
 <script setup>
 import {
   ExclamationCircleOutlined,
-  SettingOutlined
+  SettingOutlined,
+  LeftOutlined
 } from "@ant-design/icons-vue";
 import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
@@ -77,6 +88,8 @@ import {
 } from "@/api/app/serviceApi";
 import { message, Modal } from "ant-design-vue";
 import { useAppStore } from "@/pinia/appStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const appStore = useAppStore();
 const route = useRoute();
 const bindModal = reactive({
@@ -94,12 +107,12 @@ const showStatusList = ref(false);
 // 来源数据项
 const sourceColumns = [
   {
-    title: "名称",
+    i18nTitle: "serviceStatus.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "操作",
+    i18nTitle: "serviceStatus.operation",
     dataIndex: "operation",
     key: "operation"
   }
@@ -112,27 +125,27 @@ const statusColumns = [
     key: "id"
   },
   {
-    title: "主机",
+    i18nTitle: "serviceStatus.host",
     dataIndex: "host",
     key: "host"
   },
   {
-    title: "状态",
+    i18nTitle: "serviceStatus.status",
     dataIndex: "status",
     key: "status"
   },
   {
-    title: "CPU百分比",
+    i18nTitle: "serviceStatus.cpuPercent",
     dataIndex: "cpuPercent",
     key: "cpuPercent"
   },
   {
-    title: "内存百分比",
+    i18nTitle: "serviceStatus.memPercent",
     dataIndex: "memPercent",
     key: "memPercent"
   },
   {
-    title: "操作",
+    i18nTitle: "serviceStatus.operation",
     dataIndex: "operation",
     key: "operation"
   }
@@ -220,17 +233,15 @@ const refreshStatus = () => {
 // 执行自定义操作
 const doAction = (item, action) => {
   Modal.confirm({
-    title: `你确定要${action}${item.id}吗?`,
+    title: `${t('serviceStatus.confirm')} ${action} ${item.id}?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       doStatusActionRequest({
         serviceId: item.id,
         bindId: selectedSource.value.bindId,
         action: action
       }).then(() => {
-        message.success("操作成功");
+        message.success(t("operationSuccess"));
         listStatus();
       });
     },
@@ -269,7 +280,7 @@ const handleBindModalOk = () => {
     sourceIdList: bindModal.selectIdList,
     env: selectedEnv.value
   }).then(() => {
-    message.success("操作成功");
+    message.success(t("operationSuccess"));
     bindModal.open = false;
     listServiceSource();
   });

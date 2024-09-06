@@ -7,7 +7,7 @@
           :icon="h(SettingOutlined)"
           @click="showBindDiscoverySourceModal"
           v-if="appStore.perm?.canManageDiscoverySource"
-        >管理注册中心来源绑定</a-button>
+        >{{t('discoveryService.manageSource')}}</a-button>
       </div>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
@@ -15,21 +15,28 @@
       <ZTable :columns="sourceColumns" :dataSource="sourceDataSource">
         <template #bodyCell="{dataIndex, dataItem}">
           <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
-          <span v-else @click="listAndShowService(dataItem)" class="check-btn">查看</span>
+          <span
+            v-else
+            @click="listAndShowService(dataItem)"
+            class="check-btn"
+          >{{t('discoveryService.view')}}</span>
         </template>
       </ZTable>
     </div>
   </div>
   <div style="padding:10px;" v-show="selectedSource.showServices">
     <div style="margin-bottom:10px">
-      <span class="check-btn" @click="selectedSource.showServices = false">返回集群选择</span>
+      <span class="check-btn" @click="selectedSource.showServices = false">
+        <LeftOutlined />
+        <span style="margin-left:4px">{{t('discoveryService.backToSelectSource')}}</span>
+      </span>
     </div>
     <div style="margin-bottom:10px;">
       <span style="font-weight:bold">{{selectedSource.name}}</span>
-      <a-tag color="orange" style="margin-left:10px;font-weight:bold">{{selectedSource.env}}</a-tag>
+      <a-tag color="orange" style="margin-left:10px;">{{selectedSource.env}}</a-tag>
       <span class="check-btn" style="margin-left:10px" @click="listService">
         <ReloadOutlined />
-        <span style="margin-left: 6px">刷新</span>
+        <span style="margin-left: 6px">{{t('discoveryService.refresh')}}</span>
       </span>
     </div>
     <div>
@@ -46,16 +53,16 @@
                 <ul class="op-list">
                   <li @click="deregisterService(dataItem)" v-if="dataItem['up']">
                     <CloseOutlined />
-                    <span style="margin-left:4px">下线服务</span>
+                    <span style="margin-left:4px">{{t('discoveryService.deregister')}}</span>
                   </li>
                   <template v-else>
                     <li @click="reRegisterService(dataItem)">
                       <UploadOutlined />
-                      <span style="margin-left:4px">上线服务</span>
+                      <span style="margin-left:4px">{{t('discoveryService.reRegister')}}</span>
                     </li>
                     <li @click="deleteDownService(dataItem)">
                       <CloseOutlined />
-                      <span style="margin-left:4px">删除服务</span>
+                      <span style="margin-left:4px">{{t('discoveryService.deleteDownService')}}</span>
                     </li>
                   </template>
                 </ul>
@@ -69,16 +76,19 @@
       </ZTable>
     </div>
   </div>
-  <a-modal v-model:open="bindModal.open" title="绑定配置来源" @ok="handleBindModalOk">
+  <a-modal
+    v-model:open="bindModal.open"
+    :title="t('discoveryService.bindSource')"
+    @ok="handleBindModalOk"
+  >
     <div>
-      <div style="font-size:12px;margin-bottom:3px">已选环境</div>
+      <div style="font-size:12px;margin-bottom:3px">{{t('discoveryService.selectedEnv')}}</div>
       <div>{{selectedEnv}}</div>
     </div>
     <div style="margin-top: 10px">
-      <div style="font-size:12px;margin-bottom:3px">配置来源</div>
+      <div style="font-size:12px;margin-bottom:3px">{{t('discoveryService.source')}}</div>
       <a-select
         style="width: 100%"
-        placeholder="请选择"
         v-model:value="bindModal.selectIdList"
         :options="bindModal.sourceList"
         show-search
@@ -97,7 +107,8 @@ import {
   CloseOutlined,
   UploadOutlined,
   ExclamationCircleOutlined,
-  SettingOutlined
+  SettingOutlined,
+  LeftOutlined
 } from "@ant-design/icons-vue";
 import ZTable from "@/components/common/ZTable";
 import { ref, createVNode, h, reactive } from "vue";
@@ -114,6 +125,8 @@ import {
 import EnvSelector from "@/components/app/EnvSelector";
 import { message, Modal } from "ant-design-vue";
 import { useAppStore } from "@/pinia/appStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const appStore = useAppStore();
 const selectedEnv = ref("");
 const route = useRoute();
@@ -138,12 +151,12 @@ const selectedSource = reactive({
 // 注册中心来源数据项
 const sourceColumns = [
   {
-    title: "名称",
+    i18nTitle: "discoveryService.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "操作",
+    i18nTitle: "discoveryService.operation",
     dataIndex: "operation",
     key: "operation"
   }
@@ -151,52 +164,52 @@ const sourceColumns = [
 // 注册服务数据项
 const serviceColumns = [
   {
-    title: "协议",
+    i18nTitle: "discoveryService.serviceProtocol",
     dataIndex: "protocol",
     key: "protocol"
   },
   {
-    title: "名称",
+    i18nTitle: "discoveryService.serviceName",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "host",
+    i18nTitle: "discoveryService.serviceHost",
     dataIndex: "host",
     key: "host"
   },
   {
-    title: "端口",
+    i18nTitle: "discoveryService.servicePort",
     dataIndex: "port",
     key: "port"
   },
   {
-    title: "权重",
+    i18nTitle: "discoveryService.serviceWeight",
     dataIndex: "weight",
     key: "weight"
   },
   {
-    title: "版本",
+    i18nTitle: "discoveryService.serviceVersion",
     dataIndex: "version",
     key: "version"
   },
   {
-    title: "地域",
+    i18nTitle: "discoveryService.serviceRegion",
     dataIndex: "region",
     key: "region"
   },
   {
-    title: "地区",
+    i18nTitle: "discoveryService.serviceZone",
     dataIndex: "zone",
     key: "zone"
   },
   {
-    title: "是否在线",
+    i18nTitle: "discoveryService.serviceUp",
     dataIndex: "up",
     key: "up"
   },
   {
-    title: "操作",
+    i18nTitle: "discoveryService.operation",
     dataIndex: "operation",
     key: "operation"
   }
@@ -246,14 +259,14 @@ const onEnvChange = e => {
 // 下线服务
 const deregisterService = item => {
   Modal.confirm({
-    title: `你确定要下线${item.host}吗?`,
+    title: `${t('discoveryService.confirmDeregister')} ${item.host}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deregisterServiceRequest({
         bindId: selectedSource.bindId,
         instanceId: item.instanceId
       }).then(() => {
-        message.success("下线成功");
+        message.success(t('operationSuccess'));
         listService();
       });
     },
@@ -263,14 +276,14 @@ const deregisterService = item => {
 // 重新上线服务
 const reRegisterService = item => {
   Modal.confirm({
-    title: `你确定要上线${item.host}吗?`,
+    title: `${t('discoveryService.confirmReRegister')} ${item.host}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       reRegisterServiceRequest({
         bindId: selectedSource.bindId,
         instanceId: item.instanceId
       }).then(() => {
-        message.success("上线成功");
+        message.success(t('operationSuccess'));
         listService();
       });
     },
@@ -280,14 +293,14 @@ const reRegisterService = item => {
 // 删除下线服务
 const deleteDownService = item => {
   Modal.confirm({
-    title: `你确定要删除${item.host}吗?`,
+    title: `${t('discoveryService.confirmDelete')} ${item.host}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteDownServiceRequest({
         bindId: selectedSource.bindId,
         instanceId: item.instanceId
       }).then(() => {
-        message.success("删除成功");
+        message.success(t('operationSuccess'));
         listService();
       });
     },
@@ -326,7 +339,7 @@ const handleBindModalOk = () => {
     sourceIdList: bindModal.selectIdList,
     env: selectedEnv.value
   }).then(() => {
-    message.success("操作成功");
+    message.success(t('operationSuccess'));
     bindModal.open = false;
     listDiscoverySource();
   });

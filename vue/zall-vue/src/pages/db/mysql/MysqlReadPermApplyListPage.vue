@@ -1,23 +1,21 @@
 <template>
   <div style="padding:10px">
     <div style="margin-bottom:10px">
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">申请Mysql读权限</a-button>
-    </div>
-    <div>
-      <a-radio-group v-model:value="applyStatus" @change="selectApplyStatus">
-        <a-radio-button :value="1">
-          <span>等待审批</span>
-        </a-radio-button>
-        <a-radio-button :value="2">
-          <span>同意</span>
-        </a-radio-button>
-        <a-radio-button :value="3">
-          <span>不同意</span>
-        </a-radio-button>
-        <a-radio-button :value="4">
-          <span>已取消</span>
-        </a-radio-button>
-      </a-radio-group>
+      <a-select
+        v-model:value="applyStatus"
+        @change="selectApplyStatus"
+        style="margin-right:6px;width:180px"
+      >
+        <a-select-option :value="1">{{t("mysqlReadPermApply.pendingStatus")}}</a-select-option>
+        <a-select-option :value="2">{{t("mysqlReadPermApply.agreeStatus")}}</a-select-option>
+        <a-select-option :value="3">{{t("mysqlReadPermApply.disagreeStatus")}}</a-select-option>
+        <a-select-option :value="4">{{t("mysqlReadPermApply.canceledStatus")}}</a-select-option>
+      </a-select>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('mysqlReadPermApply.applyReadPerm')}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -29,7 +27,7 @@
               <ul class="op-list">
                 <li @click="cancelApply(dataItem)">
                   <CloseOutlined />
-                  <span style="margin-left:4px">撤销申请</span>
+                  <span style="margin-left:4px">{{t('mysqlReadPermApply.cancelApply')}}</span>
                 </li>
               </ul>
             </template>
@@ -68,98 +66,103 @@ import {
 import { ref, h, createVNode, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { Modal, message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const dataSource = ref([]);
+// 审批状态
 const applyStatus = ref(1);
+// 分页
 const dataPage = reactive({
   current: 1,
   pageSize: 10,
   totalCount: 0
 });
+// 数据项
 const columns = ref([
   {
-    title: "数据库名称",
+    i18nTitle: "mysqlReadPermApply.dbName",
     dataIndex: "dbName",
     key: "dbName"
   },
   {
-    title: "申请库",
+    i18nTitle: "mysqlReadPermApply.accessBase",
     dataIndex: "accessBase",
     key: "accessBase"
   },
   {
-    title: "申请表",
+    i18nTitle: "mysqlReadPermApply.accessTables",
     dataIndex: "accessTables",
     key: "accessTables"
   },
   {
-    title: "时效(天)",
+    i18nTitle: "mysqlReadPermApply.expireDay",
     dataIndex: "expireDay",
     key: "expireDay"
   },
   {
-    title: "状态",
+    i18nTitle: "mysqlReadPermApply.applyStatus",
     dataIndex: "applyStatus",
     key: "applyStatus"
   },
   {
-    title: "申请原因",
+    i18nTitle: "mysqlReadPermApply.applyReason",
     dataIndex: "applyReason",
     key: "applyReason"
   },
   {
-    title: "申请时间",
+    i18nTitle: "mysqlReadPermApply.applyTime",
     dataIndex: "created",
     key: "created"
   },
   {
-    title: "操作",
+    i18nTitle: "mysqlReadPermApply.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ]);
-
+// 选择审批状态
 const selectApplyStatus = () => {
   switch (applyStatus.value) {
     case 1:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlReadPermApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlReadPermApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "申请表",
+          i18nTitle: "mysqlReadPermApply.accessTables",
           dataIndex: "accessTables",
           key: "accessTables"
         },
         {
-          title: "时效(天)",
+          i18nTitle: "mysqlReadPermApply.expireDay",
           dataIndex: "expireDay",
           key: "expireDay"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlReadPermApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlReadPermApply.applyTime",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "操作",
+          i18nTitle: "mysqlReadPermApply.operation",
           dataIndex: "operation",
           key: "operation"
         }
@@ -168,47 +171,47 @@ const selectApplyStatus = () => {
     case 2:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlReadPermApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlReadPermApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "申请表",
+          i18nTitle: "mysqlReadPermApply.accessTables",
           dataIndex: "accessTables",
           key: "accessTables"
         },
         {
-          title: "时效(天)",
+          i18nTitle: "mysqlReadPermApply.expireDay",
           dataIndex: "expireDay",
           key: "expireDay"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlReadPermApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "审批人",
+          i18nTitle: "mysqlReadPermApply.auditor",
           dataIndex: "auditor",
           key: "auditor"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlReadPermApply.applyTime",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "审批时间",
+          i18nTitle: "mysqlReadPermApply.auditTime",
           dataIndex: "updated",
           key: "updated"
         }
@@ -217,52 +220,52 @@ const selectApplyStatus = () => {
     case 3:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlReadPermApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlReadPermApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "申请表",
+          i18nTitle: "mysqlReadPermApply.accessTables",
           dataIndex: "accessTables",
           key: "accessTables"
         },
         {
-          title: "时效(天)",
+          i18nTitle: "mysqlReadPermApply.expireDay",
           dataIndex: "expireDay",
           key: "expireDay"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlReadPermApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "不同意原因",
+          i18nTitle: "mysqlReadPermApply.disagreeReason",
           dataIndex: "disagreeReason",
           key: "disagreeReason"
         },
         {
-          title: "审批人",
+          i18nTitle: "mysqlReadPermApply.auditor",
           dataIndex: "auditor",
           key: "auditor"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlReadPermApply.applyTime",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "审批时间",
+          i18nTitle: "mysqlReadPermApply.auditTime",
           dataIndex: "updated",
           key: "updated"
         }
@@ -271,55 +274,55 @@ const selectApplyStatus = () => {
     case 4:
       columns.value = [
         {
-          title: "数据库名称",
+          i18nTitle: "mysqlReadPermApply.dbName",
           dataIndex: "dbName",
           key: "dbName"
         },
         {
-          title: "申请库",
+          i18nTitle: "mysqlReadPermApply.accessBase",
           dataIndex: "accessBase",
           key: "accessBase"
         },
         {
-          title: "申请表",
+          i18nTitle: "mysqlReadPermApply.accessTables",
           dataIndex: "accessTables",
           key: "accessTables"
         },
         {
-          title: "时效(天)",
+          i18nTitle: "mysqlReadPermApply.expireDay",
           dataIndex: "expireDay",
           key: "expireDay"
         },
         {
-          title: "状态",
+          i18nTitle: "mysqlReadPermApply.applyStatus",
           dataIndex: "applyStatus",
           key: "applyStatus"
         },
         {
-          title: "申请原因",
+          i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
           key: "applyReason"
         },
         {
-          title: "申请时间",
+          i18nTitle: "mysqlReadPermApply.applyTime",
           dataIndex: "created",
           key: "created"
         },
         {
-          title: "取消时间",
+          i18nTitle: "mysqlReadPermApply.cancelTime",
           dataIndex: "updated",
           key: "updated"
         }
       ];
       break;
   }
-  listApply();
+  searchApply();
 };
-
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(`/db/mysqlReadPermApply/apply`);
 };
-
+// 获取列表
 const listApply = () => {
   listReadPermApplyByOperatorRequest({
     pageNum: dataPage.current,
@@ -334,30 +337,27 @@ const listApply = () => {
     });
   });
 };
-
+// 撤销申请
 const cancelApply = item => {
   Modal.confirm({
-    title: `你确定要撤销${item.dbName}吗?`,
+    title: `${t("mysqlReadPermApply.confirmCancel")} ${item.dbName}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       cancelReadPermApplyRequest(item.id).then(() => {
-        message.success("撤销成功");
-        dataPage.current = 1;
-        listApply();
+        message.success(t("operationSuccess"));
+        searchApply();
       });
     },
     onCancel() {}
   });
 };
+// 搜索列表
+const searchApply = () => {
+  dataPage.current = 1;
+  listApply();
+};
 
 listApply();
 </script>
 <style scoped>
-.check-btn {
-  font-size: 14px;
-}
-.check-btn:hover {
-  color: #1677ff;
-  cursor: pointer;
-}
 </style>

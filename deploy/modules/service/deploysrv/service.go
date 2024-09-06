@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/LeeZXin/zall/deploy/modules/model/deploymd"
+	"github.com/LeeZXin/zall/fileserv/modules/model/artifactmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/model/zalletmd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/event"
@@ -163,8 +165,21 @@ func CreatePlan(ctx context.Context, reqDTO CreatePlanReqDTO) error {
 	if err != nil {
 		return err
 	}
+	// 检查制品号
+	_, b, err := artifactmd.GetArtifactByAppIdAndNameAndEnv(ctx, artifactmd.GetArtifactReqDTO{
+		AppId: app.AppId,
+		Name:  reqDTO.ArtifactVersion,
+		Env:   pipeline.Env,
+	})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if !b {
+		return util.InvalidArgsError()
+	}
 	// 检查是否有其他发布计划在
-	b, err := deploymd.ExistPendingOrRunningPlanByPipelineId(ctx, reqDTO.PipelineId)
+	b, err = deploymd.ExistPendingOrRunningPlanByPipelineId(ctx, reqDTO.PipelineId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -173,14 +188,14 @@ func CreatePlan(ctx context.Context, reqDTO CreatePlanReqDTO) error {
 		return util.AlreadyExistsError()
 	}
 	plan, err := deploymd.InsertPlan(ctx, deploymd.InsertPlanReqDTO{
-		Name:           reqDTO.Name,
-		PlanStatus:     deploymd.PendingPlanStatus,
-		AppId:          pipeline.AppId,
-		PipelineId:     reqDTO.PipelineId,
-		PipelineName:   pipeline.Name,
-		ProductVersion: reqDTO.ProductVersion,
-		Creator:        reqDTO.Operator.Account,
-		Env:            pipeline.Env,
+		Name:            reqDTO.Name,
+		PlanStatus:      deploymd.PendingPlanStatus,
+		AppId:           pipeline.AppId,
+		PipelineId:      reqDTO.PipelineId,
+		PipelineName:    pipeline.Name,
+		ArtifactVersion: reqDTO.ArtifactVersion,
+		Creator:         reqDTO.Operator.Account,
+		Env:             pipeline.Env,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -204,29 +219,43 @@ func StartPlan(ctx context.Context, reqDTO StartPlanReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	plan, b, err := deploymd.GetPlanById(ctx, reqDTO.PlanId)
+	plan, pipeline, app, team, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
+	if plan.PlanStatus != deploymd.PendingPlanStatus {
+		return util.InvalidArgsError()
+	}
+	if err != nil {
+		return err
+	}
+	var plCfg deploy.Pipeline
+	err = yaml.Unmarshal([]byte(pipeline.Config), &plCfg)
+	if err != nil || !plCfg.IsValid() {
+		return util.ThereHasBugErr()
+	}
+	nodes, err := zalletmd.ListAllZalletNode(ctx, []string{"node_id", "agent_host", "agent_token"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || plan.PlanStatus != deploymd.PendingPlanStatus {
-		return util.InvalidArgsError()
+	agentMap := make(map[string]zalletmd.ZalletNode)
+	for _, node := range nodes {
+		agentMap[node.NodeId] = node
 	}
-	pipeline, app, team, err := checkAppDevelopPermByPipelineId(ctx, reqDTO.Operator, plan.PipelineId)
+	// 转化为insertReq
+	stageList, err := pipelineCfg2DeployStageReq(&plan, &plCfg, agentMap)
 	if err != nil {
-		return err
+		return util.OperationFailedError()
 	}
-	var pipelineConfig deploy.Pipeline
-	err = yaml.Unmarshal([]byte(pipeline.Config), &pipelineConfig)
-	if err != nil || !pipelineConfig.IsValid() {
-		return util.ThereHasBugErr()
-	}
-	insertStageList, taskIdMapList := pipelineConfig2DeployStageReq(reqDTO.PlanId, &pipelineConfig)
+	// 获取变量
 	varsMap, err := deploymd.ListPipelineVarsMap(ctx, pipeline.AppId, pipeline.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	defaultEnv := util.MergeMap(varsMap, map[string]string{
+		deploy.CurrentArtifactVersionKey: plan.ArtifactVersion,
+		deploy.OperatorAccountKey:        reqDTO.Operator.Account,
+		deploy.AppKey:                    plan.AppId,
+	})
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		b2, err2 := deploymd.StartPlan(ctx, reqDTO.PlanId, pipeline.Config)
 		if err2 != nil {
@@ -236,21 +265,15 @@ func StartPlan(ctx context.Context, reqDTO StartPlanReqDTO) error {
 			return fmt.Errorf("start plan failed: %v", reqDTO.PlanId)
 		}
 		// 新增部署步骤
-		err2 = deploymd.BatchInsertDeployStage(ctx, insertStageList...)
+		stages, err2 := deploymd.BatchInsertDeployStage(ctx, stageList...)
 		if err2 != nil {
 			return err2
 		}
 		return executeDeployOnStartPlan(
-			reqDTO.PlanId,
-			pipeline.AppId,
-			pipelineConfig,
-			map[string]string{
-				deploy.CurrentProductVersionKey: plan.ProductVersion,
-				deploy.OperatorAccountKey:       reqDTO.Operator.Account,
-				deploy.AppKey:                   plan.AppId,
-			},
-			taskIdMapList,
-			varsMap,
+			plan,
+			plCfg,
+			defaultEnv,
+			getStageMap(stages),
 		)
 	})
 	if err != nil {
@@ -268,6 +291,18 @@ func StartPlan(ctx context.Context, reqDTO StartPlanReqDTO) error {
 	return nil
 }
 
+func getStageMap(stages []deploymd.Stage) map[int][]deploymd.Stage {
+	ret := make(map[int][]deploymd.Stage)
+	for _, stage := range stages {
+		dss, b := ret[stage.StageIndex]
+		if !b {
+			dss = make([]deploymd.Stage, 0)
+		}
+		ret[stage.StageIndex] = append(dss, stage)
+	}
+	return ret
+}
+
 // RedoAgentStage 重新执行agent
 func RedoAgentStage(ctx context.Context, reqDTO RedoAgentStageReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
@@ -279,6 +314,7 @@ func RedoAgentStage(ctx context.Context, reqDTO RedoAgentStageReqDTO) error {
 	if err != nil {
 		return err
 	}
+	// 校验状态
 	if plan.PlanStatus != deploymd.RunningPlanStatus ||
 		stage.StageStatus != deploymd.FailedStageStatus {
 		return util.InvalidArgsError()
@@ -288,11 +324,13 @@ func RedoAgentStage(ctx context.Context, reqDTO RedoAgentStageReqDTO) error {
 	if err != nil {
 		return nil
 	}
+	// 获取变量
 	varsMap, err := deploymd.ListPipelineVarsMap(ctx, pipeline.AppId, pipeline.Env)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
+	// 重置状态
 	b, err := deploymd.UpdateStageStatusWithOldStatusById(ctx, stage.Id, deploymd.PendingStageStatus, stage.StageStatus)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -305,13 +343,8 @@ func RedoAgentStage(ctx context.Context, reqDTO RedoAgentStageReqDTO) error {
 				args[k] = v
 			}
 		}
-		args[deploy.CurrentProductVersionKey] = plan.ProductVersion
 		args[deploy.OperatorAccountKey] = reqDTO.Operator.Account
-		args[deploy.AppKey] = plan.AppId
-		initRunner()
-		err = runner.Execute(func() {
-			redoAgentStage(stage.PlanId, plan.AppId, dp, stage.StageIndex, stage.Agent, args, varsMap, stage.TaskId)
-		})
+		err = redoAgentStageInRunner(dp, stage, util.MergeMap(varsMap, args))
 		if err != nil {
 			return util.OperationFailedError()
 		}
@@ -356,94 +389,77 @@ func ForceRedoNotSuccessfulAgentStages(ctx context.Context, reqDTO ForceRedoNotS
 		return nil
 	}
 	notSuccessfulStages := make([]deploymd.Stage, 0)
-	for _, s := range stages {
+	for _, stage := range stages {
 		// 前面阶段都必须成功
-		if s.StageIndex < reqDTO.StageIndex && s.StageStatus != deploymd.SuccessfulStageStatus {
+		if stage.StageIndex < reqDTO.StageIndex && stage.StageStatus != deploymd.SuccessfulStageStatus {
 			return util.InvalidArgsError()
 		}
 		// 计算未成功数量
-		if s.StageIndex == reqDTO.StageIndex && s.StageStatus != deploymd.SuccessfulStageStatus {
-			notSuccessfulStages = append(notSuccessfulStages, s)
+		if stage.StageIndex == reqDTO.StageIndex && stage.StageStatus != deploymd.SuccessfulStageStatus {
+			notSuccessfulStages = append(notSuccessfulStages, stage)
 		}
 	}
 	if len(notSuccessfulStages) == 0 {
 		return util.InvalidArgsError()
 	}
-	stage := dp.Deploy[reqDTO.StageIndex]
-	args, err := deploymd.MergeInputArgsByPlanIdAndLTIndex(ctx, reqDTO.PlanId, reqDTO.StageIndex)
+	args, err := deploymd.MergeInputArgsByPlanIdAndLETIndex(ctx, reqDTO.PlanId, reqDTO.StageIndex)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	args[deploy.CurrentProductVersionKey] = plan.ProductVersion
+	args[deploy.CurrentArtifactVersionKey] = plan.ArtifactVersion
 	args[deploy.OperatorAccountKey] = reqDTO.Operator.Account
 	args[deploy.AppKey] = plan.AppId
-	// 需要交互
-	if stage.Confirm != nil && stage.Confirm.NeedInteract {
-		b, extra := stage.Confirm.CheckForm(reqDTO.Args)
-		if !b {
-			return util.InvalidArgsError()
-		}
-		for k, v := range extra {
-			args[k] = v
-		}
-	}
-	initRunner()
-	err = runner.Execute(func() {
-		for _, ns := range notSuccessfulStages {
-			b, err := updateStageStatusWithOldStatusById(ns.Id, deploymd.PendingStageStatus, ns.StageStatus)
-			if err != nil {
-				logger.Logger.WithContext(ctx).Error(err)
-				return
-			}
-			if !b {
-				break
-			}
-			redoAgentStage(reqDTO.PlanId, plan.AppId, dp, reqDTO.StageIndex, ns.Agent, args, varsMap, ns.TaskId)
-		}
-	})
+	err = redoAgentStagesInRunner(dp, notSuccessfulStages, util.MergeMap(varsMap, args))
 	if err != nil {
 		return util.OperationFailedError()
 	}
 	return nil
 }
 
-func updateStageStatusWithOldStatusById(stageId int64, newStatus, oldStatus deploymd.StageStatus) (bool, error) {
+func updateStageStatusWithOldStatusById(stageId int64, newStatus, oldStatus deploymd.StageStatus) bool {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
 	b, err := deploymd.UpdateStageStatusWithOldStatusById(ctx, stageId, newStatus, oldStatus)
-	return b, err
+	if err != nil {
+		logger.Logger.Error(err)
+	}
+	return b
 }
 
-func pipelineConfig2DeployStageReq(planId int64, s *deploy.Pipeline) ([]deploymd.InsertDeployStageReqDTO, []map[string]string) {
+func pipelineCfg2DeployStageReq(plan *deploymd.Plan, dp *deploy.Pipeline, agentMap map[string]zalletmd.ZalletNode) ([]deploymd.InsertDeployStageReqDTO, error) {
 	ret := make([]deploymd.InsertDeployStageReqDTO, 0)
-	taskIdMapList := make([]map[string]string, 0)
-	for i, stage := range s.Deploy {
+	for index, stage := range dp.Deploy {
 		agents := make([]string, 0)
+		// 如果配置没有指定agent 则认为全部agent
 		if len(stage.Agents) > 0 {
 			for _, agent := range stage.Agents {
 				agents = append(agents, agent)
 			}
 		} else {
-			for agent := range s.Agents {
+			for agent := range dp.Agents {
 				agents = append(agents, agent)
 			}
 		}
-		taskIdMap := make(map[string]string)
 		for _, agent := range agents {
-			taskId := idutil.RandomUuid()
+			node, b := agentMap[dp.Agents[agent].NodeId]
+			if !b {
+				return nil, fmt.Errorf("%v not found", dp.Agents[agent].NodeId)
+			}
 			ret = append(ret, deploymd.InsertDeployStageReqDTO{
-				PlanId:      planId,
-				StageIndex:  i,
+				PlanId:      plan.Id,
+				AppId:       plan.AppId,
+				StageIndex:  index,
 				Agent:       agent,
-				TaskId:      taskId,
+				TaskId:      idutil.RandomUuid(),
+				AgentHost:   node.AgentHost,
+				AgentToken:  node.AgentToken,
+				Script:      dp.Actions[stage.Action].Script,
 				StageStatus: deploymd.PendingStageStatus,
 			})
-			taskIdMap[agent] = taskId
 		}
-		taskIdMapList = append(taskIdMapList, taskIdMap)
 	}
-	return ret, taskIdMapList
+	return ret, nil
 }
 
 // ClosePlan 关闭发布计划
@@ -453,29 +469,23 @@ func ClosePlan(ctx context.Context, reqDTO ClosePlanReqDTO) error {
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	plan, b, err := deploymd.GetPlanById(ctx, reqDTO.PlanId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b || plan.PlanStatus.IsFinalStatus() {
-		return util.InvalidArgsError()
-	}
-	pipeline, app, team, err := checkAppDevelopPermByPipelineId(ctx, reqDTO.Operator, plan.PipelineId)
+	plan, pipeline, app, team, err := checkAppDevelopPermByPlanId(ctx, reqDTO.Operator, reqDTO.PlanId)
 	if err != nil {
 		return err
+	}
+	if plan.PlanStatus.IsFinalStatus() {
+		return util.InvalidArgsError()
 	}
 	if plan.PlanStatus == deploymd.PendingPlanStatus {
 		_, err = deploymd.ClosePlanAndUpdateConfig(ctx, reqDTO.PlanId, plan.PlanStatus, pipeline.Config)
 	} else {
 		// 判断是否有执行中的任务
-		b, err = deploymd.ExistRunningStatusByPlanId(ctx, reqDTO.PlanId)
+		b, err := deploymd.ExistRunningStatusByPlanId(ctx, reqDTO.PlanId)
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 			return util.InternalError(err)
 		}
 		if b {
-			// todo 替换返回说明
 			return util.OperationFailedError()
 		}
 		_, err = deploymd.UpdatePlanStatusWithOldStatus(ctx, reqDTO.PlanId, deploymd.ClosedPlanStatus, plan.PlanStatus)
@@ -519,15 +529,15 @@ func ListPlan(ctx context.Context, reqDTO ListPlanReqDTO) ([]PlanDTO, int64, err
 	}
 	data := listutil.MapNe(plans, func(t deploymd.Plan) PlanDTO {
 		return PlanDTO{
-			Id:             t.Id,
-			PipelineId:     t.PipelineId,
-			PipelineName:   t.PipelineName,
-			Name:           t.Name,
-			ProductVersion: t.ProductVersion,
-			PlanStatus:     t.PlanStatus,
-			Env:            t.Env,
-			Creator:        t.Creator,
-			Created:        t.Created,
+			Id:              t.Id,
+			PipelineId:      t.PipelineId,
+			PipelineName:    t.PipelineName,
+			Name:            t.Name,
+			ArtifactVersion: t.ArtifactVersion,
+			PlanStatus:      t.PlanStatus,
+			Env:             t.Env,
+			Creator:         t.Creator,
+			Created:         t.Created,
 		}
 	})
 	return data, total, nil
@@ -545,15 +555,15 @@ func GetPlanDetail(ctx context.Context, reqDTO GetPlanDetailReqDTO) (PlanDetailD
 		return PlanDetailDTO{}, err
 	}
 	ret := PlanDetailDTO{
-		Id:             plan.Id,
-		PipelineId:     plan.PipelineId,
-		PipelineName:   pipeline.Name,
-		Name:           plan.Name,
-		ProductVersion: plan.ProductVersion,
-		PlanStatus:     plan.PlanStatus,
-		Env:            plan.Env,
-		Creator:        plan.Creator,
-		Created:        plan.Created,
+		Id:              plan.Id,
+		PipelineId:      plan.PipelineId,
+		PipelineName:    pipeline.Name,
+		Name:            plan.Name,
+		ArtifactVersion: plan.ArtifactVersion,
+		PlanStatus:      plan.PlanStatus,
+		Env:             plan.Env,
+		Creator:         plan.Creator,
+		Created:         plan.Created,
 	}
 	if plan.PlanStatus == deploymd.PendingPlanStatus {
 		ret.PipelineConfig = pipeline.Config
@@ -742,9 +752,9 @@ func ListStages(ctx context.Context, reqDTO ListStagesReqDTO) ([]StageDTO, error
 	} else {
 		pipelineConfig = plan.PipelineConfig
 	}
-	var pipeline deploy.Pipeline
-	err = yaml.Unmarshal([]byte(pipelineConfig), &pipeline)
-	if err != nil || !pipeline.IsValid() {
+	var pl deploy.Pipeline
+	err = yaml.Unmarshal([]byte(pipelineConfig), &pl)
+	if err != nil || !pl.IsValid() {
 		return nil, nil
 	}
 	stagesMap := make(map[int][]deploymd.Stage)
@@ -765,7 +775,8 @@ func ListStages(ctx context.Context, reqDTO ListStagesReqDTO) ([]StageDTO, error
 		}
 	}
 	ret := make([]StageDTO, 0, len(stagesMap))
-	for index, stage := range pipeline.Deploy {
+	var agentMap map[string]zalletmd.ZalletNode
+	for index, stage := range pl.Deploy {
 		var (
 			total, done, percent, pending, running float64
 
@@ -773,7 +784,7 @@ func ListStages(ctx context.Context, reqDTO ListStagesReqDTO) ([]StageDTO, error
 		)
 		total = float64(len(stage.Agents))
 		if total == 0 {
-			total = float64(len(pipeline.Agents))
+			total = float64(len(pl.Agents))
 		}
 		subStages := make([]SubStageDTO, 0, len(stagesMap[index]))
 		if len(stagesMap) > 0 {
@@ -781,13 +792,11 @@ func ListStages(ctx context.Context, reqDTO ListStagesReqDTO) ([]StageDTO, error
 				sa := SubStageDTO{
 					Id:         md.Id,
 					Agent:      md.Agent,
+					AgentHost:  md.AgentHost,
 					ExecuteLog: md.ExecuteLog,
 				}
 				if plan.PlanStatus != deploymd.ClosedPlanStatus || md.StageStatus != deploymd.PendingStageStatus {
 					sa.StageStatus = md.StageStatus
-				}
-				if len(pipeline.Agents) > 0 {
-					sa.AgentHost = pipeline.Agents[md.Agent].Host
 				}
 				subStages = append(subStages, sa)
 				switch md.StageStatus {
@@ -802,21 +811,26 @@ func ListStages(ctx context.Context, reqDTO ListStagesReqDTO) ([]StageDTO, error
 				}
 			}
 		} else {
+			if agentMap == nil {
+				agentMap, err = getZalletMap()
+				if err != nil {
+					logger.Logger.WithContext(ctx).Error(err)
+					return nil, util.InternalError(err)
+				}
+			}
 			if len(stage.Agents) > 0 {
 				for _, agent := range stage.Agents {
 					sa := SubStageDTO{
-						Agent: agent,
-					}
-					if len(pipeline.Agents) > 0 {
-						sa.AgentHost = pipeline.Agents[agent].Host
+						Agent:     agent,
+						AgentHost: agentMap[pl.Agents[agent].NodeId].AgentHost,
 					}
 					subStages = append(subStages, sa)
 				}
 			} else {
-				for id, agent := range pipeline.Agents {
+				for id, agent := range pl.Agents {
 					sa := SubStageDTO{
 						Agent:     id,
-						AgentHost: agent.Host,
+						AgentHost: agentMap[agent.NodeId].AgentHost,
 					}
 					subStages = append(subStages, sa)
 				}
@@ -852,11 +866,25 @@ func ListStages(ctx context.Context, reqDTO ListStagesReqDTO) ([]StageDTO, error
 			IsAllDone:                        isAllDone,
 			CanForceRedoUnSuccessAgentStages: canForceRedoUnSuccessAgentStages,
 		}
-		if len(pipeline.Actions) > 0 {
-			dto.Script = pipeline.Actions[stage.Action].Script
+		if len(pl.Actions) > 0 {
+			dto.Script = pl.Actions[stage.Action].Script
 		}
 		dto.Confirm = stage.Confirm
 		ret = append(ret, dto)
+	}
+	return ret, nil
+}
+
+func getZalletMap() (map[string]zalletmd.ZalletNode, error) {
+	ret := make(map[string]zalletmd.ZalletNode)
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	nodes, err := zalletmd.ListAllZalletNode(ctx, []string{"node_id", "agent_host", "agent_token"})
+	if err != nil {
+		return nil, err
+	}
+	for _, node := range nodes {
+		ret[node.NodeId] = node
 	}
 	return ret, nil
 }
@@ -901,10 +929,11 @@ func KillStage(ctx context.Context, reqDTO KillStageReqDTO) error {
 	initRunner()
 	err = runner.Execute(func() {
 		for _, stage := range stages {
-			agent := dp.Agents[stage.Agent]
-			err = sshagent.NewServiceCommand(agent.Host, agent.Token, plan.AppId).
+			err = sshagent.NewServiceCommand(stage.AgentHost, stage.AgentToken, plan.AppId).
 				Kill(stage.TaskId)
-			logger.Logger.Errorf("kill taskId: %s with err: %v", stage.TaskId, err)
+			if err != nil {
+				logger.Logger.Errorf("kill taskId: %s with err: %v", stage.TaskId, err)
+			}
 		}
 	})
 	if err != nil {
@@ -950,7 +979,7 @@ func ConfirmInteractStage(ctx context.Context, reqDTO ConfirmInteractStageReqDTO
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	filteredArgs[deploy.CurrentProductVersionKey] = plan.ProductVersion
+	filteredArgs[deploy.CurrentArtifactVersionKey] = plan.ArtifactVersion
 	filteredArgs[deploy.OperatorAccountKey] = reqDTO.Operator.Account
 	filteredArgs[deploy.AppKey] = plan.AppId
 	if len(stage.Confirm.Form) > 0 {
@@ -986,7 +1015,11 @@ func ConfirmInteractStage(ctx context.Context, reqDTO ConfirmInteractStageReqDTO
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	err = executeDeployOnConfirmStage(reqDTO.PlanId, plan.AppId, dp, filteredArgs, varsMap, reqDTO.StageIndex)
+	err = executeDeployOnConfirmStage(
+		plan,
+		dp,
+		util.MergeMap(filteredArgs, varsMap),
+		reqDTO.StageIndex)
 	if err != nil {
 		return util.OperationFailedError()
 	}

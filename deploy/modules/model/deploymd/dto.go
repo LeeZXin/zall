@@ -1,49 +1,26 @@
 package deploymd
 
 type InsertPlanReqDTO struct {
-	Name           string
-	PlanStatus     PlanStatus
-	AppId          string
-	PipelineId     int64
-	PipelineName   string
-	ProductVersion string
-	Creator        string
-	Env            string
-	PipelineConfig string
+	Name            string
+	PlanStatus      PlanStatus
+	AppId           string
+	PipelineId      int64
+	PipelineName    string
+	ArtifactVersion string
+	Creator         string
+	Env             string
+	PipelineConfig  string
 }
 
 type InsertDeployLogReqDTO struct {
-	ConfigId       int64
-	AppId          string
-	PlanId         int64
-	PipelineConfig string
-	ProductVersion string
-	Env            string
-	DeployOutput   string
-	Operator       string
-}
-
-type InsertOpLogReqDTO struct {
-	ConfigId       int64
-	Operator       string
-	ScriptOutput   string
-	Env            string
-	Op             Op
-	ProductVersion string
-}
-
-type ListDeployLogReqDTO struct {
-	ConfigId int64
-	Cursor   int64
-	Limit    int
-	Env      string
-}
-
-type ListOpLogReqDTO struct {
-	ConfigId int64
-	Cursor   int64
-	Limit    int
-	Env      string
+	ConfigId        int64
+	AppId           string
+	PlanId          int64
+	PipelineConfig  string
+	ArtifactVersion string
+	Env             string
+	DeployOutput    string
+	Operator        string
 }
 
 type ListPlanReqDTO struct {
@@ -59,6 +36,9 @@ type InsertDeployStageReqDTO struct {
 	StageIndex  int
 	Agent       string
 	TaskId      string
+	AgentHost   string
+	AgentToken  string
+	Script      string
 	StageStatus StageStatus
 }
 

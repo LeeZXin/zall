@@ -1,20 +1,19 @@
 <template>
   <div style="padding: 10px">
     <div class="container">
-      <div class="title">创建团队</div>
+      <div class="header">{{t('team.createTeam')}}</div>
       <div class="section">
         <div class="section-title">
-          <span>{{t("createTeam.teamName")}}</span>
+          <span>{{t("team.name")}}</span>
         </div>
         <div class="section-body">
           <div class="input-item">
             <a-input v-model:value="teamName" />
           </div>
-          <div class="input-desc">不包含特殊字符,长度不得超过32</div>
         </div>
       </div>
-      <div class="form-item">
-        <a-button type="primary" @click="createTeam">立即创建</a-button>
+      <div class="save-btn-line">
+        <a-button type="primary" @click="createTeam">{{t("team.save")}}</a-button>
       </div>
     </div>
   </div>
@@ -31,13 +30,13 @@ const { t } = useI18n();
 const teamName = ref("");
 const createTeam = () => {
   if (!teamNameRegexp.test(teamName.value)) {
-    message.error("团队名称长度在1-32之间");
+    message.error(t("team.nameFormatErr"));
     return;
   }
   createTeamRequest({
     name: teamName.value
   }).then(() => {
-    message.success("创建成功");
+    message.success(t("operationSuccess"));
     setTimeout(() => {
       router.push("/index/team/list");
     }, 1000);

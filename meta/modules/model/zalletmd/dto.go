@@ -1,6 +1,7 @@
 package zalletmd
 
 type InsertZalletNodeReqDTO struct {
+	NodeId     string
 	Name       string
 	AgentHost  string
 	AgentToken string

@@ -24,7 +24,7 @@ type InsertWorkflowReqDTO struct {
 	RepoId      int64
 	Name        string
 	YamlContent string
-	AgentId     int64
+	AgentId     string
 	Source      Source
 	Desc        string
 }
@@ -33,7 +33,7 @@ type UpdateWorkflowReqDTO struct {
 	Id      int64
 	Name    string
 	Content string
-	AgentId int64
+	AgentId string
 	Desc    string
 	Source  Source
 }

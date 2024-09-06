@@ -1,7 +1,11 @@
 <template>
   <div style="padding:10px">
     <div style="margin-bottom:10px">
-      <a-button type="primary" :icon="h(PlusOutlined)" @click="showAddModal">添加成员</a-button>
+      <a-button
+        type="primary"
+        :icon="h(PlusOutlined)"
+        @click="showAddModal"
+      >{{t('teamRole.addUser')}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -14,19 +18,14 @@
         <template v-else>
           <template v-if="userStore.account !== dataItem['account']">
             <div class="op-icon" @click="deleteTeamUser(dataItem)">
-              <a-tooltip placement="top">
-                <template #title>
-                  <span>删除成员</span>
-                </template>
-                <delete-outlined />
-              </a-tooltip>
+              <DeleteOutlined />
             </div>
             <a-popover placement="bottomRight" trigger="hover">
               <template #content>
                 <ul class="op-list">
                   <li @click="showChangeRoleModal(dataItem)">
-                    <edit-outlined />
-                    <span style="margin-left:4px">更换角色</span>
+                    <EditOutlined />
+                    <span style="margin-left:4px">{{t('teamRole.changeRole')}}</span>
                   </li>
                 </ul>
               </template>
@@ -38,9 +37,9 @@
         </template>
       </template>
     </ZTable>
-    <a-modal v-model:open="addUserModalOpen" title="添加成员" @ok="handleAddModalOk">
+    <a-modal v-model:open="addUserModalOpen" :title="t('teamRole.addUser')" @ok="handleAddModalOk">
       <div style="margin-bottom:10px">
-        <div style="font-size:12px;margin-bottom:4px">选择成员</div>
+        <div style="font-size:12px;margin-bottom:4px">{{t('teamRole.selectUser')}}</div>
         <a-select
           v-model:value="addFormState.userList"
           style="width:100%;"
@@ -48,31 +47,28 @@
           show-search
           mode="multiple"
           :filter-option="filterUserListOption"
-          placeholder="选择成员"
         />
       </div>
       <div>
-        <div style="font-size:12px;margin-bottom:4px">选择角色</div>
-        <a-select
-          v-model:value="addFormState.roleId"
-          style="width:100%;"
-          :options="roleList"
-          placeholder="选择角色"
-        />
+        <div style="font-size:12px;margin-bottom:4px">{{t('teamRole.selectRole')}}</div>
+        <a-select v-model:value="addFormState.roleId" style="width:100%;" :options="roleList" />
       </div>
     </a-modal>
-    <a-modal v-model:open="changeRoleModalOpen" title="更换角色" @ok="handleChangeModalOk">
+    <a-modal
+      v-model:open="changeRoleFormState.open"
+      :title="t('teamRole.changeRole')"
+      @ok="handleChangeModalOk"
+    >
       <div style="margin-bottom:10px">
-        <div style="font-size:12px;margin-bottom:4px">选择成员</div>
+        <div style="font-size:12px;margin-bottom:4px">{{t('teamRole.selectUser')}}</div>
         <div style="font-size:14px;font-weight:bold">{{changeRoleFormState.account}}</div>
       </div>
       <div>
-        <div style="font-size:12px;margin-bottom:4px">选择角色</div>
+        <div style="font-size:12px;margin-bottom:4px">{{t('teamRole.selectRole')}}</div>
         <a-select
           v-model:value="changeRoleFormState.roleId"
           style="width:100%;"
           :options="roleList"
-          placeholder="选择角色"
         />
       </div>
     </a-modal>
@@ -99,12 +95,16 @@ import {
 import { listAllUserRequest } from "@/api/user/userApi";
 import { Modal, message } from "ant-design-vue";
 import { useUserStore } from "@/pinia/userStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+// 添加成员表单
 const addFormState = reactive({
   userList: [],
   roleId: undefined
 });
-const changeRoleModalOpen = ref(false);
+// 修改角色modal
 const changeRoleFormState = reactive({
+  open: false,
   id: 0,
   roleId: undefined,
   account: ""
@@ -114,38 +114,42 @@ const dataSource = ref([]);
 const addUserModalOpen = ref(false);
 const allUserList = ref([]);
 const userList = ref([]);
+// 数据项
 const columns = [
   {
-    title: "帐号",
+    i18nTitle: "teamRole.account",
     dataIndex: "account",
     key: "account"
   },
   {
-    title: "姓名",
+    i18nTitle: "teamRole.userName",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "角色",
+    i18nTitle: "teamRole.roleName",
     dataIndex: "roleName",
     key: "roleName"
   },
 
   {
-    title: "操作",
+    i18nTitle: "teamRole.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ];
 const userStore = useUserStore();
+// 展示修改角色modal
 const showChangeRoleModal = item => {
-  changeRoleModalOpen.value = true;
+  changeRoleFormState.open = true;
   changeRoleFormState.roleId = item.roleId;
   changeRoleFormState.account = item.account;
   changeRoleFormState.id = item.id;
   loadRoleList();
 };
+// 角色列表
 const roleList = ref([]);
+// 获取成员
 const listTeamUsers = () => {
   listRoleUserRequest(route.params.teamId).then(res => {
     dataSource.value = res.data.map(item => {
@@ -157,6 +161,7 @@ const listTeamUsers = () => {
     listAllUsers();
   });
 };
+// 加载角色列表
 const loadRoleList = () => {
   if (roleList.value.length === 0) {
     listRolesRequest(route.params.teamId).then(res => {
@@ -169,62 +174,68 @@ const loadRoleList = () => {
     });
   }
 };
+// 修改角色ok
 const handleChangeModalOk = () => {
   if (!changeRoleFormState.roleId) {
-    message.warn("请选择角色");
+    message.warn(t('teamRole.pleaseSelectRole'));
     return;
   }
   changeRoleRequest({
     relationId: changeRoleFormState.id,
     roleId: changeRoleFormState.roleId
   }).then(() => {
-    message.success("操作成功");
-    changeRoleModalOpen.value = false;
+    message.success(t("operationSuccess"));
+    changeRoleFormState.open = false;
     listTeamUsers();
   });
 };
+// 删除成员
 const deleteTeamUser = item => {
   Modal.confirm({
-    title: `你确定要删除${item.account}(${item.name})吗?`,
+    title: `${t('teamRole.confirmDelete')} ${item.account}(${item.name})?`,
     icon: createVNode(ExclamationCircleOutlined),
     okText: "ok",
     cancelText: "cancel",
     onOk() {
       deleteTeamUserRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listTeamUsers();
       });
     },
     onCancel() {}
   });
 };
+// 展示添加成员modal
 const showAddModal = () => {
   addUserModalOpen.value = true;
   loadRoleList();
 };
+// 添加成员
 const handleAddModalOk = () => {
   if (addFormState.userList.length === 0) {
-    message.warn("请选择成员");
+    message.warn(t('teamRole.pleaseSelectUser'));
     return;
   }
   if (!addFormState.roleId) {
-    message.warn("请选择角色");
+    message.warn(t('teamRole.pleaseSelectRole'));
     return;
   }
   createTeamUserRequest({
     roleId: addFormState.roleId,
     accounts: addFormState.userList
   }).then(() => {
-    message.success("添加成功");
+    message.success(t("operationSuccess"));
     addUserModalOpen.value = false;
     addFormState.userList = [];
     addFormState.roleId = undefined;
     listTeamUsers();
   });
 };
+// 下拉框过滤用户
 const filterUserListOption = (input, option) => {
   return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
+// 加载所有用户
 const listAllUsers = () => {
   listAllUserRequest().then(res => {
     allUserList.value = res.data.map(item => {

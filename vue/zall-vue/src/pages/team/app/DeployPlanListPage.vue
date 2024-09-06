@@ -1,7 +1,11 @@
 <template>
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
-      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建发布计划</a-button>
+      <a-button
+        type="primary"
+        :icon="h(PlusOutlined)"
+        @click="gotoCreatePage"
+      >{{t('deployPlan.createPlan')}}</a-button>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
@@ -16,12 +20,12 @@
                   @click="closePlan(dataItem)"
                   v-if="dataItem['planStatus'] === 1 || dataItem['planStatus'] === 2"
                 >
-                  <close-outlined />
-                  <span style="margin-left:8px">关闭发布计划</span>
+                  <CloseOutlined />
+                  <span style="margin-left:8px">{{t('deployPlan.closePlan')}}</span>
                 </li>
                 <li @click="viewPlan(dataItem)">
-                  <eye-outlined />
-                  <span style="margin-left:8px">查看发布计划</span>
+                  <EyeOutlined />
+                  <span style="margin-left:8px">{{t('deployPlan.viewPlan')}}</span>
                 </li>
               </ul>
             </template>
@@ -33,10 +37,10 @@
       </template>
     </ZTable>
     <a-pagination
-      v-model:current="currPage"
-      :total="totalCount"
+      v-model:current="dataPage.current"
+      :total="dataPage.totalCount"
       show-less-items
-      :pageSize="pageSize"
+      :pageSize="dataPage.pageSize"
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
@@ -54,7 +58,7 @@ import {
 } from "@ant-design/icons-vue";
 import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
-import { ref, h, createVNode } from "vue";
+import { ref, h, createVNode, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   listDeployPlanRequest,
@@ -63,75 +67,81 @@ import {
 import { Modal, message } from "ant-design-vue";
 import PLanStatusTag from "@/components/app/PlanStatusTag";
 import { useDeloyPlanStore } from "@/pinia/deployPlanStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const planStore = useDeloyPlanStore();
 const route = useRoute();
+// 选择的环境
 const selectedEnv = ref("");
 const router = useRouter();
+// 列表
 const dataSource = ref([]);
-const currPage = ref(1);
-const pageSize = 10;
-const totalCount = ref(0);
+// 分页
+const dataPage = reactive({
+  current: 1,
+  totalCount: 0,
+  pageSize: 10
+});
+// 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "deployPlan.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "制品号",
-    dataIndex: "productVersion",
-    key: "productVersion"
+    i18nTitle: "deployPlan.artifactVersion",
+    dataIndex: "artifactVersion",
+    key: "artifactVersion"
   },
   {
-    title: "部署流水线",
+    i18nTitle: "deployPlan.pipelineName",
     dataIndex: "pipelineName",
     key: "pipelineName"
   },
   {
-    title: "状态",
+    i18nTitle: "deployPlan.planStatus",
     dataIndex: "planStatus",
     key: "planStatus"
   },
   {
-    title: "创建时间",
+    i18nTitle: "deployPlan.createTime",
     dataIndex: "created",
     key: "created"
   },
   {
-    title: "创建人",
+    i18nTitle: "deployPlan.creator",
     dataIndex: "creator",
     key: "creator"
   },
   {
-    title: "操作",
+    i18nTitle: "deployPlan.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ];
-
+// 关闭发布计划
 const closePlan = item => {
   Modal.confirm({
-    title: `你确定要关闭${item.name}吗?`,
+    title: `${t('deployPlan.confirmClose')} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       closeDeployPlanRequest(item.id).then(() => {
-        message.success("关闭成功");
+        message.success(t("operationSuccess"));
         listDeployPlan();
       });
     },
     onCancel() {}
   });
 };
-
+// 计划列表
 const listDeployPlan = () => {
   listDeployPlanRequest({
     appId: route.params.appId,
-    pageNum: currPage.value,
+    pageNum: dataPage.current,
     env: selectedEnv.value
   }).then(res => {
-    totalCount.value = res.totalCount;
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -140,22 +150,22 @@ const listDeployPlan = () => {
     });
   });
 };
-
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/deployPlan/create?env=${selectedEnv.value}`
   );
 };
-
+// 环境变化
 const onEnvChange = e => {
   router.replace(
     `/team/${route.params.teamId}/app/${route.params.appId}/deployPlan/list/${e.newVal}`
   );
   selectedEnv.value = e.newVal;
-  currPage.value = 1;
+  dataPage.current = 1;
   listDeployPlan();
 };
-
+// 查看计划
 const viewPlan = item => {
   planStore.id = item.id;
   planStore.env = item.env;

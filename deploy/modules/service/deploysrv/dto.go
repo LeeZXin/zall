@@ -14,14 +14,14 @@ import (
 )
 
 type CreatePlanReqDTO struct {
-	Name           string              `json:"name"`
-	PipelineId     int64               `json:"pipelineId"`
-	ProductVersion string              `json:"productVersion"`
-	Operator       apisession.UserInfo `json:"operator"`
+	Name            string              `json:"name"`
+	PipelineId      int64               `json:"pipelineId"`
+	ArtifactVersion string              `json:"artifactVersion"`
+	Operator        apisession.UserInfo `json:"operator"`
 }
 
 func (r *CreatePlanReqDTO) IsValid() error {
-	if !deploymd.IsProductVersionValid(r.ProductVersion) {
+	if !deploymd.IsArtifactVersionValid(r.ArtifactVersion) {
 		return util.InvalidArgsError()
 	}
 	if !deploymd.IsPlanNameValid(r.Name) {
@@ -97,14 +97,6 @@ func (r *ListOpLogReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	return nil
-}
-
-type OpLogDTO struct {
-	Op             deploymd.Op
-	Operator       string
-	ScriptOutput   string
-	ProductVersion string
-	Created        time.Time
 }
 
 type ListPlanReqDTO struct {
@@ -217,7 +209,6 @@ func (r *RedoAgentStageReqDTO) IsValid() error {
 type ForceRedoNotSuccessfulAgentStagesReqDTO struct {
 	PlanId     int64               `json:"planId"`
 	StageIndex int                 `json:"stageIndex"`
-	Args       map[string]string   `json:"args"`
 	Operator   apisession.UserInfo `json:"operator"`
 }
 
@@ -235,28 +226,28 @@ func (r *ForceRedoNotSuccessfulAgentStagesReqDTO) IsValid() error {
 }
 
 type PlanDTO struct {
-	Id             int64
-	PipelineId     int64
-	PipelineName   string
-	Name           string
-	ProductVersion string
-	PlanStatus     deploymd.PlanStatus
-	Env            string
-	Creator        string
-	Created        time.Time
+	Id              int64
+	PipelineId      int64
+	PipelineName    string
+	Name            string
+	ArtifactVersion string
+	PlanStatus      deploymd.PlanStatus
+	Env             string
+	Creator         string
+	Created         time.Time
 }
 
 type PlanDetailDTO struct {
-	Id             int64
-	PipelineId     int64
-	PipelineName   string
-	PipelineConfig string
-	Name           string
-	ProductVersion string
-	PlanStatus     deploymd.PlanStatus
-	Env            string
-	Creator        string
-	Created        time.Time
+	Id              int64
+	PipelineId      int64
+	PipelineName    string
+	PipelineConfig  string
+	Name            string
+	ArtifactVersion string
+	PlanStatus      deploymd.PlanStatus
+	Env             string
+	Creator         string
+	Created         time.Time
 }
 
 type StartPlanReqDTO struct {

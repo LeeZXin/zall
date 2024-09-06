@@ -7,7 +7,7 @@
           :icon="h(PlusOutlined)"
           @click="gotoCreatePage"
           style="margin-right:10px"
-        >创建监控告警</a-button>
+        >{{t('alertConfig.createConfig')}}</a-button>
       </div>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
@@ -20,20 +20,15 @@
           <span>{{dataItem[dataIndex]}}</span>
         </template>
         <template v-else>
-          <div class="op-icon" @click="deleteAlertConfigTask(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>删除监控告警</span>
-              </template>
-              <delete-outlined />
-            </a-tooltip>
+          <div class="op-icon" @click="deleteAlertConfig(dataItem)">
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
                   <EditOutlined />
-                  <span style="margin-left:4px">编辑监控告警</span>
+                  <span style="margin-left:4px">{{t('alertConfig.updateConfig')}}</span>
                 </li>
               </ul>
             </template>
@@ -76,38 +71,44 @@ import {
 import { Modal, message } from "ant-design-vue";
 import { useAlertConfigStore } from "@/pinia/alertConfigStore";
 import EnvSelector from "@/components/app/EnvSelector";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const alertConfigStore = useAlertConfigStore();
 const router = useRouter();
 const route = useRoute();
 const dataSource = ref([]);
+// 分页
 const dataPage = reactive({
   current: 1,
   pageSize: 10,
   totalCount: 0
 });
+// 选择的环境
 const selectedEnv = ref();
+// 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "alertConfig.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "创建人",
+    i18nTitle: "alertConfig.creator",
     dataIndex: "creator",
     key: "creator"
   },
   {
-    title: "是否启动",
+    i18nTitle: "alertConfig.isEnabled",
     dataIndex: "isEnabled",
     key: "isEnabled"
   },
   {
-    title: "操作",
+    i18nTitle: "alertConfig.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ];
+// 获取配置列表
 const listAlertConfig = () => {
   listAlertConfigRequest({
     appId: route.params.appId,
@@ -123,24 +124,27 @@ const listAlertConfig = () => {
     });
   });
 };
-const deleteAlertConfigTask = item => {
+// 删除配置
+const deleteAlertConfig = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t('alertConfig.confirmDelete')} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteAlertConfigRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         searchAlertConfig();
       });
     },
     onCancel() {}
   });
 };
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/alertConfig/create?env=${selectedEnv.value}`
   );
 };
+// 跳转编辑页面
 const gotoUpdatePage = item => {
   alertConfigStore.id = item.id;
   alertConfigStore.name = item.name;
@@ -152,19 +156,21 @@ const gotoUpdatePage = item => {
     `/team/${route.params.teamId}/app/${route.params.appId}/alertConfig/${item.id}/update`
   );
 };
+// 启动或停用
 const enableOrDisableAlertConfig = item => {
   if (item.isEnabled) {
     disableAlertConfigRequest(item.id).then(() => {
-      message.success("关闭成功");
+      message.success(t("operationSuccess"));
       item.isEnabled = false;
     });
   } else {
     enableAlertConfigRequest(item.id).then(() => {
-      message.success("启动成功");
+      message.success(t("operationSuccess"));
       item.isEnabled = true;
     });
   }
 };
+// 环境变化
 const onEnvChange = e => {
   selectedEnv.value = e.newVal;
   router.replace(

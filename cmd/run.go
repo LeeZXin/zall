@@ -19,6 +19,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/api/workflowapi"
 	"github.com/LeeZXin/zall/git/modules/sshproxy"
 	reposerver "github.com/LeeZXin/zall/git/repo/server"
+	"github.com/LeeZXin/zall/gw"
 	"github.com/LeeZXin/zall/meta/modules/api/appapi"
 	"github.com/LeeZXin/zall/meta/modules/api/cfgapi"
 	"github.com/LeeZXin/zall/meta/modules/api/teamapi"
@@ -54,6 +55,8 @@ var Run = &cli.Command{
 }
 
 func runZall(*cli.Context) error {
+	// 前端路由
+	gw.Init()
 	// for apisession
 	{
 		apisession.Init()

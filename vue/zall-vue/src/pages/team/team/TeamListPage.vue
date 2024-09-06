@@ -1,12 +1,16 @@
 <template>
   <div style="padding:10px" class="container">
     <div v-if="allowUserCreateTeam" class="flex-right" style="margin-bottom: 10px">
-      <a-button type="primary" @click="toCreateTeam" :icon="h(PlusOutlined)">{{t("createTeamText")}}</a-button>
+      <a-button
+        type="primary"
+        @click="toCreateTeam"
+        :icon="h(PlusOutlined)"
+      >{{t("team.createTeam")}}</a-button>
     </div>
     <div class="team-list">
       <div class="header">
         <TeamOutlined />
-        <span style="margin-left: 8px">{{t("myTeam")}}</span>
+        <span style="margin-left: 8px">{{t("team.myTeam")}}</span>
       </div>
       <ul class="body" v-if="teamList.length > 0">
         <li
@@ -15,10 +19,7 @@
           @click="selectTeam(item)"
         >{{item.name}}</li>
       </ul>
-      <div class="no-team" v-if="teamList.length === 0">
-        <span v-if="!allowUserCreateTeam">您暂时没有加入任何团队</span>
-        <span v-if="allowUserCreateTeam">您暂时没有加入任何团队, 可以点击上方“创建团队”</span>
-      </div>
+      <div class="no-team" v-if="teamList.length === 0">{{t("team.joinNoTeam")}}</div>
     </div>
   </div>
 </template>

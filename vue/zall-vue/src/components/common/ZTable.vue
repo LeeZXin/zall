@@ -92,7 +92,7 @@ const NoDataRender = () => {
 
 .z-table > table > tr > td {
   text-align: center;
-  padding: 6px;
+  padding: 8px;
   word-break: break-all;
 }
 

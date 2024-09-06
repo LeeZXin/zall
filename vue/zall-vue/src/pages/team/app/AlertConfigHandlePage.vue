@@ -2,34 +2,27 @@
   <div style="padding:10px">
     <div class="container">
       <div class="header">
-        <span v-if="mode==='create'">创建监控告警</span>
-        <span v-else-if="mode==='update'">编辑监控告警</span>
+        <span v-if="mode==='create'">{{t('alertConfig.createConfig')}}</span>
+        <span v-else-if="mode==='update'">{{t('alertConfig.updateConfig')}}</span>
       </div>
       <div class="section" v-if="mode==='create'">
-        <div class="section-title">选择环境</div>
+        <div class="section-title">{{t('alertConfig.selectEnv')}}</div>
         <div class="section-body">
-          <a-select
-            style="width: 100%"
-            placeholder="选择环境"
-            v-model:value="formState.selectedEnv"
-            :options="envList"
-          />
-          <div class="input-desc">多环境选择, 选择其中一个环境</div>
+          <a-select style="width: 100%" v-model:value="formState.selectedEnv" :options="envList" />
         </div>
       </div>
       <div class="section" v-if="mode==='update'">
-        <div class="section-title">已选环境</div>
+        <div class="section-title">{{t('alertConfig.selectedEnv')}}</div>
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section">
-        <div class="section-title">名称</div>
+        <div class="section-title">{{t('alertConfig.name')}}</div>
         <div class="section-body">
           <a-input style="width:100%" v-model:value="formState.name" />
-          <div class="input-desc">描述监控告警作用, 长度为32以内</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">自动触发间隔</div>
+        <div class="section-title">{{t('alertConfig.intervalSec')}}</div>
         <div class="section-body">
           <a-input-number
             style="width:100%"
@@ -39,44 +32,35 @@
             v-model:value="formState.intervalSec"
             @change="limitIntervalSecInput"
           />
-          <div class="input-desc">每隔一段时间自动触发检测, 10的倍数, 单位为秒, 最小为10, 最大为3600</div>
+          <div class="input-desc">{{t('alertConfig.intervalSecDesc')}}</div>
         </div>
       </div>
       <div class="section">
         <div class="section-title">
-          <span>触发类型</span>
-          <span style="color:darkred">*</span>
+          <span>{{t('alertConfig.hookType')}}</span>
         </div>
         <div class="section-body">
           <a-radio-group v-model:value="formState.hookType">
-            <a-radio :value="1">Webhook</a-radio>
-            <a-radio :value="2">外部通知</a-radio>
+            <a-radio :value="1">{{t('alertConfig.webhook')}}</a-radio>
+            <a-radio :value="2">{{t('alertConfig.notification')}}</a-radio>
           </a-radio-group>
         </div>
       </div>
       <div class="section" v-if="formState.hookType === 1">
-        <div class="section-title">
-          <span>Webhook</span>
-        </div>
+        <div class="section-title">{{t('alertConfig.webhook')}}</div>
         <div class="section-body">
           <div>
-            <div style="font-size: 12px;margin-bottom: 6px">hook url</div>
-            <a-input style="width:100%" v-model:value="formState.hookUrl" placeholder="请填写" />
+            <div style="font-size: 12px;margin-bottom: 6px">{{t('alertConfig.hookUrl')}}</div>
+            <a-input style="width:100%" v-model:value="formState.hookUrl" />
           </div>
           <div style="margin-top: 10px">
-            <div style="font-size: 12px;margin-bottom: 6px">签名密钥</div>
-            <a-input-password
-              style="width:100%"
-              v-model:value="formState.secret"
-              placeholder="请填写"
-            />
+            <div style="font-size: 12px;margin-bottom: 6px">{{t('alertConfig.hookSecret')}}</div>
+            <a-input-password style="width:100%" v-model:value="formState.secret" />
           </div>
         </div>
       </div>
       <div class="section" v-else-if="formState.hookType === 2">
-        <div class="section-title">
-          <span>外部通知模板</span>
-        </div>
+        <div class="section-title">{{t('alertConfig.notification')}}</div>
         <div class="section-body">
           <a-select
             style="width: 100%"
@@ -84,149 +68,134 @@
             :options="tplList"
             show-search
             :filter-option="filterTplListOption"
-            placeholder="请选择"
           />
         </div>
       </div>
       <div class="section">
-        <div class="section-title">来源类型</div>
+        <div class="section-title">{{t('alertConfig.sourceType')}}</div>
         <div class="section-body">
           <a-radio-group v-model:value="formState.sourceType">
-            <a-radio :value="1">Mysql</a-radio>
-            <a-radio :value="2">Prometheus</a-radio>
-            <a-radio :value="3">Loki</a-radio>
-            <a-radio :value="4">Http</a-radio>
-            <a-radio :value="5">Tcp</a-radio>
+            <a-radio :value="1">{{t('alertConfig.mysql')}}</a-radio>
+            <a-radio :value="2">{{t('alertConfig.prom')}}</a-radio>
+            <a-radio :value="3">{{t('alertConfig.loki')}}</a-radio>
+            <a-radio :value="4">{{t('alertConfig.http')}}</a-radio>
+            <a-radio :value="5">{{t('alertConfig.tcp')}}</a-radio>
           </a-radio-group>
         </div>
       </div>
       <div class="section" v-if="formState.sourceType === 1">
-        <div class="section-title">Mysql配置</div>
+        <div class="section-title">{{t('alertConfig.mysql')}}</div>
         <div class="section-body">
           <ul class="input-ul">
             <li>
-              <div class="input-name">Host</div>
+              <div class="input-name">{{t('alertConfig.mysqlHost')}}</div>
               <a-input v-model:value="formState.mysqlHost" />
-              <div class="input-desc">mysql主机ip ip:port格式</div>
             </li>
             <li>
-              <div class="input-name">数据库</div>
+              <div class="input-name">{{t('alertConfig.mysqlDatabase')}}</div>
               <a-input v-model:value="formState.mysqlDatabase" />
-              <div class="input-desc">mysql数据库</div>
             </li>
             <li>
-              <div class="input-name">账号</div>
+              <div class="input-name">{{t('alertConfig.mysqlUsername')}}</div>
               <a-input v-model:value="formState.mysqlUsername" />
-              <div class="input-desc">访问mysql的账号</div>
             </li>
             <li>
-              <div class="input-name">密码</div>
+              <div class="input-name">{{t('alertConfig.mysqlPassword')}}</div>
               <a-input-password v-model:value="formState.mysqlPassword" />
-              <div class="input-desc">访问mysql的密码</div>
             </li>
             <li>
-              <div class="input-name">Select sql</div>
+              <div class="input-name">{{t('alertConfig.mysqlSelectSql')}}</div>
               <a-input v-model:value="formState.mysqlSelectSql" />
-              <div class="input-desc">执行查询的select的sql</div>
             </li>
             <li>
-              <div class="input-name">判断条件</div>
+              <div class="input-name">{{t('alertConfig.mysqlCondition')}}</div>
               <a-input v-model:value="formState.mysqlCondition" />
-              <div class="input-desc">查询结果满足判断条件则会触发告警</div>
             </li>
           </ul>
         </div>
       </div>
       <div class="section" v-if="formState.sourceType === 2">
-        <div class="section-title">Prometheus配置</div>
+        <div class="section-title">{{t('alertConfig.prom')}}</div>
         <div class="section-body">
           <ul class="input-ul">
             <li>
-              <div class="input-name">Host</div>
+              <div class="input-name">{{t('alertConfig.promHost')}}</div>
               <a-input v-model:value="formState.promHost" />
-              <div class="input-desc">prometheus主机url http开头</div>
             </li>
             <li>
-              <div class="input-name">promQl</div>
+              <div class="input-name">{{t('alertConfig.promQl')}}</div>
               <a-input v-model:value="formState.promQl" />
-              <div class="input-desc">执行查询的promQl</div>
             </li>
             <li>
-              <div class="input-name">判断条件</div>
+              <div class="input-name">{{t('alertConfig.promCondition')}}</div>
               <a-input v-model:value="formState.promCondition" />
-              <div class="input-desc">查询结果满足判断条件则会触发告警</div>
             </li>
           </ul>
         </div>
       </div>
       <div class="section" v-if="formState.sourceType === 3">
-        <div class="section-title">Loki配置</div>
+        <div class="section-title">{{t('alertConfig.loki')}}</div>
         <div class="section-body">
           <ul class="input-ul">
             <li>
-              <div class="input-name">loki host</div>
+              <div class="input-name">{{t('alertConfig.lokiHost')}}</div>
               <a-input v-model:value="formState.lokiHost" />
-              <div class="input-desc">loki请求地址 http开头</div>
             </li>
             <li>
-              <div class="input-name">loki OrgId</div>
+              <div class="input-name">{{t('alertConfig.lokiOrgId')}}</div>
               <a-input v-model:value="formState.lokiOrgId" />
-              <div class="input-desc">loki的X-Scope-OrgID 非必填</div>
             </li>
             <li>
-              <div class="input-name">logQl</div>
+              <div class="input-name">{{t('alertConfig.lokiLogQl')}}</div>
               <a-input v-model:value="formState.lokiLogQl" />
-              <div class="input-desc">执行查询的logQl, 只支持matrix结果的logQl</div>
+              <div class="input-desc">{{t('alertConfig.lokiLogQlDesc')}}</div>
             </li>
             <li>
-              <div class="input-name">过去多少时间</div>
+              <div class="input-name">{{t('alertConfig.lokiLastDuration')}}</div>
               <a-input v-model:value="formState.lokiLastDuration" />
-              <div class="input-desc">开始时间查询时间为过去多少时间, 例如1m, 代表从过去一分钟到现在的时间段, 不允许超过一个小时</div>
+              <div class="input-desc">{{t('alertConfig.lokiLastDurationDesc')}}</div>
             </li>
             <li>
-              <div class="input-name">步长step</div>
+              <div class="input-name">{{t('alertConfig.lokiStep')}}</div>
               <a-input-number
                 style="width:100%"
                 :min="1"
                 :max="3600"
                 v-model:value="formState.lokiStep"
               />
-              <div class="input-desc">查询步长, 数字, 单位为秒, 最小为1, 最大为3600</div>
+              <div class="input-desc">{{t('alertConfig.lokiStepDesc')}}</div>
             </li>
             <li>
-              <div class="input-name">判断条件</div>
+              <div class="input-name">{{t('alertConfig.lokiCondition')}}</div>
               <a-input v-model:value="formState.lokiCondition" />
-              <div class="input-desc">查询结果满足判断条件则会触发告警</div>
             </li>
           </ul>
         </div>
       </div>
       <div class="section" v-if="formState.sourceType === 4">
-        <div class="section-title">Http配置</div>
+        <div class="section-title">{{t('alertConfig.http')}}</div>
         <div class="section-body">
           <ul class="input-ul">
             <li>
-              <div class="input-name">GetUrl</div>
+              <div class="input-name">{{t('alertConfig.httpGetUrl')}}</div>
               <a-input v-model:value="formState.httpGetUrl" />
-              <div class="input-desc">http Get url http开头</div>
             </li>
           </ul>
         </div>
       </div>
       <div class="section" v-if="formState.sourceType === 5">
-        <div class="section-title">Tcp配置</div>
+        <div class="section-title">{{t('alertConfig.tcp')}}</div>
         <div class="section-body">
           <ul class="input-ul">
             <li>
-              <div class="input-name">host</div>
+              <div class="input-name">{{t('alertConfig.tcpHost')}}</div>
               <a-input v-model:value="formState.tcpHost" />
-              <div class="input-desc">主机 ip:port格式</div>
             </li>
           </ul>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateTimerTask">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateAlertConfig">{{t('alertConfig.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -250,37 +219,49 @@ import {
   createAlertConfigRequest,
   updateAlertConfigRequest
 } from "@/api/app/alertApi";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const alertConfigStore = useAlertConfigStore();
 const router = useRouter();
+// 通知列表
 const tplList = ref([]);
+// 表单数据
 const formState = reactive({
   selectedEnv: null,
   name: "",
   intervalSec: 10,
   sourceType: 1,
+  // mysql
   mysqlHost: "",
   mysqlDatabase: "",
   mysqlUsername: "",
   mysqlPassword: "",
   mysqlSelectSql: "",
   mysqlCondition: "",
+  // prom
   promHost: "",
   promQl: "",
   promCondition: "",
+  // loki
   lokiHost: "",
   lokiOrgId: "",
   lokiLogQl: "",
   lokiLastDuration: "",
   lokiStep: 60,
   lokiCondition: "",
+  // hook
   hookUrl: "",
   secret: "",
   tplId: null,
   hookType: 1,
+  // http
   httpGetUrl: "",
+  // tcp
   tcpHost: ""
 });
+// 环境列表
 const envList = ref([]);
+// 模式
 const route = useRoute();
 const getMode = () => {
   let s = route.path.split("/");
@@ -302,34 +283,31 @@ const getEnvCfg = () => {
     }
   });
 };
-const saveOrUpdateTimerTask = () => {
-  if (!formState.selectedEnv) {
-    message.warn("请选择环境");
-    return;
-  }
+// 新增或编辑告警配置
+const saveOrUpdateAlertConfig = () => {
   if (!alertConfigNameRegexp.test(formState.name)) {
-    message.warn("名称格式错误");
+    message.warn(t("alertConfig.nameFormatErr"));
     return;
   }
   if (!formState.intervalSec) {
-    message.warn("触发间隔错误");
+    message.warn(t("alertConfig.pleaseFillIntervalSec"));
     return;
   }
   let hookCfg = {};
   if (formState.hookType === 1) {
     if (!alertConfigHookUrlRegexp.test(formState.hookUrl)) {
-      message.warn("hook url错误");
+      message.warn(t("alertConfig.hookUrlFormatErr"));
       return;
     }
     if (!alertConfigSecretRegexp.test(formState.secret)) {
-      message.warn("hook签名密钥错误");
+      message.warn(t("alertConfig.hookSecretFormatErr"));
       return;
     }
     hookCfg.hookUrl = formState.hookUrl;
     hookCfg.secret = formState.secret;
   } else if (formState.hookType === 2) {
     if (!formState.tplId) {
-      message.warn("请选择外部通知模板");
+      message.warn(t("alertConfig.pleaseSelectTplId"));
       return;
     }
     hookCfg.notifyTplId = formState.tplId;
@@ -344,27 +322,27 @@ const saveOrUpdateTimerTask = () => {
   };
   if (formState.sourceType === 1) {
     if (!alertMysqlHostRegexp.test(formState.mysqlHost)) {
-      message.warn("mysql host格式錯誤");
+      message.warn(t("alertConfig.mysqlHostFormatErr"));
       return;
     }
     if (!formState.mysqlDatabase) {
-      message.warn("请填写mysql数据库");
+      message.warn(t("alertConfig.pleaseFillMysqlDatabase"));
       return;
     }
     if (!formState.mysqlUsername) {
-      message.warn("请填写mysql账号");
+      message.warn(t("alertConfig.pleaseFillMysqlUsername"));
       return;
     }
     if (!formState.mysqlPassword) {
-      message.warn("请填写mysql密码");
+      message.warn(t("alertConfig.pleaseFillMysqlPassword"));
       return;
     }
     if (!formState.mysqlSelectSql) {
-      message.warn("请填写mysql sql");
+      message.warn(t("alertConfig.pleaseFillMysqlSelectSql"));
       return;
     }
     if (!formState.mysqlCondition) {
-      message.warn("请填写mysql触发条件");
+      message.warn(t("alertConfig.pleaseFillMysqlCondition"));
       return;
     }
     alert.mysql = {
@@ -377,15 +355,15 @@ const saveOrUpdateTimerTask = () => {
     };
   } else if (formState.sourceType === 2) {
     if (!alertHttpHostRegexp.test(formState.promHost)) {
-      message.warn("prometheus host格式錯誤");
+      message.warn(t("alertConfig.promHostFormatErr"));
       return;
     }
     if (!formState.promQl) {
-      message.warn("请填写promQl");
+      message.warn(t("alertConfig.pleaseFillPromQl"));
       return;
     }
     if (!formState.promCondition) {
-      message.warn("请填写prometheus触发条件");
+      message.warn(t("alertConfig.pleaseFillPromCondition"));
       return;
     }
     alert.prom = {
@@ -395,23 +373,23 @@ const saveOrUpdateTimerTask = () => {
     };
   } else if (formState.sourceType === 3) {
     if (!alertHttpHostRegexp.test(formState.lokiHost)) {
-      message.warn("loki host格式錯誤");
+      message.warn(t("alertConfig.lokiHostFormatErr"));
       return;
     }
     if (!formState.lokiLogQl) {
-      message.warn("请填写logQl");
+      message.warn(t("alertConfig.pleaseFillLokiLogQl"));
       return;
     }
     if (!formState.lokiLastDuration) {
-      message.warn("请填写loki过去多少时间");
+      message.warn(t("alertConfig.pleaseFillLokiLastDuration"));
       return;
     }
     if (!formState.lokiStep) {
-      message.warn("请填写loki过去多少时间");
+      message.warn(t("alertConfig.pleaseFillLokiStep"));
       return;
     }
     if (!formState.lokiCondition) {
-      message.warn("请填写loki触发条件");
+      message.warn(t("alertConfig.pleaseFillLokiCodition"));
       return;
     }
     alert.loki = {
@@ -424,7 +402,7 @@ const saveOrUpdateTimerTask = () => {
     };
   } else if (formState.sourceType === 4) {
     if (!alertHttpHostRegexp.test(formState.httpGetUrl)) {
-      message.warn("http get url格式錯誤");
+      message.warn(t("alertConfig.httpGetUrlFormatErr"));
       return;
     }
     alert.http = {
@@ -432,7 +410,7 @@ const saveOrUpdateTimerTask = () => {
     };
   } else if (formState.sourceType === 5) {
     if (!alertIpPortHostRegexp.test(formState.tcpHost)) {
-      message.warn("http get url格式錯誤");
+      message.warn(t("alertConfig.tcpHostFormatErr"));
       return;
     }
     alert.tcp = {
@@ -449,7 +427,7 @@ const saveOrUpdateTimerTask = () => {
       intervalSec: formState.intervalSec,
       alert
     }).then(() => {
-      message.success("创建成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/alertConfig/list/${formState.selectedEnv}`
       );
@@ -461,13 +439,14 @@ const saveOrUpdateTimerTask = () => {
       alert,
       id: alertConfigStore.id
     }).then(() => {
-      message.success("编辑成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/alertConfig/list/${formState.selectedEnv}`
       );
     });
   }
 };
+// 获取外部通知列表
 const getTplList = () => {
   listAllTplByTeamIdRequest(route.params.teamId).then(res => {
     tplList.value = res.data.map(item => {
@@ -538,15 +517,4 @@ if (mode === "create") {
 getTplList();
 </script>
 <style scoped>
-.headers-ul > li {
-  height: 32px;
-  line-height: 32px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-}
-.headers-ul > li + li {
-  margin-top: 6px;
-}
 </style>

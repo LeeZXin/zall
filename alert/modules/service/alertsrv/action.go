@@ -26,7 +26,6 @@ import (
 
 var (
 	taskExecutor *executor.Executor
-	env          string
 )
 
 func InitTask() {
@@ -39,13 +38,9 @@ func InitTask() {
 	if queueSize <= 0 {
 		queueSize = 1024
 	}
-	env = static.GetString("alert.env")
-	if env == "" {
-		logger.Logger.Fatal("alert task started with empty env")
-	}
 	taskExecutor, _ = executor.NewExecutor(poolSize, queueSize, time.Minute, executor.AbortStrategy)
 	leaser, _ := lease.NewDbLease(
-		"alert-lock-"+env,
+		"alert-lock",
 		common.GetInstanceId(),
 		"zall_lock",
 		xormstore.GetEngine(),
@@ -81,7 +76,7 @@ func InitTask() {
 func doExecuteTask(runCtx context.Context) {
 	ctx, closer := xormstore.Context(context.Background())
 	defer closer.Close()
-	err := alertmd.IterateExecute(ctx, time.Now().UnixMilli(), env, func(cfg *alertmd.Execute) error {
+	err := alertmd.IterateExecute(ctx, time.Now().UnixMilli(), func(cfg *alertmd.Execute) error {
 		if err := runCtx.Err(); err != nil {
 			return err
 		}

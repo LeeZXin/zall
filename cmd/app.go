@@ -10,11 +10,7 @@ var (
 		Run,
 		RepoServer,
 		GitHook,
-		Timer,
-		PropServer,
 		FileServer,
-		Probe,
-		DeployServer,
 		PromAgent,
 	}
 )

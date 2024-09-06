@@ -6,12 +6,8 @@ import (
 	"regexp"
 )
 
-var (
-	validAppIdPattern = regexp.MustCompile("[\\w-]{1,32}")
-)
-
 func IsAppIdValid(app string) bool {
-	return validAppIdPattern.MatchString(app)
+	return regexp.MustCompile("[\\w-]{1,32}").MatchString(app)
 }
 
 func IsAppNameValid(name string) bool {

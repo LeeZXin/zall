@@ -555,11 +555,4 @@ const viewLog = item => {
 listApply();
 </script>
 <style scoped>
-.check-btn {
-  font-size: 14px;
-}
-.check-btn:hover {
-  color: #1677ff;
-  cursor: pointer;
-}
 </style>

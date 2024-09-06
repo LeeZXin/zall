@@ -2,34 +2,27 @@
   <div style="padding:10px">
     <div class="container">
       <div class="header">
-        <span v-if="mode==='create'">创建定时任务</span>
-        <span v-else-if="mode==='update'">编辑定时任务</span>
+        <span v-if="mode==='create'">{{t('timerTask.createTimer')}}</span>
+        <span v-else-if="mode==='update'">{{t('timerTask.updateTimer')}}</span>
       </div>
       <div class="section" v-if="mode==='create'">
-        <div class="section-title">选择环境</div>
+        <div class="section-title">{{t('timerTask.selectEnv')}}</div>
         <div class="section-body">
-          <a-select
-            style="width: 100%"
-            placeholder="选择环境"
-            v-model:value="formState.selectedEnv"
-            :options="envList"
-          />
-          <div class="input-desc">多环境选择, 选择其中一个环境</div>
+          <a-select style="width: 100%" v-model:value="formState.selectedEnv" :options="envList" />
         </div>
       </div>
       <div class="section" v-if="mode==='update'">
-        <div class="section-title">已选环境</div>
+        <div class="section-title">{{t('timerTask.selectedEnv')}}</div>
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section">
-        <div class="section-title">名称</div>
+        <div class="section-title">{{t('timerTask.name')}}</div>
         <div class="section-body">
           <a-input style="width:100%" v-model:value="formState.name" />
-          <div class="input-desc">描述定时任务的作用</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">cron表达式</div>
+        <div class="section-title">{{t('timerTask.cronExp')}}</div>
         <div class="section-body">
           <a-input
             style="width:100%"
@@ -37,33 +30,31 @@
             @focus="cronInputFocus"
             ref="cronInput"
           />
-          <div class="input-desc">cron表达式, 分钟级别</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">任务类型</div>
+        <div class="section-title">{{t('timerTask.taskType')}}</div>
         <div class="section-body">
           <a-radio-group v-model:value="formState.taskType">
             <a-radio value="http">HTTP</a-radio>
-            <div class="radio-option-desc">定时任务执行将会发送http请求</div>
+            <div class="radio-option-desc">{{t('timerTask.httpTaskDesc')}}</div>
           </a-radio-group>
         </div>
       </div>
       <div class="section" v-if="formState.taskType === 'http'">
-        <div class="section-title">HTTP请求配置</div>
+        <div class="section-title">{{t('timerTask.httpTaskCfg')}}</div>
         <div class="section-body">
           <ul class="input-ul">
             <li>
               <div class="input-name">Url</div>
               <a-input v-model:value="formState.url" />
-              <div class="input-desc">必须以http://或https://开头</div>
             </li>
             <li>
               <div class="input-name">Method</div>
               <a-select
                 v-model:value="formState.method"
                 style="width:100%"
-                :options="methodList.map(item=>{return {value:item}})"
+                :options="httpMethodList.map(item=>{return {value:item}})"
               />
             </li>
             <li>
@@ -73,23 +64,17 @@
                   <a-input style="width: 40%" v-model:value="item.key" />
                   <div style="width: 10%;text-align:center">=</div>
                   <a-input style="width: 40%" v-model:value="item.value" />
-                  <div style="width: 10%;">
-                    <a-button
-                      style="width: 80%;margin-left:20%"
-                      type="primary"
-                      danger
-                      :icon="h(MinusOutlined)"
-                      @click="deleteHeader(index)"
-                    />
+                  <div style="width: 10%;text-align:center">
+                    <CloseOutlined @click="deleteHeader(index)" />
                   </div>
                 </li>
               </ul>
               <div style="margin-top: 10px;">
-                <a-button type="primary" @click="addHeader">新增一个header</a-button>
+                <a-button type="primary" @click="addHeader">{{t('timerTask.newHttpHeader')}}</a-button>
               </div>
             </li>
             <li v-if="formState.method === 'POST'">
-              <div class="input-name">请求体</div>
+              <div class="input-name">body</div>
               <a-textarea
                 :auto-size="{ minRows: 5, maxRows: 10 }"
                 v-model:value="formState.body"
@@ -104,7 +89,7 @@
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateTimerTask">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateTimerTask">{{t('timerTask.save')}}</a-button>
       </div>
       <a-modal v-model:open="cronModalOpen" title="cron表达式" :width="800" @ok="handleCronModalOk">
         <ZCron v-model="addCronExp" />
@@ -115,16 +100,20 @@
 <script setup>
 import ZCron from "@/components/common/ZCron";
 import { useRoute, useRouter } from "vue-router";
-import { ref, reactive, h } from "vue";
+import { ref, reactive } from "vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
 import { createTimerRequest, updateTimerRequest } from "@/api/team/timerApi";
 import { message } from "ant-design-vue";
 import { timerTaskNameRegexp } from "@/utils/regexp";
-import { MinusOutlined } from "@ant-design/icons-vue";
+import { CloseOutlined } from "@ant-design/icons-vue";
 import { useTimerTaskStore } from "@/pinia/timerTaskStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const timerTaskStore = useTimerTaskStore();
 const router = useRouter();
+// cron
 const addCronExp = ref("");
+// 表单数据
 const formState = reactive({
   selectedEnv: null,
   name: "",
@@ -141,8 +130,11 @@ const formState = reactive({
   ],
   body: "{}"
 });
+// cron input框ref
 const cronInput = ref();
+// 是否展示cron modal
 const cronModalOpen = ref(false);
+// 环境列表
 const envList = ref([]);
 const route = useRoute();
 const getMode = () => {
@@ -150,10 +142,12 @@ const getMode = () => {
   return s[s.length - 1];
 };
 const mode = getMode();
+// cron input框focus
 const cronInputFocus = () => {
   cronModalOpen.value = true;
   cronInput.value.blur();
 };
+// 获取环境列表
 const getEnvCfg = () => {
   getEnvCfgRequest().then(res => {
     envList.value = res.data.map(item => {
@@ -169,6 +163,7 @@ const getEnvCfg = () => {
     }
   });
 };
+// tab键取消默认行为
 const handleTab = event => {
   event.preventDefault();
   let inputElement = event.target;
@@ -180,20 +175,25 @@ const handleTab = event => {
   inputElement.selectionStart = selectionStart + 4;
   inputElement.selectionEnd = inputElement.selectionStart;
 };
-const methodList = ["GET", "POST"];
+// http method
+const httpMethodList = ["GET", "POST"];
+// cron确定
 const handleCronModalOk = () => {
   formState.cronExp = addCronExp.value;
   cronModalOpen.value = false;
 };
+// 新增header
 const addHeader = () => {
   formState.headers.push({
     key: "",
     value: ""
   });
 };
+// 删除header
 const deleteHeader = index => {
   formState.headers.splice(index, 1);
 };
+// 新增或编辑定时任务
 const saveOrUpdateTimerTask = () => {
   if (!formState.selectedEnv) {
     message.warn("请选择环境");

@@ -651,3 +651,8 @@ func (r *AskToExecuteDataUpdateApplyReqDTO) IsValid() error {
 	}
 	return nil
 }
+
+type AuthorizedTableDTO struct {
+	Table string
+	Size  string
+}

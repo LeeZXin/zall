@@ -98,10 +98,9 @@ func DisableExecute(ctx context.Context, configId int64) (bool, error) {
 	return rows == 1, err
 }
 
-func IterateExecute(ctx context.Context, nextTime int64, env string, fn func(*Execute) error) error {
+func IterateExecute(ctx context.Context, nextTime int64, fn func(*Execute) error) error {
 	return xormutil.MustGetXormSession(ctx).
 		Where("next_time <= ?", nextTime).
-		And("env = ?", env).
 		And("is_enabled = 1").
 		Iterate(new(Execute), func(idx int, obj interface{}) error {
 			return fn(obj.(*Execute))

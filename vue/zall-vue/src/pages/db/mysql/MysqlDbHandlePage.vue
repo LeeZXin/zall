@@ -1,63 +1,58 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span v-if="mode === 'create'">创建Mysql数据源</span>
-        <span v-else-if="mode === 'update'">编辑Mysql数据源</span>
+      <div class="header">
+        <span v-if="mode === 'create'">{{t('mysqlSource.createSource')}}</span>
+        <span v-else-if="mode === 'update'">{{t('mysqlSource.updateSource')}}</span>
       </div>
       <div class="section">
-        <div class="section-title">名称</div>
+        <div class="section-title">{{t('mysqlSource.name')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
-          <div class="input-desc">标识数据源</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">写节点</div>
+        <div class="section-title">{{t('mysqlSource.writeHost')}}</div>
         <div class="section-body">
           <ul class="node-ul">
             <li>
-              <div class="input-title">host</div>
+              <div class="input-title">{{t('mysqlSource.host')}}</div>
               <a-input v-model:value="formState.writeHost" />
-              <div class="input-desc">数据库host ip:port格式</div>
+              <div class="input-desc">{{t('mysqlSource.hostFormat')}}</div>
             </li>
             <li>
-              <div class="input-title">账号</div>
+              <div class="input-title">{{t('mysqlSource.username')}}</div>
               <a-input v-model:value="formState.writeUsername" />
-              <div class="input-desc">数据库账号</div>
             </li>
             <li>
-              <div class="input-title">密码</div>
+              <div class="input-title">{{t('mysqlSource.password')}}</div>
               <a-input-password v-model:value="formState.writePassword" />
-              <div class="input-desc">数据库密码</div>
             </li>
           </ul>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">读节点</div>
+        <div class="section-title">{{t('mysqlSource.readHost')}}</div>
         <div class="section-body">
           <ul class="node-ul">
             <li>
-              <div class="input-title">host</div>
+              <div class="input-title">{{t('mysqlSource.host')}}</div>
               <a-input v-model:value="formState.readHost" />
-              <div class="input-desc">数据库host ip:port格式</div>
+              <div class="input-desc">{{t('mysqlSource.hostFormat')}}</div>
             </li>
             <li>
-              <div class="input-title">账号</div>
+              <div class="input-title">{{t('mysqlSource.username')}}</div>
               <a-input v-model:value="formState.readUsername" />
-              <div class="input-desc">数据库账号</div>
             </li>
             <li>
-              <div class="input-title">密码</div>
+              <div class="input-title">{{t('mysqlSource.password')}}</div>
               <a-input-password v-model:value="formState.readPassword" />
-              <div class="input-desc">数据库密码</div>
             </li>
           </ul>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateDb">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateDb">{{t('mysqlSource.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -69,14 +64,18 @@ import { message } from "ant-design-vue";
 import { createMysqlDbRequest, updateMysqlDbRequest } from "@/api/db/mysqlApi";
 import { useRoute, useRouter } from "vue-router";
 import { useMysqldbStore } from "@/pinia/mysqldbStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const dbStore = useMysqldbStore();
 const route = useRoute();
 const router = useRouter();
+// 模式 根据页面 create/update 区分
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
 const mode = getMode();
+// 表单数据
 const formState = reactive({
   name: "",
   writeHost: "",
@@ -86,26 +85,26 @@ const formState = reactive({
   readUsername: "",
   readPassword: ""
 });
-
+// 新增或编辑
 const saveOrUpdateDb = () => {
   if (!dbNameRegexp.test(formState.name)) {
-    message.warn("名称格式错误");
+    message.warn(t("mysqlSource.nameFormatErr"));
     return;
   }
   if (!dbHostRegexp.test(formState.writeHost)) {
-    message.warn("写节点host格式错误");
+    message.warn(t("mysqlSource.writeHostFormatErr"));
     return;
   }
   if (!dbUsernameRegexp.test(formState.writeUsername)) {
-    message.warn("写节点账号格式错误");
+    message.warn(t("mysqlSource.writeUsernameFormatErr"));
     return;
   }
   if (!dbHostRegexp.test(formState.readHost)) {
-    message.warn("读节点host格式错误");
+    message.warn(t("mysqlSource.readHostFormatErr"));
     return;
   }
   if (!dbUsernameRegexp.test(formState.readUsername)) {
-    message.warn("读节点账号格式错误");
+    message.warn(t("mysqlSource.readUsernameFormatErr"));
     return;
   }
   if (mode === "create") {
@@ -124,7 +123,7 @@ const saveOrUpdateDb = () => {
         }
       }
     }).then(() => {
-      message.success("创建成功");
+      message.success(t("operationSuccess"));
       router.push(`/db/mysqlDb/list`);
     });
   } else if (mode === "update") {
@@ -144,7 +143,7 @@ const saveOrUpdateDb = () => {
         }
       }
     }).then(() => {
-      message.success("保存成功");
+      message.success(t("operationSuccess"));
       router.push(`/db/mysqlDb/list`);
     });
   }
@@ -166,6 +165,6 @@ if (mode === "update") {
 </script>
 <style scoped>
 .node-ul > li + li {
-  margin-top: 20px;
+  margin-top: 10px;
 }
 </style>

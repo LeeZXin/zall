@@ -14,7 +14,7 @@ const props = defineProps(["status"]);
 const colorMap = {
   1: "orange",
   2: "green",
-  3: "purple",
+  3: "green",
   4: "red"
 };
 // 转化请求状态

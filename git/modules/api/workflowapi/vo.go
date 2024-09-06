@@ -10,7 +10,7 @@ type CreateWorkflowReqVO struct {
 	RepoId      int64             `json:"repoId"`
 	YamlContent string            `json:"yamlContent"`
 	Source      workflowmd.Source `json:"source"`
-	AgentId     int64             `json:"agentId"`
+	AgentId     string            `json:"agentId"`
 	Desc        string            `json:"desc"`
 }
 
@@ -19,7 +19,7 @@ type UpdateWorkflowReqVO struct {
 	Name        string            `json:"name"`
 	YamlContent string            `json:"yamlContent"`
 	Source      workflowmd.Source `json:"source"`
-	AgentId     int64             `json:"agentId"`
+	AgentId     string            `json:"agentId"`
 	Desc        string            `json:"desc"`
 }
 
@@ -59,7 +59,7 @@ type WorkflowVO struct {
 	RepoId      int64             `json:"repoId"`
 	YamlContent string            `json:"yamlContent"`
 	Source      workflowmd.Source `json:"source"`
-	AgentId     int64             `json:"agentId"`
+	AgentId     string            `json:"agentId"`
 }
 
 type CreateVarsReqVO struct {

@@ -7,12 +7,7 @@
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div class="op-icon" @click="deleteArtifact(dataItem)" v-else>
-          <a-tooltip placement="top">
-            <template #title>
-              <span>Delete File</span>
-            </template>
-            <delete-outlined />
-          </a-tooltip>
+          <DeleteOutlined />
         </div>
       </template>
     </ZTable>
@@ -37,39 +32,48 @@ import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
 import { ref, createVNode, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { listArtifactRequest, deleteArtifactRequest } from "@/api/app/artifactApi";
+import {
+  listArtifactRequest,
+  deleteArtifactRequest
+} from "@/api/app/artifactApi";
 import { message, Modal } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const route = useRoute();
+// 选择环境
 const selectedEnv = ref("");
 const router = useRouter();
 const dataSource = ref([]);
+// 分页
 const dataPage = reactive({
   current: 1,
   pageSize: 10,
   totalCount: 0
 });
+// 数据项
 const columns = [
   {
-    title: "制品号",
+    i18nTitle: "artifacts.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "创建人",
+    i18nTitle: "artifacts.creator",
     dataIndex: "creator",
     key: "creator"
   },
   {
-    title: "创建时间",
+    i18nTitle: "artifacts.created",
     dataIndex: "created",
     key: "created"
   },
   {
-    title: "操作",
+    i18nTitle: "artifacts.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ];
+// 制品列表
 const listArtifact = () => {
   listArtifactRequest(
     {
@@ -88,14 +92,14 @@ const listArtifact = () => {
     });
   });
 };
-
+// 删除制品
 const deleteArtifact = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("artifacts.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteArtifactRequest(item.id, item.env).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         dataPage.current = 1;
         listArtifact();
       });
@@ -103,7 +107,7 @@ const deleteArtifact = item => {
     onCancel() {}
   });
 };
-
+// 环境变化
 const onEnvChange = e => {
   router.replace(
     `/team/${route.params.teamId}/app/${route.params.appId}/artifact/list/${e.newVal}`
@@ -113,18 +117,4 @@ const onEnvChange = e => {
 };
 </script>
 <style scoped>
-.check-btn:hover {
-  color: #1677ff;
-  cursor: pointer;
-}
-.action-ul > li {
-  display: inline;
-}
-.action-ul > li:hover {
-  color: #1677ff;
-  cursor: pointer;
-}
-.action-ul > li + li {
-  margin-left: 6px;
-}
 </style>

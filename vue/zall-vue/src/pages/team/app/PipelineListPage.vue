@@ -2,13 +2,17 @@
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
       <div>
-        <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建流水线</a-button>
+        <a-button
+          type="primary"
+          :icon="h(PlusOutlined)"
+          @click="gotoCreatePage"
+        >{{t('deployPipeline.createPipeline')}}</a-button>
         <a-button
           type="primary"
           @click="gotoVarsPage"
           :icon="h(KeyOutlined)"
           style="margin-left:8px"
-        >管理变量</a-button>
+        >{{t('deployPipeline.manageVars')}}</a-button>
       </div>
 
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
@@ -18,19 +22,14 @@
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deletePipeline(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete Pipeline</span>
-              </template>
-              <delete-outlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
-                  <edit-outlined />
-                  <span style="margin-left:4px">编辑流水线</span>
+                  <EditOutlined />
+                  <span style="margin-left:4px">{{t('deployPipeline.updatePipeline')}}</span>
                 </li>
               </ul>
             </template>
@@ -62,40 +61,41 @@ import {
 } from "@/api/app/pipelineApi";
 import { usePipelineStore } from "@/pinia/pipelineStore";
 import { Modal, message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const pipelineStore = usePipelineStore();
 const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
 const dataSource = ref([]);
+// 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "deployPipeline.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "操作",
+    i18nTitle: "deployPipeline.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ];
-
+// 删除流水线
 const deletePipeline = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("deployPipeline.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deletePipelineRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listPipeline();
       });
     },
     onCancel() {}
   });
 };
-
+// 流水列表
 const listPipeline = () => {
   listPipelineRequest({
     appId: route.params.appId,
@@ -109,19 +109,19 @@ const listPipeline = () => {
     });
   });
 };
-
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/create?env=${selectedEnv.value}`
   );
 };
-
+// 跳转管理变量页面
 const gotoVarsPage = () => {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${selectedEnv.value}`
   );
 };
-
+// 跳转编辑页面
 const gotoUpdatePage = item => {
   pipelineStore.id = item.id;
   pipelineStore.name = item.name;
@@ -131,7 +131,7 @@ const gotoUpdatePage = item => {
     `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/${item.id}/update`
   );
 };
-
+// 环境变化
 const onEnvChange = e => {
   router.replace(
     `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/list/${e.newVal}`

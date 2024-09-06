@@ -1,9 +1,9 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
+      <div class="header">
         <span v-if="mode === 'create'">创建工作流</span>
-        <span v-if="mode === 'update'">编辑工作流</span>
+        <span v-else-if="mode === 'update'">编辑工作流</span>
       </div>
       <div class="section">
         <div class="section-title">工作流名称</div>
@@ -229,7 +229,7 @@ const listAllZalletNode = () => {
   listAllZalletNodeRequest().then(res => {
     zalletNodeList.value = res.data.map(item => {
       return {
-        value: item.id,
+        value: item.nodeId,
         label: item.name
       };
     });
@@ -256,8 +256,9 @@ if (mode === "update") {
 <style scoped>
 .format-yaml-btn {
   cursor: pointer;
+  font-weight: normal;
 }
-.format-yaml-text:hover {
+.format-yaml-btn:hover {
   color: #1677ff;
 }
 .insert-template {

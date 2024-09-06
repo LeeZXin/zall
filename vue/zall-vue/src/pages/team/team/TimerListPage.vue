@@ -3,7 +3,7 @@
     <div style="margin-bottom:10px;font-size:14px" class="flex-between">
       <div class="flex-center">
         <a-input
-          placeholder="搜索名称"
+          :placeholder="t('timerTask.searchName')"
           style="width: 240px;margin-right:10px"
           v-model:value="searchName"
           @pressEnter="()=>searchTimer()"
@@ -18,7 +18,7 @@
           @click="gotoCreatePage"
           style="margin-right:10px"
           v-if="teamStore.perm?.canManageTimer"
-        >创建定时任务</a-button>
+        >{{t('timerTask.createTimer')}}</a-button>
       </div>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
@@ -32,27 +32,22 @@
         </template>
         <template v-else>
           <div class="op-icon" @click="deleteTimerTask(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>删除定时任务</span>
-              </template>
-              <delete-outlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
                   <edit-outlined />
-                  <span style="margin-left:4px">编辑定时任务</span>
+                  <span style="margin-left:4px">{{t('timerTask.updateTimer')}}</span>
                 </li>
                 <li @click="triggerTimerTask(dataItem)">
                   <play-circle-outlined />
-                  <span style="margin-left:4px">手动触发任务</span>
+                  <span style="margin-left:4px">{{t('timerTask.triggerTimer')}}</span>
                 </li>
                 <li @click="viewLog(dataItem)">
                   <eye-outlined />
-                  <span style="margin-left:4px">查看日志</span>
+                  <span style="margin-left:4px">{{t('timerTask.viewLog')}}</span>
                 </li>
               </ul>
             </template>
@@ -100,45 +95,53 @@ import { Modal, message } from "ant-design-vue";
 import { useTimerTaskStore } from "@/pinia/timerTaskStore";
 import EnvSelector from "@/components/app/EnvSelector";
 import { useTeamStore } from "@/pinia/teamStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const teamStore = useTeamStore();
 const timerTaskStore = useTimerTaskStore();
 const router = useRouter();
 const route = useRoute();
+// 数据
 const dataSource = ref([]);
+// 分页
 const dataPage = reactive({
   current: 1,
   pageSize: 10,
   totalCount: 0
 });
+// 当前环境
 const selectedEnv = ref();
+// 搜索名称
 const searchName = ref("");
+// 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "timerTask.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "cron表达式",
+    i18nTitle: "timerTask.cronExp",
     dataIndex: "cronExp",
     key: "cronExp"
   },
   {
-    title: "创建人",
+    i18nTitle: "timerTask.creator",
     dataIndex: "creator",
     key: "creator"
   },
   {
-    title: "是否启动",
+    i18nTitle: "timerTask.isEnabled",
     dataIndex: "isEnabled",
     key: "isEnabled"
   },
   {
-    title: "操作",
+    i18nTitle: "timerTask.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ];
+// 定时任务列表
 const listTimer = () => {
   listTimerRequest({
     teamId: parseInt(route.params.teamId),
@@ -155,35 +158,39 @@ const listTimer = () => {
     });
   });
 };
+// 删除定时任务
 const deleteTimerTask = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("timerTask.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteTimerRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         searchTimer();
       });
     },
     onCancel() {}
   });
 };
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(
     `/team/${route.params.teamId}/timer/create?env=${selectedEnv.value}`
   );
 };
+// 手动触发任务
 const triggerTimerTask = item => {
   Modal.confirm({
-    title: `你确定要触发${item.name}吗?`,
+    title: `${t("timerTask.confirmTrigger")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       triggerTimerTaskRequest(item.id).then(() => {
-        message.success("触发成功");
+        message.success(t("operationSuccess"));
       });
     }
   });
 };
+// 跳转编辑页面
 const gotoUpdatePage = item => {
   timerTaskStore.id = item.id;
   timerTaskStore.name = item.name;
@@ -194,19 +201,21 @@ const gotoUpdatePage = item => {
   timerTaskStore.env = item.env;
   router.push(`/team/${route.params.teamId}/timer/${item.id}/update`);
 };
+// 启动或停用定时任务
 const enableOrDisableTimer = item => {
   if (item.isEnabled) {
     disableTimerRequest(item.id).then(() => {
-      message.success("关闭成功");
+      message.success(t("operationSuccess"));
       item.isEnabled = false;
     });
   } else {
     enableTimerRequest(item.id).then(() => {
-      message.success("启动成功");
+      message.success(t("operationSuccess"));
       item.isEnabled = true;
     });
   }
 };
+// 跳转日志页面
 const viewLog = item => {
   timerTaskStore.id = item.id;
   timerTaskStore.name = item.name;
@@ -217,15 +226,17 @@ const viewLog = item => {
   timerTaskStore.env = item.env;
   router.push(`/team/${route.params.teamId}/timer/${item.id}/log`);
 };
+// 环境变化
 const onEnvChange = e => {
   selectedEnv.value = e.newVal;
   router.replace(`/team/${route.params.teamId}/timer/list/${e.newVal}`);
   searchTimer();
 };
+// 搜索定时任务
 const searchTimer = () => {
   dataPage.current = 1;
   listTimer();
-}
+};
 </script>
 <style scoped>
 </style>

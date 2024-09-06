@@ -1,27 +1,27 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span>发布配置</span>
+      <div class="header">
+        <span>{{t('propertyFile.deployVersion')}}</span>
       </div>
       <div class="section">
-        <div class="section-title">跟随版本号</div>
+        <div class="section-title">{{t('propertyFile.lastVersion')}}</div>
         <div class="section-body">{{formState.lastVersion}}</div>
       </div>
       <div class="section">
-        <div class="section-title">当前版本号</div>
+        <div class="section-title">{{t('propertyFile.currentVersion')}}</div>
         <div class="section-body">{{formState.version}}</div>
       </div>
       <div class="section">
-        <div class="section-title">已选环境</div>
+        <div class="section-title">{{t('propertyFile.selectedEnv')}}</div>
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section">
-        <div class="section-title">文件名称</div>
+        <div class="section-title">{{t('propertyFile.name')}}</div>
         <div class="section-body">{{formState.name}}</div>
       </div>
       <div class="section">
-        <div class="section-title">发布节点</div>
+        <div class="section-title">{{t('propertyFile.deployNode')}}</div>
         <div class="section-body">
           <a-checkbox-group v-model:value="formState.nodeList" style="width: 100%">
             <ul class="node-ul">
@@ -34,8 +34,8 @@
       </div>
       <div class="section">
         <div class="section-title flex-between">
-          <span>配置内容</span>
-          <span class="diff-btn" @click="showDiffModal">对比</span>
+          <span>{{t('propertyFile.content')}}</span>
+          <span class="diff-btn" @click="showDiffModal">{{t('propertyFile.compare')}}</span>
         </div>
         <Codemirror
           v-model="formState.content"
@@ -45,10 +45,15 @@
         />
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="publishFile">立即发布</a-button>
+        <a-button type="primary" @click="deployFile">{{t('propertyFile.deploy')}}</a-button>
       </div>
     </div>
-    <a-modal title="新旧对比" :footer="null" v-model:open="diffModalOpen" :width="800">
+    <a-modal
+      :title="t('propertyFile.compare')"
+      :footer="null"
+      v-model:open="diffModalOpen"
+      :width="800"
+    >
       <code-diff
         :old-string="formState.oldContent"
         :new-string="formState.content"
@@ -75,6 +80,8 @@ import {
 import { CodeDiff } from "v-code-diff";
 import { useRoute, useRouter } from "vue-router";
 import { usePropertyHistoryStore } from "@/pinia/propertyHistoryStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 // 透传的配置版本历史
 const propertyHistoryStore = usePropertyHistoryStore();
 // 对比modal是否展开
@@ -99,16 +106,16 @@ const showDiffModal = () => {
   diffModalOpen.value = true;
 };
 // 发布配置
-const publishFile = () => {
+const deployFile = () => {
   if (formState.nodeList.length === 0) {
-    message.warn("请选择节点");
+    message.warn(t('propertyFile.pleaseSelectNodes'));
     return;
   }
   deployHistoryRequest({
     historyId: propertyHistoryStore.id,
     sourceIdList: formState.nodeList
   }).then(() => {
-    message.success("发布成功");
+    message.success(t('operationSuccess'));
     router.push(
       `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
     );

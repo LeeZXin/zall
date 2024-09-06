@@ -183,19 +183,21 @@ func FindAndExecute(reqDTO FindAndExecuteWorkflowReqDTO) {
 
 func Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO) error {
 	ctx, closer := xormstore.Context(context.Background())
-	defer closer.Close()
 	varsList, err := workflowmd.ListVarsByRepoId(ctx, wf.RepoId, nil)
 	if err != nil {
 		logger.Logger.Error(err)
+		closer.Close()
 		return err
 	}
 	// 获取agent
-	agent, b, err := zalletmd.GetZalletNodeById(ctx, wf.AgentId)
+	agent, b, err := zalletmd.GetZalletNodeByNodeId(ctx, wf.AgentId)
 	if err != nil {
 		logger.Logger.Error(err)
+		closer.Close()
 		return err
 	}
 	if !b {
+		closer.Close()
 		return fmt.Errorf("zallet agent id: %d not found", wf.AgentId)
 	}
 	now := time.Now()
@@ -231,8 +233,10 @@ func Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO) error {
 	})
 	if err != nil {
 		logger.Logger.Error(err)
+		closer.Close()
 		return err
 	}
+	closer.Close()
 	url := static.GetString("workflow.callback.url")
 	if url == "" {
 		url = fmt.Sprintf("http://%s:%d/api/v1/workflow/internal/taskCallBack", common.GetLocalIP(), common.HttpServerPort())
@@ -285,7 +289,7 @@ func CreateWorkflow(ctx context.Context, reqDTO CreateWorkflowReqDTO) error {
 		return util.NewBizErr(apicode.InvalidArgsCode, i18n.InvalidWorkflowContent)
 	}
 	// 校验agentId
-	b, err := zalletmd.ExistZalletNodeById(ctx, reqDTO.AgentId)
+	b, err := zalletmd.ExistZalletNodeByNodeId(ctx, reqDTO.AgentId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -397,7 +401,7 @@ func UpdateWorkflow(ctx context.Context, reqDTO UpdateWorkflowReqDTO) error {
 		return util.NewBizErr(apicode.InvalidArgsCode, i18n.InvalidWorkflowContent)
 	}
 	// 校验agentId
-	b, err := zalletmd.ExistZalletNodeById(ctx, reqDTO.AgentId)
+	b, err := zalletmd.ExistZalletNodeByNodeId(ctx, reqDTO.AgentId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
@@ -442,6 +446,7 @@ func TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReqDTO) error {
 		PrId:        0,
 	})
 	if err != nil {
+		fmt.Println(err)
 		if strings.Contains(err.Error(), "out of capacity") {
 			return util.NewBizErr(apicode.OutOfWorkflowCapacityErrCode, i18n.SystemTooManyOperation)
 		}

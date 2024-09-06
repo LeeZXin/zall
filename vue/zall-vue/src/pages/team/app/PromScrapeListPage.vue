@@ -4,7 +4,7 @@
       <div>
         <a-input
           v-model:value="searchEndpointKey"
-          placeholder="搜索endpoint"
+          :placeholder="t('promScrape.searchEndpoint')"
           style="width:240px;margin-right:6px"
           @pressEnter="searchPromScrape"
         >
@@ -12,30 +12,29 @@
             <SearchOutlined />
           </template>
         </a-input>
-        <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建抓取任务</a-button>
+        <a-button
+          type="primary"
+          :icon="h(PlusOutlined)"
+          @click="gotoCreatePage"
+        >{{t('promScrape.createScrape')}}</a-button>
       </div>
 
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
-        <span v-if="dataIndex === 'targetType'">{{targetTypeMap[dataItem[dataIndex]]}}</span>
+        <span v-if="dataIndex === 'targetType'">{{t(targetTypeMap[dataItem[dataIndex]])}}</span>
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deletePromScrape(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete Source</span>
-              </template>
-              <delete-outlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
-                  <edit-outlined />
-                  <span style="margin-left:4px">编辑抓取任务</span>
+                  <EditOutlined />
+                  <span style="margin-left:4px">{{t('promScrape.updateScrape')}}</span>
                 </li>
               </ul>
             </template>
@@ -77,6 +76,8 @@ import {
 } from "@/api/app/promApi";
 import { usePromScrapeStore } from "@/pinia/promScrapeStore";
 import { Modal, message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const promScrapeStore = usePromScrapeStore();
 // 分页数据
 const dataPage = reactive({
@@ -84,51 +85,55 @@ const dataPage = reactive({
   totalCount: 0,
   pageSize: 10
 });
+// 搜索关键词
 const searchEndpointKey = ref("");
 const route = useRoute();
+// 选择的环境
 const selectedEnv = ref("");
 const router = useRouter();
 const dataSource = ref([]);
+// 服务发现类型map
 const targetTypeMap = {
-  1: "服务发现类型",
-  2: "直连类型"
+  1: "promScrape.discoveryType",
+  2: "promScrape.hostType"
 };
+// 数据项
 const columns = [
   {
-    title: "endpoint",
+    i18nTitle: "promScrape.endpoint",
     dataIndex: "endpoint",
     key: "endpoint"
   },
   {
-    title: "目标",
+    i18nTitle: "promScrape.target",
     dataIndex: "target",
     key: "target"
   },
   {
-    title: "目标类型",
+    i18nTitle: "promScrape.targetType",
     dataIndex: "targetType",
     key: "targetType"
   },
   {
-    title: "操作",
+    i18nTitle: "promScrape.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ];
-
+// 删除任务
 const deletePromScrape = item => {
   Modal.confirm({
-    title: `你确定要删除${item.endpoint}吗?`,
+    title: `${t("promScrape.confirmDelete")} ${item.endpoint}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deletePromScrapeByTeamRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         searchPromScrape();
       });
     }
   });
 };
-
+// 任务列表
 const listPromScrape = () => {
   listPromScrapeByTeamRequest({
     endpoint: searchEndpointKey.value,
@@ -150,13 +155,13 @@ const searchPromScrape = () => {
   dataPage.current = 1;
   listPromScrape();
 };
-
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/promScrape/create?env=${selectedEnv.value}`
   );
 };
-
+// 跳转编辑页面
 const gotoUpdatePage = item => {
   promScrapeStore.id = item.id;
   promScrapeStore.endpoint = item.endpoint;
@@ -168,7 +173,7 @@ const gotoUpdatePage = item => {
     `/team/${route.params.teamId}/app/${route.params.appId}/promScrape/${item.id}/update`
   );
 };
-
+// 环境变化
 const onEnvChange = e => {
   router.replace(
     `/team/${route.params.teamId}/app/${route.params.appId}/promScrape/list/${e.newVal}`

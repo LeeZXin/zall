@@ -1,37 +1,30 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span v-if="mode === 'create'">创建流水线</span>
-        <span v-else-if="mode === 'update'">编辑流水线</span>
+      <div class="header">
+        <span v-if="mode === 'create'">{{t('deployPipeline.createPipeline')}}</span>
+        <span v-else-if="mode === 'update'">{{t('deployPipeline.updatePipeline')}}</span>
       </div>
       <div class="section" v-if="mode==='create'">
-        <div class="section-title">选择环境</div>
+        <div class="section-title">{{t('deployPipeline.selectEnv')}}</div>
         <div class="section-body">
-          <a-select
-            style="width: 100%"
-            placeholder="选择环境"
-            v-model:value="formState.selectedEnv"
-            :options="envList"
-          />
-          <div class="input-desc">多环境选择, 选择其中一个环境</div>
+          <a-select style="width: 100%" v-model:value="formState.selectedEnv" :options="envList" />
         </div>
       </div>
       <div class="section" v-if="mode==='update'">
-        <div class="section-title">已选环境</div>
+        <div class="section-title">{{t('deployPipeline.selectedEnv')}}</div>
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section">
-        <div class="section-title">名称</div>
+        <div class="section-title">{{t('deployPipeline.name')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
-          <div class="input-desc">标识配置作用</div>
         </div>
       </div>
       <div class="section">
         <div class="section-title flex-between">
-          <span>配置内容</span>
-          <span @click="formatYaml" class="format-yaml-btn">格式化yaml</span>
+          <span>{{t('deployPipeline.yaml')}}</span>
+          <span @click="formatYaml" class="format-yaml-btn">{{t('deployPipeline.formatYaml')}}</span>
         </div>
         <Codemirror
           v-model="formState.content"
@@ -40,7 +33,7 @@
         />
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdatePipeline">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdatePipeline">{{t('deployPipeline.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -60,21 +53,27 @@ import {
 import { useRoute, useRouter } from "vue-router";
 import { usePipelineStore } from "@/pinia/pipelineStore";
 import jsyaml from "js-yaml";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const pipelineStore = usePipelineStore();
 const route = useRoute();
 const router = useRouter();
+// 模式
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
 const mode = getMode();
 const extensions = ref([yaml(), oneDark]);
+// 表单数据
 const formState = reactive({
   name: "",
   content: "",
   selectedEnv: ""
 });
+// 环境列表
 const envList = ref([]);
+// 获取环境配置
 const getEnvCfg = () => {
   getEnvCfgRequest().then(res => {
     envList.value = res.data.map(item => {
@@ -90,6 +89,7 @@ const getEnvCfg = () => {
     }
   });
 };
+// 格式化yaml
 const formatYaml = () => {
   if (formState.content) {
     try {
@@ -100,9 +100,10 @@ const formatYaml = () => {
     }
   }
 };
+// 新增或编辑流水线
 const saveOrUpdatePipeline = () => {
   if (!pipelineNameRegexp.test(formState.name)) {
-    message.warn("名称格式错误");
+    message.warn(t("deployPipeline.nameFormatErr"));
     return;
   }
   if (mode === "create") {
@@ -112,7 +113,7 @@ const saveOrUpdatePipeline = () => {
       config: formState.content,
       name: formState.name
     }).then(() => {
-      message.success("创建成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/list/${formState.selectedEnv}`
       );
@@ -123,7 +124,7 @@ const saveOrUpdatePipeline = () => {
       config: formState.content,
       name: formState.name
     }).then(() => {
-      message.success("保存成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/list/${formState.selectedEnv}`
       );

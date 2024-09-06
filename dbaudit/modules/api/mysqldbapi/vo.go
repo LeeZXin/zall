@@ -173,3 +173,8 @@ type ShowTableIndexRespVO struct {
 	Columns []string            `json:"columns"`
 	Data    []map[string]string `json:"data"`
 }
+
+type AuthorizedTableVO struct {
+	Table string `json:"table"`
+	Size  string `json:"size"`
+}

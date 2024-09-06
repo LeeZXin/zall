@@ -227,6 +227,33 @@ func ListArtifact(ctx context.Context, reqDTO ListArtifactReqDTO) ([]ArtifactDTO
 	return ret, total, nil
 }
 
+// ListLatestArtifact 最新制品库列表
+func ListLatestArtifact(ctx context.Context, reqDTO ListLatestArtifactReqDTO) ([]ArtifactDTO, error) {
+	if err := reqDTO.IsValid(); err != nil {
+		return nil, err
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	_, _, err := checkAppDevelopPermByAppId(ctx, reqDTO.AppId, reqDTO.Operator)
+	if err != nil {
+		return nil, err
+	}
+	artifacts, err := artifactmd.ListLatestArtifact(ctx, reqDTO.AppId, reqDTO.Env, 10)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	ret := listutil.MapNe(artifacts, func(t artifactmd.Artifact) ArtifactDTO {
+		return ArtifactDTO{
+			Id:      t.Id,
+			Name:    t.Name,
+			Creator: t.Creator,
+			Created: t.Created,
+		}
+	})
+	return ret, nil
+}
+
 // DeleteArtifact 删除制品
 func DeleteArtifact(ctx context.Context, reqDTO DeleteArtifactReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {

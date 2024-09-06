@@ -1,10 +1,8 @@
 package deploy
 
 import (
-	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zsf-utils/collections/hashset"
 	"regexp"
-	"strings"
 )
 
 var (
@@ -46,6 +44,9 @@ type Confirm struct {
 }
 
 func (c *Confirm) CheckForm(args map[string]string) (bool, map[string]string) {
+	if len(c.Form) == 0 {
+		return true, nil
+	}
 	if args == nil {
 		return false, nil
 	}
@@ -94,7 +95,7 @@ func (c *Confirm) isValid() bool {
 type Stage struct {
 	Name     string   `json:"name" yaml:"name"`
 	Agents   []string `json:"agents,omitempty" yaml:"agents,omitempty"`
-	Confirm  *Confirm `json:"confirm" yaml:"confirm"`
+	Confirm  *Confirm `json:"confirm" yaml:"confirm,omitempty"`
 	Action   string   `json:"action" yaml:"action"`
 	Parallel int      `json:"parallel" yaml:"parallel"`
 }
@@ -117,26 +118,10 @@ func (s *Stage) isValid(agents map[string]Agent, actions map[string]Action) bool
 }
 
 type Agent struct {
-	Host  string            `json:"host" yaml:"host"`
-	Token string            `json:"token" yaml:"token"`
-	With  map[string]string `json:"with,omitempty" yaml:"with,omitempty"`
+	NodeId string            `json:"nodeId" yaml:"nodeId"`
+	With   map[string]string `json:"with,omitempty" yaml:"with,omitempty"`
 }
 
 func (a *Agent) isValid() bool {
-	return IpPortPattern.MatchString(a.Host)
-}
-
-func (a *Agent) RunScript(script, service string, env map[string]string, taskId string) (string, error) {
-	if script == "" {
-		return "", nil
-	}
-	args := make(map[string]string, len(a.With)+len(env))
-	for k, v := range a.With {
-		args[k] = v
-	}
-	for k, v := range env {
-		args[k] = v
-	}
-	return sshagent.NewServiceCommand(a.Host, a.Token, service).
-		Execute(strings.NewReader(script), args, taskId)
+	return a.NodeId != ""
 }

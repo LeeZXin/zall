@@ -34,6 +34,7 @@ func createZalletNode(c *gin.Context) {
 	var req CreateZalletNodeReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := zalletsrv.CreateZalletNode(c, zalletsrv.CreateZalletNodeReqDTO{
+			NodeId:     req.NodeId,
 			Name:       req.Name,
 			AgentHost:  req.AgentHost,
 			AgentToken: req.AgentToken,
@@ -51,7 +52,7 @@ func updateZalletNode(c *gin.Context) {
 	var req UpdateZalletNodeReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := zalletsrv.UpdateZalletNode(c, zalletsrv.UpdateZalletNodeReqDTO{
-			NodeId:     req.NodeId,
+			Id:         req.Id,
 			Name:       req.Name,
 			AgentHost:  req.AgentHost,
 			AgentToken: req.AgentToken,
@@ -92,6 +93,7 @@ func listZalletNode(c *gin.Context) {
 		data := listutil.MapNe(nodes, func(t zalletsrv.ZalletNodeDTO) ZalletNodeVO {
 			return ZalletNodeVO{
 				Id:         t.Id,
+				NodeId:     t.NodeId,
 				Name:       t.Name,
 				AgentHost:  t.AgentHost,
 				AgentToken: t.AgentToken,
@@ -118,8 +120,9 @@ func listAllZalletNode(c *gin.Context) {
 	}
 	data := listutil.MapNe(nodes, func(t zalletsrv.SimpleZalletNodeDTO) SimpleZalletNodeVO {
 		return SimpleZalletNodeVO{
-			Id:   t.Id,
-			Name: t.Name,
+			Id:     t.Id,
+			NodeId: t.NodeId,
+			Name:   t.Name,
 		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]SimpleZalletNodeVO]{

@@ -1,10 +1,15 @@
 <template>
   <div style="padding:10px">
     <div style="margin-bottom:10px;font-size: 14px;" class="flex-between">
-      <span>
+      <div>
         <span style="font-weight:bold;font-size:18px">{{timerTaskStore.name}}</span>
-        <span style="color:gray;padding-left:4px">{{t('timerTask.executeLog')}}</span>
-      </span>
+        <a-tag style="margin-left:4px" color="orange">{{timerTaskStore.env}}</a-tag>
+        <a-button
+          type="primary"
+          :icon="h(ReloadOutlined)"
+          @click="reloadLog"
+        >{{t('timerTask.reloadLog')}}</a-button>
+      </div>
       <div>
         <span>{{t('timerTask.searchMonthly')}}:</span>
         <a-date-picker
@@ -78,7 +83,7 @@
     <a-modal v-model:open="taskModal.open" :title="t('timerTask.taskCfg')" :footer="null">
       <ul class="task-ul">
         <li>
-          <div class="item-name">任务类型</div>
+          <div class="item-name">{{t('timerTask.taskType')}}</div>
           <div class="item-value">{{taskModal.task?.taskType}}</div>
         </li>
         <template v-if="taskModal.task?.taskType === 'http'">
@@ -109,14 +114,15 @@
 </template>
 <script setup>
 import ZTable from "@/components/common/ZTable";
-import { ref, reactive } from "vue";
+import { ref, reactive, h } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   EllipsisOutlined,
   ControlOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
-  SettingOutlined
+  SettingOutlined,
+  ReloadOutlined
 } from "@ant-design/icons-vue";
 import { listTimerTaskLogRequest } from "@/api/team/timerApi";
 import dayjs from "dayjs";
@@ -217,8 +223,13 @@ const listLog = () => {
     });
   });
 };
+// 重新加载日志
+const reloadLog = () => {
+  dataPage.current = 1;
+  listLog();
+};
 if (timerTaskStore.id === 0) {
-  router.push(`/team/${route.params.teamId}/timerTask/list`);
+  router.push(`/team/${route.params.teamId}/timer/list`);
 } else {
   listLog();
 }

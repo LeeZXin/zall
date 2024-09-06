@@ -3,33 +3,41 @@
     <div class="container">
       <div class="section">
         <div class="section-title">
-          <span>应用名称</span>
+          <span>{{t('appSetting.appName')}}</span>
         </div>
         <div class="section-body">
           <div class="input-item" style="margin-bottom:10px">
             <a-input v-model:value="appName" />
           </div>
-          <a-button type="primary" @click="updateApp">保存名称</a-button>
+          <a-button type="primary" @click="updateApp">{{t('appSetting.saveAppName')}}</a-button>
         </div>
       </div>
       <div class="section">
         <div class="section-title">
-          <span>危险操作</span>
+          <span>{{t('appSetting.dangerousAction')}}</span>
         </div>
         <div class="section-body">
           <div class="input-item">
-            <a-button type="primary" danger @click="deleteApp">删除应用</a-button>
-            <div class="input-desc">删除应用后, 将删除跟应用相关的配置、部署流水线、相关记录等信息, 不可逆</div>
+            <a-button type="primary" danger @click="deleteApp">{{t('appSetting.deleteApp')}}</a-button>
+            <div class="input-desc">{{t('appSetting.deleteAppDesc')}}</div>
           </div>
           <div class="input-item" v-if="userStore.isAdmin">
-            <a-button type="primary" danger @click="showTransferModal">迁移至其他团队</a-button>
-            <div class="input-desc">将应用迁移至其他团队, 该团队成员无法再看到此应用</div>
+            <a-button
+              type="primary"
+              danger
+              @click="showTransferModal"
+            >{{t('appSetting.transferAppToOtherTeam')}}</a-button>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <a-modal v-model:open="transferModal.open" title="迁移团队" @ok="handleTransferModalOk">
+  <a-modal
+    v-model:open="transferModal.open"
+    :title="t('appSetting.transferAppToOtherTeam')"
+    @ok="handleTransferModalOk"
+  >
+    <div style="font-size:12px;margin-bottom:6px">{{t('appSetting.selectTeam')}}</div>
     <a-select
       v-model:value="transferModal.teamId"
       style="width:100%"
@@ -53,6 +61,8 @@ import { message, Modal } from "ant-design-vue";
 import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
 import { useUserStore } from "@/pinia/userStore";
 import { listAllByAdminRequest } from "@/api/team/teamApi";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const userStore = useUserStore();
 const appName = ref("");
 const route = useRoute();
@@ -72,24 +82,24 @@ const getApp = () => {
 // 编辑应用服务名称
 const updateApp = () => {
   if (!appNameRegexp.test(appName.value)) {
-    message.warn("名称格式错误");
+    message.warn(t("appSetting.appNameFormatErr"));
     return;
   }
   updateAppRequest({
     appId: route.params.appId,
     name: appName.value
   }).then(() => {
-    message.success("编辑成功");
+    message.success(t("operationSuccess"));
   });
 };
 // 删除应用服务
 const deleteApp = () => {
   Modal.confirm({
-    title: `你确定要删除该应用吗?`,
+    title: `${t("appSetting.confirmDeleteApp")}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteAppRequest(route.params.appId).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         router.push(`/team/${route.params.teamId}/app/list`);
       });
     },
@@ -127,14 +137,14 @@ const filterTeamListOption = (input, option) => {
 // 迁移团队点击“确定”
 const handleTransferModalOk = () => {
   if (!transferModal.teamId) {
-    message.warn("请选择团队");
+    message.warn(t("appSetting.pleaseSelectTeam"));
     return;
   }
   transferAppRequest({
     appId: route.params.appId,
     teamId: transferModal.teamId
   }).then(() => {
-    message.success("迁移成功");
+    message.success(t("operationSuccess"));
     router.push(`/team/${transferModal.teamId}/app/list`);
   });
 };

@@ -1,19 +1,19 @@
 <template>
   <span v-if="props.status === 1">
     <LoadingOutlined />
-    <span style="margin-left:8px">等待执行</span>
+    <span style="margin-left:8px">{{t('deployPlan.stagePendingStatus')}}</span>
   </span>
   <span v-else-if="props.status === 2">
     <LoadingOutlined />
-    <span style="margin-left:8px">执行中</span>
+    <span style="margin-left:8px">{{t('deployPlan.stageRunningStatus')}}</span>
   </span>
   <span v-else-if="props.status === 3">
     <CheckCircleFilled style="color:#52c41a" />
-    <span style="margin-left:8px">成功</span>
+    <span style="margin-left:8px">{{t('deployPlan.stageSuccessfulStatus')}}</span>
   </span>
   <span v-else-if="props.status === 4">
     <CloseCircleFilled style="color:#ff4d4f" />
-    <span style="margin-left:8px">失败</span>
+    <span style="margin-left:8px">{{t('deployPlan.stageFailedStatus')}}</span>
   </span>
 </template>
 <script setup>
@@ -26,6 +26,8 @@ import {
 /*
   发布计划阶段状态值
 */
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const props = defineProps(["status"]);
 </script>
 
