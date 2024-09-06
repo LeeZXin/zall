@@ -1,45 +1,37 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span v-if="mode === 'create'">创建配置文件</span>
-        <span v-else-if="mode === 'new'">新增版本</span>
+      <div class="header">
+        <span v-if="mode === 'create'">{{t('propertyFile.createFile')}}</span>
+        <span v-else-if="mode === 'new'">{{t('propertyFile.newVersion')}}</span>
       </div>
       <div class="section" v-if="mode==='create'">
-        <div class="section-title">选择环境</div>
+        <div class="section-title">{{t('propertyFile.selectEnv')}}</div>
         <div class="section-body">
-          <a-select
-            style="width: 100%"
-            placeholder="选择环境"
-            v-model:value="formState.selectedEnv"
-            :options="envList"
-          />
-          <div class="input-desc">多环境选择, 选择其中一个环境</div>
+          <a-select style="width: 100%" v-model:value="formState.selectedEnv" :options="envList" />
         </div>
       </div>
       <div class="section" v-if="mode==='new'">
-        <div class="section-title">跟随版本号</div>
+        <div class="section-title">{{t('propertyFile.lastVersion')}}</div>
         <div class="section-body">{{route.query.from}}</div>
       </div>
       <div class="section" v-if="mode==='new'">
-        <div class="section-title">已选环境</div>
+        <div class="section-title">{{t('propertyFile.selectedEnv')}}</div>
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section" v-if="mode === 'create'">
-        <div class="section-title">文件名称</div>
+        <div class="section-title">{{t('propertyFile.name')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
-          <div
-            class="input-desc"
-          >配置名称,文件的唯一标识,不能包含特殊字符,最后文件会拼接下面格式作为后缀,例如 test-xxx 选择格式为json, 则最后保存的名称为test-xxx.json</div>
+          <div class="input-desc">{{t('propertyFile.nameDesc')}}</div>
         </div>
       </div>
       <div class="section" v-if="mode === 'new'">
-        <div class="section-title">文件名称</div>
+        <div class="section-title">{{t('propertyFile.name')}}</div>
         <div class="section-body">{{formState.name}}</div>
       </div>
       <div class="section" v-if="mode === 'create'">
-        <div class="section-title">格式</div>
+        <div class="section-title">{{t('propertyFile.format')}}</div>
         <div class="section-body">
           <a-radio-group v-model:value="formState.format" @change="onFormatChange">
             <a-radio value="json">json</a-radio>
@@ -52,8 +44,12 @@
       </div>
       <div class="section">
         <div class="section-title flex-between">
-          <span>配置内容</span>
-          <span v-if="mode==='new'" class="diff-btn" @click="showDiffModal">对比</span>
+          <span>{{t('propertyFile.content')}}</span>
+          <span
+            v-if="mode==='new'"
+            class="diff-btn"
+            @click="showDiffModal"
+          >{{t('propertyFile.compare')}}</span>
         </div>
         <Codemirror
           v-model="formState.content"
@@ -62,10 +58,15 @@
         />
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateFile">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateFile">{{t('propertyFile.save')}}</a-button>
       </div>
     </div>
-    <a-modal title="新旧对比" :footer="null" v-model:open="diffModalOpen" :width="800">
+    <a-modal
+      :title="t('propertyFile.compare')"
+      :footer="null"
+      v-model:open="diffModalOpen"
+      :width="800"
+    >
       <code-diff
         :old-string="formState.oldContent"
         :new-string="formState.content"
@@ -99,16 +100,20 @@ import {
 import { CodeDiff } from "v-code-diff";
 import { useRoute, useRouter } from "vue-router";
 import { usePropertyFileStore } from "@/pinia/propertyFileStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const diffModalOpen = ref(false);
 const propertyFileStore = usePropertyFileStore();
 const route = useRoute();
 const router = useRouter();
+// 模式
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
 const mode = getMode();
 const extensions = ref([json(), oneDark]);
+// 表单数据
 const formState = reactive({
   name: "",
   format: "json",
@@ -116,7 +121,9 @@ const formState = reactive({
   selectedEnv: "",
   oldContent: ""
 });
+// 环境列表
 const envList = ref([]);
+// 获取环境列表
 const getEnvCfg = () => {
   getEnvCfgRequest().then(res => {
     envList.value = res.data.map(item => {
@@ -132,12 +139,17 @@ const getEnvCfg = () => {
     }
   });
 };
+// 展示差异modal
 const showDiffModal = () => {
   diffModalOpen.value = true;
 };
+// codemirror对不同格式文件支持
 const propertiesLang = StreamLanguage.define(properties);
 const onFormatChange = event => {
-  switch (event.target.value) {
+  formatChange(event.target.value);
+};
+const formatChange = ext => {
+  switch (ext) {
     case "json":
       extensions.value = [json(), oneDark];
       break;
@@ -155,11 +167,11 @@ const onFormatChange = event => {
       break;
   }
 };
-
+// 新增或编辑配置文件
 const saveOrUpdateFile = () => {
   if (mode === "create") {
     if (!propertyFileNameRegexp.test(formState.name)) {
-      message.warn("文件名称格式错误");
+      message.warn(t("propertyFile.nameFormatErr"));
       return;
     }
     createPropertyFileRequest({
@@ -168,7 +180,7 @@ const saveOrUpdateFile = () => {
       content: formState.content,
       name: formState.name + "." + formState.format
     }).then(() => {
-      message.success("创建成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/list/${formState.selectedEnv}`
       );
@@ -179,7 +191,7 @@ const saveOrUpdateFile = () => {
       content: formState.content,
       lastVersion: route.query.from
     }).then(() => {
-      message.success("保存成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
       );
@@ -199,6 +211,8 @@ if (mode === "create") {
       `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${route.params.fileId}/history/list`
     );
   } else {
+    let dot = propertyFileStore.name.lastIndexOf(".");
+    formatChange(propertyFileStore.name.substr(dot + 1));
     getHistoryByVersionRequest({
       fileId: propertyFileStore.id,
       version: route.query.from

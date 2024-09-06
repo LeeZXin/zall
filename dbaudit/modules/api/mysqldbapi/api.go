@@ -535,9 +535,15 @@ func listAuthorizedTable(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+	ret := listutil.MapNe(tables, func(t mysqldbsrv.AuthorizedTableDTO) AuthorizedTableVO {
+		return AuthorizedTableVO{
+			Table: t.Table,
+			Size:  t.Size,
+		}
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]AuthorizedTableVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     tables,
+		Data:     ret,
 	})
 }
 

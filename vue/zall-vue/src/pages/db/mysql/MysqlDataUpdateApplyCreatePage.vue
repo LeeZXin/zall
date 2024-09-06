@@ -88,6 +88,10 @@ const formState = reactive({
 });
 // 提交申请
 const applyDataUpdate = () => {
+  if (formState.dbId <= 0) {
+    message.warn(t("mysqlDataUpdateApply.pleaseSelectDatabse"));
+    return;
+  }
   if (!dbAccessBaseRegexp.test(formState.accessBase)) {
     message.warn(t("mysqlDataUpdateApply.accessBaseFormatErr"));
     return;

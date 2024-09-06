@@ -3,7 +3,7 @@
     <div style="margin-bottom:10px;font-size: 14px;" class="flex-between">
       <span>
         <span style="font-weight:bold;font-size:18px">{{timerTaskStore.name}}</span>
-        <span style="color:gray;padding-left:4px">{{t('timerTask.executeLog')}}</span>
+        <a-tag style="margin-left:4px" color="orange">{{timerTaskStore.env}}</a-tag>
       </span>
       <div>
         <span>{{t('timerTask.searchMonthly')}}:</span>
@@ -78,7 +78,7 @@
     <a-modal v-model:open="taskModal.open" :title="t('timerTask.taskCfg')" :footer="null">
       <ul class="task-ul">
         <li>
-          <div class="item-name">任务类型</div>
+          <div class="item-name">{{t('timerTask.taskType')}}</div>
           <div class="item-value">{{taskModal.task?.taskType}}</div>
         </li>
         <template v-if="taskModal.task?.taskType === 'http'">
@@ -218,7 +218,7 @@ const listLog = () => {
   });
 };
 if (timerTaskStore.id === 0) {
-  router.push(`/team/${route.params.teamId}/timerTask/list`);
+  router.push(`/team/${route.params.teamId}/timer/list`);
 } else {
   listLog();
 }

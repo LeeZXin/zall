@@ -1,9 +1,21 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
+      <div class="header">
         <span v-if="mode === 'create'">创建Zallet代理节点</span>
         <span v-else-if="mode === 'update'">编辑Zallet代理节点</span>
+      </div>
+      <div class="section">
+        <div class="section-title">NodeId</div>
+        <div class="section-body">
+          <template v-if="mode==='create'">
+            <a-input v-model:value="formState.nodeId" />
+            <div class="input-desc">唯一标识, 不超过32</div>
+          </template>
+          <template v-if="mode==='update'">
+            <span>{{formState.nodeId}}</span>
+          </template>
+        </div>
       </div>
       <div class="section">
         <div class="section-title">名称</div>
@@ -33,9 +45,10 @@
 <script setup>
 import { reactive } from "vue";
 import {
-  zalletNodeNameRegexp,
-  zalletNodeAgentHostRegexp,
-  zalletNodeAgentTokenRegexp
+  zalletNodeIdRegexp,
+  zalletNameRegexp,
+  zalletAgentHostRegexp,
+  zalletAgentTokenRegexp
 } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import {
@@ -54,24 +67,30 @@ const getMode = () => {
 const mode = getMode();
 const formState = reactive({
   name: "",
+  nodeId: "",
   agentHost: "",
   agentToken: ""
 });
 const saveOrUpdateZalletNode = () => {
-  if (!zalletNodeNameRegexp.test(formState.name)) {
+  if (!zalletNameRegexp.test(formState.name)) {
     message.warn("名称格式错误");
     return;
   }
-  if (!zalletNodeAgentHostRegexp.test(formState.agentHost)) {
+  if (!zalletAgentHostRegexp.test(formState.agentHost)) {
     message.warn("host格式错误");
     return;
   }
-  if (!zalletNodeAgentTokenRegexp.test(formState.agentToken)) {
+  if (!zalletAgentTokenRegexp.test(formState.agentToken)) {
     message.warn("token格式错误");
     return;
   }
   if (mode === "create") {
+    if (!zalletNodeIdRegexp.test(formState.nodeId)) {
+      message.warn("nodeId格式错误");
+      return;
+    }
     createZalletNodeRequest({
+      nodeId: formState.nodeId,
       agentHost: formState.agentHost,
       agentToken: formState.agentToken,
       name: formState.name
@@ -81,7 +100,7 @@ const saveOrUpdateZalletNode = () => {
     });
   } else if (mode === "update") {
     updateZalletNodeRequest({
-      nodeId: zalletNodeStore.id,
+      id: zalletNodeStore.id,
       agentHost: formState.agentHost,
       agentToken: formState.agentToken,
       name: formState.name
@@ -96,6 +115,7 @@ if (mode === "update") {
   if (zalletNodeStore.id === 0) {
     router.push(`/sa/zalletNode/list`);
   } else {
+    formState.nodeId = zalletNodeStore.nodeId;
     formState.name = zalletNodeStore.name;
     formState.agentHost = zalletNodeStore.agentHost;
     formState.agentToken = zalletNodeStore.agentToken;

@@ -96,6 +96,25 @@ func (r *ListArtifactReqDTO) IsValid() error {
 	return nil
 }
 
+type ListLatestArtifactReqDTO struct {
+	AppId    string              `json:"appId"`
+	Env      string              `json:"env"`
+	Operator apisession.UserInfo `json:"operator"`
+}
+
+func (r *ListLatestArtifactReqDTO) IsValid() error {
+	if !cfgsrv.ContainsEnv(r.Env) {
+		return util.InvalidArgsError()
+	}
+	if !appmd.IsAppIdValid(r.AppId) {
+		return util.InvalidArgsError()
+	}
+	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	return nil
+}
+
 type ArtifactDTO struct {
 	Id      int64
 	Name    string

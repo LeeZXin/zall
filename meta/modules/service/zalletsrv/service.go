@@ -20,7 +20,16 @@ func CreateZalletNode(ctx context.Context, reqDTO CreateZalletNodeReqDTO) error 
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	err := zalletmd.InsertZalletNode(ctx, zalletmd.InsertZalletNodeReqDTO{
+	_, b, err := zalletmd.GetZalletNodeByNodeId(ctx, reqDTO.NodeId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if b {
+		return util.AlreadyExistsError()
+	}
+	err = zalletmd.InsertZalletNode(ctx, zalletmd.InsertZalletNodeReqDTO{
+		NodeId:     reqDTO.NodeId,
 		Name:       reqDTO.Name,
 		AgentHost:  reqDTO.AgentHost,
 		AgentToken: reqDTO.AgentToken,
@@ -44,7 +53,7 @@ func UpdateZalletNode(ctx context.Context, reqDTO UpdateZalletNodeReqDTO) error 
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	_, err := zalletmd.UpdateZalletNode(ctx, zalletmd.UpdateZalletNodeReqDTO{
-		Id:         reqDTO.NodeId,
+		Id:         reqDTO.Id,
 		Name:       reqDTO.Name,
 		AgentHost:  reqDTO.AgentHost,
 		AgentToken: reqDTO.AgentToken,
@@ -90,7 +99,7 @@ func ListZalletNode(ctx context.Context, reqDTO ListZalletNodeReqDTO) ([]ZalletN
 		PageNum:  reqDTO.PageNum,
 		PageSize: 10,
 		Name:     reqDTO.Name,
-		Cols:     []string{"id", "name", "agent_host", "agent_token"},
+		Cols:     []string{"id", "node_id", "name", "agent_host", "agent_token"},
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -99,6 +108,7 @@ func ListZalletNode(ctx context.Context, reqDTO ListZalletNodeReqDTO) ([]ZalletN
 	data := listutil.MapNe(ret, func(t zalletmd.ZalletNode) ZalletNodeDTO {
 		return ZalletNodeDTO{
 			Id:         t.Id,
+			NodeId:     t.NodeId,
 			Name:       t.Name,
 			AgentHost:  t.AgentHost,
 			AgentToken: t.AgentToken,
@@ -114,16 +124,16 @@ func ListAllZalletNode(ctx context.Context, reqDTO ListAllZalletNodeReqDTO) ([]S
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	nodes, err := zalletmd.ListAllZalletNode(ctx, []string{"id", "name"})
+	nodes, err := zalletmd.ListAllZalletNode(ctx, []string{"id", "name", "node_id"})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	data := listutil.MapNe(nodes, func(t zalletmd.ZalletNode) SimpleZalletNodeDTO {
+	return listutil.MapNe(nodes, func(t zalletmd.ZalletNode) SimpleZalletNodeDTO {
 		return SimpleZalletNodeDTO{
-			Id:   t.Id,
-			Name: t.Name,
+			Id:     t.Id,
+			NodeId: t.NodeId,
+			Name:   t.Name,
 		}
-	})
-	return data, nil
+	}), nil
 }

@@ -456,7 +456,7 @@ func ListAuthorizedBase(ctx context.Context, reqDTO ListAuthorizedBaseReqDTO) ([
 }
 
 // ListAuthorizedTable 展示授权的表
-func ListAuthorizedTable(ctx context.Context, reqDTO ListAuthorizedTableReqDTO) ([]string, error) {
+func ListAuthorizedTable(ctx context.Context, reqDTO ListAuthorizedTableReqDTO) ([]AuthorizedTableDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
@@ -468,89 +468,76 @@ func ListAuthorizedTable(ctx context.Context, reqDTO ListAuthorizedTableReqDTO) 
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	isDba := checkDbaPerm(reqDTO.Operator) == nil
-	if isDba {
-		db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return nil, util.InternalError(err)
-		}
-		if !b {
-			return nil, util.InvalidArgsError()
-		}
-		datasourceName := fmt.Sprintf(
-			"%s:%s@tcp(%s)/%s?charset=utf8",
-			url.QueryEscape(db.Config.Data.ReadNode.Username),
-			url.QueryEscape(db.Config.Data.ReadNode.Password),
-			db.Config.Data.ReadNode.Host,
-			reqDTO.AccessBase,
-		)
-		result, err := util.MysqlQuery(datasourceName, "show tables")
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return nil, util.InternalError(err)
-		}
-		tables := result.Data
-		ret := make([]string, 0, len(tables))
-		for _, table := range tables {
-			if len(table) > 0 {
-				ret = append(ret, table[0])
-			}
-		}
-		return ret, nil
-	}
-	perms, err := mysqldbmd.ListReadPermByAccount(ctx, mysqldbmd.ListReadPermByAccountReqDTO{
-		DbId:       reqDTO.DbId,
-		AccessBase: reqDTO.AccessBase,
-		Account:    reqDTO.Operator.Account,
-		Cols:       []string{"access_table"},
-	})
+	db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	retTables := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) string {
-		return t.AccessTable
-	})
-	retTables = listutil.Distinct(retTables...)
-	hasStar := false
-	for _, table := range retTables {
-		if table == "*" {
-			hasStar = true
-			break
+	if !b {
+		return nil, util.InvalidArgsError()
+	}
+	datasourceName := fmt.Sprintf(
+		"%s:%s@tcp(%s)/?charset=utf8",
+		url.QueryEscape(db.Config.Data.ReadNode.Username),
+		url.QueryEscape(db.Config.Data.ReadNode.Password),
+		db.Config.Data.ReadNode.Host,
+	)
+	sql := fmt.Sprintf(`
+		select TABLE_NAME as 'table',
+			(DATA_LENGTH + INDEX_LENGTH) as size
+		from
+    		information_schema.TABLES
+		where
+    		TABLE_SCHEMA = '%s'
+		`, reqDTO.AccessBase)
+	isDba := checkDbaPerm(reqDTO.Operator) == nil
+	if !isDba {
+		// 如果不是dba 则查询有权限的表
+		perms, err := mysqldbmd.ListReadPermByAccount(ctx, mysqldbmd.ListReadPermByAccountReqDTO{
+			DbId:       reqDTO.DbId,
+			AccessBase: reqDTO.AccessBase,
+			Account:    reqDTO.Operator.Account,
+			Cols:       []string{"access_table"},
+		})
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return nil, util.InternalError(err)
+		}
+		hasStar := listutil.ContainsNe(perms, func(t mysqldbmd.ReadPerm) bool {
+			return t.AccessTable == "*"
+		})
+		if !hasStar {
+			tables := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) string {
+				return "'" + t.AccessTable + "'"
+			})
+			sql = fmt.Sprintf(`
+		select TABLE_NAME as 'table',
+			(DATA_LENGTH + INDEX_LENGTH) as size
+		from
+    		information_schema.TABLES
+		where
+    		TABLE_SCHEMA = '%s'
+			AND TABLE_NAME in (%s)
+		`, reqDTO.AccessBase, strings.Join(listutil.Distinct(tables...), ","))
 		}
 	}
-	if hasStar {
-		db, b, err := mysqldbmd.GetDbById(ctx, reqDTO.DbId)
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return nil, util.InternalError(err)
-		}
-		if !b {
-			return nil, util.ThereHasBugErr()
-		}
-		datasourceName := fmt.Sprintf(
-			"%s:%s@tcp(%s)/%s?charset=utf8",
-			url.QueryEscape(db.Config.Data.ReadNode.Username),
-			url.QueryEscape(db.Config.Data.ReadNode.Password),
-			db.Config.Data.ReadNode.Host,
-			reqDTO.AccessBase,
-		)
-		result, err := util.MysqlQuery(datasourceName, "show tables")
-		if err != nil {
-			logger.Logger.WithContext(ctx).Error(err)
-			return nil, util.InternalError(err)
-		}
-		tables := result.Data
-		retTables = make([]string, 0, len(tables))
-		for _, table := range tables {
-			if len(table) > 0 {
-				retTables = append(retTables, table[0])
-			}
+	result, err := util.MysqlQuery(datasourceName, sql)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	retTables := make([]AuthorizedTableDTO, 0, len(result.Data))
+	for _, data := range result.Data {
+		if len(data) > 1 {
+			size, _ := strconv.ParseInt(data[1], 10, 64)
+			retTables = append(retTables, AuthorizedTableDTO{
+				Table: data[0],
+				Size:  util.VolumeReadable(size),
+			})
 		}
 	}
 	sort.SliceStable(retTables, func(i, j int) bool {
-		return retTables[i] < retTables[j]
+		return retTables[i].Table < retTables[j].Table
 	})
 	return retTables, nil
 }

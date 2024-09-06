@@ -39,7 +39,6 @@ const pipelineVarsNameRegexp = /^\w{1,32}$/;
 const pipelineVarsContentRegexp = /^[\s\S]{1,10240}$/;
 // 发布计划
 const deployPlanNameRegexp = /^.{1,32}$/;
-const deployProductVersionRegexp = /^.{1,128}$/;
 // 服务来源
 const serviceSourceNameRegexp = /^.{1,32}$/;
 const serviceSourceApiKeyRegexp = /^.{0,128}$/;
@@ -67,9 +66,10 @@ const sshKeyNameRegexp = /^.{1,128}$/;
 // gpg key
 const gpgKeyNameRegexp = /^.{1,128}$/;
 // zallet node
-const zalletNodeNameRegexp = /^.{1,32}$/;
-const zalletNodeAgentHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
-const zalletNodeAgentTokenRegexp = /^.{0,1024}$/;
+const zalletNodeIdRegexp = /^[\w-]{1,32}$/;
+const zalletNameRegexp = /^.{1,32}$/;
+const zalletAgentHostRegexp = /^(\d{1,3}\.){3}\d{1,3}:\d+/;
+const zalletAgentTokenRegexp = /^.{0,1024}$/;
 // notify tpl
 const notifyTplNameRegexp = /^.{1,32}$/;
 const notifyTplUrlRegexp = /^https?:\/\/.+$/;
@@ -121,7 +121,6 @@ export {
     pipelineVarsNameRegexp,
     pipelineVarsContentRegexp,
     deployPlanNameRegexp,
-    deployProductVersionRegexp,
     serviceSourceNameRegexp,
     serviceSourceApiKeyRegexp,
     propertySourceNameRegexp,
@@ -139,9 +138,10 @@ export {
     envRegexp,
     sshKeyNameRegexp,
     gpgKeyNameRegexp,
-    zalletNodeNameRegexp,
-    zalletNodeAgentHostRegexp,
-    zalletNodeAgentTokenRegexp,
+    zalletNodeIdRegexp,
+    zalletNameRegexp,
+    zalletAgentHostRegexp,
+    zalletAgentTokenRegexp,
     notifyTplNameRegexp,
     notifyTplUrlRegexp,
     teamHookUrlRegexp,

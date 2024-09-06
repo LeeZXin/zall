@@ -366,7 +366,6 @@ func forceRedoStage(c *gin.Context) {
 		err := deploysrv.ForceRedoNotSuccessfulAgentStages(c, deploysrv.ForceRedoNotSuccessfulAgentStagesReqDTO{
 			PlanId:     req.PlanId,
 			StageIndex: req.StageIndex,
-			Args:       req.Args,
 			Operator:   apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -394,10 +393,10 @@ func createPlan(c *gin.Context) {
 	var req CreatePlanReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.CreatePlan(c, deploysrv.CreatePlanReqDTO{
-			Name:           req.Name,
-			PipelineId:     req.PipelineId,
-			ProductVersion: req.ProductVersion,
-			Operator:       apisession.MustGetLoginUser(c),
+			Name:            req.Name,
+			PipelineId:      req.PipelineId,
+			ArtifactVersion: req.ArtifactVersion,
+			Operator:        apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -446,15 +445,15 @@ func listPlan(c *gin.Context) {
 		}
 		data := listutil.MapNe(plans, func(t deploysrv.PlanDTO) PlanVO {
 			return PlanVO{
-				Id:             t.Id,
-				PipelineId:     t.PipelineId,
-				PipelineName:   t.PipelineName,
-				Name:           t.Name,
-				ProductVersion: t.ProductVersion,
-				PlanStatus:     t.PlanStatus,
-				Env:            t.Env,
-				Creator:        t.Creator,
-				Created:        t.Created.Format(time.DateTime),
+				Id:              t.Id,
+				PipelineId:      t.PipelineId,
+				PipelineName:    t.PipelineName,
+				Name:            t.Name,
+				ArtifactVersion: t.ArtifactVersion,
+				PlanStatus:      t.PlanStatus,
+				Env:             t.Env,
+				Creator:         t.Creator,
+				Created:         t.Created.Format(time.DateTime),
 			}
 		})
 		c.JSON(http.StatusOK, ginutil.Page2Resp[PlanVO]{
@@ -480,16 +479,16 @@ func getPlanDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, ginutil.DataResp[PlanDetailVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data: PlanDetailVO{
-			Id:             plan.Id,
-			PipelineId:     plan.PipelineId,
-			PipelineName:   plan.PipelineName,
-			PipelineConfig: plan.PipelineConfig,
-			Name:           plan.Name,
-			ProductVersion: plan.ProductVersion,
-			PlanStatus:     plan.PlanStatus,
-			Env:            plan.Env,
-			Creator:        plan.Creator,
-			Created:        plan.Created.Format(time.DateTime),
+			Id:              plan.Id,
+			PipelineId:      plan.PipelineId,
+			PipelineName:    plan.PipelineName,
+			PipelineConfig:  plan.PipelineConfig,
+			Name:            plan.Name,
+			ArtifactVersion: plan.ArtifactVersion,
+			PlanStatus:      plan.PlanStatus,
+			Env:             plan.Env,
+			Creator:         plan.Creator,
+			Created:         plan.Created.Format(time.DateTime),
 		},
 	})
 }

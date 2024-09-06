@@ -51,3 +51,14 @@ func ListArtifact(ctx context.Context, reqDTO ListArtifactReqDTO) ([]Artifact, i
 		FindAndCount(&ret)
 	return ret, total, err
 }
+
+func ListLatestArtifact(ctx context.Context, appId, env string, size int) ([]Artifact, error) {
+	ret := make([]Artifact, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env).
+		OrderBy("id desc").
+		Limit(size).
+		Find(&ret)
+	return ret, err
+}

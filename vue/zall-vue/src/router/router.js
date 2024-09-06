@@ -381,7 +381,7 @@ const router = createRouter({
             }, {
                 path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/list",
                 component: () =>
-                    import ("../pages/team/gitRepo/WorkflowsPage")
+                    import ("../pages/team/gitRepo/WorkflowListPage")
             }, {
                 path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/workflow/create",
                 component: () =>
@@ -436,9 +436,9 @@ const router = createRouter({
                     import ("../pages/team/app/PropertyFileHandlePage")
 
             }, {
-                path: "/team/:teamId(\\d+)/app/:appId/propertyFile/:fileId(\\d+)/publish/:version",
+                path: "/team/:teamId(\\d+)/app/:appId/propertyFile/:fileId(\\d+)/deploy/:version",
                 component: () =>
-                    import ("../pages/team/app/PropertyHistoryPublishPage")
+                    import ("../pages/team/app/PropertyHistoryDeployPage")
 
             }, {
                 path: "/team/:teamId(\\d+)/app/:appId/propertyFile/:fileId(\\d+)/history/list",
@@ -478,7 +478,7 @@ const router = createRouter({
             }, {
                 path: "/team/:teamId(\\d+)/app/:appId/pipeline/vars/:env?",
                 component: () =>
-                    import ("../pages/team/app/PipelineVarsPage")
+                    import ("../pages/team/app/PipelineVarsListPage")
 
             }, {
                 path: "/team/:teamId(\\d+)/app/:appId/pipeline/vars/create",

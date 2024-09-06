@@ -48,6 +48,8 @@ func InitApi() {
 			group.GET("/list", listArtifact)
 			// 删除制品
 			group.DELETE("/delete/:artifactId", deleteArtifact)
+			// 获取最新十个制品
+			group.GET("/listLatest", listLatestArtifact)
 		}
 	})
 }
@@ -94,6 +96,30 @@ func listArtifact(c *gin.Context) {
 			TotalCount: total,
 		})
 	}
+}
+
+func listLatestArtifact(c *gin.Context) {
+	artifacts, err := filesrv.ListLatestArtifact(c, filesrv.ListLatestArtifactReqDTO{
+		AppId:    c.Query("appId"),
+		Env:      c.Query("env"),
+		Operator: apisession.MustGetLoginUser(c),
+	})
+	if err != nil {
+		util.HandleApiErr(err, c)
+		return
+	}
+	data := listutil.MapNe(artifacts, func(t filesrv.ArtifactDTO) ArtifactVO {
+		return ArtifactVO{
+			Id:      t.Id,
+			Name:    t.Name,
+			Creator: t.Creator,
+			Created: t.Created.Format("20060102"),
+		}
+	})
+	c.JSON(http.StatusOK, ginutil.DataResp[[]ArtifactVO]{
+		BaseResp: ginutil.DefaultSuccessResp,
+		Data:     data,
+	})
 }
 
 func checkArtifactToken(c *gin.Context) {

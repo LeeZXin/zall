@@ -1,15 +1,19 @@
 <template>
   <div style="padding:10px">
     <div class="header flex-between">
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加变量</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('deployPipeline.createVars')}}</a-button>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ul class="vars-list" v-if="varsList.length > 0">
       <li v-for="item in varsList" v-bind:key="item.id">
         <div class="vars-pattern no-wrap">{{item.name}}</div>
         <ul class="op-btns">
-          <li class="update-btn" @click="handleVars(item)">编辑</li>
-          <li class="del-btn" @click="deleteVars(item)">删除</li>
+          <li class="update-btn" @click="handleVars(item)">{{t('deployPipeline.updateVars')}}</li>
+          <li class="del-btn" @click="deleteVars(item)">{{t('deployPipeline.deleteVars')}}</li>
         </ul>
       </li>
     </ul>
@@ -28,32 +32,36 @@ import {
   deletePipelineVarsRequest
 } from "@/api/app/pipelineApi";
 import { usePipelineVarsStore } from "@/pinia/pipelineVarsStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const varsStore = usePipelineVarsStore();
 const router = useRouter();
 const route = useRoute();
+// 数据
 const varsList = ref([]);
+// 选择的环境
 const selectedEnv = ref("");
-
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(
     `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/create?env=${selectedEnv.value}`
   );
 };
-
+// 删除变量
 const deleteVars = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t('deployPipeline.confirmDelete')} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deletePipelineVarsRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listVars();
       });
     },
     onCancel() {}
   });
 };
-
+// 变量列表
 const listVars = () => {
   listPipelineVarsRequest({
     appId: route.params.appId,
@@ -62,7 +70,7 @@ const listVars = () => {
     varsList.value = res.data;
   });
 };
-
+// 编辑变量
 const handleVars = item => {
   varsStore.id = item.id;
   varsStore.name = item.name;
@@ -71,7 +79,7 @@ const handleVars = item => {
     `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${item.id}/update`
   );
 };
-
+// 环境变化
 const onEnvChange = e => {
   router.replace(
     `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${e.newVal}`
@@ -147,15 +155,7 @@ const onEnvChange = e => {
   color: white;
   background-color: darkred;
 }
-.update-btn:hover,
-.ping-btn:hover {
+.update-btn:hover {
   background-color: #f0f0f0;
-}
-.no-data-text {
-  font-size: 14px;
-  line-height: 18px;
-  padding: 10px;
-  text-align: center;
-  word-break: break-all;
 }
 </style>

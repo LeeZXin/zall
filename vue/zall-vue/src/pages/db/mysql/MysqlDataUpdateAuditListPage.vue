@@ -13,13 +13,7 @@
         <a-select-option :value="5">{{t("mysqlDataUpdateApply.askToExecuteStatus")}}</a-select-option>
         <a-select-option :value="6">{{t("mysqlDataUpdateApply.executedStatus")}}</a-select-option>
       </a-select>
-      <a-select
-        v-model:value="selectedDbId"
-        show-search
-        :filter-option="filterDbListOption"
-        @change="searchApply"
-        style="width:180px"
-      >
+      <a-select v-model:value="selectedDbId" @change="searchApply" style="width:180px">
         <a-select-option :value="0">{{t("mysqlDataUpdateApply.allDatabases")}}</a-select-option>
         <a-select-option
           :value="item.value"
@@ -174,6 +168,7 @@ const logModal = reactive({
 });
 // 不同意modal
 const disagreeModal = reactive({
+  id: 0,
   open: false,
   reason: ""
 });
@@ -557,10 +552,6 @@ const selectApplyStatus = () => {
   }
   searchApply();
 };
-// 过滤数据库列表
-const filterDbListOption = (input, option) => {
-  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
-};
 // 申请列表
 const listApply = () => {
   listDataUpdateApplyByDbaRequest({
@@ -665,11 +656,4 @@ getAllDb();
 listApply();
 </script>
 <style scoped>
-.check-btn {
-  font-size: 14px;
-}
-.check-btn:hover {
-  color: #1677ff;
-  cursor: pointer;
-}
 </style>

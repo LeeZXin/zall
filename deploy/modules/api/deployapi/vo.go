@@ -6,9 +6,9 @@ import (
 )
 
 type CreatePlanReqVO struct {
-	Name           string `json:"name"`
-	PipelineId     int64  `json:"pipelineId"`
-	ProductVersion string `json:"productVersion"`
+	Name            string `json:"name"`
+	PipelineId      int64  `json:"pipelineId"`
+	ArtifactVersion string `json:"artifactVersion"`
 }
 
 type ListPlanReqVO struct {
@@ -18,28 +18,28 @@ type ListPlanReqVO struct {
 }
 
 type PlanVO struct {
-	Id             int64               `json:"id"`
-	PipelineId     int64               `json:"pipelineId"`
-	PipelineName   string              `json:"pipelineName"`
-	Name           string              `json:"name"`
-	ProductVersion string              `json:"productVersion"`
-	PlanStatus     deploymd.PlanStatus `json:"planStatus"`
-	Env            string              `json:"env"`
-	Creator        string              `json:"creator"`
-	Created        string              `json:"created"`
+	Id              int64               `json:"id"`
+	PipelineId      int64               `json:"pipelineId"`
+	PipelineName    string              `json:"pipelineName"`
+	Name            string              `json:"name"`
+	ArtifactVersion string              `json:"artifactVersion"`
+	PlanStatus      deploymd.PlanStatus `json:"planStatus"`
+	Env             string              `json:"env"`
+	Creator         string              `json:"creator"`
+	Created         string              `json:"created"`
 }
 
 type PlanDetailVO struct {
-	Id             int64               `json:"id"`
-	PipelineId     int64               `json:"pipelineId"`
-	PipelineName   string              `json:"pipelineName"`
-	PipelineConfig string              `json:"pipelineConfig"`
-	Name           string              `json:"name"`
-	ProductVersion string              `json:"productVersion"`
-	PlanStatus     deploymd.PlanStatus `json:"planStatus"`
-	Env            string              `json:"env"`
-	Creator        string              `json:"creator"`
-	Created        string              `json:"created"`
+	Id              int64               `json:"id"`
+	PipelineId      int64               `json:"pipelineId"`
+	PipelineName    string              `json:"pipelineName"`
+	PipelineConfig  string              `json:"pipelineConfig"`
+	Name            string              `json:"name"`
+	ArtifactVersion string              `json:"artifactVersion"`
+	PlanStatus      deploymd.PlanStatus `json:"planStatus"`
+	Env             string              `json:"env"`
+	Creator         string              `json:"creator"`
+	Created         string              `json:"created"`
 }
 
 type CreatePipelineReqVO struct {
@@ -100,9 +100,8 @@ type ConfirmInteractStageReqVO struct {
 }
 
 type ForceRedoStageReqVO struct {
-	PlanId     int64             `json:"planId"`
-	StageIndex int               `json:"stageIndex"`
-	Args       map[string]string `json:"args"`
+	PlanId     int64 `json:"planId"`
+	StageIndex int   `json:"stageIndex"`
 }
 
 type CreateServiceSourceReqVO struct {

@@ -10,8 +10,8 @@ func IsPlanNameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
 }
 
-func IsProductVersionValid(productVersion string) bool {
-	return len(productVersion) > 0 && len(productVersion) <= 128
+func IsArtifactVersionValid(version string) bool {
+	return len(version) > 0 && len(version) <= 128
 }
 
 func IsServiceSourceNameValid(name string) bool {
@@ -24,15 +24,15 @@ func IsPipelineVarsNameValid(name string) bool {
 
 func InsertPlan(ctx context.Context, reqDTO InsertPlanReqDTO) (Plan, error) {
 	ret := Plan{
-		AppId:          reqDTO.AppId,
-		PipelineId:     reqDTO.PipelineId,
-		PipelineName:   reqDTO.PipelineName,
-		Name:           reqDTO.Name,
-		ProductVersion: reqDTO.ProductVersion,
-		PlanStatus:     reqDTO.PlanStatus,
-		Env:            reqDTO.Env,
-		Creator:        reqDTO.Creator,
-		PipelineConfig: reqDTO.PipelineConfig,
+		AppId:           reqDTO.AppId,
+		PipelineId:      reqDTO.PipelineId,
+		PipelineName:    reqDTO.PipelineName,
+		Name:            reqDTO.Name,
+		ArtifactVersion: reqDTO.ArtifactVersion,
+		PlanStatus:      reqDTO.PlanStatus,
+		Env:             reqDTO.Env,
+		Creator:         reqDTO.Creator,
+		PipelineConfig:  reqDTO.PipelineConfig,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
 	return ret, err
@@ -144,21 +144,13 @@ func ListStageByPlanIdAndStageIndexAndStatus(ctx context.Context, planId int64, 
 	return ret, err
 }
 
-func GetStageTaskIdMap(ctx context.Context, planId int64, stageIndex int) (map[string]string, error) {
+func GetStagesByPlanIdAndIndex(ctx context.Context, planId int64, stageIndex int) ([]Stage, error) {
 	ret := make([]Stage, 0)
 	err := xormutil.MustGetXormSession(ctx).
 		Where("plan_id = ?", planId).
 		And("stage_index = ?", stageIndex).
-		Cols("agent", "task_id").
 		Find(&ret)
-	if err != nil {
-		return nil, err
-	}
-	taskIdMap := make(map[string]string, len(ret))
-	for _, stage := range ret {
-		taskIdMap[stage.Agent] = stage.TaskId
-	}
-	return taskIdMap, err
+	return ret, err
 }
 
 func MergeInputArgsByPlanIdAndLTIndex(ctx context.Context, planId int64, stageIndex int) (map[string]string, error) {
@@ -183,19 +175,44 @@ func MergeInputArgsByPlanIdAndLTIndex(ctx context.Context, planId int64, stageIn
 	return args, err
 }
 
-func BatchInsertDeployStage(ctx context.Context, reqDTOList ...InsertDeployStageReqDTO) error {
+func MergeInputArgsByPlanIdAndLETIndex(ctx context.Context, planId int64, stageIndex int) (map[string]string, error) {
+	ret := make([]Stage, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("plan_id = ?", planId).
+		And("stage_index <= ?", stageIndex).
+		Cols("input_args").
+		Asc("id").
+		Find(&ret)
+	if err != nil {
+		return nil, err
+	}
+	args := make(map[string]string)
+	for _, stage := range ret {
+		if stage.InputArgs != nil && stage.InputArgs.Data != nil {
+			for k, v := range stage.InputArgs.Data {
+				args[k] = v
+			}
+		}
+	}
+	return args, err
+}
+
+func BatchInsertDeployStage(ctx context.Context, reqDTOList ...InsertDeployStageReqDTO) ([]Stage, error) {
 	stages := listutil.MapNe(reqDTOList, func(t InsertDeployStageReqDTO) Stage {
 		return Stage{
 			PlanId:      t.PlanId,
 			AppId:       t.AppId,
 			StageIndex:  t.StageIndex,
 			Agent:       t.Agent,
+			AgentHost:   t.AgentHost,
+			AgentToken:  t.AgentToken,
 			StageStatus: t.StageStatus,
 			TaskId:      t.TaskId,
+			Script:      t.Script,
 		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).Insert(stages)
-	return err
+	return stages, err
 }
 
 func UpdateStageStatusAndInputArgsWithOldStatus(ctx context.Context, planId int64, index int, agent string, inputArgs map[string]string, newStatus, oldStatus StageStatus) (bool, error) {
@@ -254,7 +271,9 @@ func UpdateStageStatusAndExecuteLogWithOldStatus(ctx context.Context, planId int
 
 func GetStageByStageId(ctx context.Context, stageId int64) (Stage, bool, error) {
 	var ret Stage
-	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", stageId).Get(&ret)
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("id = ?", stageId).
+		Get(&ret)
 	return ret, b, err
 }
 

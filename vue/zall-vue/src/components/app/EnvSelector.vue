@@ -9,7 +9,7 @@
         </a-menu>
       </template>
       <a-button :icon="h(SwapOutlined)">
-        <span>切换环境</span>
+        <span>{{t('switchEnv')}}</span>
       </a-button>
     </a-dropdown>
   </div>
@@ -19,9 +19,11 @@ import { ref, defineProps, watch, defineEmits } from "vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
 import { SwapOutlined } from "@ant-design/icons-vue";
 import { h } from "vue";
+import { useI18n } from "vue-i18n";
 /*
   环境选择下拉框 
 */
+const { t } = useI18n();
 // 默认环境值
 const props = defineProps(["defaultEnv"]);
 // 监听@change

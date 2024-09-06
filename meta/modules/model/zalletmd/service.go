@@ -4,23 +4,29 @@ import (
 	"context"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
+	"regexp"
 )
 
-func IsZalletNodeNameValid(name string) bool {
+func IsZalletNodeIdValid(nodeId string) bool {
+	return regexp.MustCompile("[\\w-]{1,32}").MatchString(nodeId)
+}
+
+func IsZalletNameValid(name string) bool {
 	return len(name) > 0 && len(name) <= 32
 }
 
-func IsZalletNodeAgentHostValid(agentHost string) bool {
+func IsZalletAgentHostValid(agentHost string) bool {
 	return util.GenIpPortPattern().MatchString(agentHost)
 }
 
-func IsZalletNodeAgentTokenValid(agentToken string) bool {
+func IsZalletAgentTokenValid(agentToken string) bool {
 	return len(agentToken) <= 1024
 }
 
 func InsertZalletNode(ctx context.Context, reqDTO InsertZalletNodeReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).
 		Insert(&ZalletNode{
+			NodeId:     reqDTO.NodeId,
 			Name:       reqDTO.Name,
 			AgentHost:  reqDTO.AgentHost,
 			AgentToken: reqDTO.AgentToken,
@@ -28,14 +34,14 @@ func InsertZalletNode(ctx context.Context, reqDTO InsertZalletNodeReqDTO) error 
 	return err
 }
 
-func GetZalletNodeById(ctx context.Context, id int64) (ZalletNode, bool, error) {
+func GetZalletNodeByNodeId(ctx context.Context, nodeId string) (ZalletNode, bool, error) {
 	var ret ZalletNode
-	b, err := xormutil.MustGetXormSession(ctx).Where("id = ?", id).Get(&ret)
+	b, err := xormutil.MustGetXormSession(ctx).Where("node_id = ?", nodeId).Get(&ret)
 	return ret, b, err
 }
 
-func ExistZalletNodeById(ctx context.Context, id int64) (bool, error) {
-	return xormutil.MustGetXormSession(ctx).Where("id = ?", id).Exist(new(ZalletNode))
+func ExistZalletNodeByNodeId(ctx context.Context, nodeId string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).Where("node_id = ?", nodeId).Exist(new(ZalletNode))
 }
 
 func ListZalletNode(ctx context.Context, reqDTO ListZalletNodeReqDTO) ([]ZalletNode, int64, error) {

@@ -2,36 +2,39 @@
   <div style="padding:10px">
     <ul class="info-list" v-if="planDetail">
       <li>
-        <div class="info-name">名称</div>
+        <div class="info-name">{{t('deployPlan.name')}}</div>
         <div class="info-value">
           <span>{{planDetail.name}}</span>
-          <a-tag color="orange" style="font-weight:bold;margin-left: 8px">{{planDetail.env}}</a-tag>
+          <a-tag color="orange" style="margin-left: 8px">{{planDetail.env}}</a-tag>
         </div>
       </li>
       <li>
-        <div class="info-name">状态</div>
+        <div class="info-name">{{t('deployPlan.planStatus')}}</div>
         <div class="info-value">
           <PlanStatusTag :status="planDetail.planStatus" />
         </div>
       </li>
       <li>
-        <div class="info-name">创建人</div>
+        <div class="info-name">{{t('deployPlan.creator')}}</div>
         <div class="info-value">{{planDetail.creator}}</div>
       </li>
     </ul>
     <ul class="info-list" v-if="planDetail">
       <li>
-        <div class="info-name">创建时间</div>
+        <div class="info-name">{{t('deployPlan.createTime')}}</div>
         <div class="info-value">{{planDetail.created}}</div>
       </li>
       <li>
-        <div class="info-name">制品号</div>
-        <div class="info-value">{{planDetail.productVersion}}</div>
+        <div class="info-name">{{t('deployPlan.artifactVersion')}}</div>
+        <div class="info-value">{{planDetail.artifactVersion}}</div>
       </li>
       <li>
-        <div class="info-name">配置</div>
+        <div class="info-name">{{t('deployPlan.pipelineCfg')}}</div>
         <div class="info-value">
-          <span class="check-config-btn" @click="yamlModalOpen = true">查看配置</span>
+          <span
+            class="check-config-btn"
+            @click="yamlModal.open = true"
+          >{{t('deployPlan.viewPipelineCfg')}}</span>
         </div>
       </li>
     </ul>
@@ -41,7 +44,7 @@
         :icon="h(PlayCircleOutlined)"
         v-if="planDetail?.planStatus === 1"
         @click="startPlan"
-      >执行发布计划</a-button>
+      >{{t('deployPlan.startPlan')}}</a-button>
     </div>
     <div class="service-name no-wrap">{{planDetail?planDetail.pipelineName:''}}</div>
     <div class="flex" style="padding-left:calc(50% - 420px)">
@@ -54,12 +57,12 @@
                 :style="{'background-color': getStageNameBackgroundColor(item)}"
                 @click="selectStage(item, index)"
               >
-                <span>{{item.isAutomatic?'自动阶段':'交互阶段'}}-{{item.name}}</span>
+                <span>{{item.isAutomatic?t('deployPlan.automaticPeriod'):t('deployPlan.interactivePeriod')}}-{{item.name}}</span>
                 <span v-if="item.isRunning || item.hasError">
                   <LoadingOutlined v-if="item.isRunning" />
                   <span style="margin-left:8px">
-                    <span v-if="item.isRunning">执行中</span>
-                    <span v-else-if="item.hasError">执行失败</span>
+                    <span v-if="item.isRunning">{{t('deployPlan.running')}}</span>
+                    <span v-else-if="item.hasError">{{t('deployPlan.hasErr')}}</span>
                   </span>
                 </span>
               </div>
@@ -76,11 +79,11 @@
                   @click="showConfirmModal(item, index)"
                 >
                   <LoadingOutlined />
-                  <span style="margin-left:8px">等待交互</span>
+                  <span style="margin-left:8px">{{t('deployPlan.waitForInteraction')}}</span>
                 </div>
                 <div class="kill-btn" v-if="item.isRunning" @click="killStage(index)">
                   <CloseOutlined />
-                  <span style="margin-left:8px">中止执行</span>
+                  <span style="margin-left:8px">{{t('deployPlan.stop')}}</span>
                 </div>
               </div>
             </div>
@@ -98,7 +101,9 @@
             <template #content>
               <ul class="op-list">
                 <li @click="forceRedoUnSuccessAgentStages">
-                  <span style="margin-left:8px">强制重新执行未成功任务</span>
+                  <span
+                    style="margin-left:8px"
+                  >{{t('deployPlan.forcefullyReExecuteUnsuccessfulTask')}}</span>
                 </li>
               </ul>
             </template>
@@ -131,35 +136,24 @@
     >
       <ul class="agent-info-ul">
         <li>
-          <div>代理:</div>
+          <div>{{t('deployPlan.agent')}}:</div>
           <div>{{selectedSubStage.agent}}</div>
         </li>
         <li>
-          <div>Host:</div>
+          <div>{{t('deployPlan.host')}}:</div>
           <div>{{selectedSubStage.agentHost}}</div>
         </li>
         <li>
-          <div>状态:</div>
+          <div>{{t('deployPlan.stageStatus')}}:</div>
           <div>
             <StageStatusTag :status="selectedSubStage.stageStatus" />
           </div>
         </li>
         <li v-show="selectedSubStage.executeLog?.length > 0">
-          <div>执行日志:</div>
+          <div>{{t('deployPlan.executeLog')}}:</div>
           <div>
             <Codemirror
               v-model="selectedSubStage.executeLog"
-              style="height:200px;width:100%"
-              :extensions="extensions"
-              :disabled="true"
-            />
-          </div>
-        </li>
-        <li v-show="selectedSubStage.rollbackLog?.length > 0">
-          <div>回滚日志:</div>
-          <div>
-            <Codemirror
-              v-model="selectedSubStage.rollbackLog"
               style="height:200px;width:100%"
               :extensions="extensions"
               :disabled="true"
@@ -171,12 +165,12 @@
         class="agent-info-btn"
         v-if="planDetail.planStatus === 2 && selectedSubStage.stageStatus === 4"
       >
-        <a-button type="primary" style="width:100%" @click="redoAgentStage">重新执行</a-button>
+        <a-button type="primary" style="width:100%" @click="redoAgentStage">{{t('deployPlan.redo')}}</a-button>
       </div>
     </a-drawer>
-    <a-modal v-model:open="yamlModalOpen" title="服务配置" :footer="null">
+    <a-modal v-model:open="yamlModal.open" :title="t('deployPlan.pipelineCfg')" :footer="null">
       <Codemirror
-        v-model="yamlConfig"
+        v-model="yamlModal.config"
         style="height:380px;width:100%"
         :extensions="extensions"
         :disabled="true"
@@ -200,7 +194,6 @@
     </a-modal>
   </div>
 </template>
-
 <script setup>
 import PlanStatusTag from "@/components/app/PlanStatusTag";
 import StageStatusTag from "@/components/app/StageStatusTag";
@@ -228,19 +221,28 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { useDeloyPlanStore } from "@/pinia/deployPlanStore";
 import { useRouter, useRoute } from "vue-router";
 import { Modal, message } from "ant-design-vue";
-const yamlConfig = ref("");
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const extensions = [yaml(), oneDark];
-const yamlModalOpen = ref(false);
+// 流水线配置modal
+const yamlModal = reactive({
+  open: false,
+  config: ""
+});
 const router = useRouter();
 const route = useRoute();
 const planStore = useDeloyPlanStore();
+// 计划详情
 const planDetail = ref(null);
+// 阶段列表
 const stageList = ref([]);
 const selectedStage = ref(null);
 const selectedIndex = ref(-1);
 const selectedSubStage = ref(null);
+// 定时刷新interval
 const refreshInterval = ref(null);
 const drawerVisible = ref(false);
+// 交互确认modal
 const confirmModal = reactive({
   open: false,
   title: "",
@@ -248,16 +250,17 @@ const confirmModal = reactive({
   stageIndex: -1,
   type: ""
 });
+// 选择阶段
 const selectStage = (item, index) => {
   selectedStage.value = item;
   selectedIndex.value = index;
 };
-
+// 选择阶段的agent
 const selectSubStage = item => {
   selectedSubStage.value = item;
   drawerVisible.value = true;
 };
-
+// 根据状态有不同的背景颜色
 const getStageNameBackgroundColor = data => {
   if (data.hasError) {
     return "#ff4d4f";
@@ -273,18 +276,18 @@ const getStageNameBackgroundColor = data => {
   }
   return "#6b6b6b";
 };
-
+// 强制重新执行
 const forceRedoUnSuccessAgentStages = () => {
   if (selectedStage.value.isAutomatic) {
     Modal.confirm({
-      title: `你确定要强制重新执行吗?`,
+      title: `${t("deploy.confirmForcefullyRedo")}?`,
       icon: createVNode(ExclamationCircleOutlined),
       onOk() {
         forceRedoStageRequest({
           planId: planStore.id,
           stageIndex: selectedIndex.value
         }).then(() => {
-          message.success("开始执行");
+          message.success(t("operationSuccess"));
           getDetail();
         });
       },
@@ -294,32 +297,32 @@ const forceRedoUnSuccessAgentStages = () => {
     handleConfirmModal("force", selectedStage.value, selectedIndex.value);
   }
 };
-
+// 获取详情
 const getDetail = () => {
   getDeployPlanDetailRequest(planStore.id).then(res => {
     planDetail.value = res.data;
-    yamlConfig.value = res.data.pipelineConfig;
+    yamlModal.config = res.data.pipelineConfig;
     listStages();
     if (res.data?.planStatus === 3 || res.data?.planStatus === 4) {
       clearRefreshInterval();
     }
   });
 };
-
+// 开始发布计划
 const startPlan = () => {
   Modal.confirm({
-    title: `你确定要执行发布计划吗?`,
+    title: `${t("deployPlan.confirmStartPlan")}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       startDeployPlanRequest(planStore.id).then(() => {
-        message.success("开始执行");
+        message.success(t("operationSuccess"));
         getDetail();
       });
     },
     onCancel() {}
   });
 };
-
+// 获取阶段列表
 const listStages = () => {
   listDeployPlanStagesRequest(planStore.id).then(res => {
     stageList.value = res.data.map((item, index) => {
@@ -347,51 +350,46 @@ const listStages = () => {
     }
   });
 };
-
+// 清除interval
 const clearRefreshInterval = () => {
   if (refreshInterval.value) {
     clearInterval(refreshInterval.value);
   }
 };
-
+// 重新执行
 const redoAgentStage = () => {
   Modal.confirm({
-    title: `你确定要重新执行吗?`,
+    title: `${t("deployPlan.confirmRedo")}?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       redoDeployAgentStageRequest(selectedSubStage.value.id).then(() => {
-        message.success("重新执行成功");
+        message.success(t("operationSuccess"));
         getDetail();
       });
     },
     onCancel() {}
   });
 };
-
+// 中止执行
 const killStage = index => {
   Modal.confirm({
-    title: `你确定要中止执行吗?`,
+    title: `${t("deployPlan.confirmKillStage")}?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       killDeployStageRequest(planStore.id, index).then(() => {
-        message.success("中止成功");
+        message.success(t("operationSuccess"));
         getDetail();
       });
     },
     onCancel() {}
   });
 };
-
+// 展示确认modal
 const showConfirmModal = (item, index) => {
   handleConfirmModal("normal", item, index);
 };
 
 const handleConfirmModal = (type, item, index) => {
-  console.log(type, item, index);
   if (item.confirm) {
     confirmModal.type = type;
     confirmModal.title = item.name;
@@ -420,12 +418,12 @@ const confirmOk = () => {
       if (!fi.options || fi.options.length === 0) {
         let re = new RegExp(fi.regexp);
         if (!re || !re.test(fi.value)) {
-          message.warn(`${fi.label || fi.key} 格式错误`);
+          message.warn(`${fi.label || fi.key} ${t("deployPlan.wrongFormat")}`);
           return;
         }
       } else {
         if (!fi.options.find(item => item.value === fi.value)) {
-          message.warn(`${fi.label || fi.key} 格式错误`);
+          message.warn(`${fi.label || fi.key} ${t("deployPlan.wrongFormat")}`);
           return;
         }
       }
@@ -447,7 +445,7 @@ const confirmOk = () => {
     stageIndex: confirmModal.stageIndex,
     args
   }).then(() => {
-    message.success("操作成功");
+    message.success(t("operationSuccess"));
     confirmModal.open = false;
     getDetail();
   });

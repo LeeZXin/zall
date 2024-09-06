@@ -2,14 +2,18 @@
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
       <div>
-        <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建配置文件</a-button>
+        <a-button
+          type="primary"
+          :icon="h(PlusOutlined)"
+          @click="gotoCreatePage"
+        >{{t('propertyFile.createFile')}}</a-button>
         <a-button
           type="primary"
           :icon="h(SettingOutlined)"
           @click="showBindPropertySourceModal"
           style="margin-left:6px"
           v-if="appStore.perm?.canManagePropertySource"
-        >管理配置来源绑定</a-button>
+        >{{t('propertyFile.manageSource')}}</a-button>
       </div>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
@@ -18,23 +22,18 @@
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deleteFile(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete File</span>
-              </template>
-              <delete-outlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoHistoryListPage(dataItem)">
                   <FileTextOutlined />
-                  <span style="margin-left:4px">版本列表</span>
+                  <span style="margin-left:4px">{{t('propertyFile.historyList')}}</span>
                 </li>
                 <li @click="showSearchModal(dataItem)">
                   <SearchOutlined />
-                  <span style="margin-left:4px">配置查询</span>
+                  <span style="margin-left:4px">{{t('propertyFile.searchContent')}}</span>
                 </li>
               </ul>
             </template>
@@ -46,38 +45,45 @@
       </template>
     </ZTable>
   </div>
-  <a-modal v-model:open="bindModal.open" title="绑定配置来源" @ok="handleBindModalOk">
+  <a-modal
+    v-model:open="bindModal.open"
+    :title="t('propertyFile.bindSource')"
+    @ok="handleBindModalOk"
+  >
     <div>
-      <div style="font-size:12px;margin-bottom:3px">已选环境</div>
+      <div style="font-size:12px;margin-bottom:3px">{{t('propertyFile.selectedEnv')}}</div>
       <div>{{selectedEnv}}</div>
     </div>
     <div style="margin-top: 10px">
-      <div style="font-size:12px;margin-bottom:3px">配置来源</div>
+      <div style="font-size:12px;margin-bottom:3px">{{t('propertyFile.selectedSource')}}</div>
       <a-select
         style="width: 100%"
-        placeholder="请选择"
         v-model:value="bindModal.selectedIdList"
         :options="bindModal.sourceList"
         mode="multiple"
       />
     </div>
   </a-modal>
-  <a-modal v-model:open="searchModal.open" title="配置查询" :width="600" :footer="null">
+  <a-modal
+    v-model:open="searchModal.open"
+    :title="t('propertyFile.searchContent')"
+    :width="600"
+    :footer="null"
+  >
     <ul class="search-ul">
       <li>
-        <div class="left">已选文件:</div>
+        <div class="left">{{t('propertyFile.selectedFile')}}:</div>
         <div class="right">{{searchModal.fileName}}</div>
       </li>
       <li>
-        <div class="left">已选环境:</div>
+        <div class="left">{{t('propertyFile.env')}}:</div>
         <div class="right">{{selectedEnv}}</div>
       </li>
       <li>
-        <div class="left">配置来源:</div>
+        <div class="left">{{t('propertyFile.selectedSource')}}:</div>
         <div class="right">
           <a-select
             style="width: 100%"
-            placeholder="请选择"
             v-model:value="searchModal.sourceId"
             :options="searchModal.sourceList"
             @change="searchFromSource"
@@ -88,18 +94,21 @@
     <div v-if="searchModal.loading">
       <div style="text-align:center;padding:10px 0;font-size: 14px">
         <LoadingOutlined />
-        <span style="margin-left:8px">查询中</span>
+        <span style="margin-left:8px">{{t('propertyFile.searching')}}</span>
       </div>
     </div>
     <div style="margin-top: 10px" v-else>
       <div v-if="searchModal.exist">
         <ul class="search-ul">
           <li>
-            <div class="left">版本:</div>
+            <div class="left">{{t('propertyFile.version')}}:</div>
             <div class="right">{{searchModal.version}}</div>
           </li>
         </ul>
-        <div class="no-wrap" style="margin-top:10px;font-size:14px;margin-bottom:6px">内容</div>
+        <div
+          class="no-wrap"
+          style="margin-top:10px;font-size:14px;margin-bottom:6px"
+        >{{t('propertyFile.content')}}</div>
         <Codemirror
           v-model="searchModal.content"
           style="height:280px;width:100%"
@@ -140,6 +149,8 @@ import { usePropertyFileStore } from "@/pinia/propertyFileStore";
 import EnvSelector from "@/components/app/EnvSelector";
 import { Modal, message } from "ant-design-vue";
 import { useAppStore } from "@/pinia/appStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const extensions = [oneDark];
 const appStore = useAppStore();
 const propertyFileStore = usePropertyFileStore();
@@ -213,11 +224,11 @@ const gotoHistoryListPage = item => {
 // 删除配置文件
 const deleteFile = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("propertyFile.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deletePropertyFileRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listPropertyFile();
       });
     }
@@ -273,7 +284,7 @@ const showSearchModal = item => {
 };
 const searchFromSource = () => {
   if (!searchModal.sourceId) {
-    message.warn("请选择配置来源");
+    message.warn(t('propertyFile.pleaseSelectSource'));
     return;
   }
   searchModal.loading = true;
@@ -298,7 +309,7 @@ const handleBindModalOk = () => {
     sourceIdList: bindModal.selectedIdList,
     env: selectedEnv.value
   }).then(() => {
-    message.success("操作成功");
+    message.success(t('operationSuccess'));
     bindModal.open = false;
   });
 };

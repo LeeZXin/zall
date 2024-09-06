@@ -2,38 +2,28 @@
   <div style="padding:10px">
     <div class="container">
       <div class="header">
-        <span v-if="mode === 'create'">添加变量</span>
-        <span v-else-if="mode === 'update'">更新变量</span>
+        <span v-if="mode === 'create'">{{t('deployPipeline.createVars')}}</span>
+        <span v-else-if="mode === 'update'">{{t('deployPipeline.updateVars')}}</span>
       </div>
       <div class="section" v-if="mode==='create'">
-        <div class="section-title">选择环境</div>
+        <div class="section-title">{{t('deployPipeline.selectEnv')}}</div>
         <div class="section-body">
-          <a-select
-            style="width: 100%"
-            placeholder="选择环境"
-            v-model:value="formState.selectedEnv"
-            :options="envList"
-          />
-          <div class="input-desc">多环境选择, 选择其中一个环境</div>
+          <a-select style="width: 100%" v-model:value="formState.selectedEnv" :options="envList" />
         </div>
       </div>
       <div class="section" v-if="mode==='update'">
-        <div class="section-title">已选环境</div>
+        <div class="section-title">{{t('deployPipeline.selectedEnv')}}</div>
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>Key</span>
-        </div>
+        <div class="section-title">{{t('deployPipeline.varsKey')}}</div>
         <div class="section-body">
           <a-input style="width:100%" v-model:value="formState.name" :disabled="mode==='update'" />
-          <div class="input-desc">key用来唯一标识变量, 不为空, 长度不得超过32</div>
+          <div class="input-desc">{{t('deployPipeline.varsKeyDesc')}}</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>内容</span>
-        </div>
+        <div class="section-title">{{t('deployPipeline.varsContent')}}</div>
         <div class="section-body">
           <a-textarea
             style="width:100%"
@@ -41,12 +31,11 @@
             :auto-size="{ minRows: 8, maxRows: 15 }"
             @keydown.tab="handleTab"
           />
-          <div class="input-desc">变量的具体内容</div>
         </div>
       </div>
       <div style="width:100%;border-top:1px solid #d9d9d9;margin: 10px 0"></div>
       <div style="margin-bottom:20px">
-        <a-button type="primary" @click="createOrUpdateVars">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateVars">{{t('deployPipeline.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -66,20 +55,26 @@ import {
 } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import { usePipelineVarsStore } from "@/pinia/pipelineVarsStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const varsStore = usePipelineVarsStore();
 const route = useRoute();
+// 模式
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
 const router = useRouter();
 const mode = getMode();
+// 表单数据
 const formState = reactive({
   name: "",
   content: "",
   selectedEnv: ""
 });
+// 环境列表
 const envList = ref([]);
+// 获取环境
 const getEnvCfg = () => {
   getEnvCfgRequest().then(res => {
     envList.value = res.data.map(item => {
@@ -95,6 +90,7 @@ const getEnvCfg = () => {
     }
   });
 };
+// tab键处理
 const handleTab = event => {
   event.preventDefault();
   let inputElement = event.target;
@@ -106,13 +102,14 @@ const handleTab = event => {
   inputElement.selectionStart = selectionStart + 4;
   inputElement.selectionEnd = inputElement.selectionStart;
 };
-const createOrUpdateVars = () => {
+// 新增或编辑变量
+const saveOrUpdateVars = () => {
   if (!pipelineVarsNameRegexp.test(formState.name)) {
-    message.warn("key格式错误");
+    message.warn(t("deployPipeline.varsKeyFormatErr"));
     return;
   }
   if (!pipelineVarsContentRegexp.test(formState.content)) {
-    message.warn("内容格式错误");
+    message.warn(t("deployPipeline.varsContentFormatErr"));
     return;
   }
   if (mode === "create") {
@@ -122,7 +119,7 @@ const createOrUpdateVars = () => {
       content: formState.content,
       env: formState.selectedEnv
     }).then(() => {
-      message.success("添加成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${formState.selectedEnv}`
       );
@@ -132,7 +129,7 @@ const createOrUpdateVars = () => {
       id: varsStore.id,
       content: formState.content
     }).then(() => {
-      message.success("更新成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/app/${route.params.appId}/pipeline/vars/${formState.selectedEnv}`
       );

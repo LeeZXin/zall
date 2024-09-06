@@ -123,6 +123,7 @@ ul {
 .section>.section-title {
     font-size: 14px;
     padding: 14px;
+    font-weight: bold;
 }
 
 .section>.section-body {

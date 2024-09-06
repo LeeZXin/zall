@@ -2,6 +2,7 @@ package workflowsrv
 
 import (
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
+	"github.com/LeeZXin/zall/meta/modules/model/zalletmd"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zall/util"
@@ -13,7 +14,7 @@ type CreateWorkflowReqDTO struct {
 	Name        string              `json:"name"`
 	RepoId      int64               `json:"repoId"`
 	YamlContent string              `json:"yamlContent"`
-	AgentId     int64               `json:"agentId"`
+	AgentId     string              `json:"agentId"`
 	Source      workflowmd.Source   `json:"source"`
 	Desc        string              `json:"desc"`
 	Operator    apisession.UserInfo `json:"operator"`
@@ -32,7 +33,7 @@ func (r *CreateWorkflowReqDTO) IsValid() error {
 	if r.YamlContent == "" {
 		return util.InvalidArgsError()
 	}
-	if r.AgentId <= 0 {
+	if !zalletmd.IsZalletNodeIdValid(r.AgentId) {
 		return util.InvalidArgsError()
 	}
 	if !r.Source.IsValid() {
@@ -78,7 +79,7 @@ type UpdateWorkflowReqDTO struct {
 	WorkflowId  int64               `json:"workflowId"`
 	Name        string              `json:"name"`
 	YamlContent string              `json:"yamlContent"`
-	AgentId     int64               `json:"agentId"`
+	AgentId     string              `json:"agentId"`
 	Source      workflowmd.Source   `json:"source"`
 	Desc        string              `json:"desc"`
 	Operator    apisession.UserInfo `json:"operator"`
@@ -97,7 +98,7 @@ func (r *UpdateWorkflowReqDTO) IsValid() error {
 	if r.YamlContent == "" {
 		return util.InvalidArgsError()
 	}
-	if r.AgentId <= 0 {
+	if !zalletmd.IsZalletNodeIdValid(r.AgentId) {
 		return util.InvalidArgsError()
 	}
 	if !r.Source.IsValid() {
@@ -195,7 +196,7 @@ type WorkflowDTO struct {
 	RepoId      int64             `json:"repoId"`
 	YamlContent string            `json:"yamlContent"`
 	Source      workflowmd.Source `json:"source"`
-	AgentId     int64             `json:"agentId"`
+	AgentId     string            `json:"agentId"`
 }
 
 type GetWorkflowDetailReqDTO struct {

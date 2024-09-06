@@ -14,25 +14,25 @@
             <div class="op-icon" @click="gotoNewPage(dataItem)">
               <a-tooltip placement="top">
                 <template #title>
-                  <span>在此版本号新增版本</span>
+                  <span>{{t('propertyFile.newVersion')}}</span>
                 </template>
-                <plus-outlined />
+                <PlusOutlined />
               </a-tooltip>
             </div>
             <a-popover placement="bottomRight" trigger="hover">
               <template #content>
                 <ul class="op-list">
                   <li @click="showDiffModal(dataItem)">
-                    <code-outlined />
-                    <span style="margin-left:4px">对比跟随版本</span>
+                    <CodeOutlined />
+                    <span style="margin-left:4px">{{t('propertyFile.compareLastVersion')}}</span>
                   </li>
                   <li @click="gotoPubPage(dataItem)" v-if="appStore.perm?.canDeployProperty">
-                    <cloud-upload-outlined />
-                    <span style="margin-left:4px">发布此版本</span>
+                    <CloudUploadOutlined />
+                    <span style="margin-left:4px">{{t('propertyFile.deployVersion')}}</span>
                   </li>
                   <li @click="showDeployModal(dataItem)">
-                    <eye-outlined />
-                    <span style="margin-left:4px">发布记录</span>
+                    <EyeOutlined />
+                    <span style="margin-left:4px">{{t('propertyFile.deployRecord')}}</span>
                   </li>
                 </ul>
               </template>
@@ -53,7 +53,12 @@
         :showSizeChanger="false"
         @change="()=>listHistory()"
       />
-      <a-modal title="跟随版本对比" :footer="null" v-model:open="diffModalOpen" :width="800">
+      <a-modal
+        :title="t('propertyFile.compareLastVersion')"
+        :footer="null"
+        v-model:open="diffModalOpen"
+        :width="800"
+      >
         <code-diff
           :old-string="diffState.oldContent"
           :new-string="diffState.newContent"
@@ -99,6 +104,8 @@ import {
 } from "@/api/app/propertyApi";
 import { message } from "ant-design-vue";
 import { CodeDiff } from "v-code-diff";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const appStore = useAppStore();
 // 发布记录modal数据
 const deployModal = reactive({
@@ -108,7 +115,7 @@ const deployModal = reactive({
 // 发布记录表项
 const deployColumns = [
   {
-    title: "发布节点",
+    i18nTitle: "propertyFile.nodeName",
     dataIndex: "nodeName",
     key: "nodeName"
   },
@@ -118,12 +125,12 @@ const deployColumns = [
     key: "endpoints"
   },
   {
-    title: "发布时间",
+    i18nTitle: "propertyFile.deployTime",
     dataIndex: "created",
     key: "created"
   },
   {
-    title: "发布人",
+    i18nTitle: "propertyFile.deployer",
     dataIndex: "creator",
     key: "creator"
   }
@@ -154,27 +161,27 @@ const diffState = reactive({
 // 版本数据表项
 const columns = [
   {
-    title: "版本号",
+    i18nTitle: "propertyFile.version",
     dataIndex: "version",
     key: "version"
   },
   {
-    title: "跟随版本号",
+    i18nTitle: "propertyFile.lastVersion",
     dataIndex: "lastVersion",
     key: "lastVersion"
   },
   {
-    title: "创建时间",
+    i18nTitle: "propertyFile.created",
     dataIndex: "created",
     key: "created"
   },
   {
-    title: "创建人",
+    i18nTitle: "propertyFile.creator",
     dataIndex: "creator",
     key: "creator"
   },
   {
-    title: "操作",
+    i18nTitle: "propertyFile.operation",
     dataIndex: "operation",
     key: "operation"
   }
@@ -245,7 +252,7 @@ const gotoPubPage = item => {
   propertyHistoryStore.lastVersion = item.lastVersion;
   propertyHistoryStore.env = item.env;
   router.push(
-    `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${propertyFileStore.id}/publish/${item.version}`
+    `/team/${route.params.teamId}/app/${route.params.appId}/propertyFile/${propertyFileStore.id}/deploy/${item.version}`
   );
 };
 // 展示发布记录modal

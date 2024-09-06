@@ -8,6 +8,7 @@ const (
 
 type ZalletNode struct {
 	Id         int64     `json:"id" xorm:"pk autoincr"`
+	NodeId     string    `json:"nodeId"`
 	Name       string    `json:"name"`
 	AgentHost  string    `json:"agentHost"`
 	AgentToken string    `json:"agentToken"`

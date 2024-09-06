@@ -1,14 +1,14 @@
 <template>
   <div style="padding:10px">
     <div style="margin-bottom:10px">
-      <a-select
-        style="width: 300px"
-        v-model:value="selectedDbId"
-        :options="dbList"
-        show-search
-        :filter-option="filterDbListOption"
-        @change="selectDbIdChange"
-      />
+      <a-select style="width: 180px" v-model:value="selectedDbId" @change="selectDbIdChange">
+        <a-select-option :value="0">{{t("mysqlReadPermApply.allDatabases")}}</a-select-option>
+        <a-select-option
+          :value="item.value"
+          v-for="item in dbList"
+          v-bind:key="item.value"
+        >{{item.label}}</a-select-option>
+      </a-select>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -19,7 +19,7 @@
               <ul class="op-list">
                 <li @click="getApply(dataItem)">
                   <EyeOutlined />
-                  <span style="margin-left:4px">查看审批单</span>
+                  <span style="margin-left:4px">{{t('mysqlReadPermApply.viewApprovalForm')}}</span>
                 </li>
               </ul>
             </template>
@@ -31,43 +31,43 @@
       </template>
     </ZTable>
     <a-pagination
-      v-model:current="currPage"
-      :total="totalCount"
+      v-model:current="dataPage.current"
+      :total="dataPage.totalCount"
       show-less-items
-      :pageSize="pageSize"
+      :pageSize="dataPage.pageSize"
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
       @change="()=>listPerm()"
     />
-    <a-modal v-model:open="apply.open" title="审批单" :footer="null">
+    <a-modal v-model:open="apply.open" :title="t('mysqlReadPermApply.approvalForm')" :footer="null">
       <ul class="apply-ul">
         <li>
-          <div class="item-name">数据库名称</div>
+          <div class="item-name">{{t('mysqlReadPermApply.dbName')}}</div>
           <div class="item-value">{{apply.dbName}}</div>
         </li>
         <li>
-          <div class="item-name">申请库</div>
+          <div class="item-name">{{t('mysqlReadPermApply.accessBase')}}</div>
           <div class="item-value">{{apply.accessBase}}</div>
         </li>
         <li>
-          <div class="item-name">申请表</div>
+          <div class="item-name">{{t('mysqlReadPermApply.accessTables')}}</div>
           <div class="item-value">{{apply.accessTables}}</div>
         </li>
         <li>
-          <div class="item-name">审批人</div>
+          <div class="item-name">{{t('mysqlReadPermApply.auditor')}}</div>
           <div class="item-value">{{apply.auditor}}</div>
         </li>
         <li>
-          <div class="item-name">申请原因</div>
+          <div class="item-name">{{t('mysqlReadPermApply.applyReaason')}}</div>
           <div class="item-value">{{apply.applyReason}}</div>
         </li>
         <li>
-          <div class="item-name">申请时间</div>
+          <div class="item-name">{{t('mysqlReadPermApply.applyTime')}}</div>
           <div class="item-value">{{apply.created}}</div>
         </li>
         <li>
-          <div class="item-name">审批时间</div>
+          <div class="item-name">{{t('mysqlReadPermApply.auditTime')}}</div>
           <div class="item-value">{{apply.updated}}</div>
         </li>
       </ul>
@@ -83,17 +83,18 @@ import {
 } from "@/api/db/mysqlApi";
 import { EyeOutlined, EllipsisOutlined } from "@ant-design/icons-vue";
 import { ref, reactive } from "vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const dataSource = ref([]);
-const currPage = ref(1);
-const pageSize = 10;
-const totalCount = ref(0);
+const dataPage = reactive({
+  current: 1,
+  totalCount: 0,
+  pageSize: 10
+});
 const selectedDbId = ref(0);
-const dbList = ref([
-  {
-    value: 0,
-    label: "所有数据库"
-  }
-]);
+// 数据库列表
+const dbList = ref([]);
+// 审批单
 const apply = reactive({
   open: false,
   dbName: "",
@@ -106,45 +107,46 @@ const apply = reactive({
   created: "",
   updated: ""
 });
+// 数据项
 const columns = ref([
   {
-    title: "数据库名称",
+    i18nTitle: "mysqlReadPermApply.dbName",
     dataIndex: "dbName",
     key: "dbName"
   },
   {
-    title: "申请库",
+    i18nTitle: "mysqlReadPermApply.accessBase",
     dataIndex: "accessBase",
     key: "accessBase"
   },
   {
-    title: "申请表",
+    i18nTitle: "mysqlReadPermApply.accessTables",
     dataIndex: "accessTable",
     key: "accessTable"
   },
   {
-    title: "生效时间",
+    i18nTitle: "mysqlReadPermApply.effectiveTime",
     dataIndex: "created",
     key: "created"
   },
   {
-    title: "过期时间",
+    i18nTitle: "mysqlReadPermApply.expireTime",
     dataIndex: "expired",
     key: "expired"
   },
   {
-    title: "操作",
+    i18nTitle: "mysqlReadPermApply.operation",
     dataIndex: "operation",
     key: "operation"
   }
 ]);
-
+// 权限列表
 const listPerm = () => {
   listReadPermByOperatorRequest({
     dbId: selectedDbId.value,
-    pageNum: currPage.value
+    pageNum: dataPage.current
   }).then(res => {
-    totalCount.value = res.totalCount;
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.id,
@@ -153,11 +155,7 @@ const listPerm = () => {
     });
   });
 };
-
-const filterDbListOption = (input, option) => {
-  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
-};
-
+// 所有数据库
 const getAllDb = () => {
   getAllMysqlDbRequest().then(res => {
     dbList.value = dbList.value.concat(
@@ -170,12 +168,12 @@ const getAllDb = () => {
     );
   });
 };
-
+// 选择数据库
 const selectDbIdChange = () => {
-  currPage.value = 1;
+  dataPage.current = 1;
   listPerm();
 };
-
+// 获取审批单
 const getApply = item => {
   getReadPermApplyRequest(item.applyId).then(res => {
     let data = res.data;
@@ -191,18 +189,10 @@ const getApply = item => {
     apply.open = true;
   });
 };
-
 getAllDb();
 listPerm();
 </script>
 <style scoped>
-.check-btn {
-  font-size: 14px;
-}
-.check-btn:hover {
-  color: #1677ff;
-  cursor: pointer;
-}
 .apply-ul {
   width: 100%;
   padding-bottom: 20px;
