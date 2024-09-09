@@ -567,7 +567,7 @@ export default {
         deleteDownService: "删除下线服务",
         serviceProtocol: "协议",
         serviceName: "服务名称",
-        serivceHost: "主机",
+        serviceHost: "主机",
         servicePort: "端口",
         serviceWeight: "权重",
         serviceVersion: "版本",

@@ -21,7 +21,7 @@
         />
       </div>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0px">
+    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0px" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'isSuccess'">
           <span v-if="dataItem[dataIndex]">
@@ -183,7 +183,9 @@ const columns = [
   {
     i18nTitle: "timerTask.logColumns.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 触发类型i18n map

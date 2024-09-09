@@ -2,7 +2,13 @@
   <div style="padding:10px">
     <div class="workflow-name">{{workflowStore.name}}</div>
     <div class="workflow-desc">{{workflowStore.desc}}</div>
-    <ZTable :columns="columns" :dataSource="taskList" label="任务列表" style="margin-top:10px">
+    <ZTable
+      :columns="columns"
+      :dataSource="taskList"
+      label="任务列表"
+      style="margin-top:10px"
+      :scroll="{x:1300}"
+    >
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex === 'created'">{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
         <span v-else-if="dataIndex === 'triggerType'">{{triggerTypeMap[dataItem[dataIndex]]}}</span>
@@ -116,7 +122,9 @@ const columns = [
   {
     title: "操作",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 const gotoTaskDetail = item => {

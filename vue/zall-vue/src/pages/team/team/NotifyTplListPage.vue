@@ -13,7 +13,7 @@
       </a-input>
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建通知模板</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'avatarUrl'">
           <a-image :width="20" :height="20" :src="dataItem[dataIndex]" :fallback="fallbackAvatar" />
@@ -117,7 +117,9 @@ const columns = [
   {
     title: "操作",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 跳转创建模板界面

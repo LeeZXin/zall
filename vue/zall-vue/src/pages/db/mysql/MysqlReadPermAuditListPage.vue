@@ -20,7 +20,7 @@
         >{{item.label}}</a-select-option>
       </a-select>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <StatusTag v-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
@@ -55,7 +55,11 @@
       :showSizeChanger="false"
       @change="()=>listApply()"
     />
-    <a-modal v-model:open="disagreeModal.open" :title="t('mysqlReadPermApply.fillDisagreeReason')" @ok="disagreeApply">
+    <a-modal
+      v-model:open="disagreeModal.open"
+      :title="t('mysqlReadPermApply.fillDisagreeReason')"
+      @ok="disagreeApply"
+    >
       <a-textarea
         style="width:100%"
         v-model:value="disagreeModal.reason"
@@ -106,7 +110,8 @@ const columns = ref([
   {
     i18nTitle: "mysqlReadPermApply.dbName",
     dataIndex: "dbName",
-    key: "dbName"
+    key: "dbName",
+    fix: "left"
   },
   {
     i18nTitle: "mysqlReadPermApply.accessBase",
@@ -136,7 +141,8 @@ const columns = ref([
   {
     i18nTitle: "mysqlReadPermApply.applyReason",
     dataIndex: "applyReason",
-    key: "applyReason"
+    key: "applyReason",
+    width: 160
   },
   {
     i18nTitle: "mysqlReadPermApply.applyTime",
@@ -146,7 +152,9 @@ const columns = ref([
   {
     i18nTitle: "mysqlReadPermApply.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ]);
 
@@ -192,7 +200,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.applyTime",
@@ -202,7 +211,9 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.operation",
           dataIndex: "operation",
-          key: "operation"
+          key: "operation",
+          width: 130,
+          fixed: "right"
         }
       ];
       break;
@@ -241,7 +252,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.auditor",
@@ -295,12 +307,14 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.disagreeReason",
           dataIndex: "disagreeReason",
-          key: "disagreeReason"
+          key: "disagreeReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.auditor",
@@ -354,7 +368,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.applyTime",
@@ -410,7 +425,7 @@ const showDisagreeModal = item => {
 
 const disagreeApply = () => {
   if (!dbApplyReasonRegexp.test(disagreeModal.reason)) {
-    message.warn(t('mysqlReadPermApply.disagreeReasonFormatErr'));
+    message.warn(t("mysqlReadPermApply.disagreeReasonFormatErr"));
     return;
   }
   disagreeReadPermApplyRequest({

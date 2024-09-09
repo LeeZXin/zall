@@ -8,7 +8,7 @@
       >{{t('deployPlan.createPlan')}}</a-button>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <PLanStatusTag v-if="dataIndex === 'planStatus'" :status="dataItem[dataIndex]" />
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
@@ -117,7 +117,9 @@ const columns = [
   {
     i18nTitle: "deployPlan.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 关闭发布计划

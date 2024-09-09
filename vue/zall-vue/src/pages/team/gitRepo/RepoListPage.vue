@@ -26,7 +26,7 @@
         v-if="teamStore.isAdmin"
       >仓库回收站</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="repoList">
+    <ZTable :columns="columns" :dataSource="repoList" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <span @click="checkRepo(dataItem)" class="check-btn" v-if="dataIndex === 'operation'">查看</span>
         <span v-else-if="dataIndex === 'gitSize'">{{readableVolumeSize(dataItem[dataIndex])}}</span>
@@ -115,7 +115,9 @@ const columns = [
   {
     title: "操作",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 获取仓库列表

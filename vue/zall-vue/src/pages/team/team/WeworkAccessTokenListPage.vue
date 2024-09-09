@@ -19,7 +19,7 @@
       >刷新列表</a-button>
       <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建AccessToken任务</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0">
+    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex !== 'operation'">
           <span>{{dataItem[dataIndex]}}</span>
@@ -155,7 +155,9 @@ const columns = [
   {
     title: "操作",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 const tokenModal = reactive({

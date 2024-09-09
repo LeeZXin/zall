@@ -40,7 +40,7 @@
       </span>
     </div>
     <div>
-      <ZTable :columns="serviceColumns" :dataSource="serviceDataSource">
+      <ZTable :columns="serviceColumns" :dataSource="serviceDataSource" :scroll="{x:1300}">
         <template #bodyCell="{dataIndex, dataItem}">
           <template v-if="dataIndex === 'up'">
             <CheckCircleFilled style="color:green" v-if="dataItem[dataIndex]" />
@@ -211,7 +211,9 @@ const serviceColumns = [
   {
     i18nTitle: "discoveryService.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 获取注册中心列表
@@ -259,14 +261,14 @@ const onEnvChange = e => {
 // 下线服务
 const deregisterService = item => {
   Modal.confirm({
-    title: `${t('discoveryService.confirmDeregister')} ${item.host}?`,
+    title: `${t("discoveryService.confirmDeregister")} ${item.host}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deregisterServiceRequest({
         bindId: selectedSource.bindId,
         instanceId: item.instanceId
       }).then(() => {
-        message.success(t('operationSuccess'));
+        message.success(t("operationSuccess"));
         listService();
       });
     },
@@ -276,14 +278,14 @@ const deregisterService = item => {
 // 重新上线服务
 const reRegisterService = item => {
   Modal.confirm({
-    title: `${t('discoveryService.confirmReRegister')} ${item.host}?`,
+    title: `${t("discoveryService.confirmReRegister")} ${item.host}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       reRegisterServiceRequest({
         bindId: selectedSource.bindId,
         instanceId: item.instanceId
       }).then(() => {
-        message.success(t('operationSuccess'));
+        message.success(t("operationSuccess"));
         listService();
       });
     },
@@ -293,14 +295,14 @@ const reRegisterService = item => {
 // 删除下线服务
 const deleteDownService = item => {
   Modal.confirm({
-    title: `${t('discoveryService.confirmDelete')} ${item.host}?`,
+    title: `${t("discoveryService.confirmDelete")} ${item.host}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteDownServiceRequest({
         bindId: selectedSource.bindId,
         instanceId: item.instanceId
       }).then(() => {
-        message.success(t('operationSuccess'));
+        message.success(t("operationSuccess"));
         listService();
       });
     },
@@ -339,7 +341,7 @@ const handleBindModalOk = () => {
     sourceIdList: bindModal.selectIdList,
     env: selectedEnv.value
   }).then(() => {
-    message.success(t('operationSuccess'));
+    message.success(t("operationSuccess"));
     bindModal.open = false;
     listDiscoverySource();
   });

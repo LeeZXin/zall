@@ -7,7 +7,7 @@
       </div>
     </div>
     <div class="body">
-      <ZTable :columns="columns" :dataSource="dataSource">
+      <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
         <template #bodyCell="{dataIndex, dataItem}">
           <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
           <div v-else>
@@ -183,7 +183,9 @@ const columns = [
   {
     i18nTitle: "propertyFile.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 获取版本历史

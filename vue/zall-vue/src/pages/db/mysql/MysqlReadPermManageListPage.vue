@@ -18,7 +18,7 @@
         @change="searchPerm"
       />
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
@@ -178,7 +178,9 @@ const columns = ref([
   {
     i18nTitle: "mysqlReadPermApply.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ]);
 // 权限列表
@@ -252,7 +254,9 @@ const getApply = item => {
 // 删除权限
 const deleteReadPerm = item => {
   Modal.confirm({
-    title: `${t("mysqlReadPermApply.confirmDelete")} ${item.account} ${item.dbName} ${item.accessBase} ${item.accessTable}?`,
+    title: `${t("mysqlReadPermApply.confirmDelete")} ${item.account} ${
+      item.dbName
+    } ${item.accessBase} ${item.accessTable}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteReadPermRequest(item.id).then(() => {

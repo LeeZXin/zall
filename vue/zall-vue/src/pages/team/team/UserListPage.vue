@@ -135,7 +135,9 @@ const columns = [
   {
     i18nTitle: "teamRole.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 const userStore = useUserStore();

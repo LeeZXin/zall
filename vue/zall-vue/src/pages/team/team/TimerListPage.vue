@@ -22,7 +22,7 @@
       </div>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0">
+    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'isEnabled'">
           <a-switch :checked="dataItem[dataIndex]" @click="enableOrDisableTimer(dataItem)" />
@@ -138,7 +138,9 @@ const columns = [
   {
     i18nTitle: "timerTask.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 定时任务列表

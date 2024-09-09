@@ -11,7 +11,7 @@
         @change="searchChange"
       />
     </div>
-    <ZTable :columns="columns" :dataSource="repoList">
+    <ZTable :columns="columns" :dataSource="repoList" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex === 'operation'">
           <a-popover placement="bottomRight" trigger="hover">
@@ -107,7 +107,9 @@ const columns = [
   {
     title: "操作",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 const getDeletedRepo = () => {

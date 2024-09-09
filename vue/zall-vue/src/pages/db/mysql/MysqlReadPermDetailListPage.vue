@@ -10,7 +10,7 @@
         >{{item.label}}</a-select-option>
       </a-select>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
@@ -137,7 +137,9 @@ const columns = ref([
   {
     i18nTitle: "mysqlReadPermApply.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ]);
 // 权限列表

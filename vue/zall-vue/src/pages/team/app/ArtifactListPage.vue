@@ -3,7 +3,7 @@
     <div style="margin-bottom:10px;" class="flex-end">
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div class="op-icon" @click="deleteArtifact(dataItem)" v-else>
@@ -70,7 +70,9 @@ const columns = [
   {
     i18nTitle: "artifacts.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 制品列表

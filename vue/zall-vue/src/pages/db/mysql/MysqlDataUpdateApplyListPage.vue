@@ -19,7 +19,7 @@
         :icon="h(PlusOutlined)"
       >{{t("mysqlDataUpdateApply.title")}}</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <StatusTag v-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
         <span
@@ -30,7 +30,10 @@
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
-                <li @click="cancelApply(dataItem)" v-if="applyStatus === 1 || applyStatus === 2 || applyStatus === 5">
+                <li
+                  @click="cancelApply(dataItem)"
+                  v-if="applyStatus === 1 || applyStatus === 2 || applyStatus === 5"
+                >
                   <CloseOutlined />
                   <span style="margin-left:4px">{{t("mysqlDataUpdateApply.cancel")}}</span>
                 </li>
@@ -189,7 +192,9 @@ const columns = ref([
   {
     i18nTitle: "mysqlDataUpdateApply.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ]);
 // 选择状态
@@ -230,7 +235,9 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
-          key: "operation"
+          key: "operation",
+          width: 130,
+          fixed: "right"
         }
       ];
       break;
@@ -279,7 +286,9 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
-          key: "operation"
+          key: "operation",
+          width: 130,
+          fixed: "right"
         }
       ];
       break;
@@ -333,7 +342,9 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
-          key: "operation"
+          key: "operation",
+          width: 130,
+          fixed: "right"
         }
       ];
       break;
@@ -377,7 +388,9 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
-          key: "operation"
+          key: "operation",
+          width: 130,
+          fixed: "right"
         }
       ];
       break;
@@ -426,7 +439,9 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
-          key: "operation"
+          key: "operation",
+          width: 130,
+          fixed: "right"
         }
       ];
       break;
@@ -475,7 +490,9 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.operation",
           dataIndex: "operation",
-          key: "operation"
+          key: "operation",
+          width: 130,
+          fixed: "right"
         }
       ];
       break;

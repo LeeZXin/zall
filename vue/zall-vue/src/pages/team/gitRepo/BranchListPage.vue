@@ -1,6 +1,6 @@
 <template>
   <div style="padding:10px">
-    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" v-if="totalCount > 0">
+    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" v-if="totalCount > 0" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'pullRequest'">
           <template v-if="dataItem[dataIndex]">
@@ -111,7 +111,9 @@ const columns = [
   {
     title: "操作",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 const listBranch = () => {

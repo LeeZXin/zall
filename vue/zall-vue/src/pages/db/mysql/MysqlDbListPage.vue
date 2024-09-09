@@ -17,7 +17,7 @@
         :icon="h(PlusOutlined)"
       >{{t('mysqlSource.createSource')}}</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
@@ -101,7 +101,9 @@ const columns = [
   {
     i18nTitle: "mysqlSource.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 跳转创建页面

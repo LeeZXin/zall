@@ -568,7 +568,7 @@ export default {
         deleteDownService: "Delete down service",
         serviceProtocol: "Protocol",
         serviceName: "Name",
-        serivceHost: "Host",
+        serviceHost: "Host",
         servicePort: "Port",
         serviceWeight: "Weight",
         serviceVersion: "Version",

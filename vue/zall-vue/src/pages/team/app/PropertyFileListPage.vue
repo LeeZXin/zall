@@ -181,14 +181,16 @@ const dataSource = ref([]);
 // 数据项
 const columns = [
   {
-    title: "配置文件",
+    i18nTitle: "propertyFile.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "操作",
+    i18nTitle: "propertyFile.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 

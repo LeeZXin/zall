@@ -33,7 +33,7 @@
       <span style="font-weight:bold">{{selectedSource?selectedSource.name:""}}</span>
       <a-tag color="orange" style="margin-left:10px">{{selectedSource.env}}</a-tag>
     </div>
-    <ZTable :columns="statusColumns" :dataSource="statusDataSource">
+    <ZTable :columns="statusColumns" :dataSource="statusDataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <ul class="action-ul" v-else>
@@ -147,7 +147,9 @@ const statusColumns = [
   {
     i18nTitle: "serviceStatus.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 状态数据

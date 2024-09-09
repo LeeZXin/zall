@@ -78,7 +78,9 @@ const columns = [
   {
     i18nTitle: "deployPipeline.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 删除流水线

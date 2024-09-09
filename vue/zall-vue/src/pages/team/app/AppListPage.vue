@@ -59,7 +59,9 @@ const columns = [
   {
     i18nTitle: "appService.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 跳转创建页面

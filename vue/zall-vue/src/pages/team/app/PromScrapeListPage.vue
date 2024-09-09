@@ -21,7 +21,7 @@
 
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex === 'targetType'">{{t(targetTypeMap[dataItem[dataIndex]])}}</span>
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
@@ -117,7 +117,9 @@ const columns = [
   {
     i18nTitle: "promScrape.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 删除任务

@@ -17,7 +17,7 @@
         :icon="h(PlusOutlined)"
       >{{t('mysqlReadPermApply.applyReadPerm')}}</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <StatusTag v-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
@@ -93,7 +93,8 @@ const columns = ref([
   {
     i18nTitle: "mysqlReadPermApply.accessTables",
     dataIndex: "accessTables",
-    key: "accessTables"
+    key: "accessTables",
+    width: 130
   },
   {
     i18nTitle: "mysqlReadPermApply.expireDay",
@@ -108,7 +109,8 @@ const columns = ref([
   {
     i18nTitle: "mysqlReadPermApply.applyReason",
     dataIndex: "applyReason",
-    key: "applyReason"
+    key: "applyReason",
+    width: 160
   },
   {
     i18nTitle: "mysqlReadPermApply.applyTime",
@@ -118,7 +120,9 @@ const columns = ref([
   {
     i18nTitle: "mysqlReadPermApply.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ]);
 // 选择审批状态
@@ -139,7 +143,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.accessTables",
           dataIndex: "accessTables",
-          key: "accessTables"
+          key: "accessTables",
+          width: 130
         },
         {
           i18nTitle: "mysqlReadPermApply.expireDay",
@@ -154,7 +159,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.applyTime",
@@ -164,7 +170,9 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.operation",
           dataIndex: "operation",
-          key: "operation"
+          key: "operation",
+          width: 130,
+          fixed: "right"
         }
       ];
       break;
@@ -183,7 +191,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.accessTables",
           dataIndex: "accessTables",
-          key: "accessTables"
+          key: "accessTables",
+          width: 130
         },
         {
           i18nTitle: "mysqlReadPermApply.expireDay",
@@ -198,7 +207,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.auditor",
@@ -232,7 +242,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.accessTables",
           dataIndex: "accessTables",
-          key: "accessTables"
+          key: "accessTables",
+          width: 130
         },
         {
           i18nTitle: "mysqlReadPermApply.expireDay",
@@ -247,12 +258,14 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.disagreeReason",
           dataIndex: "disagreeReason",
-          key: "disagreeReason"
+          key: "disagreeReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.auditor",
@@ -286,7 +299,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.accessTables",
           dataIndex: "accessTables",
-          key: "accessTables"
+          key: "accessTables",
+          width: 130
         },
         {
           i18nTitle: "mysqlReadPermApply.expireDay",
@@ -301,7 +315,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.applyTime",
