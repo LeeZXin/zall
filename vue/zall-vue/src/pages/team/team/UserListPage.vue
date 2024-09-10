@@ -196,8 +196,6 @@ const deleteTeamUser = item => {
   Modal.confirm({
     title: `${t('teamRole.confirmDelete')} ${item.account}(${item.name})?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteTeamUserRequest(item.id).then(() => {
         message.success(t("operationSuccess"));

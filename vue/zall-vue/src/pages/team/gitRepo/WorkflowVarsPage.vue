@@ -38,8 +38,6 @@ const deleteVars = item => {
   Modal.confirm({
     title: `你确定要删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteVarsRequest(item.id).then(() => {
         message.success("删除成功");

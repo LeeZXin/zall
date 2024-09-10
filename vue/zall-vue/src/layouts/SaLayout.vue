@@ -20,15 +20,15 @@
             </a-menu-item>
             <a-menu-item key="/propertySource/list">
               <BookOutlined />
-              <span>{{t("saMenu.propertyCenterSource")}}</span>
+              <span>{{t("saMenu.propertySource")}}</span>
             </a-menu-item>
             <a-menu-item key="/serviceSource/list">
               <BookOutlined />
-              <span>{{t("saMenu.serviceStatusSource")}}</span>
+              <span>{{t("saMenu.serviceSource")}}</span>
             </a-menu-item>
             <a-menu-item key="/discoverySource/list">
               <BookOutlined />
-              <span>{{t("saMenu.registryCenterSource")}}</span>
+              <span>{{t("saMenu.discoverySource")}}</span>
             </a-menu-item>
             <a-menu-item key="/zalletNode/list">
               <ClusterOutlined />

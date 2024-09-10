@@ -1,56 +1,46 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span v-if="mode === 'create'">创建注册中心来源</span>
-        <span v-else-if="mode === 'update'">编辑注册中心来源</span>
+      <div class="header">
+        <span v-if="mode === 'create'">{{t('discoverySource.createSource')}}</span>
+        <span v-else-if="mode === 'update'">{{t('discoverySource.updateSource')}}</span>
       </div>
       <div class="section" v-if="mode==='create'">
-        <div class="section-title">选择环境</div>
+        <div class="section-title">{{t('discoverySource.selectEnv')}}</div>
         <div class="section-body">
-          <a-select
-            style="width: 100%"
-            placeholder="选择环境"
-            v-model:value="formState.selectedEnv"
-            :options="envList"
-          />
-          <div class="input-desc">多环境选择, 选择其中一个环境</div>
+          <a-select style="width: 100%" v-model:value="formState.selectedEnv" :options="envList" />
         </div>
       </div>
       <div class="section" v-if="mode==='update'">
-        <div class="section-title">已选环境</div>
+        <div class="section-title">{{t('discoverySource.selectedEnv')}}</div>
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section">
-        <div class="section-title">名称</div>
+        <div class="section-title">{{t('discoverySource.name')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
-          <div class="input-desc">标识配置来源</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">endpoints</div>
+        <div class="section-title">{{t('discoverySource.endpoints')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.endpoints" />
-          <div class="input-desc">etcd endpoints ip:port格式, 以;隔开</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">账号</div>
+        <div class="section-title">{{t('discoverySource.etcdUsername')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.username" />
-          <div class="input-desc">etcd账号</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">密码</div>
+        <div class="section-title">{{t('discoverySource.etcdPwd')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.password" type="password" />
-          <div class="input-desc">etcd密码</div>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateServiceSource">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateDiscoverySource">{{t('discoverySource.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -66,14 +56,18 @@ import {
 } from "@/api/app/discoveryApi";
 import { useRoute, useRouter } from "vue-router";
 import { useDiscoverySourceStore } from "@/pinia/discoverySourceStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const discoverySourceStore = useDiscoverySourceStore();
 const route = useRoute();
 const router = useRouter();
+// 模式
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
 const mode = getMode();
+// 表单数据
 const formState = reactive({
   name: "",
   endpoints: "",
@@ -81,6 +75,7 @@ const formState = reactive({
   password: "",
   selectedEnv: ""
 });
+// 环境列表
 const envList = ref([]);
 const getEnvCfg = () => {
   getEnvCfgRequest().then(res => {
@@ -97,14 +92,14 @@ const getEnvCfg = () => {
     }
   });
 };
-
-const saveOrUpdateServiceSource = () => {
+// 新增或编辑来源
+const saveOrUpdateDiscoverySource = () => {
   if (!discoverySourceNameRegexp.test(formState.name)) {
-    message.warn("名称格式错误");
+    message.warn(t("discoverySource.nameFormatErr"));
     return;
   }
   if (!formState.endpoints) {
-    message.warn("endpoints格式错误");
+    message.warn(t("discoverySource.pleaseFillEndpoints"));
     return;
   }
   let endpoints = formState.endpoints.split(";").filter(item => item);
@@ -116,7 +111,7 @@ const saveOrUpdateServiceSource = () => {
       password: formState.password,
       name: formState.name
     }).then(() => {
-      message.success("创建成功");
+      message.success(t("operationSuccess"));
       router.push(`/sa/discoverySource/list/${formState.selectedEnv}`);
     });
   } else if (mode === "update") {
@@ -127,7 +122,7 @@ const saveOrUpdateServiceSource = () => {
       password: formState.password,
       name: formState.name
     }).then(() => {
-      message.success("保存成功");
+      message.success(t("operationSuccess"));
       router.push(`/sa/discoverySource/list/${formState.selectedEnv}`);
     });
   }
@@ -136,7 +131,6 @@ const saveOrUpdateServiceSource = () => {
 if (mode === "create") {
   getEnvCfg();
 } else if (mode === "update") {
-  console.log(discoverySourceStore.id);
   if (discoverySourceStore.id === 0) {
     router.push(`/sa/discoverySource/list`);
   } else {

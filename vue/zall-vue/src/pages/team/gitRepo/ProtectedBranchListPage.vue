@@ -43,8 +43,6 @@ const deleteProtectedBranch = item => {
   Modal.confirm({
     title: `你确定要删除${item.pattern}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteProtectedBranchRequest(item.id).then(() => {
         message.success("删除成功");

@@ -532,8 +532,6 @@ const closePr = () => {
   Modal.confirm({
     title: "你确定要关闭?",
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       closePullRequestRequest(route.params.prId).then(res => {
         if (res.data.statusChange) {
@@ -553,8 +551,6 @@ const deleteComment = id => {
   Modal.confirm({
     title: "你确定要删除?",
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteCommentRequest(id).then(() => {
         message.success("删除成功");
@@ -644,8 +640,6 @@ const mergePr = () => {
   Modal.confirm({
     title: "你确定要提交合并吗?",
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       merging.value = true;
       mergePullRequestRequest(prStore.id)

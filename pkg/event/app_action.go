@@ -90,6 +90,7 @@ func (a AppArtifactEventAction) GetI18nValue() string {
 }
 
 const (
+	AppArtifactUploadAction AppArtifactEventAction = "upload"
 	AppArtifactDeleteAction AppArtifactEventAction = "delete"
 )
 

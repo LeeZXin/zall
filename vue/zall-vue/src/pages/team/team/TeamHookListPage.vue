@@ -1,24 +1,22 @@
 <template>
   <div style="padding:10px">
     <div class="header">
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加TeamHook</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('teamHook.createHook')}}</a-button>
     </div>
     <ul class="team-hook-list" v-if="teamHookList.length > 0">
       <li v-for="item in teamHookList" v-bind:key="item.id">
         <div class="team-hook-name no-wrap">{{item.name}}</div>
         <ul class="op-btns">
-          <li class="update-btn" @click="updateTeamHook(item)">编辑</li>
-          <li class="del-btn" @click="deleteTeamHook(item)">删除</li>
+          <li class="update-btn" @click="updateTeamHook(item)">{{t('teamHook.update')}}</li>
+          <li class="del-btn" @click="deleteTeamHook(item)">{{t('teamHook.delete')}}</li>
         </ul>
       </li>
     </ul>
-    <ZNoData v-else>
-      <template #desc>
-        <div
-          class="no-data-text"
-        >TeamHooks allow external services to be notified when certain events happen. When the specified events happen, we'll send a POST request to each of the URLs you provide. Learn more in our TeamHooks Guide.</div>
-      </template>
-    </ZNoData>
+    <ZNoData v-else />
   </div>
 </template>
 <script setup>
@@ -32,6 +30,8 @@ import {
 import { ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
 import { useTeamHookStore } from "@/pinia/teamHookStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const teamHookList = ref([]);
@@ -43,11 +43,11 @@ const gotoCreatePage = () => {
 // 删除webhook
 const deleteTeamHook = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t('teamHook.confirmDelete')} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteTeamHookRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listTeamHook();
       });
     },

@@ -1,53 +1,60 @@
 <template>
   <div style="padding:10px">
     <div class="container" style="width:70%">
-      <div class="title">SSH和GPG</div>
+      <div class="header">SSH&GPG</div>
       <div class="section">
         <div class="section-title flex-between">
           <span>SSH</span>
-          <span class="add-btn" @click="goto('/personalSetting/sshAndGpg/createSshKey')">新增SSH密钥</span>
+          <span
+            class="add-btn"
+            @click="goto('/personalSetting/sshAndGpg/createSshKey')"
+          >{{t('sshGpg.createSsh')}}</span>
         </div>
         <ul class="key-ul" v-if="sshList.length > 0">
           <li v-for="item in sshList" v-bind:key="item.id">
             <div style="padding-left:10px;width:90%">
               <div class="key-name no-wrap">{{item.name}}</div>
               <div class="key-extra no-wrap">{{item.fingerprint}}</div>
-              <div class="key-extra no-wrap">新增于 {{item.created}}</div>
-              <div class="key-extra no-wrap">最近使用于 {{item.lastOperated}}</div>
+              <div class="key-extra no-wrap">{{t('sshGpg.createdAt')}} {{item.created}}</div>
+              <div class="key-extra no-wrap">{{t('sshGpg.recentlyUsedAt')}} {{item.lastOperated}}</div>
             </div>
             <div class="key-right">
-              <a-button type="primary" danger @click="deleteSshKey(item)">删除</a-button>
+              <a-button type="primary" danger @click="deleteSshKey(item)">{{t('sshGpg.delete')}}</a-button>
             </div>
           </li>
         </ul>
-        <div v-else class="no-data">没有上传SSH密钥, 请点击新增SSH密钥</div>
+        <ZNoData v-else :unbordered="true" style="border-top: 1px solid #d9d9d9;"/>
       </div>
       <div class="section">
         <div class="section-title flex-between">
           <span>GPG</span>
-          <span class="add-btn" @click="goto('/personalSetting/sshAndGpg/createGpgKey')">新增GPG密钥</span>
+          <span
+            class="add-btn"
+            @click="goto('/personalSetting/sshAndGpg/createGpgKey')"
+          >{{t('sshGpg.createGpg')}}</span>
         </div>
         <ul class="key-ul" v-if="gpgList.length > 0">
           <li v-for="item in gpgList" v-bind:key="item.id">
             <div style="padding-left:10px;width:90%">
               <div class="key-name no-wrap">{{item.name}}</div>
               <div class="key-extra no-wrap">KeyID {{item.keyId}}</div>
-              <div class="key-extra no-wrap">邮箱 {{item.email}}</div>
-              <div class="key-extra no-wrap">子项 {{item.subKeys}}</div>
-              <div class="key-extra no-wrap">添加于 {{item.created}}</div>
-              <div class="key-extra no-wrap">过期于 {{item.expired}}</div>
+              <div class="key-extra no-wrap">{{t('sshGpg.email')}} {{item.email}}</div>
+              <div class="key-extra no-wrap">{{t('sshGpg.subKeys')}} {{item.subKeys}}</div>
+              <div class="key-extra no-wrap">{{t('sshGpg.createdAt')}} {{item.created}}</div>
+              <div class="key-extra no-wrap">{{t('sshGpg.expiredAt')}} {{item.expired}}</div>
             </div>
             <div class="key-right">
-              <a-button type="primary" danger @click="deleteGpgKey(item)">删除</a-button>
+              <a-button type="primary" danger @click="deleteGpgKey(item)">{{t('sshGpg.delete')}}</a-button>
             </div>
           </li>
         </ul>
-        <div v-else class="no-data">没有上传GPG密钥, 请点击新增GPG密钥</div>
+        <ZNoData v-else :unbordered="true" style="border-top: 1px solid #d9d9d9;"/>
       </div>
     </div>
   </div>
 </template>
 <script setup>
+import ZNoData from "@/components/common/ZNoData";
 import { useRouter } from "vue-router";
 import { ref, createVNode } from "vue";
 import {
@@ -60,6 +67,8 @@ import {
 } from "@/api/user/gpgKeyApi";
 import { Modal, message } from "ant-design-vue";
 import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const sshList = ref([]);
 const gpgList = ref([]);
@@ -90,11 +99,11 @@ const listGpgKey = () => {
 // 删除ssh密钥
 const deleteSshKey = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("sshGpg.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteSshKeyRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listSshKey();
       });
     }
@@ -103,11 +112,11 @@ const deleteSshKey = item => {
 // 删除gpg密钥
 const deleteGpgKey = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("sshGpg.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteGpgKeyRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listGpgKey();
       });
     }
@@ -141,13 +150,6 @@ listSshKey();
 .key-extra {
   font-size: 14px;
   padding-bottom: 4px;
-  color: gray;
-}
-.no-data {
-  border-top: 1px solid #d9d9d9;
-  padding: 20px 10px;
-  font-size: 16px;
-  text-align: center;
   color: gray;
 }
 .add-btn:hover {

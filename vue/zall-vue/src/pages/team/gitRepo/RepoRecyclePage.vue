@@ -129,8 +129,6 @@ const deleteRepoPermanently = item => {
   Modal.confirm({
     title: `你确定要永久删除${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteRepoPermanentlyRequest(item.repoId).then(() => {
         message.success("删除成功");
@@ -144,8 +142,6 @@ const recoverRepo = item => {
   Modal.confirm({
     title: `你确定要恢复${item.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       reoverFromRecycleRequest(item.repoId).then(() => {
         message.success("恢复成功");

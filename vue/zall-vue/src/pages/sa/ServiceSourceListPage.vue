@@ -1,7 +1,11 @@
 <template>
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
-      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建服务来源</a-button>
+      <a-button
+        type="primary"
+        :icon="h(PlusOutlined)"
+        @click="gotoCreatePage"
+      >{{t('serviceSource.createSource')}}</a-button>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
@@ -9,19 +13,14 @@
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deleteServiceSource(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete Source</span>
-              </template>
-              <delete-outlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
-                  <edit-outlined />
-                  <span style="margin-left:4px">编辑服务来源</span>
+                  <EditOutlined />
+                  <span style="margin-left:4px">{{t('serviceSource.updateSource')}}</span>
                 </li>
               </ul>
             </template>
@@ -52,45 +51,48 @@ import {
 } from "@/api/app/serviceApi";
 import { useServiceSourceStore } from "@/pinia/serviceSourceStore";
 import { Modal, message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const serviceSourceStore = useServiceSourceStore();
 const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
 const dataSource = ref([]);
+// 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "serviceSource.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "host",
+    i18nTitle: "serviceSource.host",
     dataIndex: "host",
     key: "host"
   },
   {
-    title: "操作",
+    i18nTitle: "serviceSource.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    fixed: "right",
+    width: 130
   }
 ];
-
+// 删除来源
 const deleteServiceSource = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("serviceSource.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteServiceSourceRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listServiceSource();
       });
     },
     onCancel() {}
   });
 };
-
+// 获取列表
 const listServiceSource = () => {
   listServiceSourceRequest({
     env: selectedEnv.value
@@ -103,11 +105,11 @@ const listServiceSource = () => {
     });
   });
 };
-
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(`/sa/serviceSource/create?env=${selectedEnv.value}`);
 };
-
+// 跳转编辑页面
 const gotoUpdatePage = item => {
   serviceSourceStore.id = item.id;
   serviceSourceStore.name = item.name;
@@ -116,7 +118,7 @@ const gotoUpdatePage = item => {
   serviceSourceStore.apiKey = item.apiKey;
   router.push(`/sa/serviceSource/${item.id}/update`);
 };
-
+// 环境变化
 const onEnvChange = e => {
   router.replace(`/sa/serviceSource/list/${e.newVal}`);
   selectedEnv.value = e.newVal;

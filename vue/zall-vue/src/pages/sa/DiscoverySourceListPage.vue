@@ -1,7 +1,11 @@
 <template>
   <div style="padding:10px;height:100%">
     <div style="margin-bottom:10px" class="flex-between">
-      <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建注册中心来源</a-button>
+      <a-button
+        type="primary"
+        :icon="h(PlusOutlined)"
+        @click="gotoCreatePage"
+      >{{t('discoverySource.createSource')}}</a-button>
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
@@ -9,19 +13,14 @@
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deleteDiscoverySource(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete Source</span>
-              </template>
-              <delete-outlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
-                  <edit-outlined />
-                  <span style="margin-left:4px">编辑注册中心来源</span>
+                  <EditOutlined />
+                  <span style="margin-left:4px">{{t('discoverySource.updateSource')}}</span>
                 </li>
               </ul>
             </template>
@@ -52,45 +51,48 @@ import {
 } from "@/api/app/discoveryApi";
 import { useDiscoverySourceStore } from "@/pinia/discoverySourceStore";
 import { Modal, message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const discoverySourceStore = useDiscoverySourceStore();
 const route = useRoute();
 const selectedEnv = ref("");
 const router = useRouter();
 const dataSource = ref([]);
+// 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "discoverySource.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "endpoints",
+    i18nTitle: "discoverySource.endpoints",
     dataIndex: "endpoints",
     key: "endpoints"
   },
   {
-    title: "操作",
+    i18nTitle: "discoverySource.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
-
+// 删除来源
 const deleteDiscoverySource = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("discoverySource.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteDiscoverySourceRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listDiscoverySource();
       });
     },
     onCancel() {}
   });
 };
-
+// 获取列表
 const listDiscoverySource = () => {
   listDiscoverySourceRequest({
     env: selectedEnv.value
@@ -104,11 +106,11 @@ const listDiscoverySource = () => {
     });
   });
 };
-
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(`/sa/discoverySource/create?env=${selectedEnv.value}`);
 };
-
+// 跳转编辑页面
 const gotoUpdatePage = item => {
   discoverySourceStore.id = item.id;
   discoverySourceStore.name = item.name;
@@ -118,7 +120,7 @@ const gotoUpdatePage = item => {
   discoverySourceStore.password = item.password;
   router.push(`/sa/discoverySource/${item.id}/update`);
 };
-
+// 环境变化
 const onEnvChange = e => {
   router.replace(`/sa/discoverySource/list/${e.newVal}`);
   selectedEnv.value = e.newVal;

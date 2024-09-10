@@ -65,9 +65,9 @@ export default {
     saMenu: {
         sysCfg: "系统配置",
         userManage: "用户管理",
-        propertyCenterSource: "配置中心来源",
-        serviceStatusSource: "服务状态来源",
-        registryCenterSource: "注册中心来源",
+        propertySource: "配置中心来源",
+        serviceSource: "服务状态来源",
+        discoverySource: "注册中心来源",
         zallet: "Zallet",
         promScrape: "Prom抓取任务"
     },
@@ -603,7 +603,9 @@ export default {
         targetDesc: "抓取目标, 若选择服务发现类型, 则填写服务发现的key, 例如xxx-http. 若选择直连类型, 多个ip:port用;隔开",
         save: "立即保存",
         endpointFormatErr: "endpoint格式错误",
-        targetFormatErr: "目标类型错误"
+        targetFormatErr: "目标类型错误",
+        team: "团队",
+        app: "应用服务"
     },
     alertConfig: {
         createConfig: "创建告警配置",
@@ -691,5 +693,407 @@ export default {
         deleteTeamDesc: "删除团队前, 会判断与团队关联的git仓库、应用服务、定时任务等数据, 若存在关联未迁移的数据, 则会阻止删除, 直到相关仓库、服务等数据被删除或被迁移到其他团队",
         confirmDeleteTeam: "你确定要删除该团队吗",
         teamNameFormatErr: "名称格式错误"
+    },
+    notifyTpl: {
+        createTpl: "创建通知模板",
+        wework: "企微",
+        feishu: "飞书",
+        changeApiKey: "变更api密钥",
+        updateTpl: "编辑通知模板",
+        name: "名称",
+        notifyType: "通知类型",
+        apiKey: "api密钥",
+        operation: "操作",
+        confirmChangeApiKey: "你确定要变更密钥",
+        confirmDelete: "你确定要删除",
+        feishuSignKey: "飞书签名密钥",
+        feishuSignKeyDesc: "非必填, 飞书签名验证专用",
+        templateJson: "模板json",
+        save: "立即保存",
+        nameFormatErr: "名称格式错误",
+        webhookFormatErr: "Webhook格式错误",
+        pleaseFillTemplate: "请填写模板"
+    },
+    teamHook: {
+        createHook: "创建team hook",
+        updateHook: "编辑team hook",
+        update: "编辑",
+        delete: "删除",
+        confirmDelete: "你确定要删除",
+        name: "名称",
+        hookType: "类型",
+        webhook: "Webhook",
+        notification: "外部通知",
+        webhookUrl: "Webhook url",
+        webhookSecret: "密钥",
+        gitEvents: "代码仓库事件",
+        teamEvents: "团队事件",
+        envRelatedEvents: "环境相关事件",
+        env: "环境",
+        save: "立即保存",
+        protectedBranch: {
+            title: "保护分支",
+            create: "新增",
+            update: "编辑",
+            delete: "删除"
+        },
+        gitPush: {
+            title: "代码推送",
+            commit: "提交",
+            delete: "删除"
+        },
+        pullRequest: {
+            title: "合并请求",
+            submit: "提交",
+            close: "关闭",
+            review: "评审",
+            merge: "合并",
+            addComment: "添加评论",
+            deleteComment: "删除评论"
+        },
+        gitRepo: {
+            title: "代码仓库",
+            create: "创建",
+            update: "编辑",
+            deleteTemporarily: "临时删除",
+            deletePermanently: "永久删除",
+            archived: "归档",
+            unArchived: "取消归档",
+            recoverFromRecycle: "恢复删除"
+        },
+        gitWorkflow: {
+            title: "git工作流",
+            create: "创建",
+            update: "编辑",
+            delete: "删除",
+            trigger: "触发",
+            kill: "停止任务"
+        },
+        gitWorkflowVars: {
+            title: "git工作流变量",
+            create: "创建",
+            update: "编辑",
+            delete: "删除"
+        },
+        gitWebhook: {
+            title: "git webhook",
+            create: "创建",
+            update: "编辑",
+            delete: "删除"
+        },
+        team: {
+            title: "团队",
+            create: "创建",
+            update: "编辑",
+            delete: "删除"
+        },
+        teamRole: {
+            title: "团队角色",
+            create: "创建",
+            update: "编辑",
+            delete: "删除"
+        },
+        teamUser: {
+            title: "团队成员",
+            create: "创建",
+            changeRole: "变更角色",
+            delete: "删除"
+        },
+        app: {
+            title: "应用服务",
+            create: "创建",
+            update: "编辑",
+            delete: "删除",
+            transfer: "迁移"
+        },
+        notifyTpl: {
+            title: "外部通知",
+            create: "新增",
+            update: "编辑",
+            delete: "删除",
+            changeApiKey: "变更api密钥"
+        },
+        weworkAccessToken: {
+            title: "企微access token",
+            create: "创建",
+            update: "编辑",
+            delete: "删除",
+            changeApiKey: "变更api密钥",
+            refresh: "手动刷新"
+        },
+        feishuAccessToken: {
+            title: "飞书access token",
+            create: "创建",
+            update: "编辑",
+            delete: "删除",
+            changeApiKey: "变更api密钥",
+            refresh: "手动刷新"
+        },
+        appSource: {
+            title: "应用服务资源",
+            managePropertySource: "管理配置中心来源",
+            manageDiscoverySource: "管理注册中心来源",
+            manageServiceSource: "管理服务状态来源"
+        },
+        appPropertyFile: {
+            title: "配置文件",
+            create: "创建",
+            delete: "删除"
+        },
+        appPropertyVersion: {
+            title: "配置版本",
+            new: "新增",
+            deploy: "发布"
+        },
+        appDeployPipeline: {
+            title: "部署流水线",
+            create: "创建",
+            update: "编辑",
+            delete: "删除"
+        },
+        appDeployPipelineVars: {
+            title: "部署流水线变量",
+            create: "创建",
+            update: "编辑",
+            delete: "删除"
+        },
+        appDeployPlan: {
+            title: "发布计划",
+            create: "创建",
+            close: "关闭",
+            start: "开始"
+        },
+        appDeployService: {
+            title: "部署服务",
+            triggerAction: "触发指令"
+        },
+        appDiscovery: {
+            title: "注册中心",
+            reRegister: "上线服务",
+            deregister: "下线服务",
+            deleteDownService: "删除下线服务"
+        },
+        appArtifact: {
+            title: "应用制品",
+            upload: "上传",
+            delete: "删除"
+        },
+        appPromScrape: {
+            title: "Prometheus抓取任务",
+            create: "创建",
+            update: "编辑",
+            delete: "删除"
+        },
+        appAlertConfig: {
+            title: "告警配置",
+            create: "创建",
+            update: "编辑",
+            delete: "删除",
+            enable: "启用",
+            disable: "停用"
+        },
+        timer: {
+            title: "定时任务",
+            create: "创建",
+            update: "编辑",
+            delete: "删除",
+            enable: "启用",
+            disable: "停用",
+            manuallyTrigger: "手动触发"
+        },
+        timerTask: {
+            title: "定时任务执行",
+            fail: "任务失败"
+        },
+        nameFormatErr: "名称格式错误",
+        webhookUrlFormatErr: "Webhook url格式错误",
+        webhookSecretFormatErr: "Webhook密钥格式错误",
+        pleaseSelectNotificationTpl: "请选择通知模板"
+    },
+    weworkAccessToken: {
+        refreshList: "刷新列表",
+        createTask: "创建access token任务",
+        updateTask: "编辑任务",
+        changeApiKey: "变更api密钥",
+        refreshToken: "重刷token",
+        viewToken: "查看token",
+        copy: "复制",
+        expiredTime: "过期时间",
+        name: "名称",
+        corpId: "CorpId",
+        secret: "密钥",
+        apiKey: "Api密钥",
+        creator: "创建人",
+        operation: "操作",
+        confirmChange: "你确定变更",
+        confirmDelete: "你确定要删除",
+        confirmRefresh: "你确定要刷新",
+        save: "立即保存",
+        nameFormatErr: "名称格式错误",
+        corpIdFormatErr: "CorpId格式错误",
+        secretFormatErr: "密钥格式错误"
+    },
+    feishuAccessToken: {
+        refreshList: "刷新列表",
+        createTask: "创建access token任务",
+        updateTask: "编辑任务",
+        changeApiKey: "变更api密钥",
+        refreshToken: "重刷token",
+        viewToken: "查看token",
+        copy: "复制",
+        expiredTime: "过期时间",
+        name: "名称",
+        appId: "AppId",
+        secret: "密钥",
+        apiKey: "Api密钥",
+        creator: "创建人",
+        operation: "操作",
+        confirmChange: "你确定变更",
+        confirmDelete: "你确定要删除",
+        confirmRefresh: "你确定要刷新",
+        save: "立即保存",
+        nameFormatErr: "名称格式错误",
+        appIdFormatErr: "CorpId格式错误",
+        secretFormatErr: "密钥格式错误"
+    },
+    personalSetting: "个人设置",
+    profile: {
+        title: "个人信息",
+        account: "账号",
+        name: "姓名",
+        email: "邮箱",
+        avatar: "头像",
+        clickUpload: "点击上传",
+        save: "立即保存",
+        uploadFileSuccess: "上传成功",
+        notImage: "不是图像",
+        nameFormatErr: "姓名格式错误",
+        emailFormatErr: "邮箱格式错误",
+        pleaseUploadAvatar: "请上传头像"
+    },
+    changePassword: {
+        title: "修改密码",
+        oldPwd: "旧密码",
+        newPwd: "新密码",
+        confirmPwd: "确认密码",
+        save: "立即修改",
+        oldPwdFormatErr: "原密码格式错误",
+        newPwdFormatErr: "新密码格式错误",
+        oldPwdNotEqualNewPwd: "确认密码与新密码不一致"
+    },
+    sshGpg: {
+        createSsh: "新增Ssh密钥",
+        createdAt: "新增于",
+        recentlyUsedAt: "最近使用于",
+        delete: "删除",
+        createGpg: "新增Gpg密钥",
+        email: "邮箱",
+        subKeys: "子项",
+        confirmDelete: "你确定要删除",
+        name: "名称",
+        content: "内容",
+        sshContentDesc: "以 'ssh-ed25519'、 'ssh-rsa'、 'ecdsa-sha2-nistp256'、'ecdsa-sha2-nistp384'、'ecdsa-sha2-nistp521'、 'sk-ecdsa-sha2-nistp256@openssh.com' 或 'sk-ssh-ed25519@openssh.com' 开头",
+        save: "立即保存",
+        nameFormatErr: "名称格式错误",
+        pleaseFillContent: "请填写密钥内容",
+        gpgContentDesc: "以 '-----BEGIN PGP PUBLIC KEY BLOCK-----' 开头",
+    },
+    cfgList: {
+        systemCfg: "系统配置",
+        save: "保存",
+        disallowUserRegisterAccount: "禁止用户注册帐号",
+        disallowUserRegisterAccountDesc: "用户不可自行注册帐号, 只允许超级管理员创建用户帐号",
+        allowUserCreateTeam: "允许用户创建团队",
+        allowUserCreateTeamDesc: "允许用户自行创建团队并成为团队的管理员",
+        envCfg: "环境配置",
+        envCfgDesc: "多个环境使用;隔开",
+        loginCfg: "登录配置",
+        loginWithAccountPassword: "允许账号密码登录",
+        loginWithWework: "允许使用企业微信登录",
+        loginWithFeishu: "允许使用飞书登录",
+        gitCfg: "Git配置",
+        lfsJwtExpiredDuration: "LFS JWT过期时间",
+        lfsJwtKey: "LFS JWT密钥",
+        gitServerCfg: "Git服务端配置",
+        pleaseFillEnv: "请填写环境",
+        envFormatErr: "环境格式错误",
+        httpHostFormatErr: "http host格式错误",
+        sshHostFormatErr: "ssh host格式错误",
+        pleaseChooseAtLeastOneLoginWay: "至少选择一种登录方式",
+        pleaseFill: "请填写"
+    },
+    discoverySource: {
+        createSource: "创建注册中心来源",
+        updateSource: "编辑注册中心来源",
+        name: "名称",
+        endpoints: "etcd endpoints",
+        operation: "操作",
+        confirmDelete: "你确定要删除",
+        save: "立即保存",
+        selectEnv: "选择环境",
+        selectedEnv: "已选环境",
+        etcdUsername: "Etcd账号",
+        etcdPwd: "Etcd密码",
+        nameFormatErr: "名称格式错误",
+        pleaseFillEndpoints: "请填写endpoints"
+    },
+    userManage: {
+        createUser: "创建用户",
+        yes: "是",
+        no: "否",
+        resetPwd: "重置密码",
+        updateUser: "编辑用户",
+        revokeDba: "取消DBA",
+        grantDba: "成为DBA",
+        disableAccount: "禁用账号",
+        enableAccount: "启动账号",
+        revokeAdmin: "取消管理员",
+        grantAdmin: "成为管理员",
+        account: "账号",
+        name: "姓名",
+        email: "邮箱",
+        avatarUrl: "头像",
+        isAdmin: "是否是管理员",
+        isDba: "是否是Dba",
+        isProhibited: "是否禁用",
+        operation: "操作",
+        confirmGrantDba: "是否赋予DBA角色",
+        confirmRevokeDba: "是否撤回DBA角色",
+        confirmGrantAdmin: "是否赋予管理员角色",
+        confirmRevokeAdmin: "是否撤回管理员角色",
+        confirmDisable: "你确定是否禁用",
+        confirmEnable: "你确定是否启动",
+        confirmDelete: "你确定是否删除",
+        confirmResetPwd: "是否重置密码"
+    },
+    propertySource: {
+        createSource: "创建配置来源",
+        updateSource: "编辑配置来源",
+        name: "名称",
+        endpoints: "Endpoints",
+        operation: "操作",
+        confirmDelete: "你确定是否删除",
+        selectEnv: "选择环境",
+        selectedEnv: "已选环境",
+        etcdUsername: "Etcd账号",
+        etcdPwd: "Etcd密码",
+        nameFormatErr: "名称格式错误",
+        pleaseFillEndpoints: "请填写endpoints",
+        save: "立即保存",
+    },
+    serviceSource: {
+        createSource: "创建服务状态来源",
+        updateSource: "编辑服务状态来源",
+        confirmDelete: "你确定是否删除",
+        name: "名称",
+        host: "Host",
+        operation: "操作",
+        selectEnv: "选择环境",
+        selectedEnv: "已选环境",
+        apiKey: "Api密钥",
+        save: "立即保存",
+        nameFormatErr: "名称格式错误",
+        hostFormatErr: "host格式错误",
+        apiKeyFormatErr: "api key格式错误"
     }
 }

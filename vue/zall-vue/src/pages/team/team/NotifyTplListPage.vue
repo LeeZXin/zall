@@ -3,7 +3,6 @@
     <div style="margin-bottom:10px">
       <a-input
         v-model:value="searchNameKey"
-        placeholder="搜索名称"
         style="width:240px;margin-right:6px"
         @pressEnter="searchTpl"
       >
@@ -11,7 +10,11 @@
           <SearchOutlined />
         </template>
       </a-input>
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建通知模板</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('notifyTpl.createTpl')}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -19,29 +22,24 @@
           <a-image :width="20" :height="20" :src="dataItem[dataIndex]" :fallback="fallbackAvatar" />
         </template>
         <template v-else-if="dataIndex === 'notifyType'">
-          <span v-if="dataItem[dataIndex] === 'wework'">企业微信</span>
-          <span v-else-if="dataItem[dataIndex] === 'feishu'">飞书</span>
+          <span v-if="dataItem[dataIndex] === 'wework'">{{t('notifyTpl.wework')}}</span>
+          <span v-else-if="dataItem[dataIndex] === 'feishu'">{{t('notifyTpl.feishu')}}</span>
         </template>
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deleteTpl(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>删除模板</span>
-              </template>
-              <DeleteOutlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="changeApiKey(dataItem)">
                   <KeyOutlined />
-                  <span style="margin-left:4px">变更api密钥</span>
+                  <span style="margin-left:4px">{{t('notifyTpl.changeApiKey')}}</span>
                 </li>
                 <li @click="gotoUpdatePage(dataItem)">
                   <EditOutlined />
-                  <span style="margin-left:4px">编辑模板</span>
+                  <span style="margin-left:4px">{{t('notifyTpl.updateTpl')}}</span>
                 </li>
               </ul>
             </template>
@@ -84,6 +82,8 @@ import { ref, h, reactive, createVNode } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useNotifyTplStore } from "@/pinia/notifyTplStore";
 import { Modal, message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const notifyTplStore = useNotifyTplStore();
 // 分页数据
 const dataPage = reactive({
@@ -100,22 +100,22 @@ const dataSource = ref([]);
 // 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "notifyTpl.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "类型",
+    i18nTitle: "notifyTpl.notifyType",
     dataIndex: "notifyType",
     key: "notifyType"
   },
   {
-    title: "Api密钥",
+    i18nTitle: "notifyTpl.apiKey",
     dataIndex: "apiKey",
     key: "apiKey"
   },
   {
-    title: "操作",
+    i18nTitle: "notifyTpl.operation",
     dataIndex: "operation",
     key: "operation",
     width: 130,
@@ -160,11 +160,11 @@ const listTpl = () => {
 // 变更api key
 const changeApiKey = item => {
   Modal.confirm({
-    title: `是否要变更${item.name}的api密钥吗?`,
+    title: `${t('notifyTpl.confirmChangeApiKey')} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       changeNotifyTplApiKeyRequest(item.id).then(() => {
-        message.success("操作成功");
+        message.success(t('operationSuccess'));
         listTpl();
       });
     }
@@ -173,11 +173,11 @@ const changeApiKey = item => {
 // 删除模板
 const deleteTpl = item => {
   Modal.confirm({
-    title: `是否要删除${item.name}?`,
+    title: `${t('notifyTpl.confirmDelete')} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteNotifyTplRequest(item.id).then(() => {
-        message.success("操作成功");
+        message.success(t('operationSuccess'));
         searchTpl();
       });
     }

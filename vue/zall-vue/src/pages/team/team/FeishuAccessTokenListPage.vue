@@ -3,7 +3,6 @@
     <div style="margin-bottom:10px" class="flex-center">
       <a-input
         v-model:value="searchKey"
-        placeholder="搜索名称或appId"
         style="width:240px;margin-right:6px"
         @pressEnter="searchAccessToken"
       >
@@ -16,8 +15,12 @@
         @click="listAccessToken"
         :icon="h(ReloadOutlined)"
         style="margin-right:6px"
-      >刷新列表</a-button>
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建AccessToken任务</a-button>
+      >{{t('feishuAccessToken.refreshList')}}</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('feishuAccessToken.createTask')}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -26,31 +29,26 @@
         </template>
         <template v-else>
           <div class="op-icon" @click="deleteAccessToken(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>删除任务</span>
-              </template>
-              <DeleteOutlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
                   <EditOutlined />
-                  <span style="margin-left:4px">编辑任务</span>
+                  <span style="margin-left:4px">{{t('feishuAccessToken.updateTask')}}</span>
                 </li>
                 <li @click="changeApiKey(dataItem)">
                   <ReloadOutlined />
-                  <span style="margin-left:4px">变更api key</span>
+                  <span style="margin-left:4px">{{t('feishuAccessToken.changeApiKey')}}</span>
                 </li>
                 <li @click="refreshAccessToken(dataItem)">
                   <ReloadOutlined />
-                  <span style="margin-left:4px">重刷token</span>
+                  <span style="margin-left:4px">{{t('feishuAccessToken.refreshToken')}}</span>
                 </li>
                 <li @click="viewToken(dataItem)">
                   <EyeOutlined />
-                  <span style="margin-left:4px">查看token</span>
+                  <span style="margin-left:4px">{{t('feishuAccessToken.viewToken')}}</span>
                 </li>
               </ul>
             </template>
@@ -79,7 +77,7 @@
         <span style="word-break:break-all;">{{tokenModal.token}}</span>
         <div class="copy-btn" @click="copyToken">
           <CopyOutlined />
-          <span>复制</span>
+          <span>{{t('feishuAccessToken.copy')}}</span>
         </div>
       </div>
       <div>tenant token</div>
@@ -87,10 +85,10 @@
         <span style="word-break:break-all;">{{tokenModal.tenantToken}}</span>
         <div class="copy-btn" @click="copyTenantToken">
           <CopyOutlined />
-          <span>复制</span>
+          <span>{{t('feishuAccessToken.copy')}}</span>
         </div>
       </div>
-      <div>过期时间</div>
+      <div>{{t('feishuAccessToken.expiredTime')}}</div>
       <div style="word-break:break-all;padding:10px">{{tokenModal.expired}}</div>
     </div>
   </a-modal>
@@ -118,6 +116,8 @@ import {
 import { useRoute, useRouter } from "vue-router";
 import { message, Modal } from "ant-design-vue";
 import { useFeishuAccessTokenStore } from "@/pinia/feishuAccessTokenStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const fsatStore = useFeishuAccessTokenStore();
 const router = useRouter();
 const route = useRoute();
@@ -136,32 +136,32 @@ const dataPage = reactive({
 // 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "feishuAccessToken.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "appId",
+    i18nTitle: "feishuAccessToken.appId",
     dataIndex: "appId",
     key: "appId"
   },
   {
-    title: "secret",
+    i18nTitle: "feishuAccessToken.secret",
     dataIndex: "secret",
     key: "secret"
   },
   {
-    title: "Api密钥",
+    i18nTitle: "feishuAccessToken.apiKey",
     dataIndex: "apiKey",
     key: "apiKey"
   },
   {
-    title: "创建人",
+    i18nTitle: "feishuAccessToken.creator",
     dataIndex: "creator",
     key: "creator"
   },
   {
-    title: "操作",
+    i18nTitle: "feishuAccessToken.operation",
     dataIndex: "operation",
     key: "operation",
     width: 130,
@@ -208,22 +208,22 @@ const viewToken = item => {
 };
 // 复制token
 const copyToken = () => {
-  message.success("复制成功");
+  message.success(t("operationSuccess"));
   window.navigator.clipboard.writeText(tokenModal.token);
 };
 // 复制tenant token
 const copyTenantToken = () => {
-  message.success("复制成功");
+  message.success(t("operationSuccess"));
   window.navigator.clipboard.writeText(tokenModal.tenantToken);
 };
 // 删除token
 const deleteAccessToken = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("feishuAccessToken.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteAccessTokenRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         searchAccessToken();
       });
     },
@@ -233,11 +233,13 @@ const deleteAccessToken = item => {
 // 刷新token
 const refreshAccessToken = item => {
   Modal.confirm({
-    title: `你确定要刷新${item.name}的access token吗?`,
+    title: `${t("feishuAccessToken.confirmRefresh")} ${
+      item.name
+    } access token?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       refreshAccessTokenRequest(item.id).then(() => {
-        message.success("刷新成功");
+        message.success(t("operationSuccess"));
         listAccessToken();
       });
     },
@@ -247,11 +249,13 @@ const refreshAccessToken = item => {
 // 变更api key
 const changeApiKey = item => {
   Modal.confirm({
-    title: `你确定要刷新${item.name}的api密钥吗?`,
+    title: `${t("feishuAccessToken.confirmChange")} ${item.name} ${t(
+      "feishuAccessToken.apiKey"
+    )}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       changeAccessTokenApiKeyRequest(item.id).then(() => {
-        message.success("变更成功");
+        message.success(t("operationSuccess"));
         listAccessToken();
       });
     },

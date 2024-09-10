@@ -1,7 +1,7 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
+      <div class="header">
         <span v-if="mode === 'create'">创建用户</span>
         <span v-else-if="mode === 'update'">编辑用户</span>
       </div>

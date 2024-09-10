@@ -4,7 +4,6 @@
       <div>
         <a-input
           v-model:value="searchEndpointKey"
-          placeholder="搜索endpoint"
           style="width:240px;margin-right:6px"
           @pressEnter="searchPromScrape"
         >
@@ -14,39 +13,37 @@
         </a-input>
         <a-select
           style="width: 200px;margin-right:10px"
-          placeholder="请选择"
           v-model:value="searchAppIdKey"
           :options="appList"
           show-search
           :filter-option="filterAppListOption"
           @change="()=>searchPromScrape()"
         />
-        <a-button type="primary" :icon="h(PlusOutlined)" @click="gotoCreatePage">创建抓取任务</a-button>
+        <a-button
+          type="primary"
+          :icon="h(PlusOutlined)"
+          @click="gotoCreatePage"
+        >{{t('promScrape.createScrape')}}</a-button>
       </div>
 
       <EnvSelector @change="onEnvChange" :defaultEnv="route.params.env" />
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
-        <span v-if="dataIndex === 'targetType'">{{targetTypeMap[dataItem[dataIndex]]}}</span>
+        <span v-if="dataIndex === 'targetType'">{{t(targetTypeMap[dataItem[dataIndex]])}}</span>
         <span v-else-if="dataIndex === 'app'">{{dataItem['appName']}}({{dataItem['appId']}})</span>
         <span v-else-if="dataIndex === 'team'">{{dataItem['teamName']}}</span>
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deletePromScrape(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete Source</span>
-              </template>
-              <delete-outlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
-                  <edit-outlined />
-                  <span style="margin-left:4px">编辑抓取任务</span>
+                  <EditOutlined />
+                  <span style="margin-left:4px">{{t('promScrape.updateScrape')}}</span>
                 </li>
               </ul>
             </template>
@@ -89,6 +86,8 @@ import {
 import { listAllAppBySaRequest } from "@/api/app/appApi";
 import { usePromScrapeStore } from "@/pinia/promScrapeStore";
 import { Modal, message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const promScrapeStore = usePromScrapeStore();
 // 分页数据
 const dataPage = reactive({
@@ -101,7 +100,7 @@ const searchAppIdKey = ref("");
 const appList = ref([
   {
     value: "",
-    label: "所有应用服务"
+    label: "ALL"
   }
 ]);
 const route = useRoute();
@@ -109,49 +108,51 @@ const selectedEnv = ref("");
 const router = useRouter();
 const dataSource = ref([]);
 const targetTypeMap = {
-  1: "服务发现类型",
-  2: "直连类型"
+  1: "promScrape.discoveryType",
+  2: "promScrape.hostType"
 };
 const columns = [
   {
-    title: "endpoint",
+    i18nTitle: "promScrape.endpoint",
     dataIndex: "endpoint",
     key: "endpoint"
   },
   {
-    title: "团队",
+    i18nTitle: "promScrape.team",
     dataIndex: "team",
     key: "team"
   },
   {
-    title: "应用服务",
+    i18nTitle: "promScrape.app",
     dataIndex: "app",
     key: "app"
   },
   {
-    title: "目标",
+    i18nTitle: "promScrape.target",
     dataIndex: "target",
     key: "target"
   },
   {
-    title: "目标类型",
+    i18nTitle: "promScrape.targetType",
     dataIndex: "targetType",
     key: "targetType"
   },
   {
-    title: "操作",
+    i18nTitle: "promScrape.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 
 const deletePromScrape = item => {
   Modal.confirm({
-    title: `你确定要删除${item.endpoint}吗?`,
+    title: `${t("promScrape.confirmDelete")} ${item.endpoint}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deletePromScrapeBySaRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         searchPromScrape();
       });
     }

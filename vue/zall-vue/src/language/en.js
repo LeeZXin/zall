@@ -14,7 +14,7 @@ export default {
     notFound: "The page is lost",
     backToIndex: "Back to index page",
     noData: "No data found",
-    superAdmin: "Super Admin",
+    superAdmin: "Super Administrator",
     ztable: {
         noDataText: "No data found",
     },
@@ -65,9 +65,9 @@ export default {
     saMenu: {
         sysCfg: "System config",
         userManage: "Manage users",
-        propertyCenterSource: "Property source",
-        serviceStatusSource: "Service source",
-        registryCenterSource: "Registry source",
+        propertySource: "Property source",
+        serviceSource: "Service source",
+        discoverySource: "Registry source",
         zallet: "Zallet",
         promScrape: "Prom scrape"
     },
@@ -115,8 +115,8 @@ export default {
         setting: "Team setting",
         notifyTpl: "Notification",
         teamHook: "Team hook",
-        weworkAccessToken: "Wework token",
-        feishuAccessToken: "Feishu token"
+        weworkAccessToken: "企微 token",
+        feishuAccessToken: "飞书 token"
     },
     teamRole: {
         createRole: "Create role",
@@ -603,7 +603,9 @@ export default {
         targetDesc: "Fill service appid when choosing discovery type, for example xxx-http. Or you can fill hosts in 'ip:port' format when choosing host type, sperate mutiple hosts by ';'",
         save: "Save now",
         endpointFormatErr: "endpoint format is wrong",
-        targetFormatErr: "target format is wrong"
+        targetFormatErr: "target format is wrong",
+        team: "Team",
+        app: "Application"
     },
     alertConfig: {
         createConfig: "Create alert config",
@@ -691,5 +693,407 @@ export default {
         deleteTeamDesc: "Before deleting a team, the Git repository, application services, scheduled tasks, and other data associated with the team will be evaluated. If there is any associated data that has not been migrated, deletion will be prevented until the relevant repository, service, and other data are deleted or migrated to another team",
         confirmDeleteTeam: "Do you confirm to delete this team",
         teamNameFormatErr: "Team name format is wrong"
+    },
+    notifyTpl: {
+        createTpl: "Create template",
+        wework: "企微",
+        feishu: "飞书",
+        changeApiKey: "Change api key",
+        updateTpl: "Update template",
+        name: "Name",
+        notifyType: "Type",
+        apiKey: "Api key",
+        operation: "Operation",
+        confirmChangeApiKey: "Do you confirm to change api key of",
+        confirmDelete: "Do you confirm to delete",
+        feishuSignKey: "飞书 sign secret key",
+        feishuSignKeyDesc: "It's for 飞书 api signature, not necessary",
+        templateJson: "Template in json format",
+        save: "Save now",
+        nameFormatErr: "Name format is wrong",
+        webhookFormatErr: "Webhook format is wrong",
+        pleaseFillTemplate: "Please fill template"
+    },
+    teamHook: {
+        createHook: "Create team hook",
+        updateHook: "Update team hook",
+        update: "Update",
+        delete: "Delete",
+        confirmDelete: "Do you confirm to delete",
+        name: "Name",
+        hookType: "Type",
+        webhook: "Webhook",
+        notification: "Notification",
+        webhookUrl: "Webhook url",
+        webhookSecret: "Webhook secret",
+        gitEvents: "Git events",
+        teamEvents: "Team events",
+        envRelatedEvents: "Env-related events",
+        env: "Environment",
+        save: "Save now",
+        protectedBranch: {
+            title: "Protected branch",
+            create: "Create",
+            update: "Update",
+            delete: "Delete"
+        },
+        gitPush: {
+            title: "Git push",
+            commit: "Commit",
+            delete: "Delete"
+        },
+        pullRequest: {
+            title: "Pull request",
+            submit: "Submit",
+            close: "Close",
+            review: "Review",
+            merge: "Merge",
+            addComment: "Add comment",
+            deleteComment: "Delete comment"
+        },
+        gitRepo: {
+            title: "Git repository",
+            create: "Create",
+            update: "Update",
+            deleteTemporarily: "Delete temporarily",
+            deletePermanently: "Delete permanently",
+            archived: "Archived",
+            unArchived: "Un-archived",
+            recoverFromRecycle: "Recover from recycle"
+        },
+        gitWorkflow: {
+            title: "Git workflow",
+            create: "Create",
+            update: "Update",
+            delete: "Delete",
+            trigger: "Trigger",
+            kill: "Kill task"
+        },
+        gitWorkflowVars: {
+            title: "Git workflow variables",
+            create: "Create",
+            update: "Update",
+            delete: "Delete"
+        },
+        gitWebhook: {
+            title: "Git webhook",
+            create: "Create",
+            update: "Update",
+            delete: "Delete"
+        },
+        team: {
+            title: "Team",
+            create: "Create",
+            update: "Update",
+            delete: "Delete"
+        },
+        teamRole: {
+            title: "Team role",
+            create: "Create",
+            update: "Update",
+            delete: "Delete"
+        },
+        teamUser: {
+            title: "Team member",
+            create: "Create",
+            changeRole: "Change role",
+            delete: "Delete"
+        },
+        app: {
+            title: "Application",
+            create: "Create",
+            update: "Update",
+            delete: "Delete",
+            transfer: "Transfer team"
+        },
+        notifyTpl: {
+            title: "Notification",
+            create: "Create",
+            update: "Update",
+            delete: "Delete",
+            changeApiKey: "Change api key"
+        },
+        weworkAccessToken: {
+            title: "企微 access token",
+            create: "Create",
+            update: "Update",
+            delete: "Delete",
+            changeApiKey: "Change api key",
+            refresh: "Refresh"
+        },
+        feishuAccessToken: {
+            title: "飞书 access token",
+            create: "Create",
+            update: "Update",
+            delete: "Delete",
+            changeApiKey: "Change api key",
+            refresh: "Refresh"
+        },
+        appSource: {
+            title: "Application source",
+            managePropertySource: "Manage property source",
+            manageDiscoverySource: "Manage discovery source",
+            manageServiceSource: "Manage service source"
+        },
+        appPropertyFile: {
+            title: "Property file",
+            create: "Create",
+            delete: "Delete"
+        },
+        appPropertyVersion: {
+            title: "Property file version",
+            new: "New version",
+            deploy: "Deploy"
+        },
+        appDeployPipeline: {
+            title: "Deploy pipeline",
+            create: "Create",
+            update: "Update",
+            delete: "Delete"
+        },
+        appDeployPipelineVars: {
+            title: "Deploy pipeline variables",
+            create: "Create",
+            update: "Update",
+            delete: "Delete"
+        },
+        appDeployPlan: {
+            title: "Deploy plan",
+            create: "Create",
+            close: "Close",
+            start: "Start"
+        },
+        appDeployService: {
+            title: "Deploy service",
+            triggerAction: "Trigger action"
+        },
+        appDiscovery: {
+            title: "Registry",
+            reRegister: "Re-register",
+            deregister: "Deregister",
+            deleteDownService: "Delete down service"
+        },
+        appArtifact: {
+            title: "Artifacts",
+            upload: "Upload",
+            delete: "Delete"
+        },
+        appPromScrape: {
+            title: "Prometheus scrape task",
+            create: "Create",
+            update: "Update",
+            delete: "Delete"
+        },
+        appAlertConfig: {
+            title: "Alert Configuration",
+            create: "Create",
+            update: "Update",
+            delete: "Delete",
+            enable: "Enable",
+            disable: "Disable"
+        },
+        timer: {
+            title: "Timer",
+            create: "Create",
+            update: "Update",
+            delete: "Delete",
+            enable: "Enable",
+            disable: "Disable",
+            manuallyTrigger: "Manually trigger"
+        },
+        timerTask: {
+            title: "Timer task",
+            fail: "Task fails"
+        },
+        nameFormatErr: "Name format is wrong",
+        webhookUrlFormatErr: "Webhook url format is wrong",
+        webhookSecretFormatErr: "Webhook secret format is wrong",
+        pleaseSelectNotificationTpl: "Please select notification template"
+    },
+    weworkAccessToken: {
+        refreshList: "Refresh list",
+        createTask: "Create token task",
+        updateTask: "Update token task",
+        changeApiKey: "Change api key",
+        refreshToken: "Refresh token",
+        viewToken: "View token",
+        copy: "Copy",
+        expiredTime: "Expired time",
+        name: "Name",
+        corpId: "CorpId",
+        secret: "Secret",
+        apiKey: "Api key",
+        creator: "Creator",
+        operation: "Operation",
+        confirmChange: "Do you confirm to change",
+        confirmDelete: "Do you confirm to delete",
+        confirmRefresh: "Do you confirm to refresh",
+        save: "Save now",
+        nameFormatErr: "Name format is wrong",
+        corpIdFormatErr: "CorpId format is wrong",
+        secretFormatErr: "Secret format is wrong"
+    },
+    feishuAccessToken: {
+        refreshList: "Refresh list",
+        createTask: "Create token task",
+        updateTask: "Update token task",
+        changeApiKey: "Change api key",
+        refreshToken: "Refresh token",
+        viewToken: "View token",
+        copy: "Copy",
+        expiredTime: "Expired time",
+        name: "Name",
+        appId: "AppId",
+        secret: "Secret",
+        apiKey: "Api key",
+        creator: "Creator",
+        operation: "Operation",
+        confirmChange: "Do you confirm to change",
+        confirmDelete: "Do you confirm to delete",
+        confirmRefresh: "Do you confirm to refresh",
+        save: "Save now",
+        nameFormatErr: "Name format is wrong",
+        appIdFormatErr: "AppId format is wrong",
+        secretFormatErr: "Secret format is wrong"
+    },
+    personalSetting: "Personal setting",
+    profile: {
+        title: "Profile",
+        account: "Account",
+        name: "Name",
+        email: "Email",
+        avatar: "Avatar",
+        clickUpload: "Click to upload",
+        save: "Save now",
+        uploadFileSuccess: "Upload successfully",
+        notImage: "Its not image",
+        nameFormatErr: "Name format is wrong",
+        emailFormatErr: "Email format is wrong",
+        pleaseUploadAvatar: "Please upload avatar"
+    },
+    changePassword: {
+        title: "Change password",
+        oldPwd: "Old password",
+        newPwd: "New password",
+        confirmPwd: "Confirm password",
+        save: "Save now",
+        oldPwdFormatErr: "Old password format is wrong",
+        newPwdFormatErr: "New password format is wrong",
+        oldPwdNotEqualNewPwd: "Confirm password is not equal with new password"
+    },
+    sshGpg: {
+        createSsh: "Create ssh key",
+        createdAt: "Created at",
+        recentlyUsedAt: "Recently used at",
+        delete: "Delete",
+        createGpg: "Create gpg key",
+        email: "Email",
+        subKeys: "Sub keys",
+        confirmDelete: "Do you confirm to delete",
+        name: "Name",
+        content: "Content",
+        sshContentDesc: "starts with 'ssh-ed25519'、 'ssh-rsa'、 'ecdsa-sha2-nistp256'、'ecdsa-sha2-nistp384'、'ecdsa-sha2-nistp521'、 'sk-ecdsa-sha2-nistp256@openssh.com' 或 'sk-ssh-ed25519@openssh.com'",
+        save: "Save now",
+        nameFormatErr: "Name format is wrong",
+        pleaseFillContent: "Please fill content",
+        gpgContentDesc: "starts with '-----BEGIN PGP PUBLIC KEY BLOCK-----'",
+    },
+    cfgList: {
+        systemCfg: "System configuration",
+        save: "Save",
+        disallowUserRegisterAccount: "Disallow users to register account",
+        disallowUserRegisterAccountDesc: "Allow users to register account, only super administrator can create account",
+        allowUserCreateTeam: "Allow users to create team",
+        allowUserCreateTeamDesc: "Allow users to create team and become administrator of the team",
+        envCfg: "Environment configuration",
+        envCfgDesc: "Multiple environments should be separated by ';'",
+        loginCfg: "Login configuration",
+        loginWithAccountPassword: "Login with account and password",
+        loginWithWework: "Login with 企微",
+        loginWithFeishu: "Login with 飞书",
+        gitCfg: "Git configuration",
+        lfsJwtExpiredDuration: "Lfs jwt expired duration",
+        lfsJwtKey: "Lfs jwt sign key",
+        gitServerCfg: "Git server configuration",
+        pleaseFillEnv: "Please fill environments",
+        envFormatErr: "Environment format is wrong",
+        httpHostFormatErr: "http host format is wrong",
+        sshHostFormatErr: "ssh host format is wrong",
+        pleaseChooseAtLeastOneLoginWay: "Please choose at least one login way",
+        pleaseFill: "Please fill"
+    },
+    discoverySource: {
+        createSource: "Create source",
+        updateSource: "Update source",
+        name: "Name",
+        endpoints: "Etcd endpoints",
+        operation: "Operation",
+        confirmDelete: "Do you confirm to delete",
+        save: "Save now",
+        selectEnv: "Select environment",
+        selectedEnv: "Selected environment",
+        etcdUsername: "Etcd username",
+        etcdPwd: "Etcd password",
+        nameFormatErr: "Name format is wrong",
+        pleaseFillEndpoints: "Please fill endpoints"
+    },
+    userManage: {
+        createUser: "Create user",
+        yes: "Yes",
+        no: "No",
+        resetPwd: "Reset password",
+        updateUser: "Update user",
+        revokeDba: "Revoke DBA",
+        grantDba: "Grant DBA",
+        disableAccount: "Disable account",
+        enableAccount: "Enable account",
+        revokeAdmin: "Revoke administrator",
+        grantAdmin: "Grant administrator",
+        account: "Account",
+        name: "Name",
+        email: "Email",
+        avatarUrl: "Avatar",
+        isAdmin: "Is administrator",
+        isDba: "Is Dba",
+        isProhibited: "Is Prohibited",
+        operation: "Operation",
+        confirmGrantDba: "Do you confirm to grant DBA role",
+        confirmRevokeDba: "Do you confirm to revoke DBA role",
+        confirmGrantAdmin: "Do you confirm to grant administrator role",
+        confirmRevokeAdmin: "Do you confirm to revoke administrator role",
+        confirmDisable: "Do you confirm to disable",
+        confirmEnable: "Do you confirm to enable",
+        confirmDelete: "Do you confirm to delete",
+        confirmResetPwd: "Do you confirm to reset password"
+    },
+    propertySource: {
+        createSource: "Create source",
+        updateSource: "Update source",
+        name: "Name",
+        endpoints: "Endpoints",
+        operation: "Operation",
+        confirmDelete: "Do you confirm to delete",
+        selectEnv: "Select environment",
+        selectedEnv: "Selected environment",
+        etcdUsername: "Etcd username",
+        etcdPwd: "Etcd password",
+        nameFormatErr: "Name format is wrong",
+        pleaseFillEndpoints: "please fill endpoints",
+        save: "Save now",
+    },
+    serviceSource: {
+        createSource: "Create source",
+        updateSource: "Update source",
+        confirmDelete: "Do you confirm to delete",
+        name: "Name",
+        host: "Host",
+        operation: "Operation",
+        selectEnv: "Select environment",
+        selectedEnv: "Selected environment",
+        apiKey: "Api key",
+        save: "Save now",
+        nameFormatErr: "Name format is wrong",
+        hostFormatErr: "Host format is wrong",
+        apiKeyFormatErr: "Api key format is wrong"
     }
 }

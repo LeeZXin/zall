@@ -167,8 +167,6 @@ const killTask = id => {
   Modal.confirm({
     title: `你确定要停止${workflowStore.name}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       killWorkflowTaskRequest(id).then(() => {
         message.success("停止成功");

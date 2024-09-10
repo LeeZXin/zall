@@ -1,67 +1,61 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span v-if="mode === 'create'">创建抓取任务</span>
-        <span v-else-if="mode === 'update'">编辑抓取任务</span>
+      <div class="header">
+        <span v-if="mode === 'create'">{{t('promScrape.createScrape')}}</span>
+        <span v-else-if="mode === 'update'">{{t('promScrape.updateScrape')}}</span>
       </div>
       <div class="section" v-if="mode==='create'">
-        <div class="section-title">选择环境</div>
+        <div class="section-title">{{t('promScrape.selectEnv')}}</div>
         <div class="section-body">
-          <a-select
-            style="width: 100%"
-            placeholder="选择环境"
-            v-model:value="formState.selectedEnv"
-            :options="envList"
-          />
-          <div class="input-desc">多环境选择, 选择其中一个环境</div>
+          <a-select style="width: 100%" v-model:value="formState.selectedEnv" :options="envList" />
         </div>
       </div>
       <div class="section" v-if="mode==='update'">
-        <div class="section-title">已选环境</div>
+        <div class="section-title">{{t('promScrape.selectedEnv')}}</div>
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section">
-        <div class="section-title">应用服务</div>
+        <div class="section-title">{{t('promScrape.app')}}</div>
         <div class="section-body">
           <a-select
             style="width: 100%"
-            placeholder="请选择"
             v-model:value="formState.appId"
             :options="appList"
             show-search
             :filter-option="filterAppListOption"
           />
-          <div class="input-desc">单选应用服务</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">endpoint</div>
+        <div class="section-title">{{t('promScrape.endpoint')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.endpoint" />
-          <div class="input-desc">prometheus标识</div>
+          <div class="input-desc">{{t('promScrape.endpointDesc')}}</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">目标类型</div>
+        <div class="section-title">{{t('promScrape.targetType')}}</div>
         <div class="section-body">
-          <a-select
-            style="width: 100%"
-            v-model:value="formState.targetType"
-            :options="targetTypeList"
-          />
-          <div class="input-desc">选择服务发现类型, 则利用注册中心发现服务后抓取, 适合配置了注册中心的服务. 直连类型适合ip不经常变动的服务.</div>
+          <a-select style="width: 100%" v-model:value="formState.targetType">
+            <a-select-option
+              v-for="item in targetTypeList"
+              v-bind:key="item.value"
+              :value="item.value"
+            >{{t(item.label)}}</a-select-option>
+          </a-select>
+          <div class="input-desc">{{t('promScrape.targetTypeDesc')}}</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">目标</div>
+        <div class="section-title">{{t('promScrape.target')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.target" />
-          <div class="input-desc">抓取目标, 若选择服务发现类型, 则填写服务发现的key, 例如xxx-http. 若选择直连类型, 多个ip:port用;隔开</div>
+          <div class="input-desc">{{t('promScrape.targetDesc')}}</div>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateScrape">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateScrape">{{t('promScrape.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -81,22 +75,27 @@ import {
 import { listAllAppBySaRequest } from "@/api/app/appApi";
 import { useRoute, useRouter } from "vue-router";
 import { usePromScrapeStore } from "@/pinia/promScrapeStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const promScrapeStore = usePromScrapeStore();
 const route = useRoute();
 const router = useRouter();
 // 应用服务列表
 const appList = ref([]);
+// 模式
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
 const mode = getMode();
+// 表单数据
 const formState = reactive({
   endpoint: "",
   target: "",
   targetType: 2,
   appId: undefined
 });
+// 环境列表
 const envList = ref([]);
 const getEnvCfg = () => {
   getEnvCfgRequest().then(res => {
@@ -113,23 +112,25 @@ const getEnvCfg = () => {
     }
   });
 };
+// 服务类型
 const targetTypeList = [
   {
     value: 1,
-    label: "服务发现类型"
+    label: "promScrape.discoveryType"
   },
   {
     value: 2,
-    label: "直连类型"
+    label: "promScrape.hostType"
   }
 ];
+// 新增或编辑任务
 const saveOrUpdateScrape = () => {
   if (!promScrapeEndpointRegexp.test(formState.endpoint)) {
-    message.warn("endpoint格式错误");
+    message.warn(t("promScrape.endpointFormatErr"));
     return;
   }
   if (!promScrapeTargetRegexp.test(formState.target)) {
-    message.warn("目标格式错误");
+    message.warn(t("promScrape.targetFormatErr"));
     return;
   }
   if (mode === "create") {
@@ -140,7 +141,7 @@ const saveOrUpdateScrape = () => {
       target: formState.target,
       targetType: formState.targetType
     }).then(() => {
-      message.success("创建成功");
+      message.success(t("operationSuccess"));
       router.push(`/sa/promScrape/list/${formState.selectedEnv}`);
     });
   } else if (mode === "update") {
@@ -150,7 +151,7 @@ const saveOrUpdateScrape = () => {
       targetType: formState.targetType,
       endpoint: formState.endpoint
     }).then(() => {
-      message.success("保存成功");
+      message.success(t("operationSuccess"));
       router.push(`/sa/promScrape/list/${formState.selectedEnv}`);
     });
   }

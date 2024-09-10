@@ -1,15 +1,14 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span v-if="mode === 'create'">创建通知模板</span>
-        <span v-else-if="mode === 'update'">编辑通知模板</span>
+      <div class="header">
+        <span v-if="mode === 'create'">{{t('notifyTpl.createTpl')}}</span>
+        <span v-else-if="mode === 'update'">{{t('notifyTpl.updateTpl')}}</span>
       </div>
       <div class="section">
-        <div class="section-title">名称</div>
+        <div class="section-title">{{t('notifyTpl.name')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
-          <div class="input-desc">通知模板名称, 长度为1-32</div>
         </div>
       </div>
       <div class="section">
@@ -19,23 +18,23 @@
         </div>
       </div>
       <div class="section">
-        <div class="section-title">类型</div>
+        <div class="section-title">{{t('notifyTpl.notifyType')}}</div>
         <div class="section-body">
           <a-radio-group v-model:value="formState.notifyType">
-            <a-radio value="wework">企业微信</a-radio>
-            <a-radio value="feishu">飞书</a-radio>
+            <a-radio value="wework">{{t('notifyTpl.wework')}}</a-radio>
+            <a-radio value="feishu">{{t('notifyTpl.feishu')}}</a-radio>
           </a-radio-group>
         </div>
       </div>
       <div class="section" v-if="formState.notifyType === 'feishu'">
-        <div class="section-title">飞书签名密钥</div>
+        <div class="section-title">{{t('notifyTpl.feishuSignKey')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.feishuSignKey" />
-          <div class="input-desc">非必填, 飞书签名验证专用</div>
+          <div class="input-desc">{{t('notifyTpl.feishuSignKeyDesc')}}</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">模板</div>
+        <div class="section-title">{{t('notifyTpl.templateJson')}}</div>
         <Codemirror
           v-model="formState.template"
           style="height:380px;width:100%"
@@ -43,7 +42,7 @@
         />
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateTpl">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateTpl">{{t('notifyTpl.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -61,6 +60,8 @@ import {
 import { useRoute, useRouter } from "vue-router";
 import { useNotifyTplStore } from "@/pinia/notifyTplStore";
 import { json } from "@codemirror/lang-json";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 // code mirror扩展项
 const extensions = ref([json(), oneDark]);
 const notifyTplStore = useNotifyTplStore();
@@ -82,15 +83,15 @@ const formState = reactive({
 // 点击“立即保存”
 const saveOrUpdateTpl = () => {
   if (!notifyTplNameRegexp.test(formState.name)) {
-    message.warn("名称格式错误");
+    message.warn(t('notifyTpl.nameFormatErr'));
     return;
   }
   if (!notifyTplUrlRegexp.test(formState.url)) {
-    message.warn("webhook url格式错误");
+    message.warn(t('notifyTpl.webhookFormatErr'));
     return;
   }
   if (!formState.template) {
-    message.warn("模板为空");
+    message.warn(t('notifyTpl.pleaseFillTemplate'));
     return;
   }
   if (formState.notifyType !== "feishu") {
@@ -108,7 +109,7 @@ const saveOrUpdateTpl = () => {
         feishuSignKey: formState.feishuSignKey
       }
     }).then(() => {
-      message.success("创建成功");
+      message.success(t("operationSuccess"));
       router.push(`/team/${route.params.teamId}/notifyTpl/list`);
     });
   } else if (mode === "update") {
@@ -123,7 +124,7 @@ const saveOrUpdateTpl = () => {
         feishuSignKey: formState.feishuSignKey
       }
     }).then(() => {
-      message.success("保存成功");
+      message.success(t("operationSuccess"));
       router.push(`/team/${route.params.teamId}/notifyTpl/list`);
     });
   }

@@ -7,6 +7,7 @@ import (
 	"github.com/LeeZXin/zall/fileserv/modules/model/artifactmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
@@ -72,6 +73,8 @@ func initPsub() {
 						switch req.Action {
 						case event.AppArtifactDeleteAction:
 							return cfg.AppArtifact.Delete
+						case event.AppArtifactUploadAction:
+							return cfg.AppArtifact.Upload
 						default:
 							return false
 						}
@@ -153,7 +156,7 @@ func UploadArtifact(ctx context.Context, reqDTO UploadArtifactReqDTO) (string, e
 	if b {
 		return "", util.AlreadyExistsError()
 	}
-	_, b, err = appmd.GetByAppId(ctx, reqDTO.AppId)
+	operator, b, err := usermd.GetByAccount(ctx, reqDTO.Creator)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
@@ -161,7 +164,23 @@ func UploadArtifact(ctx context.Context, reqDTO UploadArtifactReqDTO) (string, e
 	if !b {
 		return "", util.InvalidArgsError()
 	}
-	err = artifactmd.InsertArtifact(ctx, artifactmd.InsertArtifactReqDTO{
+	app, b, err := appmd.GetByAppId(ctx, reqDTO.AppId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	if !b {
+		return "", util.InvalidArgsError()
+	}
+	team, b, err := teammd.GetByTeamId(ctx, app.TeamId)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return "", util.InternalError(err)
+	}
+	if !b {
+		return "", util.ThereHasBugErr()
+	}
+	artifact, err := artifactmd.InsertArtifact(ctx, artifactmd.InsertArtifactReqDTO{
 		AppId:   reqDTO.AppId,
 		Name:    reqDTO.Name,
 		Creator: reqDTO.Creator,
@@ -176,6 +195,21 @@ func UploadArtifact(ctx context.Context, reqDTO UploadArtifactReqDTO) (string, e
 		logger.Logger.WithContext(ctx).Error(err)
 		return "", util.InternalError(err)
 	}
+	notifyArtifactEvent(
+		apisession.UserInfo{
+			Account:      operator.Account,
+			Name:         operator.Name,
+			Email:        operator.Email,
+			IsProhibited: operator.IsProhibited,
+			AvatarUrl:    operator.AvatarUrl,
+			IsAdmin:      operator.IsAdmin,
+			IsDba:        operator.IsDba,
+		},
+		team,
+		app,
+		artifact,
+		event.AppArtifactUploadAction,
+	)
 	return domain + fmt.Sprintf("/api/files/artifact/get/%s/%s/%s", reqDTO.AppId, url.QueryEscape(reqDTO.Name), reqDTO.Env), nil
 }
 

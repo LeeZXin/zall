@@ -49,8 +49,6 @@ const deleteWebhook = item => {
   Modal.confirm({
     title: `你确定要删除${item.hookUrl}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteWebhookRequest(item.id).then(() => {
         message.success("删除成功");

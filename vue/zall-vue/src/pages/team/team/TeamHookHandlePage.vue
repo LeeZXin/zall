@@ -2,53 +2,39 @@
   <div style="padding:10px">
     <div class="container">
       <div class="header">
-        <span v-if="mode === 'create'">添加Team Hook</span>
-        <span v-else-if="mode === 'update'">更新Team Hook</span>
+        <span v-if="mode === 'create'">{{t('teamHook.createHook')}}</span>
+        <span v-else-if="mode === 'update'">{{t('teamHook.updateHook')}}</span>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>名称</span>
-        </div>
+        <div class="section-title">{{t('teamHook.name')}}</div>
         <div class="section-body">
           <a-input style="width:100%" v-model:value="formState.name" />
-          <div class="input-desc">标识team hook</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>类型</span>
-          <span style="color:darkred">*</span>
-        </div>
+        <div class="section-title">{{t('teamHook.hookType')}}</div>
         <div class="section-body">
           <a-radio-group v-model:value="formState.hookType">
-            <a-radio :value="1">Webhook</a-radio>
-            <a-radio :value="2">外部通知</a-radio>
+            <a-radio :value="1">{{t('teamHook.webhook')}}</a-radio>
+            <a-radio :value="2">{{t('teamHook.notification')}}</a-radio>
           </a-radio-group>
         </div>
       </div>
       <div class="section" v-if="formState.hookType === 1">
-        <div class="section-title">
-          <span>Webhook</span>
-        </div>
+        <div class="section-title">{{t('teamHook.webhook')}}</div>
         <div class="section-body">
           <div>
-            <div style="font-size: 12px;margin-bottom: 6px">hook url</div>
-            <a-input style="width:100%" v-model:value="formState.hookUrl" placeholder="请填写" />
+            <div style="font-size: 12px;margin-bottom: 6px">{{t('teamHook.webhookUrl')}}</div>
+            <a-input style="width:100%" v-model:value="formState.hookUrl" />
           </div>
           <div style="margin-top: 10px">
-            <div style="font-size: 12px;margin-bottom: 6px">签名密钥</div>
-            <a-input-password
-              style="width:100%"
-              v-model:value="formState.secret"
-              placeholder="请填写"
-            />
+            <div style="font-size: 12px;margin-bottom: 6px">{{t('teamHook.webhookSecret')}}</div>
+            <a-input-password style="width:100%" v-model:value="formState.secret" />
           </div>
         </div>
       </div>
       <div class="section" v-else-if="formState.hookType === 2">
-        <div class="section-title">
-          <span>外部通知模板</span>
-        </div>
+        <div class="section-title">{{t('teamHook.notification')}}</div>
         <div class="section-body">
           <a-select
             style="width: 100%"
@@ -56,21 +42,18 @@
             :options="tplList"
             show-search
             :filter-option="filterTplListOption"
-            placeholder="请选择"
           />
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>代码仓库事件</span>
-        </div>
+        <div class="section-title">{{t('teamHook.gitEvents')}}</div>
         <div class="section-body">
           <ul class="event-list">
             <li v-for="(item, index) in gitCheckboxes" v-bind:key="index">
-              <div style="font-size:12px;margin-bottom:8px">{{item.title}}</div>
+              <div style="font-size:12px;margin-bottom:8px">{{t(item.title)}}</div>
               <ul class="action-list">
                 <li v-for="action in item.actions" v-bind:key="`${index}-${action.key}`">
-                  <a-checkbox v-model:checked="action.value">{{action.title}}</a-checkbox>
+                  <a-checkbox v-model:checked="action.value">{{t(action.title)}}</a-checkbox>
                 </li>
               </ul>
             </li>
@@ -78,16 +61,14 @@
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>团队事件</span>
-        </div>
+        <div class="section-title">{{t('teamHook.teamEvents')}}</div>
         <div class="section-body">
           <ul class="event-list">
             <li v-for="(item, index) in teamCheckboxes" v-bind:key="index">
-              <div style="font-size:12px;margin-bottom:8px">{{item.title}}</div>
+              <div style="font-size:12px;margin-bottom:8px">{{t(item.title)}}</div>
               <ul class="action-list">
                 <li v-for="action in item.actions" v-bind:key="`${index}-${action.key}`">
-                  <a-checkbox v-model:checked="action.value">{{action.title}}</a-checkbox>
+                  <a-checkbox v-model:checked="action.value">{{t(action.title)}}</a-checkbox>
                 </li>
               </ul>
             </li>
@@ -95,22 +76,20 @@
         </div>
       </div>
       <div class="section" v-if="envList.length > 0">
-        <div class="section-title">
-          <span>环境相关事件</span>
-        </div>
+        <div class="section-title">{{t('teamHook.envRelatedEvents')}}</div>
         <div class="section-body">
           <div style="margin-bottom: 18px">
-            <div style="font-size:12px;margin-bottom:8px">环境</div>
+            <div style="font-size:12px;margin-bottom:8px">{{t('teamHook.env')}}</div>
             <a-select style="width: 100%" v-model:value="selectedEnv" :options="envList" />
           </div>
           <ul class="event-list">
             <li v-for="(item, index) in envRelatedEvents" v-bind:key="index">
-              <div style="font-size:12px;margin-bottom:8px">{{item.title}}</div>
+              <div style="font-size:12px;margin-bottom:8px">{{t(item.title)}}</div>
               <ul class="action-list">
                 <li v-for="action in item.actions" v-bind:key="`${index}-${action.key}`">
                   <a-checkbox
                     v-model:checked="envRelatedCheckboxes[selectedEnv][item.key][action.key]"
-                  >{{action.title}}</a-checkbox>
+                  >{{t(action.title)}}</a-checkbox>
                 </li>
               </ul>
             </li>
@@ -118,7 +97,7 @@
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="createOrUpdateTeamHook">立即保存</a-button>
+        <a-button type="primary" @click="createOrUpdateTeamHook">{{t('teamHook.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -139,15 +118,22 @@ import {
 } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import { useTeamHookStore } from "@/pinia/teamHookStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const selectedEnv = ref(null);
 const route = useRoute();
+// 模式
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
+// 环境相关checkbox
 const envRelatedCheckboxes = ref({});
+// 环境列表
 const envList = ref([]);
+// 消息通知列表
 const tplList = ref([]);
+// 默认数据
 const defaultEnvRelated = {
   appSource: {
     managePropertySource: false,
@@ -212,593 +198,600 @@ const defaultEnvRelated = {
     fail: false
   }
 };
+// events列表
 const envRelatedEvents = [
   {
     key: "appSource",
-    title: "应用服务资源",
+    title: "teamHook.appSource.title",
     actions: [
       {
         key: "managePropertySource",
-        title: "管理配置中心来源"
+        title: "teamHook.appSource.managePropertySource"
       },
       {
         key: "manageDiscoverySource",
-        title: "管理注册中心来源"
+        title: "teamHook.appSource.manageDiscoverySource"
       },
       {
         key: "manageServiceSource",
-        title: "管理服务状态来源"
+        title: "teamHook.appSource.manageServiceSource"
       }
     ]
   },
   {
     key: "appPropertyFile",
-    title: "配置文件",
+    title: "teamHook.appPropertyFile.title",
     actions: [
       {
         key: "create",
-        title: "新增"
+        title: "teamHook.appPropertyFile.create"
       },
       {
         key: "delete",
-        title: "删除"
+        title: "teamHook.appPropertyFile.delete"
       }
     ]
   },
   {
     key: "appPropertyVersion",
-    title: "配置版本",
+    title: "teamHook.appPropertyVersion.title",
     actions: [
       {
         key: "new",
-        title: "新增"
+        title: "teamHook.appPropertyVersion.new"
       },
       {
         key: "deploy",
-        title: "发布"
+        title: "teamHook.appPropertyVersion.deploy"
       }
     ]
   },
   {
     key: "appDeployPipeline",
-    title: "部署流水线",
+    title: "teamHook.appDeployPipeline.title",
     actions: [
       {
         key: "create",
-        title: "新增"
+        title: "teamHook.appDeployPipeline.create"
       },
       {
         key: "update",
-        title: "编辑"
+        title: "teamHook.appDeployPipeline.update"
       },
       {
         key: "delete",
-        title: "删除"
+        title: "teamHook.appDeployPipeline.delete"
       }
     ]
   },
   {
     key: "appDeployPipelineVars",
-    title: "部署流水线变量",
+    title: "teamHook.appDeployPipelineVars.title",
     actions: [
       {
         key: "create",
-        title: "新增"
+        title: "teamHook.appDeployPipelineVars.create"
       },
       {
         key: "update",
-        title: "编辑"
+        title: "teamHook.appDeployPipelineVars.update"
       },
       {
         key: "delete",
-        title: "删除"
+        title: "teamHook.appDeployPipelineVars.delete"
       }
     ]
   },
   {
     key: "appDeployPlan",
-    title: "发布计划",
+    title: "teamHook.appDeployPlan.title",
     actions: [
       {
         key: "create",
-        title: "新增"
+        title: "teamHook.appDeployPlan.create"
       },
       {
         key: "close",
-        title: "关闭"
+        title: "teamHook.appDeployPlan.close"
       },
       {
         key: "start",
-        title: "开始"
+        title: "teamHook.appDeployPlan.start"
       }
     ]
   },
   {
     key: "appDeployService",
-    title: "部署服务",
+    title: "teamHook.appDeployService.title",
     actions: [
       {
         key: "triggerAction",
-        title: "触发指令"
+        title: "teamHook.appDeployService.triggerAction"
       }
     ]
   },
   {
     key: "appDiscovery",
-    title: "注册中心",
+    title: "teamHook.appDiscovery.title",
     actions: [
       {
         key: "deregister",
-        title: "下线服务"
+        title: "teamHook.appDiscovery.deregister"
       },
       {
         key: "reRegister",
-        title: "上线服务"
+        title: "teamHook.appDiscovery.reRegister"
       },
       {
         key: "deleteDownService",
-        title: "删除下线服务"
+        title: "teamHook.appDiscovery.deleteDownService"
       }
     ]
   },
   {
     key: "appArtifact",
-    title: "应用制品",
+    title: "teamHook.appArtifact.title",
     actions: [
       {
+        key: "upload",
+        title: "teamHook.appArtifact.upload"
+      },
+      {
         key: "delete",
-        title: "删除"
+        title: "teamHook.appArtifact.delete"
       }
     ]
   },
   {
     key: "appPromScrape",
-    title: "Prometheus抓取任务",
+    title: "teamHook.appPromScrape.title",
     actions: [
       {
         key: "create",
-        title: "新增"
+        title: "teamHook.appPromScrape.create"
       },
       {
         key: "update",
-        title: "编辑"
+        title: "teamHook.appPromScrape.update"
       },
       {
         key: "delete",
-        title: "删除"
+        title: "teamHook.appPromScrape.delete"
       }
     ]
   },
   {
     key: "appAlertConfig",
-    title: "告警配置",
+    title: "teamHook.appAlertConfig.title",
     actions: [
       {
         key: "create",
-        title: "新增"
+        title: "teamHook.appAlertConfig.create"
       },
       {
         key: "update",
-        title: "编辑"
+        title: "teamHook.appAlertConfig.update"
       },
       {
         key: "delete",
-        title: "删除"
+        title: "teamHook.appAlertConfig.delete"
       },
       {
         key: "enable",
-        title: "启用"
+        title: "teamHook.appAlertConfig.enable"
       },
       {
         key: "disable",
-        title: "停用"
+        title: "teamHook.appAlertConfig.disable"
       }
     ]
   },
   {
     key: "timer",
-    title: "定时任务",
+    title: "teamHook.timer.title",
     actions: [
       {
         key: "create",
-        title: "新增"
+        title: "teamHook.timer.create"
       },
       {
         key: "update",
-        title: "编辑"
+        title: "teamHook.timer.update"
       },
       {
         key: "delete",
-        title: "删除"
+        title: "teamHook.timer.delete"
       },
       {
         key: "enable",
-        title: "启用"
+        title: "teamHook.timer.enable"
       },
       {
         key: "disable",
-        title: "停用"
+        title: "teamHook.timer.disable"
       },
       {
         key: "manuallyTrigger",
-        title: "手动触发"
+        title: "teamHook.timer.manuallyTrigger"
       }
     ]
   },
   {
     key: "timerTask",
-    title: "定时任务执行",
+    title: "teamHook.timerTask.title",
     actions: [
       {
         key: "fail",
-        title: "任务失败"
+        title: "teamHook.timerTask.fail"
       }
     ]
   }
 ];
+// 团队events列表
 const teamCheckboxes = reactive([
   {
     key: "team",
-    title: "团队",
+    title: "teamHook.team.title",
     actions: [
       {
         key: "create",
-        title: "新增",
+        title: "teamHook.team.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.team.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.team.delete",
         value: false
       }
     ]
   },
   {
     key: "teamRole",
-    title: "团队角色",
+    title: "teamHook.teamRole.title",
     actions: [
       {
         key: "create",
-        title: "新增",
+        title: "teamHook.teamRole.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.teamRole.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.teamRole.delete",
         value: false
       }
     ]
   },
   {
     key: "teamUser",
-    title: "团队成员",
+    title: "teamHook.teamUser.title",
     actions: [
       {
         key: "create",
-        title: "新增",
+        title: "teamHook.teamUser.create",
         value: false
       },
       {
         key: "changeRole",
-        title: "变更角色",
+        title: "teamHook.teamUser.changeRole",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.teamUser.delete",
         value: false
       }
     ]
   },
   {
     key: "app",
-    title: "应用服务",
+    title: "teamHook.app.title",
     actions: [
       {
         key: "create",
-        title: "新增",
+        title: "teamHook.app.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.app.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.app.delete",
         value: false
       },
       {
         key: "transfer",
-        title: "迁移",
+        title: "teamHook.app.transfer",
         value: false
       }
     ]
   },
   {
     key: "notifyTpl",
-    title: "外部通知",
+    title: "teamHook.notifyTpl.title",
     actions: [
       {
         key: "create",
-        title: "新增",
+        title: "teamHook.notifyTpl.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.notifyTpl.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.notifyTpl.delete",
         value: false
       },
       {
         key: "changeApiKey",
-        title: "变更apiKey",
+        title: "teamHook.notifyTpl.changeApiKey",
         value: false
       }
     ]
   },
   {
     key: "weworkAccessToken",
-    title: "企微AccessToken",
+    title: "teamHook.weworkAccessToken.title",
     actions: [
       {
         key: "create",
-        title: "新增",
+        title: "teamHook.weworkAccessToken.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.weworkAccessToken.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.weworkAccessToken.delete",
         value: false
       },
       {
         key: "changeApiKey",
-        title: "变更apiKey",
+        title: "teamHook.weworkAccessToken.changeApiKey",
         value: false
       },
       {
         key: "refresh",
-        title: "手动刷新token",
+        title: "teamHook.weworkAccessToken.refresh",
         value: false
       }
     ]
   },
   {
     key: "feishuAccessToken",
-    title: "飞书AccessToken",
+    title: "teamHook.feishuAccessToken.title",
     actions: [
       {
         key: "create",
-        title: "新增",
+        title: "teamHook.feishuAccessToken.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.feishuAccessToken.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.feishuAccessToken.delete",
         value: false
       },
       {
         key: "changeApiKey",
-        title: "变更apiKey",
+        title: "teamHook.feishuAccessToken.changeApiKey",
         value: false
       },
       {
         key: "refresh",
-        title: "手动刷新token",
+        title: "teamHook.feishuAccessToken.refresh",
         value: false
       }
     ]
   }
 ]);
+// git events列表
 const gitCheckboxes = reactive([
   {
     key: "protectedBranch",
-    title: "保护分支",
+    title: "teamHook.protectedBranch.title",
     actions: [
       {
         key: "create",
-        title: "新增",
+        title: "teamHook.protectedBranch.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.protectedBranch.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.protectedBranch.delete",
         value: false
       }
     ]
   },
   {
     key: "gitPush",
-    title: "代码提交",
+    title: "teamHook.gitPush.title",
     actions: [
       {
         key: "commit",
-        title: "提交",
+        title: "teamHook.gitPush.commit",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.gitPush.delete",
         value: false
       }
     ]
   },
   {
     key: "pullRequest",
-    title: "合并请求",
+    title: "teamHook.pullRequest.title",
     actions: [
       {
         key: "submit",
-        title: "提交",
+        title: "teamHook.pullRequest.submit",
         value: false
       },
       {
         key: "close",
-        title: "关闭",
+        title: "teamHook.pullRequest.close",
         value: false
       },
       {
         key: "merge",
-        title: "合并",
+        title: "teamHook.pullRequest.merge",
         value: false
       },
       {
         key: "review",
-        title: "评审",
+        title: "teamHook.pullRequest.review",
         value: false
       },
       {
         key: "addComment",
-        title: "添加评论",
+        title: "teamHook.pullRequest.addComment",
         value: false
       },
       {
         key: "deleteComment",
-        title: "删除评论",
+        title: "teamHook.pullRequest.deleteComment",
         value: false
       }
     ]
   },
   {
     key: "gitRepo",
-    title: "代码仓库",
+    title: "teamHook.gitRepo.title",
     actions: [
       {
         key: "create",
-        title: "新增",
+        title: "teamHook.gitRepo.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.gitRepo.update",
         value: false
       },
       {
         key: "deleteTemporarily",
-        title: "临时删除",
+        title: "teamHook.gitRepo.deleteTemporarily",
         value: false
       },
       {
         key: "deletePermanently",
-        title: "永久删除",
+        title: "teamHook.gitRepo.deletePermanently",
         value: false
       },
       {
         key: "archived",
-        title: "归档",
+        title: "teamHook.gitRepo.archived",
         value: false
       },
       {
         key: "unArchived",
-        title: "取消归档",
+        title: "teamHook.gitRepo.unArchived",
         value: false
       },
       {
         key: "recoverFromRecycle",
-        title: "恢复删除",
+        title: "teamHook.gitRepo.recoverFromRecycle",
         value: false
       }
     ]
   },
   {
     key: "gitWorkflow",
-    title: "git工作流",
+    title: "teamHook.gitWorkflow.title",
     actions: [
       {
         key: "create",
-        title: "创建",
+        title: "teamHook.gitWorkflow.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.gitWorkflow.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.gitWorkflow.delete",
         value: false
       },
       {
         key: "trigger",
-        title: "触发",
+        title: "teamHook.gitWorkflow.trigger",
         value: false
       },
       {
         key: "kill",
-        title: "停止任务",
+        title: "teamHook.gitWorkflow.kill",
         value: false
       }
     ]
   },
   {
     key: "gitWorkflowVars",
-    title: "git工作流变量",
+    title: "teamHook.gitWorkflowVars.title",
     actions: [
       {
         key: "create",
-        title: "创建",
+        title: "teamHook.gitWorkflowVars.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.gitWorkflowVars.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.gitWorkflowVars.delete",
         value: false
       }
     ]
   },
   {
     key: "gitWebhook",
-    title: "git webhook",
+    title: "teamHook.gitWebhook.title",
     actions: [
       {
         key: "create",
-        title: "创建",
+        title: "teamHook.gitWebhook.create",
         value: false
       },
       {
         key: "update",
-        title: "编辑",
+        title: "teamHook.gitWebhook.update",
         value: false
       },
       {
         key: "delete",
-        title: "删除",
+        title: "teamHook.gitWebhook.delete",
         value: false
       }
     ]
@@ -807,6 +800,7 @@ const gitCheckboxes = reactive([
 const teamHookStore = useTeamHookStore();
 const router = useRouter();
 const mode = getMode();
+// 表单数据
 const formState = reactive({
   hookUrl: "",
   secret: "",
@@ -814,31 +808,29 @@ const formState = reactive({
   hookType: 1,
   tplId: null
 });
+// 新增或编辑teamhook
 const createOrUpdateTeamHook = () => {
   if (!teamHookNameRegexp.test(formState.name)) {
-    message.warn("名称格式错误");
+    message.warn(t("teamHook.nameFormatErr"));
     return;
   }
   if (formState.hookType === 1) {
     if (!teamHookUrlRegexp.test(formState.hookUrl)) {
-      message.warn("url格式错误");
+      message.warn(t("teamHook.webhookUrlFormatErr"));
       return;
     }
     if (!teamHookSecretRegexp.test(formState.secret)) {
-      message.warn("密钥格式错误");
+      message.warn(t("teamHook.webhookSecretFormatErr"));
       return;
     }
     formState.tplId = null;
   } else if (formState.hookType === 2) {
     if (!formState.tplId) {
-      message.warn("请选择通知模板");
+      message.warn(t("teamHook.pleaseSelectNotificationTpl"));
       return;
     }
     formState.hookUrl = "";
     formState.secret = "";
-  } else {
-    message.warn("未选择类型");
-    return;
   }
   let events = {};
   gitCheckboxes.forEach(git => {
@@ -868,7 +860,7 @@ const createOrUpdateTeamHook = () => {
         notifyTplId: formState.tplId
       }
     }).then(() => {
-      message.success("添加成功");
+      message.success(t("operationSuccess"));
       router.push(`/team/${route.params.teamId}/teamHook/list`);
     });
   } else if (mode === "update") {
@@ -884,7 +876,7 @@ const createOrUpdateTeamHook = () => {
         notifyTplId: formState.tplId
       }
     }).then(() => {
-      message.success("更新成功");
+      message.success(t("operationSuccess"));
       router.push(`/team/${route.params.teamId}/teamHook/list`);
     });
   }
@@ -910,6 +902,7 @@ const getEnvList = callback => {
     }
   });
 };
+// 获取消息模板列表
 const getTplList = () => {
   listAllTplByTeamIdRequest(route.params.teamId).then(res => {
     tplList.value = res.data.map(item => {
@@ -979,11 +972,6 @@ if (mode === "create") {
 getTplList();
 </script>
 <style scoped>
-.header {
-  font-size: 18px;
-  margin-bottom: 10px;
-  font-weight: bold;
-}
 .action-list {
   font-size: 14px;
   display: flex;

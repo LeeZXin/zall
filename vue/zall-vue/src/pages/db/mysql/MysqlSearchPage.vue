@@ -10,33 +10,36 @@
           :filter-option="filterDbListOption"
         />
       </div>
-      <ul class="access-ul" v-if="accessBases.length > 0">
-        <li v-for="item in accessBases" v-bind:key="item">
-          <div class="flex-center sticky-top">
-            <div class="base-arrow" @click="showOrHideTables(item)">
-              <CaretDownOutlined v-if="item.open" />
-              <CaretRightOutlined v-else />
+      <div class="access-bordered">
+        <ul class="access-ul" v-if="accessBases.length > 0">
+          <li v-for="item in accessBases" v-bind:key="item">
+            <div class="flex-center sticky-top">
+              <div class="base-arrow" @click="showOrHideTables(item)">
+                <CaretDownOutlined v-if="item.open" />
+                <CaretRightOutlined v-else />
+              </div>
+              <div class="base-name" @click="showSearchTab(item.base)">
+                <DatabaseOutlined />
+                <span style="margin-left:4px">{{item.base}}</span>
+              </div>
             </div>
-            <div class="base-name" @click="showSearchTab(item.base)">
-              <DatabaseOutlined />
-              <span style="margin-left:4px">{{item.base}}</span>
-            </div>
-          </div>
-          <ul class="tables-ul" v-show="item.open">
-            <li
-              v-for="table in item.tables"
-              v-bind:key="table"
-              @click="showCreateTableSql(item.base, table.table, table.size)"
-            >
-              <TableOutlined />
-              <span style="margin-left:4px">
-                <span>{{table.table}}</span>
-                <span style="font-size:10px;color:gray">{{table.size}}</span>
-              </span>
-            </li>
-          </ul>
-        </li>
-      </ul>
+            <ul class="tables-ul" v-show="item.open">
+              <li
+                v-for="table in item.tables"
+                v-bind:key="table"
+                @click="showCreateTableSql(item.base, table.table, table.size)"
+              >
+                <TableOutlined />
+                <span style="margin-left:4px">
+                  <span>{{table.table}}</span>
+                  <span style="font-size:10px;color:gray">{{table.size}}</span>
+                </span>
+              </li>
+            </ul>
+          </li>
+        </ul>
+        <ZNoData v-else :unbordered="true" />
+      </div>
     </div>
     <div class="right" v-show="tableInfoDiv === 'search'">
       <div class="right-body">
@@ -132,6 +135,7 @@
 </template>
 
 <script setup>
+import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
 import { ref, h, watch, reactive } from "vue";
 import {
@@ -486,15 +490,19 @@ listDb();
   font-size: 14px;
 }
 
-.access-ul {
-  width: 100%;
-  max-height: 500px;
-  overflow: scroll;
+.access-bordered {
+  padding: 1px;
   border-left: 1px solid #d9d9d9;
   border-bottom: 1px solid #d9d9d9;
   border-right: 1px solid #d9d9d9;
   border-bottom-right-radius: 4px;
   border-bottom-left-radius: 4px;
+}
+
+.access-ul {
+  width: 100%;
+  max-height: 500px;
+  overflow: scroll;
 }
 
 .base-select {

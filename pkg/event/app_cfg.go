@@ -42,6 +42,7 @@ type AppDeployPlanEventCfg struct {
 }
 
 type AppArtifactEventCfg struct {
+	Upload bool `json:"upload"`
 	Delete bool `json:"delete"`
 }
 

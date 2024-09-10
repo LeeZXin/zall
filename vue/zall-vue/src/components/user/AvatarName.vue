@@ -6,11 +6,11 @@
   <a-drawer :title="user.name" :closable="false" :open="visible" @close="closeDrawer">
     <div class="drawer-item no-wrap" @click="goto('/personalSetting/profile/info')">
       <SettingOutlined style="font-size:18px" />
-      <span>个人设置</span>
+      <span>{{t('personalSetting')}}</span>
     </div>
     <div class="drawer-item no-wrap" @click="goto('/sa/cfg/list')" v-if="user.isAdmin">
       <UserOutlined style="font-size:18px" />
-      <span>超级管理员</span>
+      <span>{{t('superAdmin')}}</span>
     </div>
     <a-divider style="margin-bottom: 10px" />
     <div>

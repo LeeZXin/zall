@@ -242,8 +242,6 @@ const setArchivedStatus = isArchived => {
   Modal.confirm({
     title: warnMsg,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       request(repoId).then(() => {
         message.success("操作成功");
@@ -257,8 +255,6 @@ const deleteRepo = () => {
   Modal.confirm({
     title: "你确定要删除该仓库吗?",
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteRepoRequest(repoId).then(() => {
         message.success("删除成功");

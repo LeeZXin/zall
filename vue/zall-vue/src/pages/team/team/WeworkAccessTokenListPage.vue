@@ -3,7 +3,6 @@
     <div style="margin-bottom:10px" class="flex-center">
       <a-input
         v-model:value="searchKey"
-        placeholder="搜索名称或corpId"
         style="width:240px;margin-right:6px"
         @pressEnter="searchAccessToken"
       >
@@ -16,8 +15,12 @@
         @click="listAccessToken"
         :icon="h(ReloadOutlined)"
         style="margin-right:6px"
-      >刷新列表</a-button>
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建AccessToken任务</a-button>
+      >{{t('weworkAccessToken.refreshList')}}</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('weworkAccessToken.createTask')}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
@@ -26,31 +29,26 @@
         </template>
         <template v-else>
           <div class="op-icon" @click="deleteAccessToken(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>删除任务</span>
-              </template>
-              <DeleteOutlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
                   <EditOutlined />
-                  <span style="margin-left:4px">编辑任务</span>
+                  <span style="margin-left:4px">{{t('weworkAccessToken.updateTask')}}</span>
                 </li>
                 <li @click="changeApiKey(dataItem)">
                   <ReloadOutlined />
-                  <span style="margin-left:4px">变更api key</span>
+                  <span style="margin-left:4px">{{t('weworkAccessToken.changeApiKey')}}</span>
                 </li>
                 <li @click="refreshAccessToken(dataItem)">
                   <ReloadOutlined />
-                  <span style="margin-left:4px">重刷token</span>
+                  <span style="margin-left:4px">{{t('weworkAccessToken.refreshToken')}}</span>
                 </li>
                 <li @click="viewToken(dataItem)">
                   <EyeOutlined />
-                  <span style="margin-left:4px">查看token</span>
+                  <span style="margin-left:4px">{{t('weworkAccessToken.viewToken')}}</span>
                 </li>
               </ul>
             </template>
@@ -79,10 +77,10 @@
         <span style="word-break:break-all;">{{tokenModal.token}}</span>
         <div class="copy-btn" @click="copyToken">
           <CopyOutlined />
-          <span>复制</span>
+          <span>{{t('weworkAccessToken.copy')}}</span>
         </div>
       </div>
-      <div>过期时间</div>
+      <div>{{t('weworkAccessToken.expiredTime')}}</div>
       <div style="word-break:break-all;padding:10px">{{tokenModal.expired}}</div>
     </div>
   </a-modal>
@@ -110,6 +108,8 @@ import {
 import { useRoute, useRouter } from "vue-router";
 import { message, Modal } from "ant-design-vue";
 import { useWeworkAccessTokenStore } from "@/pinia/weworkAccessTokenStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const wwatStore = useWeworkAccessTokenStore();
 const router = useRouter();
 const route = useRoute();
@@ -128,32 +128,32 @@ const dataPage = reactive({
 // 数据项
 const columns = [
   {
-    title: "名称",
+    i18nTitle: "weworkAccessToken.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "corpId",
+    i18nTitle: "weworkAccessToken.corpId",
     dataIndex: "corpId",
     key: "corpId"
   },
   {
-    title: "secret",
+    i18nTitle: "weworkAccessToken.secret",
     dataIndex: "secret",
     key: "secret"
   },
   {
-    title: "Api密钥",
+    i18nTitle: "weworkAccessToken.apiKey",
     dataIndex: "apiKey",
     key: "apiKey"
   },
   {
-    title: "创建人",
+    i18nTitle: "weworkAccessToken.creator",
     dataIndex: "creator",
     key: "creator"
   },
   {
-    title: "操作",
+    i18nTitle: "weworkAccessToken.operation",
     dataIndex: "operation",
     key: "operation",
     width: 130,
@@ -198,17 +198,17 @@ const viewToken = item => {
 };
 // 复制token
 const copyToken = () => {
-  message.success("复制成功");
+  message.success(t("operationSuccess"));
   window.navigator.clipboard.writeText(tokenModal.token);
 };
 // 删除token
 const deleteAccessToken = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t('weworkAccessToken.confirmDelete')} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteAccessTokenRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         searchAccessToken();
       });
     },
@@ -218,11 +218,11 @@ const deleteAccessToken = item => {
 // 刷新token
 const refreshAccessToken = item => {
   Modal.confirm({
-    title: `你确定要刷新${item.name}的access token吗?`,
+    title: `${t('weworkAccessToken.confirmRefresh')} ${item.name} access token?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       refreshAccessTokenRequest(item.id).then(() => {
-        message.success("刷新成功");
+        message.success(t("operationSuccess"));
         listAccessToken();
       });
     },
@@ -232,11 +232,11 @@ const refreshAccessToken = item => {
 // 变更api key
 const changeApiKey = item => {
   Modal.confirm({
-    title: `你确定要刷新${item.name}的api密钥吗?`,
+    title: `${t('weworkAccessToken.confirmChange')} ${item.name} ${t('weworkAccessToken.apiKey')}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       changeAccessTokenApiKeyRequest(item.id).then(() => {
-        message.success("变更成功");
+        message.success(t("operationSuccess"));
         listAccessToken();
       });
     },

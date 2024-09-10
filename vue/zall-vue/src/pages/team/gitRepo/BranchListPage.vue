@@ -137,8 +137,6 @@ const deleteBranch = branch => {
   Modal.confirm({
     title: `你确定要删除${branch}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteBranchRequest({
         repoId: parseInt(route.params.repoId),

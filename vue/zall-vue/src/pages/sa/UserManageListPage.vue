@@ -3,7 +3,6 @@
     <div style="margin-bottom:10px">
       <a-input
         v-model:value="searchUserKey"
-        placeholder="搜索帐号"
         style="width:240px;margin-right:6px"
         @pressEnter="searchUser"
       >
@@ -11,16 +10,26 @@
           <SearchOutlined />
         </template>
       </a-input>
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建用户</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('userManage.createUser')}}</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'avatarUrl'">
           <a-image :width="20" :height="20" :src="dataItem[dataIndex]" :fallback="fallbackAvatar" />
         </template>
-        <span v-else-if="dataIndex === 'isDba'">{{dataItem[dataIndex] ? '是':'否'}}</span>
-        <span v-else-if="dataIndex === 'isAdmin'">{{dataItem[dataIndex] ? '是':'否'}}</span>
-        <span v-else-if="dataIndex === 'isProhibited'">{{dataItem[dataIndex] ? '是':'否'}}</span>
+        <span
+          v-else-if="dataIndex === 'isDba'"
+        >{{dataItem[dataIndex] ? t('userManage.yes'):t('userManage.no')}}</span>
+        <span
+          v-else-if="dataIndex === 'isAdmin'"
+        >{{dataItem[dataIndex] ? t('userManage.yes'):t('userManage.no')}}</span>
+        <span
+          v-else-if="dataIndex === 'isProhibited'"
+        >{{dataItem[dataIndex] ? t('userManage.yes'):t('userManage.no')}}</span>
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div
@@ -28,48 +37,43 @@
             @click="deleteUser(dataItem)"
             v-if="dataItem['account'] !== userStore.account"
           >
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete User</span>
-              </template>
-              <DeleteOutlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="resetPassword(dataItem)">
                   <LockOutlined />
-                  <span style="margin-left:4px">重置密码</span>
+                  <span style="margin-left:4px">{{t('userManage.resetPwd')}}</span>
                 </li>
                 <li @click="gotoUpdatePage(dataItem)">
                   <EditOutlined />
-                  <span style="margin-left:4px">编辑用户</span>
+                  <span style="margin-left:4px">{{t('userManage.updateUser')}}</span>
                 </li>
                 <li v-if="dataItem['isDba']" @click="setDba(dataItem, false)">
                   <UserSwitchOutlined />
-                  <span style="margin-left:4px">取消DBA</span>
+                  <span style="margin-left:4px">{{t('userManage.revokeDba')}}</span>
                 </li>
                 <li v-else @click="setDba(dataItem, true)">
                   <UserSwitchOutlined />
-                  <span style="margin-left:4px">成为DBA</span>
+                  <span style="margin-left:4px">{{t('userManage.grantDba')}}</span>
                 </li>
                 <template v-if="dataItem['account'] !== userStore.account">
                   <li v-if="dataItem['isProhibited']" @click="setProhibited(dataItem, false)">
                     <UserSwitchOutlined />
-                    <span style="margin-left:4px">取消禁用用户</span>
+                    <span style="margin-left:4px">{{t('userManage.enableAccount')}}</span>
                   </li>
                   <li v-else @click="setProhibited(dataItem, true)">
                     <UserSwitchOutlined />
-                    <span style="margin-left:4px">禁用用户</span>
+                    <span style="margin-left:4px">{{t('userManage.disableAccount')}}</span>
                   </li>
                   <li v-if="dataItem['isAdmin']" @click="setAdmin(dataItem, false)">
                     <UserSwitchOutlined />
-                    <span style="margin-left:4px">取消系统管理员</span>
+                    <span style="margin-left:4px">{{t('userManage.revokeAdmin')}}</span>
                   </li>
                   <li v-else @click="setAdmin(dataItem, true)">
                     <UserSwitchOutlined />
-                    <span style="margin-left:4px">成为系统管理员</span>
+                    <span style="margin-left:4px">{{t('userManage.grantAdmin')}}</span>
                   </li>
                 </template>
               </ul>
@@ -118,6 +122,8 @@ import { useRouter } from "vue-router";
 import { useUserStore } from "@/pinia/userStore";
 import { Modal, message } from "ant-design-vue";
 import { useUserManageStore } from "@/pinia/userManageStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const userStore = useUserStore();
 const userManageStore = useUserManageStore();
 // 头像加载失败图像
@@ -137,44 +143,46 @@ const dataSource = ref([]);
 // 数据项
 const columns = [
   {
-    title: "帐号",
+    i18nTitle: "userManage.account",
     dataIndex: "account",
     key: "account"
   },
   {
-    title: "名称",
+    i18nTitle: "userManage.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "邮箱",
+    i18nTitle: "userManage.email",
     dataIndex: "email",
     key: "email"
   },
   {
-    title: "头像",
+    i18nTitle: "userManage.avatarUrl",
     dataIndex: "avatarUrl",
     key: "avatarUrl"
   },
   {
-    title: "是否是系统管理员",
+    i18nTitle: "userManage.isAdmin",
     dataIndex: "isAdmin",
     key: "isAdmin"
   },
   {
-    title: "是否是DBA",
+    i18nTitle: "userManage.isDba",
     dataIndex: "isDba",
     key: "isDba"
   },
   {
-    title: "是否禁用",
+    i18nTitle: "userManage.isProhibited",
     dataIndex: "isProhibited",
     key: "isProhibited"
   },
   {
-    title: "操作",
+    i18nTitle: "userManage.operation",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 跳转创建用户界面
@@ -207,8 +215,8 @@ const listUser = () => {
 // 设置dba角色
 const setDba = (item, isDba) => {
   let msg = isDba
-    ? `是否使${item.account}成为DBA角色?`
-    : `是否取消${item.account}DBA角色?`;
+    ? `${t("userManage.confirmGrantDba")}?`
+    : `${t("userManage.confirmRevokeDba")}?`;
   Modal.confirm({
     title: msg,
     icon: createVNode(ExclamationCircleOutlined),
@@ -217,7 +225,7 @@ const setDba = (item, isDba) => {
         account: item.account,
         isDba
       }).then(() => {
-        message.success("操作成功");
+        message.success(t("operationSuccess"));
         item.isDba = isDba;
       });
     }
@@ -226,8 +234,8 @@ const setDba = (item, isDba) => {
 // 设置系统管理员角色
 const setAdmin = (item, isAdmin) => {
   let msg = isAdmin
-    ? `是否使${item.account}成为系统管理员角色?`
-    : `是否取消${item.account}系统管理员角色?`;
+    ? `${t("userManage.confirmGrantAdmin")}?`
+    : `${t("userManage.confirmRevokeAdmin")}?`;
   Modal.confirm({
     title: msg,
     icon: createVNode(ExclamationCircleOutlined),
@@ -236,7 +244,7 @@ const setAdmin = (item, isAdmin) => {
         account: item.account,
         isAdmin
       }).then(() => {
-        message.success("操作成功");
+        message.success(t("operationSuccess"));
         item.isAdmin = isAdmin;
       });
     }
@@ -245,8 +253,8 @@ const setAdmin = (item, isAdmin) => {
 // 设置禁用状态
 const setProhibited = (item, isProhibited) => {
   let msg = isProhibited
-    ? `是否禁用${item.account}?`
-    : `是否取消禁用${item.account}?`;
+    ? `${t("userManage.confirmDisable")} ${item.account}?`
+    : `${t("userManage.confirmEnable")} ${item.account}?`;
   Modal.confirm({
     title: msg,
     icon: createVNode(ExclamationCircleOutlined),
@@ -255,7 +263,7 @@ const setProhibited = (item, isProhibited) => {
         account: item.account,
         isProhibited
       }).then(() => {
-        message.success("操作成功");
+        message.success(t("operationSuccess"));
         item.isProhibited = isProhibited;
       });
     }
@@ -264,11 +272,11 @@ const setProhibited = (item, isProhibited) => {
 // 重置密码
 const resetPassword = item => {
   Modal.confirm({
-    title: `是否要重置${item.account}的密码?`,
+    title: `${t("userManage.confirmResetPwd")}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       resetPasswordRequest(item.account).then(() => {
-        message.success("操作成功");
+        message.success(t("operationSuccess"));
       });
     }
   });
@@ -276,11 +284,11 @@ const resetPassword = item => {
 // 删除用户
 const deleteUser = item => {
   Modal.confirm({
-    title: `是否要删除${item.account}?`,
+    title: `${t("userManage.confirmDelete")} ${item.account}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteUserRequest(item.account).then(() => {
-        message.success("操作成功");
+        message.success(t("operationSuccess"));
         searchUser();
       });
     }

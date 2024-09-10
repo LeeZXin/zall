@@ -102,7 +102,9 @@ const columns = [{
   {
     title: "操作",
     dataIndex: "operation",
-    key: "operation"
+    key: "operation",
+    width: 130,
+    fixed: "right"
   }
 ];
 // 跳转创建节点界面

@@ -85,8 +85,6 @@ const deleteTag = tag => {
   Modal.confirm({
     title: `你确定要删除${tag}吗?`,
     icon: createVNode(ExclamationCircleOutlined),
-    okText: "ok",
-    cancelText: "cancel",
     onOk() {
       deleteTagRequest({
         repoId: props.repoId,

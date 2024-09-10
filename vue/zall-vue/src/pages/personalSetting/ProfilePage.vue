@@ -1,29 +1,25 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span>个人信息</span>
+      <div class="header">{{t('profile.title')}}</div>
+      <div class="section">
+        <div class="section-title">{{t('profile.account')}}</div>
+        <div class="section-body">{{userStore.account}}</div>
       </div>
       <div class="section">
-        <div class="section-title">帐号</div>
-        <div class="section-body">{{formState.account}}</div>
-      </div>
-      <div class="section">
-        <div class="section-title">名称</div>
+        <div class="section-title">{{t('profile.name')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
-          <div class="input-desc">用户名称, 长度为1-32</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">邮箱</div>
+        <div class="section-title">{{t('profile.email')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.email" />
-          <div class="input-desc">邮箱格式</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">头像</div>
+        <div class="section-title">{{t('profile.avatar')}}</div>
         <div class="section-body">
           <a-upload
             v-model:file-list="formState.avatar"
@@ -33,16 +29,16 @@
             :before-upload="beforeUpload"
             @change="uploadChange"
           >
-            <a-button :icon="h(UploadOutlined)">点击上传</a-button>
+            <a-button :icon="h(UploadOutlined)">{{t('profile.clickUpload')}}</a-button>
           </a-upload>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveProfile">立即修改</a-button>
+        <a-button type="primary" @click="saveProfile">{{t('profile.save')}}</a-button>
       </div>
     </div>
     <a-modal
-      title="裁剪头像"
+      :title="t('profile.avatar')"
       v-model:open="cropModal.open"
       :width="448"
       @ok="handleCropModalOk"
@@ -75,15 +71,16 @@ import { reactive, h, ref } from "vue";
 import { UploadOutlined } from "@ant-design/icons-vue";
 import { message } from "ant-design-vue";
 import { updateUserRequest } from "@/api/user/userApi";
-import { usernameRegexp, accountRegexp, emailRegexp } from "@/utils/regexp";
+import { usernameRegexp, emailRegexp } from "@/utils/regexp";
 import { useUserStore } from "@/pinia/userStore";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const userStore = useUserStore();
 const cropper = ref(null);
 // 表单数据
 const formState = reactive({
-  account: "",
   name: "",
   email: "",
   avatar: [],
@@ -115,7 +112,7 @@ const handleCropModalCancel = () => {
 // 上传头像change
 const uploadChange = info => {
   if (info.file.status === "done" && info.file.response.filePath) {
-    message.success("上传成功");
+    message.success(t("profile.uploadFileSuccess"));
     info.file.url = info.file.response.filePath;
   } else if (info.file.status === "error" && info.file.response.error) {
     message.error(info.file.response.error);
@@ -130,7 +127,7 @@ const beforeUpload = file => {
   return new Promise((resolve, reject) => {
     const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
     if (!isJpgOrPng) {
-      message.error("不是图像");
+      message.error(t("profile.notImage"));
       reject();
       return;
     }
@@ -146,36 +143,31 @@ const beforeUpload = file => {
 };
 // 创建或编辑用户
 const saveProfile = () => {
-  if (!accountRegexp.test(formState.account)) {
-    message.warn("帐号格式错误");
-    return;
-  }
   if (!usernameRegexp.test(formState.name)) {
-    message.warn("名称格式错误");
+    message.warn(t("profile.nameFormatErr"));
     return;
   }
   if (!emailRegexp.test(formState.email)) {
-    message.warn("邮箱格式错误");
+    message.warn(t("profile.emailFormatErr"));
     return;
   }
   if (formState.avatar.length === 0 || !formState.avatar[0].url) {
-    message.warn("请上传头像");
+    message.warn(t("profile.pleaseUploadAvatar"));
     return;
   }
   updateUserRequest({
-    account: formState.account,
+    account: userStore.account,
     name: formState.name,
     email: formState.email,
     avatarUrl: formState.avatar[0].url
   }).then(() => {
-    message.info("你已编辑自己的信息, 将重新登录");
+    message.success("你已编辑自己的信息, 将重新登录");
     setTimeout(() => {
       router.push("/login/login");
     }, 1000);
   });
 };
 const init = () => {
-  formState.account = userStore.account;
   formState.name = userStore.name;
   formState.email = userStore.email;
   if (userStore.avatarUrl) {

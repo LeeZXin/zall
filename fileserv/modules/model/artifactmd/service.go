@@ -5,15 +5,15 @@ import (
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
-func InsertArtifact(ctx context.Context, reqDTO InsertArtifactReqDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&Artifact{
-			Env:     reqDTO.Env,
-			AppId:   reqDTO.AppId,
-			Name:    reqDTO.Name,
-			Creator: reqDTO.Creator,
-		})
-	return err
+func InsertArtifact(ctx context.Context, reqDTO InsertArtifactReqDTO) (Artifact, error) {
+	ret := Artifact{
+		Env:     reqDTO.Env,
+		AppId:   reqDTO.AppId,
+		Name:    reqDTO.Name,
+		Creator: reqDTO.Creator,
+	}
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
+	return ret, err
 }
 
 func GetArtifactByAppIdAndNameAndEnv(ctx context.Context, reqDTO GetArtifactReqDTO) (Artifact, bool, error) {

@@ -1,21 +1,21 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">修改密码</div>
+      <div class="header">{{t('changePassword.title')}}</div>
       <div class="item">
-        <div class="input-title">原密码</div>
+        <div class="input-title">{{t('changePassword.oldPwd')}}</div>
         <a-input-password v-model:value="formState.origin" />
       </div>
       <div class="item">
-        <div class="input-title">新密码</div>
+        <div class="input-title">{{t('changePassword.newPwd')}}</div>
         <a-input-password v-model:value="formState.password" />
       </div>
       <div class="item">
-        <div class="input-title">确认密码</div>
+        <div class="input-title">{{t('changePassword.confirmPwd')}}</div>
         <a-input-password v-model:value="formState.confirm" />
       </div>
       <div>
-        <a-button type="primary" @click="updatePassword">立即修改</a-button>
+        <a-button type="primary" @click="updatePassword">{{t('changePassword.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -26,6 +26,8 @@ import { updatePasswordRequest } from "@/api/user/userApi";
 import { reactive } from "vue";
 import { passwordRegexp } from "@/utils/regexp";
 import { message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const formState = reactive({
   origin: "",
   password: "",
@@ -33,22 +35,22 @@ const formState = reactive({
 });
 const updatePassword = () => {
   if (!passwordRegexp.test(formState.origin)) {
-    message.warn("原密码格式错误");
+    message.warn(t("changePassword.oldPwdFormatErr"));
     return;
   }
-  if (!passwordRegexp.test(formState.passwordRegexp)) {
-    message.warn("新密码格式错误");
+  if (!passwordRegexp.test(formState.password)) {
+    message.warn(t("changePassword.newPwdFormatErr"));
     return;
   }
   if (formState.confirm !== formState.password) {
-    message.warn("确认密码与新密码不一致");
+    message.warn(t("changePassword.oldPwdNotEqualNewPwd"));
     return;
   }
   updatePasswordRequest({
     origin: formState.origin,
     password: formState.password
   }).then(() => {
-    message.success("修改成功");
+    message.success(t("operationSuccess"));
     formState.origin = "";
     formState.password = "";
     formState.confirm = "";
