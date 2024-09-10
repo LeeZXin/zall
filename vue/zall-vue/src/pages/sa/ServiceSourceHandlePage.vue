@@ -1,52 +1,40 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">
-        <span v-if="mode === 'create'">创建服务来源</span>
-        <span v-else-if="mode === 'update'">编辑服务来源</span>
+      <div class="header">
+        <span v-if="mode === 'create'">{{t('serviceSource.createSource')}}</span>
+        <span v-else-if="mode === 'update'">{{t('serviceSource.updateSource')}}</span>
       </div>
-      <div
-        style="margin-bottom:10px;font-size:14px;line-height: 20px;color:gray"
-      >服务来源将作为服务状态数据源获取, 为了扩展性, 设计成以接口的形式获取服务状态</div>
       <div class="section" v-if="mode==='create'">
-        <div class="section-title">选择环境</div>
+        <div class="section-title">{{t('serviceSource.selectEnv')}}</div>
         <div class="section-body">
-          <a-select
-            style="width: 100%"
-            placeholder="选择环境"
-            v-model:value="formState.selectedEnv"
-            :options="envList"
-          />
-          <div class="input-desc">多环境选择, 选择其中一个环境</div>
+          <a-select style="width: 100%" v-model:value="formState.selectedEnv" :options="envList" />
         </div>
       </div>
       <div class="section" v-if="mode==='update'">
-        <div class="section-title">已选环境</div>
+        <div class="section-title">{{t('serviceSource.selectedEnv')}}</div>
         <div class="section-body">{{formState.selectedEnv}}</div>
       </div>
       <div class="section">
-        <div class="section-title">名称</div>
+        <div class="section-title">{{t('serviceSource.name')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
-          <div class="input-desc">标识服务来源</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">host</div>
+        <div class="section-title">{{t('serviceSource.host')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.host" />
-          <div class="input-desc">https?://ip:port格式</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">Api Key</div>
+        <div class="section-title">{{t('serviceSource.apiKey')}}</div>
         <div class="section-body">
           <a-input-password v-model:value="formState.apiKey" />
-          <div class="input-desc">接口鉴权使用</div>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateServiceSource">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateServiceSource">{{t('serviceSource.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -55,6 +43,7 @@
 import { reactive, ref } from "vue";
 import {
   serviceSourceNameRegexp,
+  serviceSourceHostRegexp,
   serviceSourceApiKeyRegexp
 } from "@/utils/regexp";
 import { message } from "ant-design-vue";
@@ -65,6 +54,8 @@ import {
 } from "@/api/app/serviceApi";
 import { useRoute, useRouter } from "vue-router";
 import { useServiceSourceStore } from "@/pinia/serviceSourceStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const serviceSourceStore = useServiceSourceStore();
 const route = useRoute();
 const router = useRouter();
@@ -72,6 +63,7 @@ const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
+// 模式
 const mode = getMode();
 const formState = reactive({
   name: "",
@@ -79,6 +71,7 @@ const formState = reactive({
   apiKey: "",
   selectedEnv: ""
 });
+// 环境列表
 const envList = ref([]);
 const getEnvCfg = () => {
   getEnvCfgRequest().then(res => {
@@ -95,28 +88,18 @@ const getEnvCfg = () => {
     }
   });
 };
-
-const isValidHttpUrl = url => {
-  let u;
-  try {
-    u = new URL(url);
-    return u.protocol.startsWith("http");
-  } catch (e) {
-    return false;
-  }
-};
-
+// 新增或编辑服务来源
 const saveOrUpdateServiceSource = () => {
   if (!serviceSourceNameRegexp.test(formState.name)) {
-    message.warn("名称格式错误");
+    message.warn(t("serviceSource.nameFormatErr"));
     return;
   }
-  if (!isValidHttpUrl(formState.host)) {
-    message.warn("host格式错误");
+  if (!serviceSourceHostRegexp.test(formState.host)) {
+    message.warn(t("serviceSource.hostFormatErr"));
     return;
   }
   if (!serviceSourceApiKeyRegexp.test(formState.apiKey)) {
-    message.warn("Api Key格式错误");
+    message.warn(t("serviceSource.apiKeyFormatErr"));
     return;
   }
   if (mode === "create") {
@@ -126,7 +109,7 @@ const saveOrUpdateServiceSource = () => {
       name: formState.name,
       host: formState.host
     }).then(() => {
-      message.success("创建成功");
+      message.success(t("operationSuccess"));
       router.push(`/sa/serviceSource/list/${formState.selectedEnv}`);
     });
   } else if (mode === "update") {
@@ -136,7 +119,7 @@ const saveOrUpdateServiceSource = () => {
       name: formState.name,
       apiKey: formState.apiKey
     }).then(() => {
-      message.success("保存成功");
+      message.success(t("operationSuccess"));
       router.push(`/sa/serviceSource/list/${formState.selectedEnv}`);
     });
   }
