@@ -12,6 +12,8 @@ import (
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/model/usermd"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/branch"
@@ -315,7 +317,16 @@ func CanMergePullRequest(ctx context.Context, reqDTO CanMergePullRequestReqDTO) 
 		logger.Logger.WithContext(ctx).Error(err)
 		return ret, false, util.InternalError(err)
 	}
-	ret.ProtectedBranchCfg = cfg
+	reviewList, err := usersrv.GetUsersNameAndAvatar(ctx, cfg.ReviewerList...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return ret, false, util.InternalError(err)
+	}
+	ret.ProtectedBranchCfg = ProtectedBranchCfgDTO{
+		PushOption:              cfg.PushOption,
+		ReviewCountWhenCreatePr: cfg.ReviewCountWhenCreatePr,
+		ReviewerList:            reviewList,
+	}
 	ret.IsProtectedBranch = isProtectedBranch
 	ret.ReviewCount = reviewCount
 	var info reqvo.DiffRefsResp
@@ -556,12 +567,27 @@ func ListTimeline(ctx context.Context, reqDTO ListTimelineReqDTO) ([]TimelineDTO
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
+	// 查找头像和姓名
+	accountList := listutil.MapNe(timelines, func(t pullrequestmd.Timeline) string {
+		return t.Account
+	})
+	users, err := usermd.ListUserByAccounts(ctx, listutil.Distinct(accountList...), []string{"account", "avatar_url", "name"})
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	avatarMap := make(map[string]usermd.User, len(users))
+	for _, user := range users {
+		avatarMap[user.Account] = user
+	}
 	return listutil.Map(timelines, func(t pullrequestmd.Timeline) (TimelineDTO, error) {
 		ret := TimelineDTO{
-			Id:      t.Id,
-			PrId:    t.PrId,
-			Account: t.Account,
-			Created: t.Created,
+			Id:        t.Id,
+			PrId:      t.PrId,
+			Account:   t.Account,
+			Created:   t.Created,
+			AvatarUrl: avatarMap[t.Account].AvatarUrl,
+			Name:      avatarMap[t.Account].Name,
 		}
 		if t.Action == nil {
 			ret.Action = pullrequestmd.Action{}
@@ -697,10 +723,20 @@ func ListReview(ctx context.Context, reqDTO ListReviewReqDTO) ([]ReviewDTO, erro
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(reviews, func(t pullrequestmd.Review) string {
+		return t.Reviewer
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
 	return listutil.Map(reviews, func(t pullrequestmd.Review) (ReviewDTO, error) {
 		return ReviewDTO{
 			Id:           t.Id,
 			Reviewer:     t.Reviewer,
+			AvatarUrl:    userMap[t.Reviewer].AvatarUrl,
+			Name:         userMap[t.Reviewer].Name,
 			ReviewStatus: t.ReviewStatus,
 			Updated:      t.Updated,
 		}, nil

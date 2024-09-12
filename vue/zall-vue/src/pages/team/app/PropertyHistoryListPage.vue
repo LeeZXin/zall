@@ -9,7 +9,14 @@
     <div class="body">
       <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
         <template #bodyCell="{dataIndex, dataItem}">
-          <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
+          <div v-if="dataIndex === 'creator'" class="flex-center">
+            <ZAvatar
+              :url="dataItem.creator?.avatarUrl"
+              :name="dataItem.creator?.name"
+              :showName="true"
+            />
+          </div>
+          <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
           <div v-else>
             <div class="op-icon" @click="gotoNewPage(dataItem)">
               <a-tooltip placement="top">
@@ -77,7 +84,18 @@
         :width="800"
       >
         <div style="max-height:600px;overflow:scroll">
-          <ZTable :columns="deployColumns" :dataSource="deployDataSource" />
+          <ZTable :columns="deployColumns" :dataSource="deployDataSource">
+            <template #bodyCell="{dataIndex, dataItem}">
+              <div v-if="dataIndex === 'creator'" class="flex-center">
+                <ZAvatar
+                  :url="dataItem.creator?.avatarUrl"
+                  :name="dataItem.creator?.name"
+                  :showName="true"
+                />
+              </div>
+              <span v-else>{{dataItem[dataIndex]}}</span>
+            </template>
+          </ZTable>
         </div>
       </a-modal>
     </div>
@@ -91,6 +109,7 @@ import {
   CloudUploadOutlined,
   EyeOutlined
 } from "@ant-design/icons-vue";
+import ZAvatar from "@/components/user/ZAvatar";
 import ZTable from "@/components/common/ZTable";
 import { ref, reactive } from "vue";
 import { usePropertyFileStore } from "@/pinia/propertyFileStore";

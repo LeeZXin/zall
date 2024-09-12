@@ -118,7 +118,7 @@ func (r *ListLatestArtifactReqDTO) IsValid() error {
 type ArtifactDTO struct {
 	Id      int64
 	Name    string
-	Creator string
+	Creator util.User
 	Created time.Time
 }
 

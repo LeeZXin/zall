@@ -2,22 +2,17 @@
   <div style="padding:10px">
     <div class="container">
       <div class="header">
-        <span v-if="mode === 'create'">添加变量</span>
-        <span v-else-if="mode === 'update'">更新变量</span>
+        <span v-if="mode === 'create'">{{t('gitWorkflow.createVars')}}</span>
+        <span v-else-if="mode === 'update'">{{t('gitWorkflow.updateVars')}}</span>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>Key</span>
-        </div>
+        <div class="section-title">{{t('gitWorkflow.varsKey')}}</div>
         <div class="section-body">
           <a-input style="width:100%" v-model:value="formState.name" :disabled="mode==='update'" />
-          <div class="input-desc">key用来唯一标识变量, 不为空, 长度不得超过32</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>内容</span>
-        </div>
+        <div class="section-title">{{t('gitWorkflow.varsContent')}}</div>
         <div class="section-body">
           <a-textarea
             style="width:100%"
@@ -25,12 +20,11 @@
             :auto-size="{ minRows: 8, maxRows: 15 }"
             @keydown.tab="handleTab"
           />
-          <div class="input-desc">变量的具体内容</div>
         </div>
       </div>
       <div style="width:100%;border-top:1px solid #d9d9d9;margin: 10px 0"></div>
       <div style="margin-bottom:20px">
-        <a-button type="primary" @click="createOrUpdateVars">立即保存</a-button>
+        <a-button type="primary" @click="createOrUpdateVars">{{t('gitWorkflow.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -48,17 +42,22 @@ import {
   workflowVarsContentRegexp
 } from "@/utils/regexp";
 import { message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const route = useRoute();
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
 const router = useRouter();
+// 模式
 const mode = getMode();
+// 表单数据
 const formState = reactive({
   name: "",
   content: ""
 });
+// tab默认行为
 const handleTab = event => {
   event.preventDefault();
   let inputElement = event.target;
@@ -70,13 +69,14 @@ const handleTab = event => {
   inputElement.selectionStart = selectionStart + 4;
   inputElement.selectionEnd = inputElement.selectionStart;
 };
+// 新增或编辑变量
 const createOrUpdateVars = () => {
   if (!workflowVarsNameRegexp.test(formState.name)) {
-    message.warn("key格式错误");
+    message.warn(t("gitWorkflow.varsKeyFormatErr"));
     return;
   }
   if (!workflowVarsContentRegexp.test(formState.content)) {
-    message.warn("内容格式错误");
+    message.warn(t("gitWorkflow.varsContentFormatErr"));
     return;
   }
   if (mode === "create") {
@@ -85,7 +85,7 @@ const createOrUpdateVars = () => {
       name: formState.name,
       content: formState.content
     }).then(() => {
-      message.success("添加成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`
       );
@@ -95,7 +95,7 @@ const createOrUpdateVars = () => {
       varsId: parseInt(route.params.varsId),
       content: formState.content
     }).then(() => {
-      message.success("更新成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`
       );

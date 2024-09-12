@@ -5,17 +5,17 @@
         <right-outlined v-show="!showCode" />
         <down-outlined v-show="showCode" />
       </span>
-      <span style="color:green;margin-right:8px">
+      <span style="color:green;margin-right:12px">
         <span>{{props.stat.insertNums}}</span>
         <span>++</span>
       </span>
-      <span style="color:red;margin-right:8px">
+      <span style="color:red;margin-right:12px">
         <span>{{props.stat.deleteNums}}</span>
         <span>--</span>
       </span>
       <span>{{props.stat.rawPath}}</span>
     </div>
-    <div class="is-binary-text" v-show="showCode && loadData && isBinary">二进制文件</div>
+    <div class="is-binary-text" v-show="showCode && loadData && isBinary">{{t('binary')}}</div>
     <table v-show="showCode && loadData && !isBinary">
       <colgroup>
         <col width="44" />
@@ -98,6 +98,8 @@ import {
 } from "@ant-design/icons-vue";
 import { ref, defineProps } from "vue";
 import { diffFileRequest } from "@/api/git/repoApi";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const showCode = ref(false);
 const loadData = ref(false);
 const isBinary = ref(false);
@@ -156,8 +158,7 @@ const props = defineProps(["stat", "head", "target", "repoId"]);
   margin-top: 10px;
 }
 .diff-table > .header {
-  padding: 0 10px;
-  line-height: 32px;
+  padding: 12px;
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -262,7 +263,7 @@ const props = defineProps(["stat", "head", "target", "repoId"]);
 .arrow {
   cursor: pointer;
   margin-right: 8px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .is-binary-text {
   border-top: 1px solid #d9d9d9;

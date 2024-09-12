@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/LeeZXin/zall/dbaudit/modules/model/mysqldbmd"
 	"github.com/LeeZXin/zall/dbaudit/modules/service/mysqldbsrv/command"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/util"
@@ -199,7 +200,7 @@ func GetReadPermApply(ctx context.Context, reqDTO GetReadPermApplyReqDTO) (ReadP
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	apply, b, err := mysqldbmd.GetReadPermApplyById(ctx, reqDTO.ApplyId)
+	t, b, err := mysqldbmd.GetReadPermApplyById(ctx, reqDTO.ApplyId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return ReadPermApplyDTO{}, util.InternalError(err)
@@ -207,10 +208,35 @@ func GetReadPermApply(ctx context.Context, reqDTO GetReadPermApplyReqDTO) (ReadP
 	if !b {
 		return ReadPermApplyDTO{}, util.InvalidArgsError()
 	}
-	if checkDbaPerm(reqDTO.Operator) != nil && apply.Account != reqDTO.Operator.Account {
+	if checkDbaPerm(reqDTO.Operator) != nil &&
+		t.Account != reqDTO.Operator.Account {
 		return ReadPermApplyDTO{}, util.UnauthorizedError()
 	}
-	return readPermApply2Dto(apply), nil
+	accounts := make([]string, 0)
+	accounts = append(accounts, t.Account)
+	if t.Auditor != "" {
+		accounts = append(accounts, t.Auditor)
+	}
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return ReadPermApplyDTO{}, util.InternalError(err)
+	}
+	return ReadPermApplyDTO{
+		Id:             t.Id,
+		Account:        userMap[t.Account],
+		DbId:           t.DbId,
+		DbName:         t.DbName,
+		AccessBase:     t.AccessBase,
+		AccessTables:   t.AccessTables,
+		ApplyStatus:    t.ApplyStatus,
+		Auditor:        userMap[t.Auditor],
+		ExpireDay:      t.ExpireDay,
+		ApplyReason:    t.ApplyReason,
+		DisagreeReason: t.DisagreeReason,
+		Created:        t.Created,
+		Updated:        t.Updated,
+	}, nil
 }
 
 // ListReadPermApplyByDba dba查看展示审批列表
@@ -228,32 +254,41 @@ func ListReadPermApplyByDba(ctx context.Context, reqDTO ListReadPermApplyByDbaRe
 		PageSize:    10,
 		ApplyStatus: reqDTO.ApplyStatus,
 		DbId:        reqDTO.DbId,
-	},
-	)
+	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data := listutil.MapNe(applies, readPermApply2Dto)
-	return data, total, nil
-}
-
-func readPermApply2Dto(t mysqldbmd.ReadPermApply) ReadPermApplyDTO {
-	return ReadPermApplyDTO{
-		Id:             t.Id,
-		Account:        t.Account,
-		DbId:           t.DbId,
-		DbName:         t.DbName,
-		AccessBase:     t.AccessBase,
-		AccessTables:   t.AccessTables,
-		ApplyStatus:    t.ApplyStatus,
-		Auditor:        t.Auditor,
-		ExpireDay:      t.ExpireDay,
-		ApplyReason:    t.ApplyReason,
-		DisagreeReason: t.DisagreeReason,
-		Created:        t.Created,
-		Updated:        t.Updated,
+	accounts := make([]string, 0)
+	for _, apply := range applies {
+		accounts = append(accounts, apply.Account)
+		if apply.Auditor != "" {
+			accounts = append(accounts, apply.Auditor)
+		}
 	}
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	data := listutil.MapNe(applies, func(t mysqldbmd.ReadPermApply) ReadPermApplyDTO {
+		return ReadPermApplyDTO{
+			Id:             t.Id,
+			Account:        userMap[t.Account],
+			DbId:           t.DbId,
+			DbName:         t.DbName,
+			AccessBase:     t.AccessBase,
+			AccessTables:   t.AccessTables,
+			ApplyStatus:    t.ApplyStatus,
+			Auditor:        userMap[t.Auditor],
+			ExpireDay:      t.ExpireDay,
+			ApplyReason:    t.ApplyReason,
+			DisagreeReason: t.DisagreeReason,
+			Created:        t.Created,
+			Updated:        t.Updated,
+		}
+	})
+	return data, total, nil
 }
 
 // ListReadPermApplyByOperator 展示申请的审批列表
@@ -273,7 +308,35 @@ func ListReadPermApplyByOperator(ctx context.Context, reqDTO ListReadPermApplyBy
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data := listutil.MapNe(applies, readPermApply2Dto)
+	accounts := make([]string, 0)
+	accounts = append(accounts, reqDTO.Operator.Account)
+	for _, apply := range applies {
+		if apply.Auditor != "" {
+			accounts = append(accounts, apply.Auditor)
+		}
+	}
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	data := listutil.MapNe(applies, func(t mysqldbmd.ReadPermApply) ReadPermApplyDTO {
+		return ReadPermApplyDTO{
+			Id:             t.Id,
+			Account:        userMap[t.Account],
+			DbId:           t.DbId,
+			DbName:         t.DbName,
+			AccessBase:     t.AccessBase,
+			AccessTables:   t.AccessTables,
+			ApplyStatus:    t.ApplyStatus,
+			Auditor:        userMap[t.Auditor],
+			ExpireDay:      t.ExpireDay,
+			ApplyReason:    t.ApplyReason,
+			DisagreeReason: t.DisagreeReason,
+			Created:        t.Created,
+			Updated:        t.Updated,
+		}
+	})
 	return data, total, nil
 }
 
@@ -744,23 +807,23 @@ func ListReadPermByOperator(ctx context.Context, reqDTO ListReadPermByOperatorRe
 		return nil, 0, err
 	}
 	data := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) ReadPermDTO {
-		return readPerm2Dto(t, dbMap)
+		return ReadPermDTO{
+			Id: t.Id,
+			Account: util.User{
+				Account:   reqDTO.Operator.Account,
+				Name:      reqDTO.Operator.Name,
+				AvatarUrl: reqDTO.Operator.AvatarUrl,
+			},
+			DbId:        t.DbId,
+			DbName:      dbMap[t.DbId].Name,
+			AccessBase:  t.AccessBase,
+			AccessTable: t.AccessTable,
+			Created:     t.Created,
+			Expired:     t.Expired,
+			ApplyId:     t.ApplyId,
+		}
 	})
 	return data, total, nil
-}
-
-func readPerm2Dto(t mysqldbmd.ReadPerm, dbMap map[int64]mysqldbmd.Db) ReadPermDTO {
-	return ReadPermDTO{
-		Id:          t.Id,
-		Account:     t.Account,
-		DbId:        t.DbId,
-		DbName:      dbMap[t.DbId].Name,
-		AccessBase:  t.AccessBase,
-		AccessTable: t.AccessTable,
-		Created:     t.Created,
-		Expired:     t.Expired,
-		ApplyId:     t.ApplyId,
-	}
 }
 
 // DeleteReadPermByDba 删除权限
@@ -809,8 +872,26 @@ func ListReadPermByDba(ctx context.Context, reqDTO ListReadPermByDbaReqDTO) ([]R
 	if err != nil {
 		return nil, 0, err
 	}
+	accounts := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) string {
+		return t.Account
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	data := listutil.MapNe(perms, func(t mysqldbmd.ReadPerm) ReadPermDTO {
-		return readPerm2Dto(t, dbMap)
+		return ReadPermDTO{
+			Id:          t.Id,
+			Account:     userMap[t.Account],
+			DbId:        t.DbId,
+			DbName:      dbMap[t.DbId].Name,
+			AccessBase:  t.AccessBase,
+			AccessTable: t.AccessTable,
+			Created:     t.Created,
+			Expired:     t.Expired,
+			ApplyId:     t.ApplyId,
+		}
 	})
 	return data, total, nil
 }
@@ -1048,17 +1129,31 @@ func dataUpdateApplyMd2Dto(ctx context.Context, applies []mysqldbmd.DataUpdateAp
 	if err != nil {
 		return nil, err
 	}
+	accounts := make([]string, 0)
+	for _, apply := range applies {
+		accounts = append(accounts, apply.Account)
+		if apply.Auditor != "" {
+			accounts = append(accounts, apply.Auditor)
+		}
+		if apply.Executor != "" {
+			accounts = append(accounts, apply.Executor)
+		}
+	}
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		return nil, err
+	}
 	data := listutil.MapNe(applies, func(t mysqldbmd.DataUpdateApply) DataUpdateApplyDTO {
 		ret := DataUpdateApplyDTO{
 			Id:                              t.Id,
-			Account:                         t.Account,
+			Account:                         userMap[t.Account],
 			DbId:                            t.DbId,
 			DbName:                          dbMap[t.DbId].Name,
 			AccessBase:                      t.AccessBase,
 			UpdateCmd:                       t.UpdateCmd,
 			ApplyStatus:                     t.ApplyStatus,
-			Auditor:                         t.Auditor,
-			Executor:                        t.Executor,
+			Auditor:                         userMap[t.Auditor],
+			Executor:                        userMap[t.Executor],
 			ApplyReason:                     t.ApplyReason,
 			DisagreeReason:                  t.DisagreeReason,
 			ExecuteLog:                      t.ExecuteLog,

@@ -23,7 +23,7 @@ type GetAllBranchesReq struct {
 	RepoPath string `json:"repoPath"`
 }
 
-type PageRefCommitsReq struct {
+type ListRefCommitsReq struct {
 	RepoPath string `json:"repoPath"`
 	PageNum  int    `json:"pageNum"`
 }
@@ -103,6 +103,8 @@ type CommitVO struct {
 	Tagger        UserVO   `json:"tagger"`
 	TaggerTime    int64    `json:"taggerTime"`
 	TagCommitMsg  string   `json:"tagCommitMsg"`
+	TagSig        string   `json:"tagSig"`
+	TagPayload    string   `json:"tagPayload"`
 	ShortTagId    string   `json:"shortTagId"`
 }
 

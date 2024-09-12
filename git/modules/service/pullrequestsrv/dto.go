@@ -165,11 +165,13 @@ func (r *ListTimelineReqDTO) IsValid() error {
 }
 
 type TimelineDTO struct {
-	Id      int64
-	PrId    int64
-	Action  pullrequestmd.Action
-	Account string
-	Created time.Time
+	Id        int64
+	PrId      int64
+	Action    pullrequestmd.Action
+	Account   string
+	AvatarUrl string
+	Name      string
+	Created   time.Time
 }
 
 type AddCommentReqDTO struct {
@@ -256,10 +258,16 @@ func (r *CanReviewPullRequestReqDTO) IsValid() error {
 	return nil
 }
 
+type ProtectedBranchCfgDTO struct {
+	PushOption              branch.PushOption
+	ReviewCountWhenCreatePr int
+	ReviewerList            []util.User
+}
+
 type CanMergePullRequestRespDTO struct {
 	CanMerge           bool
 	IsProtectedBranch  bool
-	ProtectedBranchCfg branch.ProtectedBranchCfg
+	ProtectedBranchCfg ProtectedBranchCfgDTO
 	ReviewCount        int
 	GitCanMerge        bool
 	GitConflictFiles   []string
@@ -277,6 +285,8 @@ type CanReviewPullRequestRespDTO struct {
 type ReviewDTO struct {
 	Id           int64
 	Reviewer     string
+	AvatarUrl    string
+	Name         string
 	ReviewStatus pullrequestmd.ReviewStatus
 	Updated      time.Time
 }

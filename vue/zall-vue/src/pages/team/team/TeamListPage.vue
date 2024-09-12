@@ -8,7 +8,7 @@
       >{{t("team.createTeam")}}</a-button>
     </div>
     <div class="team-list">
-      <div class="header">
+      <div class="header no-wrap">
         <TeamOutlined />
         <span style="margin-left: 8px">{{t("team.myTeam")}}</span>
       </div>
@@ -67,7 +67,7 @@ getSysCfgRequest().then(res => {
 .team-list > .header {
   font-weight: bold;
   font-size: 16px;
-  line-height: 38px;
+  line-height: 44px;
   padding: 0 10px;
 }
 .team-list > .body {
@@ -76,7 +76,7 @@ getSysCfgRequest().then(res => {
 .team-list > .body > li {
   cursor: pointer;
   font-size: 14px;
-  line-height: 38px;
+  line-height: 40px;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;

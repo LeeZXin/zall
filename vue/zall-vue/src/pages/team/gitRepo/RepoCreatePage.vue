@@ -1,23 +1,21 @@
 <template>
   <div style="padding:10px">
     <div class="create-form container">
-      <div class="header">{{t("createGitRepo.createText")}}</div>
+      <div class="header">{{t("gitRepo.createRepo")}}</div>
       <div class="section">
-        <div class="section-title">{{t("createGitRepo.repoName")}}</div>
+        <div class="section-title">{{t("gitRepo.name")}}</div>
         <div class="section-body">
           <a-input type="input" v-model:value="formState.name" />
-          <div class="input-desc">不包含特殊字符,长度不得超过32</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">{{t("createGitRepo.repoDesc")}}</div>
+        <div class="section-title">{{t("gitRepo.repoDesc")}}</div>
         <div class="section-body">
           <a-input type="input" v-model:value="formState.desc" />
-          <div class="input-desc">为仓库添加一段简短的描述,长度不得超过255</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">{{t("createGitRepo.gitignore")}}</div>
+        <div class="section-title">.gitignore</div>
         <div class="section-body">
           <a-select
             v-model:value="formState.gitignore"
@@ -26,27 +24,21 @@
             show-search
             :filter-option="filterGitIgnoreTemplateListOption"
           />
-          <div class="input-desc">为仓库添加一段简短的描述,长度不得超过255</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">{{t("createGitRepo.defaultBranch")}}</div>
+        <div class="section-title">{{t("gitRepo.defaultBranch")}}</div>
         <div class="section-body">
           <a-input type="input" v-model:value="formState.defaultBranch" />
-          <div class="input-desc">长度不得超过32</div>
         </div>
       </div>
-      <div class="form-item">
+      <div class="section-item">
         <a-checkbox v-model:checked="formState.addReadme">
-          <div>{{t("createGitRepo.addReadme")}}</div>
+          <div>{{t("gitRepo.addReadme")}}</div>
         </a-checkbox>
       </div>
-      <div class="form-item">
-        <a-button
-          type="primary"
-          style="margin-top:20px;"
-          @click="create"
-        >{{t("createGitRepo.createBtn")}}</a-button>
+      <div class="save-btn-line">
+        <a-button type="primary" @click="create">{{t("gitRepo.save")}}</a-button>
       </div>
     </div>
   </div>
@@ -86,15 +78,15 @@ const filterGitIgnoreTemplateListOption = (input, option) => {
 };
 const create = () => {
   if (!repoNameRegexp.test(formState.name)) {
-    message.error("仓库名称不正确");
+    message.error(t("gitRepo.nameFormatErr"));
     return;
   }
   if (!repoDescRegexp.test(formState.desc)) {
-    message.error("仓库描述不正确");
+    message.error(t("gitRepo.repoDescFormatErr"));
     return;
   }
   if (!defaultBranchRegexp.test(formState.defaultBranch)) {
-    message.error("默认分支不正确");
+    message.error(t("gitRepo.defaultBranchFormatErr"));
     return;
   }
   createRepoRequest({
@@ -105,7 +97,7 @@ const create = () => {
     gitIgnoreName: formState.gitignore,
     defaultBranch: formState.defaultBranch
   }).then(() => {
-    message.success("创建成功");
+    message.success(t("operationSuccess"));
     setTimeout(() => {
       router.push(`/team/${route.params.teamId}/gitRepo/list`);
     }, 1000);

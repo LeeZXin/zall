@@ -17,8 +17,8 @@ func InitApi() {
 			group.POST("/initRepo", initRepo)
 			group.POST("/deleteRepo", deleteRepo)
 			group.POST("/getAllBranches", getAllBranches)
-			group.POST("/pageBranchAndLastCommit", pageBranchAndLastCommit)
-			group.POST("/pageTagAndCommit", pageTagAndCommit)
+			group.POST("/listBranchAndLastCommit", listBranchAndLastCommit)
+			group.POST("/listTagAndCommit", listTagAndCommit)
 			group.POST("/deleteBranch", deleteBranch)
 			group.POST("/getAllTags", getAllTags)
 			group.POST("/gc", gc)
@@ -112,10 +112,10 @@ func deleteBranch(c *gin.Context) {
 	}
 }
 
-func pageBranchAndLastCommit(c *gin.Context) {
-	var req reqvo.PageRefCommitsReq
+func listBranchAndLastCommit(c *gin.Context) {
+	var req reqvo.ListRefCommitsReq
 	if util.ShouldBindJSON(&req, c) {
-		ret, total, err := PageBranchAndLastCommit(c, req)
+		ret, total, err := ListBranchAndLastCommit(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return
@@ -131,10 +131,10 @@ func pageBranchAndLastCommit(c *gin.Context) {
 	}
 }
 
-func pageTagAndCommit(c *gin.Context) {
-	var req reqvo.PageRefCommitsReq
+func listTagAndCommit(c *gin.Context) {
+	var req reqvo.ListRefCommitsReq
 	if util.ShouldBindJSON(&req, c) {
-		ret, total, err := PageTagAndCommit(c, req)
+		ret, total, err := ListTagAndCommit(c, req)
 		if err != nil {
 			util.HandleApiErr(err, c)
 			return

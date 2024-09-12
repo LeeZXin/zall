@@ -3,6 +3,7 @@ package tpfeishusrv
 import (
 	"context"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -71,13 +72,21 @@ func ListAccessToken(ctx context.Context, reqDTO ListAccessTokenReqDTO) ([]Acces
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(tokens, func(t tpfeishumd.AccessToken) string {
+		return t.Creator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	ret := listutil.MapNe(tokens, func(t tpfeishumd.AccessToken) AccessTokenDTO {
 		return AccessTokenDTO{
 			Id:          t.Id,
 			TeamId:      t.TeamId,
 			Name:        t.Name,
 			AppId:       t.AppId,
-			Creator:     t.Creator,
+			Creator:     userMap[t.Creator],
 			Secret:      t.Secret,
 			Token:       t.Token,
 			TenantToken: t.TenantToken,

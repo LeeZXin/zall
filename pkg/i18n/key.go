@@ -68,13 +68,9 @@ var (
 		Id:         "user.alreadyExists",
 		DefaultRet: "用户已存在",
 	}
-	UserAccountNotFoundWarnFormat = KeyItem{
-		Id:         "user.notFoundWarnFormat",
-		DefaultRet: "用户%s不存在",
-	}
-	UserAccountUnauthorizedReviewCodeWarnFormat = KeyItem{
-		Id:         "user.notFoundWarnFormat",
-		DefaultRet: "该用户%s无评审代码的权限",
+	UserEmailAlreadyExists = KeyItem{
+		Id:         "user.emailAlreadyExists",
+		DefaultRet: "用户邮箱已存在",
 	}
 )
 

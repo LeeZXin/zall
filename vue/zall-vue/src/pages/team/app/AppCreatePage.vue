@@ -1,23 +1,21 @@
 <template>
   <div style="padding:10px">
     <div class="container">
-      <div class="title">创建应用服务</div>
+      <div class="header">{{t('appService.createApp')}}</div>
       <div class="section">
-        <div class="section-title">AppId</div>
+        <div class="section-title">{{t('appService.appId')}}</div>
         <div class="section-body">
           <a-input type="input" v-model:value="formState.appId" />
-          <div class="input-desc">应用服务的唯一标识, 不能包含空格等特殊字符</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">应用名称</div>
+        <div class="section-title">{{t('appService.name')}}</div>
         <div class="section-body">
           <a-input type="input" v-model:value="formState.name" />
-          <div class="input-desc">简单的话来描述应用服务</div>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="createApp">立即创建</a-button>
+        <a-button type="primary" @click="createApp">{{t('appService.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -28,19 +26,23 @@ import { createAppRequest } from "@/api/app/appApi";
 import { appNameRegexp, appIdRegexp } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import { useRoute, useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
+// 表单数据
 const formState = reactive({
   appId: "",
   name: ""
 });
+// 创建app
 const createApp = () => {
   if (!appIdRegexp.test(formState.appId)) {
-    message.warn("appId格式不正确");
+    message.warn(t("appService.appIdFormatErr"));
     return;
   }
   if (!appNameRegexp.test(formState.name)) {
-    message.warn("名称格式不正确");
+    message.warn(t("appService.nameFormatErr"));
     return;
   }
   createAppRequest({
@@ -48,7 +50,7 @@ const createApp = () => {
     appId: formState.appId,
     name: formState.name
   }).then(() => {
-    message.success("创建成功");
+    message.success(t("operationSuccess"));
     router.push(`/team/${route.params.teamId}/app/list`);
   });
 };

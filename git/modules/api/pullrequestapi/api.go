@@ -46,7 +46,7 @@ func InitApi() {
 }
 
 func canMergePullRequest(c *gin.Context) {
-	respDTO, statusChange, err := pullrequestsrv.CanMergePullRequest(c, pullrequestsrv.CanMergePullRequestReqDTO{
+	resp, statusChange, err := pullrequestsrv.CanMergePullRequest(c, pullrequestsrv.CanMergePullRequestReqDTO{
 		PrId:     getPrId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -57,14 +57,18 @@ func canMergePullRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, ginutil.DataResp[CanMergePullRequestRespVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
 		Data: CanMergePullRequestRespVO{
-			StatusChange:       statusChange,
-			CanMerge:           respDTO.CanMerge,
-			IsProtectedBranch:  respDTO.IsProtectedBranch,
-			ProtectedBranchCfg: respDTO.ProtectedBranchCfg,
-			ReviewCount:        respDTO.ReviewCount,
-			GitCanMerge:        respDTO.GitCanMerge,
-			GitConflictFiles:   respDTO.GitConflictFiles,
-			GitCommitCount:     respDTO.GitCommitCount,
+			StatusChange:      statusChange,
+			CanMerge:          resp.CanMerge,
+			IsProtectedBranch: resp.IsProtectedBranch,
+			ProtectedBranchCfg: ProtectedBranchCfgVO{
+				PushOption:              resp.ProtectedBranchCfg.PushOption,
+				ReviewCountWhenCreatePr: resp.ProtectedBranchCfg.ReviewCountWhenCreatePr,
+				ReviewerList:            resp.ProtectedBranchCfg.ReviewerList,
+			},
+			ReviewCount:      resp.ReviewCount,
+			GitCanMerge:      resp.GitCanMerge,
+			GitConflictFiles: resp.GitConflictFiles,
+			GitCommitCount:   resp.GitCommitCount,
 		},
 	})
 }
@@ -132,11 +136,13 @@ func listTimeline(c *gin.Context) {
 	}
 	data := listutil.MapNe(timelines, func(t pullrequestsrv.TimelineDTO) TimelineVO {
 		return TimelineVO{
-			Id:      t.Id,
-			PrId:    t.PrId,
-			Action:  t.Action,
-			Account: t.Account,
-			Created: t.Created.Format(time.DateTime),
+			Id:        t.Id,
+			PrId:      t.PrId,
+			Action:    t.Action,
+			Account:   t.Account,
+			Created:   t.Created.Format(time.DateTime),
+			AvatarUrl: t.AvatarUrl,
+			Name:      t.Name,
 		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]TimelineVO]{
@@ -160,6 +166,8 @@ func listReview(c *gin.Context) {
 			Reviewer:     t.Reviewer,
 			ReviewStatus: t.ReviewStatus.Readable(),
 			Updated:      t.Updated.Format(time.DateTime),
+			AvatarUrl:    t.AvatarUrl,
+			Name:         t.Name,
 		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]ReviewVO]{

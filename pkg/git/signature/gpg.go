@@ -17,17 +17,17 @@ const (
 	EndGPGSigLineTag   = "-----END PGP SIGNATURE-----"
 )
 
-type CommitSig string
+type Sig string
 
-func (s CommitSig) IsGPGSig() bool {
+func (s Sig) IsGPGSig() bool {
 	return strings.HasPrefix(string(s), StartGPGSigLineTag)
 }
 
-func (s CommitSig) IsSSHSig() bool {
+func (s Sig) IsSSHSig() bool {
 	return strings.HasPrefix(string(s), StartSSHSigLineTag)
 }
 
-func (s CommitSig) String() string {
+func (s Sig) String() string {
 	return string(s)
 }
 

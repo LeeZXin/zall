@@ -18,7 +18,7 @@
               <CarryOutOutlined />
               <span>{{t("mysqlAuditMenu.readPermApply")}}</span>
             </a-menu-item>
-            <a-menu-item key="/mysqlReadPermAudit/list" v-if="userStore.isDba">
+            <a-menu-item key="/mysqlReadPermAudit/list" v-if="userStore.isDba || userStore.isAdmin">
               <AuditOutlined />
               <span>{{t("mysqlAuditMenu.readPermAudit")}}</span>
             </a-menu-item>
@@ -26,7 +26,10 @@
               <UnorderedListOutlined />
               <span>{{t("mysqlAuditMenu.readPermList")}}</span>
             </a-menu-item>
-            <a-menu-item key="/mysqlReadPermManage/list" v-if="userStore.isDba">
+            <a-menu-item
+              key="/mysqlReadPermManage/list"
+              v-if="userStore.isDba || userStore.isAdmin"
+            >
               <BlockOutlined />
               <span>{{t("mysqlAuditMenu.readPermManage")}}</span>
             </a-menu-item>
@@ -34,7 +37,10 @@
               <BookOutlined />
               <span>{{t("mysqlAuditMenu.dataUpdateApply")}}</span>
             </a-menu-item>
-            <a-menu-item key="/mysqlDataUpdateAudit/list" v-if="userStore.isDba">
+            <a-menu-item
+              key="/mysqlDataUpdateAudit/list"
+              v-if="userStore.isDba || userStore.isAdmin"
+            >
               <AuditOutlined />
               <span>{{t("mysqlAuditMenu.dataUpdateAudit")}}</span>
             </a-menu-item>

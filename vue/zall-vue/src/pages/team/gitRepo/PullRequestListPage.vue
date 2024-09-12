@@ -1,23 +1,18 @@
 <template>
   <div style="padding:10px">
-    <div style="margin-bottom:10px">
-      <a-radio-group v-model:value="prStatus" @change="selectPrStatus">
-        <a-radio-button value="0">
-          <span>所有</span>
-        </a-radio-button>
-        <a-radio-button value="1">
-          <span>已打开</span>
-        </a-radio-button>
-        <a-radio-button value="3">
-          <span>已合并</span>
-        </a-radio-button>
-        <a-radio-button value="2">
-          <span>已关闭</span>
-        </a-radio-button>
-      </a-radio-group>
-    </div>
     <div class="header">
-      <a-input placeholder="搜索合并请求" v-model:value="searchKey" @pressEnter="()=>listPullRequest()">
+      <a-select v-model:value="prStatus" @change="selectPrStatus" style="width:180px">
+        <a-select-option :value="0">{{t('pullRequest.allStatus')}}</a-select-option>
+        <a-select-option :value="1">{{t('pullRequest.openStatus')}}</a-select-option>
+        <a-select-option :value="3">{{t('pullRequest.mergedStatus')}}</a-select-option>
+        <a-select-option :value="2">{{t('pullRequest.closedStatus')}}</a-select-option>
+      </a-select>
+      <a-input
+        :placeholder="t('pullRequest.searchPr')"
+        v-model:value="searchKey"
+        @pressEnter="searchPullRequest"
+        style="width:240px;margin-left:10px"
+      >
         <template #prefix>
           <search-outlined />
         </template>
@@ -28,9 +23,9 @@
         @click="toCreatePage"
         :icon="h(PlusOutlined)"
         v-if="repoStore.perm?.canSubmitPullRequest"
-      >创建合并请求</a-button>
+      >{{t('pullRequest.createPr')}}</a-button>
     </div>
-    <ul class="pr-list" v-show="prList.length > 0">
+    <ul class="pr-list" v-if="prList.length > 0">
       <li v-for="item in prList" v-bind:key="item.id" @click="toDetail(item)">
         <div class="pr-title">
           <plus-circle-outlined v-if="item.prStatus === 1" />
@@ -45,12 +40,12 @@
         <div class="pr-desc">
           <PrStatusTag :status="item.prStatus" />
           <span>#{{item.id}}</span>
-          <span>created by {{item.createBy}}</span>
+          <span>{{item.createBy}} {{t('pullRequest.createdAt')}}</span>
           <span>{{readableTimeComparingNow(item.created)}}</span>
         </div>
       </li>
     </ul>
-    <ZNoData v-show="prList.length === 0" />
+    <ZNoData v-else />
     <a-pagination
       v-model:current="dataPage.current"
       :total="dataPage.totalCount"
@@ -79,13 +74,16 @@ import { listPullRequestRequest } from "@/api/git/prApi";
 import { useRoute, useRouter } from "vue-router";
 import { readableTimeComparingNow } from "@/utils/time";
 import { useRepoStore } from "@/pinia/repoStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const repoStore = useRepoStore();
 const searchKey = ref("");
 const route = useRoute();
 const router = useRouter();
 const repoId = parseInt(route.params.repoId);
-const prStatus = ref("0");
+const prStatus = ref(0);
 const prList = ref([]);
+// 分页
 const dataPage = reactive({
   current: 1,
   pageSize: 10,
@@ -102,6 +100,10 @@ const listPullRequest = () => {
     prList.value = res.data;
     dataPage.totalCount = res.totalCount;
   });
+};
+const searchPullRequest = () => {
+  dataPage.current = 1;
+  listPullRequest();
 };
 // 选择状态并搜索
 const selectPrStatus = () => {
@@ -133,7 +135,7 @@ listPullRequest();
   border-radius: 4px;
 }
 .pr-list > li {
-  padding: 12px;
+  padding: 18px;
 }
 .pr-list > li + li {
   border-top: 1px solid #d9d9d9;
@@ -157,7 +159,7 @@ listPullRequest();
   font-size: 14px;
 }
 .pr-desc {
-  margin-top: 6px;
+  margin-top: 12px;
   color: gray;
   font-size: 12px;
 }

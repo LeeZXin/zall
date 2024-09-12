@@ -3,7 +3,7 @@
     <template #content>
       <div style="width:280px">
         <a-input
-          placeholder="搜索分支"
+          :placeholder="t('gitRepo.searchBranch')"
           v-show="showSearchBranch"
           v-model:value="searchBranch"
           @change="branchInputChange"
@@ -13,7 +13,7 @@
           </template>
         </a-input>
         <a-input
-          placeholder="搜索标签"
+          :placeholder="t('gitRepo.searchTag')"
           v-show="!showSearchBranch"
           v-model:value="searchTag"
           @change="tagInputChange"
@@ -24,19 +24,21 @@
         </a-input>
       </div>
       <a-tabs style="width: 280px;" size="small" @change="onSearchBranchTagTabChange">
-        <a-tab-pane key="branch" tab="分支">
-          <ul class="branch-tag-list">
+        <a-tab-pane key="branch" :tab="t('gitRepo.branch')">
+          <ul class="branch-tag-list" v-if="branches.length > 0">
             <li @click="select(item)" v-for="item in branches" v-bind:key="item">
               <div class="branch-tag-name">{{item}}</div>
             </li>
           </ul>
+          <ZNoData v-else :unbordered="true"/>
         </a-tab-pane>
-        <a-tab-pane key="tag" tab="标签" v-if="!props.disableTags">
-          <ul class="branch-tag-list">
+        <a-tab-pane key="tag" :tab="t('gitRepo.tag')" v-if="!props.disableTags">
+          <ul class="branch-tag-list" v-if="tags.length > 0">
             <li @click="select(item)" v-for="item in tags" v-bind:key="item">
               <div class="branch-tag-name">{{item}}</div>
             </li>
           </ul>
+          <ZNoData v-else :unbordered="true"/>
         </a-tab-pane>
       </a-tabs>
     </template>
@@ -49,6 +51,7 @@
   </a-popover>
 </template>
 <script setup>
+import ZNoData from "@/components/common/ZNoData";
 import { ref, defineEmits, defineProps, watch } from "vue";
 import {
   SearchOutlined,
@@ -56,6 +59,8 @@ import {
   TagOutlined,
   CaretDownOutlined
 } from "@ant-design/icons-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const props = defineProps([
   "style",
   "branches",
@@ -146,7 +151,7 @@ watch(
   line-height: 32px;
   border: 1px solid #dadee3;
   border-radius: 4px;
-  padding: 0 10px;
+  padding: 0 14px;
   cursor: pointer;
 }
 .branch-tag-select:hover {

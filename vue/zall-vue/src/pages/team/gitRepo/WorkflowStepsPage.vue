@@ -2,25 +2,31 @@
   <div style="padding:10px">
     <ul class="info-list">
       <li>
-        <div class="info-name">触发方式</div>
+        <div class="info-name">{{t('gitWorkflow.triggerType')}}</div>
         <div
           class="info-value"
         >{{t(taskStore.triggerType === 1 ? 'workflow.hookTriggerType': 'workflow.manualTriggerType')}}</div>
       </li>
       <li>
-        <div class="info-name">操作人</div>
-        <div class="info-value">{{taskStore.operator}}</div>
+        <div class="info-name">{{t('gitWorkflow.operator')}}</div>
+        <div class="info-value flex-center">
+          <ZAvatar
+            :url="taskStore.operator?.avatarUrl"
+            :name="taskStore.operator?.name"
+            :showName="true"
+          />
+        </div>
       </li>
       <li>
-        <div class="info-name">创建时间</div>
+        <div class="info-name">{{t('gitWorkflow.createTime')}}</div>
         <div class="info-value">{{readableTimeComparingNow(taskStore.created)}}</div>
       </li>
       <li>
-        <div class="info-name">关联分支</div>
+        <div class="info-name">{{t('gitWorkflow.branch')}}</div>
         <div class="info-value">{{taskStore.branch}}</div>
       </li>
       <li>
-        <div class="info-name">关联合并请求</div>
+        <div class="info-name">{{t('gitWorkflow.pullRequest')}}</div>
         <div class="info-value">
           <PrIdTag
             :prId="taskStore.prId"
@@ -33,18 +39,18 @@
     </ul>
     <ul class="info-list">
       <li>
-        <div class="info-name">任务状态</div>
+        <div class="info-name">{{t('gitWorkflow.taskStatus')}}</div>
         <div class="info-value">
           <RunStatus :status="taskInfo.status" />
         </div>
       </li>
       <li>
-        <div class="info-name">总耗时</div>
+        <div class="info-name">{{t('gitWorkflow.duration')}}</div>
         <div class="info-value">{{readableDuration(taskInfo.duration)}}</div>
       </li>
       <li>
-        <div class="info-name">工作流配置</div>
-        <div class="info-value check-yaml-btn" @click="showYamlModal">查看配置</div>
+        <div class="info-name">{{t('gitWorkflow.workflowCfg')}}</div>
+        <div class="info-value check-yaml-btn" @click="showYamlModal">{{t('gitWorkflow.viewCfg')}}</div>
       </li>
     </ul>
     <div class="flow">
@@ -64,7 +70,13 @@
       style="margin-top:10px;"
       v-if="taskInfo.status === 'running' || taskInfo.status === 'queue'"
     >
-      <a-button type="primary" danger ghost :icon="h(PauseOutlined)" @click="killTask">停止任务</a-button>
+      <a-button
+        type="primary"
+        danger
+        ghost
+        :icon="h(PauseOutlined)"
+        @click="killTask"
+      >{{t('gitWorkflow.killWorkflow')}}</a-button>
     </div>
     <div class="step-body">
       <div class="left">
@@ -115,7 +127,7 @@
         </ul>
       </div>
     </div>
-    <a-modal v-model:open="yamlModalOpen" title="工作流配置" okText="确定" :footer="null">
+    <a-modal v-model:open="yamlModalOpen" :title="t('gitWorkflow.workflowCfg')" :footer="null">
       <Codemirror
         v-model="taskStore.yamlContent"
         :style="codemirrorStyle"
@@ -126,6 +138,7 @@
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import RunStatus from "@/components/git/WorkflowRunStatus";
 import PrIdTag from "@/components/git/PrIdTag";
 import WorkflowNode from "@/components/vueflow/WorkflowNode";
@@ -163,10 +176,12 @@ const { findNode } = useVueFlow();
 const { t } = useI18n();
 const taskStore = ref({});
 const yamlModalOpen = ref(false);
+// 任务状态
 const taskInfo = reactive({
   status: "unknown",
   duration: 0
 });
+// 单个job状态
 const jobInfo = reactive({
   status: "unknown",
   duration: 0
@@ -309,30 +324,35 @@ const getTaskStatus = () => {
     }
   });
 };
+// 获取任务详情
 const getTaskDetail = () => {
   getTaskDetailRequest(route.params.taskId).then(res => {
     taskStore.value = res.data;
     getTaskStatus();
   });
 };
+// 点击节点
 const clickFlowNode = e => {
   selectJob(e.node.id);
 };
+// 展示配置
 const showYamlModal = () => {
   yamlModalOpen.value = true;
 };
+// 停止任务
 const killTask = () => {
   Modal.confirm({
-    title: `你确定要停止该任务吗?`,
+    title: `${t("gitWorkflow.confirmKill")}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       killWorkflowTaskRequest(taskStore.value.id).then(() => {
-        message.success("停止成功");
+        message.success(t("operationSuccess"));
       });
     },
     onCancel() {}
   });
 };
+// 查看日志
 const showLogs = (item, index) => {
   if (item.openLog) {
     item.openLog = false;

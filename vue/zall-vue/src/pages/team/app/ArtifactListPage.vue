@@ -5,7 +5,14 @@
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
+        <div v-if="dataIndex === 'creator'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.creator?.avatarUrl"
+            :name="dataItem.creator?.name"
+            :showName="true"
+          />
+        </div>
+        <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div class="op-icon" @click="deleteArtifact(dataItem)" v-else>
           <DeleteOutlined />
         </div>
@@ -28,6 +35,7 @@ import {
   ExclamationCircleOutlined,
   DeleteOutlined
 } from "@ant-design/icons-vue";
+import ZAvatar from "@/components/user/ZAvatar";
 import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
 import { ref, createVNode, reactive } from "vue";

@@ -16,7 +16,13 @@
       </li>
       <li>
         <div class="info-name">{{t('deployPlan.creator')}}</div>
-        <div class="info-value">{{planDetail.creator}}</div>
+        <div class="info-value flex-center">
+          <ZAvatar
+            :url="planDetail.creator?.avatarUrl"
+            :name="planDetail.creator?.name"
+            :showName="true"
+          />
+        </div>
       </li>
     </ul>
     <ul class="info-list" v-if="planDetail">
@@ -195,6 +201,7 @@
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import PlanStatusTag from "@/components/app/PlanStatusTag";
 import StageStatusTag from "@/components/app/StageStatusTag";
 import {

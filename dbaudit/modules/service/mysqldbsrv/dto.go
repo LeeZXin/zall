@@ -303,13 +303,13 @@ func (r *ListReadPermByDbaReqDTO) IsValid() error {
 
 type ReadPermApplyDTO struct {
 	Id             int64
-	Account        string
+	Account        util.User
 	DbId           int64
 	DbName         string
 	AccessBase     string
 	AccessTables   string
 	ApplyStatus    mysqldbmd.ReadPermApplyStatus
-	Auditor        string
+	Auditor        util.User
 	ExpireDay      int
 	ApplyReason    string
 	DisagreeReason string
@@ -319,7 +319,7 @@ type ReadPermApplyDTO struct {
 
 type ReadPermDTO struct {
 	Id          int64
-	Account     string
+	Account     util.User
 	DbId        int64
 	DbName      string
 	AccessBase  string
@@ -557,14 +557,14 @@ func (r *ListDataUpdateApplyByOperatorReqDTO) IsValid() error {
 
 type DataUpdateApplyDTO struct {
 	Id                              int64
-	Account                         string
+	Account                         util.User
 	DbId                            int64
 	DbName                          string
 	AccessBase                      string
 	UpdateCmd                       string
 	ApplyStatus                     mysqldbmd.DataUpdateApplyStatus
-	Auditor                         string
-	Executor                        string
+	Auditor                         util.User
+	Executor                        util.User
 	ApplyReason                     string
 	DisagreeReason                  string
 	ExecuteLog                      string

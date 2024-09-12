@@ -8,6 +8,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/zalletmd"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/event"
@@ -527,6 +528,14 @@ func ListPlan(ctx context.Context, reqDTO ListPlanReqDTO) ([]PlanDTO, int64, err
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(plans, func(t deploymd.Plan) string {
+		return t.Creator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	data := listutil.MapNe(plans, func(t deploymd.Plan) PlanDTO {
 		return PlanDTO{
 			Id:              t.Id,
@@ -536,7 +545,7 @@ func ListPlan(ctx context.Context, reqDTO ListPlanReqDTO) ([]PlanDTO, int64, err
 			ArtifactVersion: t.ArtifactVersion,
 			PlanStatus:      t.PlanStatus,
 			Env:             t.Env,
-			Creator:         t.Creator,
+			Creator:         userMap[t.Creator],
 			Created:         t.Created,
 		}
 	})
@@ -554,6 +563,11 @@ func GetPlanDetail(ctx context.Context, reqDTO GetPlanDetailReqDTO) (PlanDetailD
 	if err != nil {
 		return PlanDetailDTO{}, err
 	}
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, plan.Creator)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return PlanDetailDTO{}, util.InternalError(err)
+	}
 	ret := PlanDetailDTO{
 		Id:              plan.Id,
 		PipelineId:      plan.PipelineId,
@@ -562,7 +576,7 @@ func GetPlanDetail(ctx context.Context, reqDTO GetPlanDetailReqDTO) (PlanDetailD
 		ArtifactVersion: plan.ArtifactVersion,
 		PlanStatus:      plan.PlanStatus,
 		Env:             plan.Env,
-		Creator:         plan.Creator,
+		Creator:         userMap[plan.Creator],
 		Created:         plan.Created,
 	}
 	if plan.PlanStatus == deploymd.PendingPlanStatus {

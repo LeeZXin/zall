@@ -333,15 +333,15 @@ type HistoryDTO struct {
 	Version     string    `json:"version"`
 	LastVersion string    `json:"lastVersion"`
 	Created     time.Time `json:"created"`
-	Creator     string    `json:"creator"`
+	Creator     util.User `json:"creator"`
 	Env         string    `json:"env"`
 }
 
 type DeployDTO struct {
-	NodeName  string    `json:"nodeName"`
-	Endpoints string    `json:"endpoints"`
-	Created   time.Time `json:"created"`
-	Creator   string    `json:"creator"`
+	NodeName  string
+	Endpoints string
+	Created   time.Time
+	Creator   util.User
 }
 
 type GetHistoryByVersionReqDTO struct {

@@ -3,6 +3,7 @@ package workflowapi
 import (
 	"github.com/LeeZXin/zall/git/modules/model/workflowmd"
 	"github.com/LeeZXin/zall/pkg/sshagent"
+	"github.com/LeeZXin/zall/util"
 )
 
 type CreateWorkflowReqVO struct {
@@ -34,7 +35,7 @@ type TaskWithoutYamlContentVO struct {
 	Id          int64                  `json:"id"`
 	TaskStatus  sshagent.Status        `json:"taskStatus"`
 	TriggerType workflowmd.TriggerType `json:"triggerType"`
-	Operator    string                 `json:"operator"`
+	Operator    util.User              `json:"operator"`
 	Created     string                 `json:"created"`
 	Branch      string                 `json:"branch"`
 	PrId        int64                  `json:"prId"`
@@ -81,4 +82,9 @@ type VarsWithoutContentVO struct {
 type VarsVO struct {
 	VarsWithoutContentVO
 	Content string `json:"content"`
+}
+
+type ListTaskReqVO struct {
+	WorkflowId int64 `json:"workflowId"`
+	PageNum    int   `json:"pageNum"`
 }

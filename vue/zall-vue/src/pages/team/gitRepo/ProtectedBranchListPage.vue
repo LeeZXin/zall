@@ -1,24 +1,25 @@
 <template>
   <div style="padding:10px">
     <div class="header">
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加保护分支</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('protectedBranch.createBranch')}}</a-button>
     </div>
     <ul class="branch-list" v-if="branches.length > 0">
       <li v-for="item in branches" v-bind:key="item.id">
         <div class="branch-pattern no-wrap">{{item.pattern}}</div>
         <ul class="op-btns">
-          <li class="update-btn" @click="handleProtectedBranch(item)">编辑</li>
-          <li class="del-btn" @click="deleteProtectedBranch(item)">删除</li>
+          <li
+            class="update-btn"
+            @click="handleProtectedBranch(item)"
+          >{{t('protectedBranch.update')}}</li>
+          <li class="del-btn" @click="deleteProtectedBranch(item)">{{t('protectedBranch.delete')}}</li>
         </ul>
       </li>
     </ul>
-    <ZNoData v-else>
-      <template #desc>
-        <div
-          class="no-data-text"
-        >Define a protected branch rule to disable force pushing, prevent branches from being deleted, and optionally require status checks before merging</div>
-      </template>
-    </ZNoData>
+    <ZNoData v-else />
   </div>
 </template>
 <script setup>
@@ -32,31 +33,39 @@ import {
 import { ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
 import { useProtectedBranchStore } from "@/pinia/protectedBranchStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const branches = ref([]);
 const protectedBranchStore = useProtectedBranchStore();
+// 跳转创建页面
 const gotoCreatePage = () => {
-  router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/create`);
+  router.push(
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/create`
+  );
 };
+// 删除保护分支
 const deleteProtectedBranch = item => {
   Modal.confirm({
-    title: `你确定要删除${item.pattern}吗?`,
+    title: `${t('protectedBranch.confirmDelete')} ${item.pattern}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteProtectedBranchRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listProtectedBranch();
       });
     },
     onCancel() {}
   });
 };
+// 获取列表
 const listProtectedBranch = () => {
   listProtectedBranchRequest(route.params.repoId).then(res => {
     branches.value = res.data;
   });
 };
+// 跳转编辑页面
 const handleProtectedBranch = item => {
   protectedBranchStore.id = item.id;
   protectedBranchStore.pattern = item.pattern;

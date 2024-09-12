@@ -2,40 +2,37 @@
   <div style="padding:10px">
     <div class="container">
       <div class="section">
-        <div class="section-title">
-          <span>仓库大小</span>
-        </div>
+        <div class="section-title">{{t('repoSetting.repoSize')}}</div>
         <div class="section-body">
-          <div class="input-item">代码大小: {{readableVolumeSize(repoInfo.gitSize)}}</div>
-          <div class="input-item">lfs大小: {{readableVolumeSize(repoInfo.lfsSize)}}</div>
+          <div
+            class="input-item"
+          >{{t('repoSetting.gitSize')}}: {{readableVolumeSize(repoInfo.gitSize)}}</div>
+          <div
+            class="input-item"
+          >{{t('repoSetting.lfsSize')}}: {{readableVolumeSize(repoInfo.lfsSize)}}</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>仓库优化</span>
-        </div>
+        <div class="section-title">{{t('repoSetting.repoOptimization')}}</div>
         <div class="section-body">
           <div class="input-item">
-            <a-button type="primary" @click="triggerGc">触发仓库GC</a-button>
+            <a-button type="primary" @click="triggerGc">{{t('repoSetting.triggerGc')}}</a-button>
           </div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>仓库设置</span>
-        </div>
+        <div class="section-title">{{t('repoSetting.setting')}}</div>
         <div class="section-body">
           <div class="input-item">
-            <div class="input-title">仓库描述</div>
+            <div class="input-title">{{t('repoSetting.repoDesc')}}</div>
             <a-input v-model:value="repoInfo.repoDesc" />
-            <div class="input-desc">用简短的话来描述仓库的作用</div>
           </div>
           <div class="input-item">
-            <a-checkbox v-model:checked="repoInfo.disableLfs">禁用LFS</a-checkbox>
-            <div class="checkbox-option-desc">禁用LFS将不允许用户上传LFS大文件, 对已有配置了LFS的仓库仍能下载原有的文件</div>
+            <a-checkbox v-model:checked="repoInfo.disableLfs">{{t('repoSetting.disallowLfs')}}</a-checkbox>
+            <div class="checkbox-option-desc">{{t('repoSetting.disallowLfsDesc')}}</div>
           </div>
           <div class="input-item">
-            <div class="input-title">代码仓库大小限制</div>
+            <div class="input-title">{{t('repoSetting.limitGitSize')}}</div>
             <a-input-number
               style="width:100%"
               v-model:value="repoInfo.gitLimitSize"
@@ -52,10 +49,10 @@
                 </a-select>
               </template>
             </a-input-number>
-            <div class="input-desc">不包含LFS大小, 指所有代码文件大小总和, 0代表不限制, 超过限制将不允许push代码</div>
+            <div class="input-desc">{{t('repoSetting.limitGitSizeDesc')}}</div>
           </div>
           <div class="input-item">
-            <div class="input-title">LFS大小限制</div>
+            <div class="input-title">{{t('repoSetting.limitLfsSize')}}</div>
             <a-input-number
               style="width:100%"
               v-model:value="repoInfo.lfsLimitSize"
@@ -72,37 +69,53 @@
                 </a-select>
               </template>
             </a-input-number>
-            <div class="input-desc">所有被git lfs track的文件大小总和, 0代表不限制, 超过限制将不允许push代码</div>
+            <div class="input-desc">{{t('repoSetting.limitLfsSizeDesc')}}</div>
           </div>
           <div class="input-item">
-            <a-button type="primary" @click="updateRepo">保存仓库配置</a-button>
+            <a-button type="primary" @click="updateRepo">{{t('repoSetting.save')}}</a-button>
           </div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">危险操作</div>
+        <div class="section-title">{{t('repoSetting.dangerousAction')}}</div>
         <div class="section-body">
           <div class="input-item">
-            <a-button type="primary" danger @click="deleteRepo">删除代码仓库</a-button>
-            <div class="input-desc">将临时删除代码仓库, 会到仓库回收站, 可在仓库回收站进行永久删除</div>
+            <a-button type="primary" danger @click="deleteRepo">{{t('repoSetting.deleteRepo')}}</a-button>
+            <div class="input-desc">{{t('repoSetting.deleteRepoDesc')}}</div>
           </div>
           <div class="input-item" v-if="repoInfo.isArchived">
-            <a-button type="primary" danger @click="setArchivedStatus(false)">取消归档代码仓库</a-button>
-            <div class="input-desc">将代码仓库置从归档状态变成正常状态, 代码可读可写</div>
+            <a-button
+              type="primary"
+              danger
+              @click="setArchivedStatus(false)"
+            >{{t('repoSetting.unArchiveRepo')}}</a-button>
+            <div class="input-desc">{{t('repoSetting.unArchiveRepoDesc')}}</div>
           </div>
           <div class="input-item" v-else>
-            <a-button type="primary" danger @click="setArchivedStatus(true)">归档代码仓库</a-button>
-            <div class="input-desc">将代码仓库置为归档状态且后续代码仅可读, 不可被推送</div>
+            <a-button
+              type="primary"
+              danger
+              @click="setArchivedStatus(true)"
+            >{{t('repoSetting.archiveRepo')}}</a-button>
+            <div class="input-desc">{{t('repoSetting.archiveRepoDesc')}}</div>
           </div>
           <div class="input-item" v-if="userStore.isAdmin">
-            <a-button type="primary" danger @click="showTransferModal">迁移仓库至其他团队</a-button>
-            <div class="input-desc">将代码仓库迁移至其他团队, 该仓库原有的团队配置将失效</div>
+            <a-button
+              type="primary"
+              danger
+              @click="showTransferModal"
+            >{{t('repoSetting.transferTeam')}}</a-button>
+            <div class="input-desc">{{t('repoSetting.transferTeamDesc')}}</div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <a-modal v-model:open="transferModal.open" title="迁移团队" @ok="handleTransferModalOk">
+  <a-modal
+    v-model:open="transferModal.open"
+    :title="t('repoSetting.transferTeam')"
+    @ok="handleTransferModalOk"
+  >
     <a-select
       v-model:value="transferModal.teamId"
       style="width:100%"
@@ -130,11 +143,14 @@ import { message, Modal } from "ant-design-vue";
 import { useRepoStore } from "@/pinia/repoStore";
 import { useUserStore } from "@/pinia/userStore";
 import { listAllByAdminRequest } from "@/api/team/teamApi";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const userStore = useUserStore();
 const route = useRoute();
 const router = useRouter();
 const repoId = parseInt(route.params.repoId);
 const volumeList = ["KB", "MB", "GB", "TB"];
+// 仓库信息
 const repoInfo = reactive({
   gitSize: 0,
   lfsSize: 0,
@@ -147,17 +163,21 @@ const repoInfo = reactive({
   repoDesc: "",
   loaded: false
 });
+// 迁移团队modal
 const transferModal = reactive({
   open: false,
   teamId: null
 });
+// 团队列表
 const teamList = ref([]);
+// 展示迁移团队modal
 const showTransferModal = () => {
   if (teamList.value.length === 0) {
     listAllTeam();
   }
   transferModal.open = true;
 };
+// 获取团队列表
 const listAllTeam = () => {
   listAllByAdminRequest().then(res => {
     let t = res.data.map(item => {
@@ -174,24 +194,25 @@ const listAllTeam = () => {
     }
   });
 };
-
+// 团队下拉框过滤
 const filterTeamListOption = (input, option) => {
   return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
-
+// 确认迁移团队
 const handleTransferModalOk = () => {
   if (!transferModal.teamId) {
-    message.warn("请选择团队");
+    message.warn(t("repoSetting.pleaseSelectTeam"));
     return;
   }
   transferRepoRequest({
     repoId: repoId,
     teamId: transferModal.teamId
   }).then(() => {
-    message.success("迁移成功");
+    message.success(t("operationSuccess"));
     router.push(`/team/${transferModal.teamId}/gitRepo/list`);
   });
 };
+// 获取仓库信息
 const getRepo = () => {
   getDetailInfoRequest(repoId).then(res => {
     repoInfo.gitSize = res.data.gitSize;
@@ -210,6 +231,7 @@ const getRepo = () => {
     repoInfo.isArchived = res.data.isArchived;
   });
 };
+// 编辑仓库
 const updateRepo = () => {
   updateRepoRequest({
     repoId,
@@ -220,12 +242,12 @@ const updateRepo = () => {
     ),
     lfsLimitSize: new Unit(repoInfo.lfsSizeUnit).toNumber(repoInfo.lfsLimitSize)
   }).then(() => {
-    message.success("编辑成功");
+    message.success(t("operationSuccess"));
   });
 };
 const triggerGc = () => {
   gcRequest(repoId).then(() => {
-    message.success("gc成功");
+    message.success(t("operationSuccess"));
     getRepo();
   });
 };
@@ -233,10 +255,10 @@ const setArchivedStatus = isArchived => {
   let warnMsg;
   let request;
   if (isArchived) {
-    warnMsg = "你确定要归档该仓库吗?";
+    warnMsg = `${t("repoSetting.confirmArchiveRepo")}?`;
     request = setArchivedRequest;
   } else {
-    warnMsg = "你确定要取消归档仓库吗?";
+    warnMsg = `${t("repoSetting.confirmUnArchiveRepo")}?`;
     request = setUnArchivedRequest;
   }
   Modal.confirm({
@@ -244,7 +266,7 @@ const setArchivedStatus = isArchived => {
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       request(repoId).then(() => {
-        message.success("操作成功");
+        message.success(t("operationSuccess"));
         getRepo();
       });
     },
@@ -253,11 +275,11 @@ const setArchivedStatus = isArchived => {
 };
 const deleteRepo = () => {
   Modal.confirm({
-    title: "你确定要删除该仓库吗?",
+    title: `${t("repoSetting.confirmDeleteRepo")}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteRepoRequest(repoId).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         router.push(`/team/${useRepoStore().teamId}/gitRepo/list`);
       });
     },

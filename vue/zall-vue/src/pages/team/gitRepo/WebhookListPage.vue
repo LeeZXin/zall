@@ -1,25 +1,23 @@
 <template>
   <div style="padding:10px">
     <div class="header">
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">添加Webhook</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('gitWebhook.createWebhook')}}</a-button>
     </div>
     <ul class="webhook-list" v-if="webhooks.length > 0">
       <li v-for="item in webhooks" v-bind:key="item.id">
         <div class="webhook-pattern no-wrap">{{item.hookUrl}}</div>
         <ul class="op-btns">
-          <li class="ping-btn" @click="pingWebhook(item)">ping</li>
-          <li class="update-btn" @click="updateWebhook(item)">编辑</li>
-          <li class="del-btn" @click="deleteWebhook(item)">删除</li>
+          <li class="ping-btn" @click="pingWebhook(item)">{{t('gitWebhook.ping')}}</li>
+          <li class="update-btn" @click="updateWebhook(item)">{{t('gitWebhook.update')}}</li>
+          <li class="del-btn" @click="deleteWebhook(item)">{{t('gitWebhook.delete')}}</li>
         </ul>
       </li>
     </ul>
-    <ZNoData v-else>
-      <template #desc>
-        <div
-          class="no-data-text"
-        >Webhooks allow external services to be notified when certain events happen. When the specified events happen, we'll send a POST request to each of the URLs you provide. Learn more in our Webhooks Guide.</div>
-      </template>
-    </ZNoData>
+    <ZNoData v-else />
   </div>
 </template>
 <script setup>
@@ -34,6 +32,8 @@ import {
 import { ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons-vue";
 import { message, Modal } from "ant-design-vue";
 import { useWebhookStore } from "@/pinia/webhookStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const webhooks = ref([]);
@@ -47,11 +47,11 @@ const gotoCreatePage = () => {
 // 删除webhook
 const deleteWebhook = item => {
   Modal.confirm({
-    title: `你确定要删除${item.hookUrl}吗?`,
+    title: `${t("gitWebhook.confirmDelete")} ${item.hookUrl}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteWebhookRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listWebhook();
       });
     },
@@ -77,7 +77,7 @@ const updateWebhook = item => {
 // ping
 const pingWebhook = item => {
   pingWebhookRequest(item.id).then(() => {
-    message.success("成功");
+    message.success(t("operationSuccess"));
   });
 };
 listWebhook();

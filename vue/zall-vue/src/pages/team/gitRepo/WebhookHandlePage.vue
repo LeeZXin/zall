@@ -2,55 +2,50 @@
   <div style="padding:10px">
     <div class="container">
       <div class="header">
-        <span v-if="mode === 'create'">添加Webhook</span>
-        <span v-else-if="mode === 'update'">更新Webhook</span>
+        <span v-if="mode === 'create'">{{t('gitWebhook.createWebhook')}}</span>
+        <span v-else-if="mode === 'update'">{{t('gitWebhook.updateWebhook')}}</span>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>Hook url</span>
-          <span style="color:darkred">*</span>
-        </div>
+        <div class="section-title">{{t('gitWebhook.webhookUrl')}}</div>
         <div class="section-body">
           <a-input style="width:100%" v-model:value="formState.hookUrl" />
-          <div class="input-desc">必须以http开头的有效url</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>密钥</span>
-        </div>
+        <div class="section-title">{{t('gitWebhook.webhookSecret')}}</div>
         <div class="section-body">
           <a-input-password style="width:100%" v-model:value="formState.secret" />
-          <div class="input-desc">我们会将通过这个密钥, 经过hmac后, 用于对请求的验证</div>
         </div>
       </div>
       <div class="section">
         <div class="section-title">
-          <span>触发事件</span>
+          <span>{{t('gitWebhook.webhookEvents')}}</span>
         </div>
         <div class="section-body">
           <ul class="event-list">
             <li>
-              <a-checkbox v-model:checked="checkboxes.protectedBranch">保护分支</a-checkbox>
-              <div class="checkbox-desc">保护分支的添加、删除、修改事件</div>
+              <a-checkbox
+                v-model:checked="checkboxes.protectedBranch"
+              >{{t('gitWebhook.protectedBranch')}}</a-checkbox>
+              <div class="checkbox-desc">{{t('gitWebhook.protectedBranchDesc')}}</div>
             </li>
             <li>
-              <a-checkbox v-model:checked="checkboxes.gitPush">Git push</a-checkbox>
-              <div class="checkbox-desc">通过ssh或http对git仓库进行push操作</div>
+              <a-checkbox v-model:checked="checkboxes.gitPush">{{t('gitWebhook.gitPush')}}</a-checkbox>
+              <div class="checkbox-desc">{{t('gitWebhook.gitPushDesc')}}</div>
             </li>
             <li>
-              <a-checkbox v-model:checked="checkboxes.pullRequest">合并请求</a-checkbox>
-              <div class="checkbox-desc">合并请求的新增、关闭、合并、评审</div>
+              <a-checkbox v-model:checked="checkboxes.pullRequest">{{t('gitWebhook.pullRequest')}}</a-checkbox>
+              <div class="checkbox-desc">{{t('gitWebhook.pullRequestDesc')}}</div>
             </li>
             <li>
-              <a-checkbox v-model:checked="checkboxes.gitRepo">仓库</a-checkbox>
-              <div class="checkbox-desc">仓库的删除、归档</div>
+              <a-checkbox v-model:checked="checkboxes.gitRepo">{{t('gitWebhook.gitRepo')}}</a-checkbox>
+              <div class="checkbox-desc">{{t('gitWebhook.gitRepoDesc')}}</div>
             </li>
           </ul>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="createOrUpdateWebhook">立即保存</a-button>
+        <a-button type="primary" @click="createOrUpdateWebhook">{{t('gitWebhook.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -65,11 +60,15 @@ import { useRoute, useRouter } from "vue-router";
 import { webhookUrlRegexp, webhookSecretRegexp } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import { useWebhookStore } from "@/pinia/webhookStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const route = useRoute();
+// 模式
 const getMode = () => {
   let s = route.path.split("/");
   return s[s.length - 1];
 };
+// 四个checkbox数据
 const checkboxes = reactive({
   protectedBranch: false,
   gitPush: false,
@@ -79,21 +78,28 @@ const checkboxes = reactive({
 const webhookStore = useWebhookStore();
 const router = useRouter();
 const mode = getMode();
+// 表单数据
 const formState = reactive({
   hookUrl: "",
   secret: ""
 });
+// 新增或编辑webhook
 const createOrUpdateWebhook = () => {
   if (!webhookUrlRegexp.test(formState.hookUrl)) {
-    message.warn("url格式错误");
+    message.warn(t("gitWebhook.webhookUrlFormatErr"));
     return;
   }
   if (!webhookSecretRegexp.test(formState.secret)) {
-    message.warn("密钥格式错误");
+    message.warn(t("gitWebhook.webhookSecretFormatErr"));
     return;
   }
-  if (!checkboxes.pullRequest && !checkboxes.gitRepo && !checkboxes.gitPush && !checkboxes.protectedBranch) {
-    message.warn("至少选择一个事件");
+  if (
+    !checkboxes.pullRequest &&
+    !checkboxes.gitRepo &&
+    !checkboxes.gitPush &&
+    !checkboxes.protectedBranch
+  ) {
+    message.warn(t("gitWebhook.atLeastChooseOneEvent"));
     return;
   }
   if (mode === "create") {
@@ -103,7 +109,7 @@ const createOrUpdateWebhook = () => {
       secret: formState.secret,
       events: checkboxes
     }).then(() => {
-      message.success("添加成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`
       );
@@ -115,7 +121,7 @@ const createOrUpdateWebhook = () => {
       secret: formState.secret,
       events: checkboxes
     }).then(() => {
-      message.success("更新成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/webhook/list`
       );

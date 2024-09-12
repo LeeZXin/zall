@@ -4,7 +4,7 @@
       <div class="left">
         <div class="title">
           <ordered-list-outlined />
-          <span style="margin-left:10px">文件列表</span>
+          <span style="margin-left:10px">{{t('repoIndex.fileList')}}</span>
         </div>
         <a-tree
           style="margin-top:10px"
@@ -24,8 +24,8 @@
         </div>
         <template v-if="showRight">
           <div class="commit-info">
-            <div class="left">
-              <span>{{latestCommit.committer}}</span>
+            <div class="left flex-center">
+              <ZAvatar :url="latestCommit.avatarUrl" :name="latestCommit.name" :showName="true" />
               <span>{{latestCommit.commitMsg}}</span>
             </div>
             <div class="right">
@@ -35,46 +35,13 @@
           </div>
           <div class="code-body">
             <div class="code-top">
-              <a-radio-group @change="codeOrBlameChange" v-model:value="codeOrBlame">
-                <a-radio-button value="code">代码</a-radio-button>
-                <a-radio-button value="blame">Blame</a-radio-button>
-              </a-radio-group>
               <div class="code-info">
-                <span>文件大小:</span>
+                <span>{{t('repoIndex.fileSize')}}:</span>
                 <span>{{fileSize}}</span>
               </div>
             </div>
-            <div style="max-height:calc(100vh - 234px);overflow:scroll;width:100%">
+            <div style="max-height:calc(100vh - 240px);overflow:scroll;width:100%">
               <div class="code-code">
-                <ul class="blame-info" v-if="showBlame">
-                  <li
-                    v-for="item in blameList"
-                    v-bind:key="item.commit.commitId"
-                    :style="blameLineStyle"
-                  >
-                    <a-popover>
-                      <template #content>
-                        <div class="commit-content">
-                          <div class="title">
-                            <div class="commit-link-icon">
-                              <link-outlined />
-                            </div>
-                            <div class="commit-msg">{{item.commit.commitMsg}}</div>
-                          </div>
-                          <div class="bottom">
-                            <span class="author-name">{{item.commit.committer.account}}</span>
-                            <span class="gray-text">提交于</span>
-                            <span
-                              class="gray-text"
-                            >{{readableTimeComparingNow(item.commit.committedTime)}}</span>
-                          </div>
-                        </div>
-                      </template>
-                      <div class="commit-text">{{item.commit.committer.account}}</div>
-                    </a-popover>
-                    <span>{{readableTimeComparingNow(item.commit.committedTime)}}</span>
-                  </li>
-                </ul>
                 <Codemirror
                   v-model="fileContent"
                   style="width:100%;"
@@ -90,25 +57,21 @@
   </div>
 </template>
 <script setup>
-import { OrderedListOutlined, LinkOutlined } from "@ant-design/icons-vue";
+import ZAvatar from "@/components/user/ZAvatar";
+import { OrderedListOutlined } from "@ant-design/icons-vue";
 import { ref, defineProps, reactive } from "vue";
 import { Codemirror } from "vue-codemirror";
-import { javascript } from "@codemirror/lang-javascript";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { useRoute } from "vue-router";
 import { readableTimeComparingNow } from "@/utils/time";
-import {
-  entriesRepoRequest,
-  catFileRequest,
-  blameRequest
-} from "@/api/git/repoApi";
+import { entriesRepoRequest, catFileRequest } from "@/api/git/repoApi";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const route = useRoute();
 const props = defineProps(["style"]);
 const fileContent = ref("");
 const fileSize = ref("");
-const extensions = [oneDark, javascript()];
-const codeOrBlame = ref("code");
-const showBlame = ref(false);
+const extensions = [oneDark];
 const files = ref(route.params.files ? route.params.files : []);
 const treeData = ref([]);
 const showRight = ref(false);
@@ -119,12 +82,10 @@ const latestCommit = reactive({
   committer: "",
   commitMsg: "",
   shortCommitId: "",
-  committedTime: ""
+  committedTime: "",
+  avatarUrl: "",
+  name: ""
 });
-const blameLineStyle = ref({});
-// 每行提交信息
-const blameList = ref([]);
-let hasBlame = false;
 const lsTree = treeNode => {
   return new Promise(resolve => {
     if (treeNode.dataRef.children) {
@@ -149,39 +110,6 @@ const lsTree = treeNode => {
       });
   });
 };
-// 代码和blame隐藏和展开
-const codeOrBlameChange = () => {
-  if (codeOrBlame.value === "code") {
-    showBlame.value = false;
-  } else if (codeOrBlame.value === "blame") {
-    showBlame.value = true;
-    if (!hasBlame) {
-      blameRequest({
-        repoId: parseInt(route.params.repoId),
-        ref: route.params.ref,
-        refType: route.params.refType,
-        filePath: files.value.join("/")
-      }).then(res => {
-        hasBlame = true;
-        blameList.value = res.data;
-        if (res.data && res.data.length > 0) {
-          let nodes = document.getElementsByClassName("cm-gutterElement");
-          if (nodes && nodes.length > 0) {
-            for (let index in nodes) {
-              let h = nodes[index].style.height;
-              if (h && h !== "0px" && h !== "0") {
-                blameLineStyle.value = {
-                  lineHeight: h
-                };
-                break;
-              }
-            }
-          }
-        }
-      });
-    }
-  }
-};
 // 获取文件列表
 const getFiles = dir => {
   return entriesRepoRequest({
@@ -198,7 +126,7 @@ getFiles("").then(res => {
       return {
         title: item.rawPath,
         key: item.rawPath,
-        isLeaf: item.mode !== 'directory'
+        isLeaf: item.mode !== "directory"
       };
     });
   }
@@ -214,9 +142,6 @@ const selectNode = (node, e) => {
     );
     files.value = filePath.split("/");
     getAndCatFile(filePath);
-    showBlame.value = false;
-    hasBlame = false;
-    codeOrBlame.value = "code";
   }
 };
 // 获取文件详细内容
@@ -225,10 +150,7 @@ const getAndCatFile = (filePath, init) => {
     if (!res.data) {
       return;
     }
-    if (
-      res.data.length === 1 &&
-      (res.data[0].mode !== 'directory')
-    ) {
+    if (res.data.length === 1 && res.data[0].mode !== "directory") {
       catFile(filePath).then(res => {
         fileContent.value = res.data.content;
         fileSize.value = res.data.size;
@@ -238,6 +160,8 @@ const getAndCatFile = (filePath, init) => {
           latestCommit.commitMsg = commit.commitMsg;
           latestCommit.shortCommitId = commit.shortId;
           latestCommit.committedTime = commit.committedTime;
+          latestCommit.avatarUrl = commit.committer.avatarUrl;
+          latestCommit.name = commit.committer.name;
         }
       });
       if (init) {
@@ -336,12 +260,9 @@ getAndCatFile(files.value.join("/"), true);
   overflow: scroll;
 }
 .code-top {
-  padding: 10px;
+  padding: 10px 16px;
   display: flex;
   align-items: center;
-}
-.code-info {
-  margin-left: 8px;
 }
 .code-info > span {
   line-height: 32px;
@@ -349,7 +270,8 @@ getAndCatFile(files.value.join("/"), true);
   padding-left: 3px;
 }
 .commit-info {
-  padding: 5px 10px;
+  line-height: 48px;
+  padding: 0 16px;
   display: flex;
   justify-content: space-between;
   border-radius: 4px;
@@ -357,7 +279,6 @@ getAndCatFile(files.value.join("/"), true);
   margin-bottom: 10px;
 }
 .commit-info > .left {
-  line-height: 32px;
   font-size: 14px;
   max-width: 50%;
   overflow: hidden;
@@ -368,7 +289,6 @@ getAndCatFile(files.value.join("/"), true);
   padding-left: 8px;
 }
 .commit-info > .right {
-  line-height: 32px;
   font-size: 14px;
   max-width: 50%;
   overflow: hidden;
@@ -396,22 +316,6 @@ getAndCatFile(files.value.join("/"), true);
   display: flex;
   border-top: 1px solid #d9d9d9;
   min-height: calc(100vh - 236px);
-}
-.blame-info {
-  width: 25%;
-  min-height: calc(100vh - 236px);
-  padding: 4px;
-  min-width: 200px;
-  background-color: #282c34;
-  color: #abb2bf;
-}
-.blame-info > li {
-  font-size: 12px;
-  line-height: 1.4;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 6px;
 }
 .commit-text {
   display: inline-block;

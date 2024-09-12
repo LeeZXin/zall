@@ -11,6 +11,13 @@
     <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <PLanStatusTag v-if="dataIndex === 'planStatus'" :status="dataItem[dataIndex]" />
+        <div v-else-if="dataIndex === 'creator'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.creator?.avatarUrl"
+            :name="dataItem.creator?.name"
+            :showName="true"
+          />
+        </div>
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <a-popover placement="bottomRight" trigger="hover">
@@ -56,6 +63,7 @@ import {
   ExclamationCircleOutlined,
   EyeOutlined
 } from "@ant-design/icons-vue";
+import ZAvatar from "@/components/user/ZAvatar";
 import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
 import { ref, h, createVNode, reactive } from "vue";
@@ -125,7 +133,7 @@ const columns = [
 // 关闭发布计划
 const closePlan = item => {
   Modal.confirm({
-    title: `${t('deployPlan.confirmClose')} ${item.name}?`,
+    title: `${t("deployPlan.confirmClose")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       closeDeployPlanRequest(item.id).then(() => {

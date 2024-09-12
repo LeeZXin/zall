@@ -22,7 +22,7 @@ func InitApi() {
 			// 仓库信息+权限
 			group.GET("/get/:repoId", getRepo)
 			// 基本信息
-			group.GET("/simpleInfo/:repoId", getSimpleInfo)
+			group.GET("/base/:repoId", getBaseInfo)
 			// 详细信息
 			group.GET("/detail/:repoId", getDetailInfo)
 			// 获取模版列表
@@ -50,9 +50,9 @@ func InitApi() {
 			// 展示仓库所有分支
 			group.GET("/allBranches/:repoId", allBranches)
 			// 分页展示分支+提交
-			group.GET("/pageBranchCommits", pageBranchCommits)
+			group.GET("/listBranchCommits", listBranchCommits)
 			// 分页展示分支+提交
-			group.GET("/pageTagCommits", pageTagCommits)
+			group.GET("/listTagCommits", listTagCommits)
 			// 展示仓库所有tag
 			group.GET("/allTags/:repoId", allTags)
 			// gc
@@ -174,8 +174,8 @@ func updateRepo(c *gin.Context) {
 	}
 }
 
-func getSimpleInfo(c *gin.Context) {
-	info, err := reposrv.GetSimpleInfo(c, reposrv.GetSimpleInfoReqDTO{
+func getBaseInfo(c *gin.Context) {
+	base, err := reposrv.GetBaseInfo(c, reposrv.GetBaseInfoReqDTO{
 		RepoId:   getRepoId(c),
 		Operator: apisession.MustGetLoginUser(c),
 	})
@@ -183,13 +183,14 @@ func getSimpleInfo(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, ginutil.DataResp[SimpleInfoVO]{
+	c.JSON(http.StatusOK, ginutil.DataResp[BaseInfoVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data: SimpleInfoVO{
-			Branches:     info.Branches,
-			Tags:         info.Tags,
-			CloneHttpUrl: info.CloneHttpUrl,
-			CloneSshUrl:  info.CloneSshUrl,
+		Data: BaseInfoVO{
+			Branches:      base.Branches,
+			Tags:          base.Tags,
+			CloneHttpUrl:  base.CloneHttpUrl,
+			CloneSshUrl:   base.CloneSshUrl,
+			DefaultBranch: base.DefaultBranch,
 		},
 	})
 }
@@ -256,10 +257,10 @@ func allBranches(c *gin.Context) {
 	})
 }
 
-func pageBranchCommits(c *gin.Context) {
-	var req PageRefCommitsReqVO
+func listBranchCommits(c *gin.Context) {
+	var req ListRefCommitsReqVO
 	if util.ShouldBindQuery(&req, c) {
-		branches, total, err := reposrv.PageBranchCommits(c, reposrv.PageRefCommitsReqDTO{
+		branches, total, err := reposrv.ListBranchCommits(c, reposrv.ListRefCommitsReqDTO{
 			RepoId:   req.RepoId,
 			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),
@@ -295,10 +296,10 @@ func pageBranchCommits(c *gin.Context) {
 	}
 }
 
-func pageTagCommits(c *gin.Context) {
-	var req PageRefCommitsReqVO
+func listTagCommits(c *gin.Context) {
+	var req ListRefCommitsReqVO
 	if util.ShouldBindQuery(&req, c) {
-		tags, total, err := reposrv.PageTagCommits(c, reposrv.PageRefCommitsReqDTO{
+		tags, total, err := reposrv.ListTagCommits(c, reposrv.ListRefCommitsReqDTO{
 			RepoId:   req.RepoId,
 			PageNum:  req.PageNum,
 			Operator: apisession.MustGetLoginUser(c),
@@ -423,8 +424,10 @@ func commitDto2Vo(d reposrv.CommitDTO) CommitVO {
 			Email:   d.Author.Email,
 		},
 		Committer: UserVO{
-			Account: d.Committer.Account,
-			Email:   d.Committer.Email,
+			Account:   d.Committer.Account,
+			Email:     d.Committer.Email,
+			AvatarUrl: d.Committer.AvatarUrl,
+			Name:      d.Committer.Name,
 		},
 		AuthoredTime:  time.UnixMilli(d.AuthoredTime).Format(time.DateTime),
 		CommittedTime: time.UnixMilli(d.CommittedTime).Format(time.DateTime),

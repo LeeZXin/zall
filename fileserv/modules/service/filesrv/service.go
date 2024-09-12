@@ -8,6 +8,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
@@ -250,11 +251,19 @@ func ListArtifact(ctx context.Context, reqDTO ListArtifactReqDTO) ([]ArtifactDTO
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(artifacts, func(t artifactmd.Artifact) string {
+		return t.Creator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	ret := listutil.MapNe(artifacts, func(t artifactmd.Artifact) ArtifactDTO {
 		return ArtifactDTO{
 			Id:      t.Id,
 			Name:    t.Name,
-			Creator: t.Creator,
+			Creator: userMap[t.Creator],
 			Created: t.Created,
 		}
 	})
@@ -277,11 +286,19 @@ func ListLatestArtifact(ctx context.Context, reqDTO ListLatestArtifactReqDTO) ([
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(artifacts, func(t artifactmd.Artifact) string {
+		return t.Creator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
 	ret := listutil.MapNe(artifacts, func(t artifactmd.Artifact) ArtifactDTO {
 		return ArtifactDTO{
 			Id:      t.Id,
 			Name:    t.Name,
-			Creator: t.Creator,
+			Creator: userMap[t.Creator],
 			Created: t.Created,
 		}
 	})

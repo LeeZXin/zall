@@ -17,12 +17,94 @@ import (
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"strings"
 	"time"
 )
 
 const (
 	LoginSessionExpiry = 2 * time.Hour
 )
+
+func GetUsersNameAndAvatar(ctx context.Context, accounts ...string) ([]util.User, error) {
+	accounts = listutil.Distinct(accounts...)
+	if len(accounts) == 0 {
+		return []util.User{}, nil
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	users, err := usermd.ListUserByAccounts(ctx, accounts, []string{"account", "avatar_url", "name"})
+	if err != nil {
+		return nil, err
+	}
+	userMap := make(map[string]usermd.User, len(users))
+	for _, user := range users {
+		userMap[user.Account] = user
+	}
+	return listutil.Map(accounts, func(t string) (util.User, error) {
+		return util.User{
+			Account:   t,
+			Name:      userMap[t].Name,
+			AvatarUrl: userMap[t].AvatarUrl,
+		}, nil
+	})
+}
+
+func GetUsersNameAndAvatarMap(ctx context.Context, accounts ...string) (map[string]util.User, error) {
+	accounts = listutil.Distinct(accounts...)
+	if len(accounts) == 0 {
+		return map[string]util.User{}, nil
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	users, err := usermd.ListUserByAccounts(ctx, accounts, []string{"account", "avatar_url", "name"})
+	if err != nil {
+		return nil, err
+	}
+	userMap := make(map[string]usermd.User, len(users))
+	for _, user := range users {
+		userMap[user.Account] = user
+	}
+	ret := make(map[string]util.User)
+	for _, account := range accounts {
+		ret[account] = util.User{
+			Account:   account,
+			Name:      userMap[account].Name,
+			AvatarUrl: userMap[account].AvatarUrl,
+		}
+	}
+	// 系统默认账号
+	ret["system"] = util.User{
+		Account: "system",
+		Name:    "system",
+	}
+	return ret, nil
+}
+
+func GetUsersNameAndAvatarMapByEmails(ctx context.Context, emails ...string) (map[string]util.User, error) {
+	emails = listutil.Distinct(emails...)
+	if len(emails) == 0 {
+		return map[string]util.User{}, nil
+	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
+	users, err := usermd.ListUserByEmails(ctx, emails, []string{"account", "avatar_url", "name", "email"})
+	if err != nil {
+		return nil, err
+	}
+	userMap := make(map[string]usermd.User, len(users))
+	for _, user := range users {
+		userMap[user.Email] = user
+	}
+	ret := make(map[string]util.User)
+	for _, email := range emails {
+		ret[email] = util.User{
+			Account:   userMap[email].Account,
+			Name:      userMap[email].Name,
+			AvatarUrl: userMap[email].AvatarUrl,
+		}
+	}
+	return ret, nil
+}
 
 func GetByAccount(ctx context.Context, account string) (usermd.UserInfo, bool) {
 	user, b := getByAccount(ctx, account)
@@ -314,27 +396,35 @@ func Logout(ctx context.Context, reqDTO LogoutReqDTO) error {
 }
 
 // CreateUser 管理员创建用户
-func CreateUser(ctx context.Context, reqDTO CreateUserReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func CreateUser(ctx context.Context, reqDTO CreateUserReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 不是企业管理员
 	if !reqDTO.Operator.IsAdmin {
-		err = util.UnauthorizedError()
-		return
+		return util.UnauthorizedError()
 	}
-	var b bool
-	b, err = usermd.ExistByAccount(ctx, reqDTO.Account)
+	if strings.ToLower(reqDTO.Account) == "system" {
+		return util.InvalidArgsError()
+	}
+	b, err := usermd.ExistByAccount(ctx, reqDTO.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if b {
-		err = util.AlreadyExistsError()
-		return
+		return util.AlreadyExistsError()
+	}
+	// 检查邮箱是否存在
+	b, err = usermd.ExistByEmail(ctx, reqDTO.Email)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if b {
+		return util.NewBizErr(apicode.UserAlreadyExistsCode, i18n.UserEmailAlreadyExists)
 	}
 	// 添加账号
 	err = usermd.InsertUser(ctx, usermd.InsertUserReqDTO{
@@ -346,16 +436,15 @@ func CreateUser(ctx context.Context, reqDTO CreateUserReqDTO) (err error) {
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
 // RegisterUser 注册用户
-func RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
@@ -363,31 +452,36 @@ func RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (err error) {
 	sysCfg, err := cfgsrv.GetSysCfg(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
 	}
 	if sysCfg.DisableSelfRegisterUser {
-		err = util.UnauthorizedError()
-		return
+		return util.UnauthorizedError()
 	}
-	var (
-		b         bool
-		userCount int64
-	)
-	_, b, err = usermd.GetByAccount(ctx, reqDTO.Account)
+	if strings.ToLower(reqDTO.Account) == "system" {
+		return util.InvalidArgsError()
+	}
+	// 检查账号是否存在
+	_, b, err := usermd.GetByAccount(ctx, reqDTO.Account)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
+		return util.InternalError(err)
 	}
 	if b {
-		err = util.NewBizErr(apicode.UserAlreadyExistsCode, i18n.UserAlreadyExists)
-		return
+		return util.NewBizErr(apicode.UserAlreadyExistsCode, i18n.UserAlreadyExists)
 	}
-	userCount, err = usermd.CountAllUsers(ctx)
+	// 检查邮箱是否存在
+	b, err = usermd.ExistByEmail(ctx, reqDTO.Email)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-		return
+		return util.InternalError(err)
+	}
+	if b {
+		return util.NewBizErr(apicode.UserAlreadyExistsCode, i18n.UserEmailAlreadyExists)
+	}
+	userCount, err := usermd.CountAllUsers(ctx)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
 	}
 	// 添加账号
 	err = usermd.InsertUser(ctx, usermd.InsertUserReqDTO{
@@ -399,9 +493,9 @@ func RegisterUser(ctx context.Context, reqDTO RegisterUserReqDTO) (err error) {
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
+		return util.InternalError(err)
 	}
-	return
+	return nil
 }
 
 // DeleteUser 注销用户
@@ -481,17 +575,25 @@ func ListUser(ctx context.Context, reqDTO ListUserReqDTO) ([]UserDTO, int64, err
 }
 
 // UpdateUser 编辑用户
-func UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (err error) {
-	if err = reqDTO.IsValid(); err != nil {
-		return
+func UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) error {
+	if err := reqDTO.IsValid(); err != nil {
+		return err
 	}
 	// 系统管理员或本人才能编辑user
-	if !reqDTO.Operator.IsAdmin && reqDTO.Account != reqDTO.Operator.Account {
-		err = util.UnauthorizedError()
-		return
+	if !reqDTO.Operator.IsAdmin &&
+		reqDTO.Account != reqDTO.Operator.Account {
+		return util.UnauthorizedError()
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
+	user, b, err := usermd.GetByEmail(ctx, reqDTO.Email)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if b && user.Account != reqDTO.Account {
+		return util.NewBizErr(apicode.UserAlreadyExistsCode, i18n.UserEmailAlreadyExists)
+	}
 	_, err = usermd.UpdateUser(ctx, usermd.UpdateUserReqDTO{
 		Account:   reqDTO.Account,
 		Name:      reqDTO.Name,
@@ -500,15 +602,14 @@ func UpdateUser(ctx context.Context, reqDTO UpdateUserReqDTO) (err error) {
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		err = util.InternalError(err)
-	} else {
-		// 修改信息后 需重新登录 登录session里有旧信息
-		err2 := apisession.GetStore().DeleteByAccount(reqDTO.Account)
-		if err2 != nil {
-			logger.Logger.WithContext(ctx).Error(err2)
-		}
+		return util.InternalError(err)
 	}
-	return
+	// 修改信息后 需重新登录 登录session里有旧信息
+	err2 := apisession.GetStore().DeleteByAccount(reqDTO.Account)
+	if err2 != nil {
+		logger.Logger.WithContext(ctx).Error(err2)
+	}
+	return nil
 }
 
 // SetAdmin 设置系统管理员角色

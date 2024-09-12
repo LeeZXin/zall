@@ -10,13 +10,7 @@
         />
       </li>
     </ul>
-    <ZNoData v-else>
-      <template #desc>
-        <div style="font-size:14px;text-align:center">
-          <span>无分支数据, 尝试去git tag -a xx -m xx</span>
-        </div>
-      </template>
-    </ZNoData>
+    <ZNoData v-else />
     <a-pagination
       v-model:current="dataPage.current"
       :total="dataPage.totalCount"
@@ -34,16 +28,18 @@ import TagItem from "@/components/git/TagItem";
 import ZNoData from "@/components/common/ZNoData";
 import { ref, reactive } from "vue";
 import { useRoute } from "vue-router";
-import { pageTagCommitsRequest } from "@/api/git/repoApi";
+import { listTagCommitsRequest } from "@/api/git/repoApi";
 const route = useRoute();
 const dataSource = ref([]);
+// 分页
 const dataPage = reactive({
   current: 1,
   totalCount: 0,
   pageSize: 10
 });
+// 获取列表
 const listTag = () => {
-  pageTagCommitsRequest({
+  listTagCommitsRequest({
     repoId: route.params.repoId,
     pageNum: dataPage.current
   }).then(res => {
@@ -57,15 +53,15 @@ const listTag = () => {
         commitId: item.commit.shortId,
         longCommitId: item.commit.commitId,
         tagCommitMsg: item.commit.tagCommitMsg,
-        verified: item.commit.verified
+        verified: item.commit.verified,
+        signer: item.commit.signer
       };
     });
   });
 };
+//
 const onDelete = () => {
-  if (dataPage.totalCount - 1 < (dataPage.current - 1) * dataPage.pageSize) {
-    dataPage.current -= 1;
-  }
+  dataPage.current = 1;
   listTag();
 };
 listTag();

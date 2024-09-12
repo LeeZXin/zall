@@ -56,10 +56,12 @@
         </li>
         <li>
           <div class="item-name">{{t('mysqlReadPermApply.auditor')}}</div>
-          <div class="item-value">{{apply.auditor}}</div>
+          <div class="item-value flex-center">
+            <ZAvatar :url="apply.auditor?.avatarUrl" :name="apply.auditor?.name" :showName="true" />
+          </div>
         </li>
         <li>
-          <div class="item-name">{{t('mysqlReadPermApply.applyReaason')}}</div>
+          <div class="item-name">{{t('mysqlReadPermApply.applyReason')}}</div>
           <div class="item-value">{{apply.applyReason}}</div>
         </li>
         <li>
@@ -75,6 +77,7 @@
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import ZTable from "@/components/common/ZTable";
 import {
   listReadPermByOperatorRequest,
@@ -203,10 +206,10 @@ listPerm();
   width: 100%;
 }
 .apply-ul > li + li {
-  margin-top: 12px;
+  margin-top: 16px;
 }
 .item-name {
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 4px;
 }
 .item-value {

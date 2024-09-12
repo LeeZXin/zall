@@ -3,13 +3,11 @@ package git
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"github.com/LeeZXin/zall/pkg/git/gitenv"
 	"github.com/LeeZXin/zall/pkg/git/signature"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/keybase/go-crypto/openpgp"
 	"io"
 	"regexp"
 	"strconv"
@@ -61,29 +59,10 @@ type Commit struct {
 	AuthorSigTime time.Time
 	Committer     User
 	CommitSigTime time.Time
-	CommitSig     signature.CommitSig
+	CommitSig     string
 	CommitMsg     string
 	Tag           *Tag
 	Payload       string
-}
-
-func (c *Commit) VerifyGPGSignature(gpgKey openpgp.EntityList) error {
-	if c.CommitSig == "" {
-		return errors.New("no need to verify gpg")
-	}
-	_, err := signature.CheckArmoredDetachedSignature(gpgKey, c.Payload, c.CommitSig.String())
-	return err
-
-}
-
-func (c *Commit) VerifySshSignature(publicKey string) error {
-	if c.CommitSig == "" {
-		return errors.New("no need to verify gpg")
-	}
-	if publicKey == "" {
-		return errors.New("empty publicKey")
-	}
-	return signature.VerifySshSignature(c.CommitSig.String(), c.Payload, publicKey)
 }
 
 func newCommit(id string) Commit {
@@ -101,6 +80,8 @@ type Tag struct {
 	Tagger    User
 	TagTime   time.Time
 	CommitMsg string
+	Sig       string
+	Payload   string
 }
 
 type Tree struct {
@@ -155,7 +136,7 @@ func GetCommitByCommitId(ctx context.Context, repoPath string, commitId string) 
 		}
 		switch typ {
 		case CommitType.String():
-			return genCommit(io.LimitReader(reader, size), &c)
+			return generateCommit(io.LimitReader(reader, size), &c)
 		default:
 			return nil
 		}
@@ -194,7 +175,7 @@ func GetCommitByTag(ctx context.Context, repoPath string, tag string) (c Commit,
 				Id:  id,
 				Tag: tag,
 			}
-			err := genTag(io.LimitReader(reader, size), t)
+			err := generateTag(io.LimitReader(reader, size), t)
 			if err != nil {
 				return fmt.Errorf("parse Tag err: %v", err)
 			}
@@ -211,11 +192,13 @@ func GetCommitByTag(ctx context.Context, repoPath string, tag string) (c Commit,
 	return
 }
 
-func genTag(r io.Reader, tag *Tag) error {
+func generateTag(r io.Reader, tag *Tag) error {
 	reader := bufio.NewReader(r)
 	commitMsg := strings.Builder{}
+	payload := strings.Builder{}
 	defer func() {
 		tag.CommitMsg = commitMsg.String()
+		tag.Payload = payload.String()
 	}()
 	for {
 		line, isPrefix, err := reader.ReadLine()
@@ -229,6 +212,31 @@ func genTag(r io.Reader, tag *Tag) error {
 			continue
 		}
 		lineStr := strings.TrimSpace(string(line))
+		if lineStr == signature.StartGPGSigLineTag ||
+			lineStr == signature.StartSSHSigLineTag {
+			sigPayLoad := strings.Builder{}
+			sigPayLoad.WriteString(lineStr + "\n")
+			for {
+				line, isPrefix, err = reader.ReadLine()
+				if err == io.EOF {
+					return nil
+				}
+				if err != nil {
+					return fmt.Errorf("read line err: %v", err)
+				}
+				if isPrefix {
+					continue
+				}
+				lineStr = strings.TrimSpace(string(line))
+				sigPayLoad.WriteString(lineStr + "\n")
+				if lineStr == signature.EndGPGSigLineTag || lineStr == signature.EndSSHSigLineTag {
+					break
+				}
+			}
+			tag.Sig = sigPayLoad.String()
+			continue
+		}
+		payload.WriteString(lineStr + "\n")
 		fields := strings.Fields(lineStr)
 		if len(fields) < 1 {
 			continue
@@ -243,12 +251,12 @@ func genTag(r io.Reader, tag *Tag) error {
 		case "tagger":
 			tag.Tagger, tag.TagTime = parseUserAndTime(fields[1:])
 		default:
-			commitMsg.WriteString(lineStr)
+			commitMsg.WriteString(lineStr + "\n")
 		}
 	}
 }
 
-func genCommit(r io.Reader, commit *Commit) error {
+func generateCommit(r io.Reader, commit *Commit) error {
 	reader := bufio.NewReader(r)
 	commitMsg := strings.Builder{}
 	payload := strings.Builder{}
@@ -272,7 +280,7 @@ func genCommit(r io.Reader, commit *Commit) error {
 		fields := strings.Fields(lineStr)
 		// 记录非签名数据
 		if len(fields) < 1 || fields[0] != "gpgsig" {
-			payload.WriteString(rowLine)
+			payload.WriteString(lineStr)
 			payload.WriteString("\n")
 		}
 		if len(fields) < 1 {
@@ -310,7 +318,7 @@ func genCommit(r io.Reader, commit *Commit) error {
 					break
 				}
 			}
-			commit.CommitSig = signature.CommitSig(sigPayload.String())
+			commit.CommitSig = sigPayload.String()
 		default:
 			commitMsg.WriteString(lineStr + "\n")
 		}

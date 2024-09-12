@@ -9,6 +9,7 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/model/zalletmd"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/action"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
@@ -198,7 +199,7 @@ func Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO) error {
 	}
 	if !b {
 		closer.Close()
-		return fmt.Errorf("zallet agent id: %d not found", wf.AgentId)
+		return fmt.Errorf("zallet agent id: %v not found", wf.AgentId)
 	}
 	now := time.Now()
 	bizId := now.Format("2006010215") + idutil.RandomUuid()
@@ -367,12 +368,19 @@ func ListWorkflowWithLastTask(ctx context.Context, reqDTO ListWorkflowWithLastTa
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
-	taskIdMap, _ := listutil.CollectToMap(taskList, func(t workflowmd.Task) (int64, error) {
-		return t.Id, nil
-	}, func(t workflowmd.Task) (*TaskWithoutYamlContentDTO, error) {
-		task := task2WithoutYamlContentDto(t)
-		return &task, nil
+	taskIdMap := make(map[int64]*TaskWithoutYamlContentDTO)
+	accounts := listutil.MapNe(taskList, func(t workflowmd.Task) string {
+		return t.Operator
 	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
+	for _, task := range taskList {
+		t := task2WithoutYamlContentDto(task, userMap)
+		taskIdMap[task.Id] = &t
+	}
 	return listutil.Map(ret, func(t workflowmd.Workflow) (WorkflowWithLastTaskDTO, error) {
 		return WorkflowWithLastTaskDTO{
 			Id:       t.Id,
@@ -446,7 +454,6 @@ func TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReqDTO) error {
 		PrId:        0,
 	})
 	if err != nil {
-		fmt.Println(err)
 		if strings.Contains(err.Error(), "out of capacity") {
 			return util.NewBizErr(apicode.OutOfWorkflowCapacityErrCode, i18n.SystemTooManyOperation)
 		}
@@ -633,13 +640,23 @@ func ListTask(ctx context.Context, reqDTO ListTaskReqDTO) ([]TaskWithoutYamlCont
 	tasks, total, err := workflowmd.ListTaskByWorkflowId(ctx, workflowmd.ListTaskByWorkflowIdReqDTO{
 		WorkflowId: reqDTO.WorkflowId,
 		PageNum:    reqDTO.PageNum,
-		PageSize:   reqDTO.PageSize,
+		PageSize:   10,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
-	data := listutil.MapNe(tasks, task2WithoutYamlContentDto)
+	accounts := listutil.MapNe(tasks, func(t workflowmd.Task) string {
+		return t.Operator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	data := listutil.MapNe(tasks, func(t workflowmd.Task) TaskWithoutYamlContentDTO {
+		return task2WithoutYamlContentDto(t, userMap)
+	})
 	return data, total, nil
 }
 
@@ -660,33 +677,34 @@ func ListTaskByPrId(ctx context.Context, reqDTO ListTaskByPrIdReqDTO) ([]Workflo
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(tasks, func(t workflowmd.Task) string {
+		return t.Operator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
 	return listutil.Map(tasks, func(t workflowmd.Task) (WorkflowTaskDTO, error) {
 		return WorkflowTaskDTO{
 			Name:                      t.WorkflowName,
-			TaskWithoutYamlContentDTO: task2WithoutYamlContentDto(t),
+			TaskWithoutYamlContentDTO: task2WithoutYamlContentDto(t, userMap),
 		}, nil
 	})
 }
 
-func task2WithoutYamlContentDto(t workflowmd.Task) TaskWithoutYamlContentDTO {
+func task2WithoutYamlContentDto(t workflowmd.Task, userMap map[string]util.User) TaskWithoutYamlContentDTO {
 	return TaskWithoutYamlContentDTO{
 		TaskStatus:  t.TaskStatus,
 		TriggerType: t.TriggerType,
 		Branch:      t.Branch,
-		Operator:    t.Operator,
+		Operator:    userMap[t.Operator],
 		Created:     t.Created,
 		Id:          t.Id,
 		PrId:        t.PrId,
 		Duration:    t.Duration,
 		WorkflowId:  t.WorkflowId,
 	}
-}
-
-func task2Dto(t workflowmd.Task) (TaskDTO, error) {
-	return TaskDTO{
-		TaskWithoutYamlContentDTO: task2WithoutYamlContentDto(t),
-		YamlContent:               t.YamlContent,
-	}, nil
 }
 
 // GetWorkflowDetail 获取工作流详情
@@ -808,7 +826,15 @@ func GetTaskDetail(ctx context.Context, reqDTO GetTaskDetailReqDTO) (TaskDTO, er
 	if err != nil {
 		return TaskDTO{}, err
 	}
-	return task2Dto(task)
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, task.Operator)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return TaskDTO{}, util.InternalError(err)
+	}
+	return TaskDTO{
+		TaskWithoutYamlContentDTO: task2WithoutYamlContentDto(task, userMap),
+		YamlContent:               task.YamlContent,
+	}, nil
 }
 
 // ListVars 展示变量列表

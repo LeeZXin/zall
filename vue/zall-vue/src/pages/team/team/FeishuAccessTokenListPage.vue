@@ -5,6 +5,7 @@
         v-model:value="searchKey"
         style="width:240px;margin-right:6px"
         @pressEnter="searchAccessToken"
+        :placeholder="t('feishuAccessToken.searchNameOrAppId')"
       >
         <template #suffix>
           <SearchOutlined />
@@ -24,7 +25,14 @@
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <template v-if="dataIndex !== 'operation'">
+        <div v-if="dataIndex === 'creator'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.creator?.avatarUrl"
+            :name="dataItem.creator?.name"
+            :showName="true"
+          />
+        </div>
+        <template v-else-if="dataIndex !== 'operation'">
           <span>{{dataItem[dataIndex]}}</span>
         </template>
         <template v-else>
@@ -94,6 +102,7 @@
   </a-modal>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import ZTable from "@/components/common/ZTable";
 import { ref, h, reactive, createVNode } from "vue";
 import {
@@ -208,12 +217,12 @@ const viewToken = item => {
 };
 // 复制token
 const copyToken = () => {
-  message.success(t("operationSuccess"));
+  message.success(t("copySuccess"));
   window.navigator.clipboard.writeText(tokenModal.token);
 };
 // 复制tenant token
 const copyTenantToken = () => {
-  message.success(t("operationSuccess"));
+  message.success(t("copySuccess"));
   window.navigator.clipboard.writeText(tokenModal.tenantToken);
 };
 // 删除token

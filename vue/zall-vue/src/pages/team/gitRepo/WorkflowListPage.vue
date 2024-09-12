@@ -6,8 +6,12 @@
         @click="gotoVarsPage"
         :icon="h(KeyOutlined)"
         style="margin-right:8px"
-      >管理变量</a-button>
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建工作流</a-button>
+      >{{t('gitWorkflow.manageVariables')}}</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('gitWorkflow.createWorkflow')}}</a-button>
     </div>
     <ul class="workflow-list" v-if="workflowList.length > 0">
       <li v-for="item in workflowList" v-bind:key="item.id">
@@ -20,15 +24,15 @@
             <template v-if="repoStore.perm?.canTriggerWorkflow">
               <a-tooltip
                 placement="top"
-                v-if="!item.lastTask || (item.lastTask.taskStatus !== 1 && item.lastTask.taskStatus !== 0)"
+                v-if="!item.lastTask || (item.lastTask.taskStatus !== 'running' && item.lastTask.taskStatus !== 'queue')"
               >
-                <template #title>手动执行</template>
+                <template #title>{{t('gitWorkflow.triggerWorkflow')}}</template>
                 <span class="op-icon" @click="showBranchModal(item)">
                   <PlayCircleFilled />
                 </span>
               </a-tooltip>
               <a-tooltip placement="top" v-else>
-                <template #title>停止执行</template>
+                <template #title>{{t('gitWorkflow.killWorkflow')}}</template>
                 <span class="op-icon" @click="killTask(item)">
                   <PauseOutlined />
                 </span>
@@ -40,16 +44,16 @@
                   <template v-if="repoStore.perm?.canManageWorkflow">
                     <li @click="deleteWorkflow(item)">
                       <DeleteOutlined />
-                      <span style="margin-left:4px">删除工作流</span>
+                      <span style="margin-left:4px">{{t('gitWorkflow.deleteWorkflow')}}</span>
                     </li>
                     <li @click="gotoDetailPage(item.id)">
                       <EditOutlined />
-                      <span style="margin-left:4px">编辑工作流</span>
+                      <span style="margin-left:4px">{{t('gitWorkflow.updateWorkflow')}}</span>
                     </li>
                   </template>
                   <li @click="gotoTasksPage(item)">
                     <EyeOutlined />
-                    <span style="margin-left:4px">查看任务</span>
+                    <span style="margin-left:4px">{{t('gitWorkflow.viewTasks')}}</span>
                   </li>
                 </ul>
               </template>
@@ -61,31 +65,31 @@
         </div>
         <div class="workflow-status">
           <WorkflowTaskStatusIconText :status="item.lastTask?.taskStatus" />
-          <div
-            class="no-wrap"
-            style="margin-top:10px;"
-            v-if="item.lastTask"
-          >{{item.lastTask.operator}}推送{{item.lastTask.branch}}触发 {{readableTimeComparingNow(item.lastTask.created)}}</div>
-          <div style="margin-top:6px;height:14px" v-else></div>
+          <div v-if="item.lastTask" class="flex-center no-wrap" style="margin-top:10px;">
+            <ZAvatar :url="item.lastTask?.operator.avatarUrl" :name="item.lastTask?.operator.name" :showName="true" />
+            <span style="padding-left:4px">{{t('gitWorkflow.push')}}</span>
+            <span style="padding-left:4px">{{item.lastTask.branch}}</span>
+            <span style="padding-left:4px">{{readableTimeComparingNow(item.lastTask.created)}}</span>
+          </div>
+          <div v-else style="height:20px;margin-top:10px"></div>
         </div>
       </li>
     </ul>
     <ZNoData v-else />
-    <a-modal
-      v-model:open="branchModalOpen"
-      :title="branchModalTitle"
-      @ok="triggerWorkflow"
-      okText="立即触发"
-      cancelText="取消"
-    >
+    <a-modal v-model:open="branchModal.open" :title="branchModal.title" @ok="triggerWorkflow">
       <div class="flex-center">
-        <div style="line-height:32px;font-size:14px;width:80px">分支:</div>
-        <a-input style="width:100%" v-model:value="triggerBranch" />
+        <div style="line-height:32px;font-size:14px;width:80px">{{t('gitWorkflow.branch')}}:</div>
+        <a-select
+          style="width:100%"
+          v-model:value="branchModal.branch"
+          :options="branchModal.branchList"
+        />
       </div>
     </a-modal>
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import {
   DeleteOutlined,
   EllipsisOutlined,
@@ -99,7 +103,7 @@ import {
 } from "@ant-design/icons-vue";
 import WorkflowTaskStatusIconText from "@/components/git/WorkflowTaskStatusIconText";
 import ZNoData from "@/components/common/ZNoData";
-import { ref, createVNode, onUnmounted, h } from "vue";
+import { ref, createVNode, onUnmounted, h, reactive } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
   listWorkflowRequest,
@@ -107,40 +111,53 @@ import {
   triggerWorkflowRequest,
   killWorkflowTaskRequest
 } from "@/api/git/workflowApi";
+import { allBranchesRequest } from "@/api/git/repoApi";
 import { Modal, message } from "ant-design-vue";
 import { workflowBranchRegexp } from "@/utils/regexp";
 import { readableTimeComparingNow } from "@/utils/time";
 import { useWorkflowStore } from "@/pinia/workflowStore";
 import { useRepoStore } from "@/pinia/repoStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const repoStore = useRepoStore();
 const workflowStore = useWorkflowStore();
 const router = useRouter();
 const route = useRoute();
+// 工作流列表
 const workflowList = ref([]);
-const branchModalOpen = ref(false);
-const branchModalTitle = ref("");
-const triggerBranch = ref("");
-const triggerWfId = ref(0);
+// 手动触发modal
+const branchModal = reactive({
+  open: false,
+  title: "",
+  branch: "",
+  wfId: 0,
+  branchList: []
+});
+// 跳转创建页面
 const gotoCreatePage = () => {
   router.push(
     `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/create`
   );
 };
+// 获取工作流列表
 const listWorkflow = () => {
   listWorkflowRequest(route.params.repoId).then(res => {
     workflowList.value = res.data;
   });
 };
+// 跳转详情页面
 const gotoDetailPage = id => {
   router.push(
     `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${id}/update`
   );
 };
+// 跳转工作流变量页面
 const gotoVarsPage = () => {
   router.push(
     `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/vars`
   );
 };
+// 跳转任务列表页面
 const gotoTasksPage = item => {
   workflowStore.id = item.id;
   workflowStore.name = item.name;
@@ -149,51 +166,71 @@ const gotoTasksPage = item => {
     `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/workflow/${item.id}/tasks`
   );
 };
+// 展示分支modal
 const showBranchModal = item => {
-  branchModalOpen.value = true;
-  triggerBranch.value = "";
-  branchModalTitle.value = item.name;
-  triggerWfId.value = item.id;
+  if (branchModal.branchList.length === 0) {
+    allBranchesRequest(route.params.repoId).then(res => {
+      branchModal.branchList = res.data.map(item => {
+        return {
+          value: item,
+          label: item
+        };
+      });
+      if (res.data.length > 0) {
+        branchModal.branch = res.data[0];
+      }
+    });
+  } else {
+    branchModal.branch = branchModal.branchList[0].value;
+  }
+  branchModal.open = true;
+  branchModal.title = item.name;
+  branchModal.wfId = item.id;
 };
+// 删除工作流
 const deleteWorkflow = item => {
   Modal.confirm({
-    title: `你确定要删除${item.name}吗?`,
+    title: `${t("gitWorkflow.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteWorkflowRequest(item.id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listWorkflow();
       });
     },
     onCancel() {}
   });
 };
+// 手动触发工作流
 const triggerWorkflow = () => {
-  if (!workflowBranchRegexp.test(triggerBranch.value)) {
+  if (!workflowBranchRegexp.test(branchModal.branch)) {
     message.warn("分支格式错误");
     return;
   }
-  triggerWorkflowRequest(triggerWfId.value, triggerBranch.value).then(() => {
-    message.success("操作成功");
+  triggerWorkflowRequest(branchModal.wfId, branchModal.branch).then(() => {
+    message.success(t("operationSuccess"));
     listWorkflow();
-    branchModalOpen.value = false;
+    branchModal.open = false;
     return;
   });
 };
 listWorkflow();
+// 每5秒获取工作流状态
 const listInterval = setInterval(() => {
   listWorkflow();
 }, 5000);
+// unmounted取消定时器
 onUnmounted(() => {
   clearInterval(listInterval);
 });
+// 停止任务
 const killTask = item => {
   Modal.confirm({
-    title: `你确定要停止${item.name}吗?`,
+    title: `${t("gitWorkflow.confirmKill")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       killWorkflowTaskRequest(item.lastTask.id).then(() => {
-        message.success("停止成功");
+        message.success(t("operationSuccess"));
         listWorkflow();
       });
     },
@@ -202,10 +239,6 @@ const killTask = item => {
 };
 </script>
 <style scoped>
-.no-data {
-  font-size: 14px;
-  text-align: center;
-}
 .workflow-list {
   display: flex;
   flex-wrap: wrap;
@@ -242,8 +275,5 @@ const killTask = item => {
   font-size: 14px;
   color: gray;
   word-break: break-all;
-}
-.op:hover {
-  background-color: #f0f0f0;
 }
 </style>

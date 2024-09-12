@@ -1,5 +1,7 @@
 package propertyapi
 
+import "github.com/LeeZXin/zall/util"
+
 type CreatePropertySourceReqVO struct {
 	Endpoints []string `json:"endpoints"`
 	Username  string   `json:"username"`
@@ -61,22 +63,22 @@ type FileVO struct {
 }
 
 type HistoryVO struct {
-	Id          int64  `json:"id"`
-	FileName    string `json:"fileName"`
-	FileId      int64  `json:"fileId"`
-	Content     string `json:"content"`
-	Version     string `json:"version"`
-	Created     string `json:"created"`
-	Creator     string `json:"creator"`
-	LastVersion string `json:"lastVersion"`
-	Env         string `json:"env"`
+	Id          int64     `json:"id"`
+	FileName    string    `json:"fileName"`
+	FileId      int64     `json:"fileId"`
+	Content     string    `json:"content"`
+	Version     string    `json:"version"`
+	Created     string    `json:"created"`
+	Creator     util.User `json:"creator"`
+	LastVersion string    `json:"lastVersion"`
+	Env         string    `json:"env"`
 }
 
 type DeployVO struct {
-	NodeName  string `json:"nodeName"`
-	Endpoints string `json:"endpoints"`
-	Created   string `json:"created"`
-	Creator   string `json:"creator"`
+	NodeName  string    `json:"nodeName"`
+	Endpoints string    `json:"endpoints"`
+	Created   string    `json:"created"`
+	Creator   util.User `json:"creator"`
 }
 
 type BindAppAndPropertySourceReqVO struct {

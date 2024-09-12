@@ -9,7 +9,7 @@ const listWorkflowRequest = (repoId) => request.get("/api/workflow/list/" + repo
 // 删除工作流
 const deleteWorkflowRequest = (workflowId) => request.delete("/api/workflow/delete/" + workflowId);
 // 工作流任务列表
-const listTaskRequest = (workflowId, params) => request.get("/api/workflowTask/list/" + workflowId, { params });
+const listTaskRequest = (params) => request.get("/api/workflowTask/list", { params });
 // 合并请求相关工作流任务列表
 const listTaskByPrIdRequest = (prId) => request.get("/api/workflowTask/listByPrId/" + prId);
 // 获取工作流详情

@@ -17,9 +17,16 @@
         :icon="h(PlusOutlined)"
       >{{t('mysqlReadPermApply.applyReadPerm')}}</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1800}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <StatusTag v-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
+        <div v-if="dataIndex === 'auditor'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.auditor?.avatarUrl"
+            :name="dataItem.auditor?.name"
+            :showName="true"
+          />
+        </div>
+        <StatusTag v-else-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
         <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <a-popover placement="bottomRight" trigger="hover">
@@ -51,6 +58,7 @@
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import ZTable from "@/components/common/ZTable";
 import StatusTag from "@/components/db/MysqlReadPermApplyStatutsTag";
 import {
@@ -213,7 +221,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.auditor",
           dataIndex: "auditor",
-          key: "auditor"
+          key: "auditor",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.applyTime",
@@ -270,7 +279,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlReadPermApply.auditor",
           dataIndex: "auditor",
-          key: "auditor"
+          key: "auditor",
+          width: 160
         },
         {
           i18nTitle: "mysqlReadPermApply.applyTime",

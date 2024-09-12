@@ -1,8 +1,10 @@
 <template>
-  <a-tag :color="colorMap[props.status]">{{convertStatus(props.status)}}</a-tag>
+  <a-tag :color="colorMap[props.status]">{{t(convertStatus(props.status))}}</a-tag>
 </template>
 <script setup>
 import { defineProps } from "vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const props = defineProps(["status"]);
 const colorMap = {
   1: "green",
@@ -13,13 +15,12 @@ const colorMap = {
 const convertStatus = status => {
   switch (status) {
     case 1:
-      return "已打开";
+      return "pullRequest.openStatus";
     case 2:
-      return "已关闭";
+      return "pullRequest.closedStatus";
     case 3:
-      return "已合并";
-    default:
-      return "未知";
+      return "pullRequest.mergedStatus";
   }
+  return "";
 };
 </script>

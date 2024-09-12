@@ -32,7 +32,7 @@ type AccessTokenDTO struct {
 	TeamId      int64
 	Name        string
 	AppId       string
-	Creator     string
+	Creator     util.User
 	Secret      string
 	Token       string
 	TenantToken string

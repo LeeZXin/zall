@@ -14,8 +14,8 @@ import (
 	"github.com/LeeZXin/zall/git/repo/client"
 	"github.com/LeeZXin/zall/git/repo/reqvo"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
-	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
@@ -340,12 +340,23 @@ func CatFile(ctx context.Context, reqDTO CatFileReqDTO) (CatFileRespDTO, error) 
 		logger.Logger.WithContext(ctx).Error(err)
 		return CatFileRespDTO{}, util.InternalError(err)
 	}
+	commit := commit2Dto(resp.Commit)
+	if commit.Committer.Email != "" {
+		userMap, err := usersrv.GetUsersNameAndAvatarMapByEmails(ctx, commit.Committer.Email)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return CatFileRespDTO{}, util.InternalError(err)
+		}
+		commit.Committer.AvatarUrl = userMap[commit.Committer.Email].AvatarUrl
+		commit.Committer.Name = userMap[commit.Committer.Email].Name
+		commit.Committer.Account = userMap[commit.Committer.Email].Account
+	}
 	return CatFileRespDTO{
 		FileMode: resp.FileMode,
 		ModeName: resp.ModeName,
 		Content:  resp.Content,
 		Size:     resp.Size,
-		Commit:   commit2Dto(resp.Commit),
+		Commit:   commit,
 	}, nil
 }
 
@@ -377,47 +388,57 @@ func IndexRepo(ctx context.Context, reqDTO IndexRepoReqDTO) (IndexRepoRespDTO, e
 		logger.Logger.WithContext(ctx).Error(err)
 		return IndexRepoRespDTO{}, util.InternalError(err)
 	}
+	lastestCommit := commit2Dto(resp.LatestCommit)
+	if resp.LatestCommit.Committer.Email != "" {
+		userMap, err := usersrv.GetUsersNameAndAvatarMapByEmails(ctx, resp.LatestCommit.Committer.Email)
+		if err != nil {
+			return IndexRepoRespDTO{}, util.InternalError(err)
+		}
+		lastestCommit.Committer.AvatarUrl = userMap[resp.LatestCommit.Committer.Email].AvatarUrl
+		lastestCommit.Committer.Name = userMap[resp.LatestCommit.Committer.Email].Name
+		lastestCommit.Committer.Account = userMap[resp.LatestCommit.Committer.Email].Account
+	}
 	return IndexRepoRespDTO{
 		ReadmeText:   resp.ReadmeText,
 		HasReadme:    resp.HasReadme,
-		LatestCommit: commit2Dto(resp.LatestCommit),
+		LatestCommit: lastestCommit,
 		Tree:         tree2Dto(resp.Tree),
 	}, nil
 }
 
-// GetSimpleInfo 基本信息
-func GetSimpleInfo(ctx context.Context, reqDTO GetSimpleInfoReqDTO) (SimpleInfoDTO, error) {
+// GetBaseInfo 基本信息
+func GetBaseInfo(ctx context.Context, reqDTO GetBaseInfoReqDTO) (BaseInfoDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
-		return SimpleInfoDTO{}, err
+		return BaseInfoDTO{}, err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	repo, b, err := repomd.GetByRepoId(ctx, reqDTO.RepoId)
 	if err != nil {
-		return SimpleInfoDTO{}, util.InternalError(err)
+		return BaseInfoDTO{}, util.InternalError(err)
 	}
 	if !b {
-		return SimpleInfoDTO{}, util.InvalidArgsError()
+		return BaseInfoDTO{}, util.InvalidArgsError()
 	}
 	err = checkPermByRepo(ctx, repo, reqDTO.Operator, accessRepo)
 	if err != nil {
-		return SimpleInfoDTO{}, err
+		return BaseInfoDTO{}, err
 	}
 	branches, err := client.GetAllBranches(ctx, reqvo.GetAllBranchesReq{
 		RepoPath: repo.Path,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return SimpleInfoDTO{}, util.InternalError(err)
+		return BaseInfoDTO{}, util.InternalError(err)
 	}
 	tags, err := client.GetAllTags(ctx, reqvo.GetAllTagsReq{
 		RepoPath: repo.Path,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return SimpleInfoDTO{}, util.InternalError(err)
+		return BaseInfoDTO{}, util.InternalError(err)
 	}
-	ret := SimpleInfoDTO{}
+	ret := BaseInfoDTO{}
 	ret.Branches = listutil.MapNe(branches, func(t reqvo.RefVO) string {
 		return t.Name
 	})
@@ -433,6 +454,7 @@ func GetSimpleInfo(ctx context.Context, reqDTO GetSimpleInfoReqDTO) (SimpleInfoD
 			ret.CloneSshUrl = strings.TrimSuffix(cfg.SshUrl, "/") + "/" + repo.Path
 		}
 	}
+	ret.DefaultBranch = repo.DefaultBranch
 	return ret, nil
 }
 
@@ -947,6 +969,37 @@ func DiffRefs(ctx context.Context, reqDTO DiffRefsReqDTO) (DiffRefsRespDTO, erro
 		}
 	})
 	ret.Commits = listutil.MapNe(refs.Commits, commit2Dto)
+	emails := make([]string, 0)
+	emails = append(emails, ret.TargetCommit.Committer.Email)
+	emails = append(emails, ret.HeadCommit.Committer.Email)
+	for _, commit := range ret.Commits {
+		emails = append(emails, commit.Committer.Email)
+	}
+	userMap, err := usersrv.GetUsersNameAndAvatarMapByEmails(ctx, emails...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return DiffRefsRespDTO{}, util.InternalError(err)
+	}
+	// target
+	ret.TargetCommit.Committer.AvatarUrl = userMap[ret.TargetCommit.Committer.Email].AvatarUrl
+	ret.TargetCommit.Committer.Name = userMap[ret.TargetCommit.Committer.Email].Name
+	if userMap[ret.TargetCommit.Committer.Email].Account != "" {
+		ret.TargetCommit.Committer.Account = userMap[ret.TargetCommit.Committer.Email].Account
+	}
+	// head
+	ret.HeadCommit.Committer.AvatarUrl = userMap[ret.HeadCommit.Committer.Email].AvatarUrl
+	ret.HeadCommit.Committer.Name = userMap[ret.HeadCommit.Committer.Email].Name
+	if userMap[ret.HeadCommit.Committer.Email].Account != "" {
+		ret.HeadCommit.Committer.Account = userMap[ret.HeadCommit.Committer.Email].Account
+	}
+	// commits
+	for i := range ret.Commits {
+		ret.Commits[i].Committer.AvatarUrl = userMap[ret.Commits[i].Committer.Email].AvatarUrl
+		ret.Commits[i].Committer.Name = userMap[ret.Commits[i].Committer.Email].Name
+		if userMap[ret.Commits[i].Committer.Email].Account != "" {
+			ret.Commits[i].Committer.Account = userMap[ret.Commits[i].Committer.Email].Account
+		}
+	}
 	ret.CanMerge = refs.CanMerge
 	return ret, nil
 }
@@ -1166,11 +1219,11 @@ func HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReqDTO) (HistoryCo
 	ret.Data = listutil.MapNe(resp.Data, func(t reqvo.CommitVO) CommitDTO {
 		r := commit2Dto(t)
 		if t.CommitSig != "" {
-			sig := signature.CommitSig(t.CommitSig)
+			sig := signature.Sig(t.CommitSig)
 			if sig.IsSSHSig() {
-				r.Verified, r.Signer.Account, r.Signer.Key, r.Signer.Type = verifyCommitWithSshKeys(ctx, &t, sshMap)
+				r.Verified, r.Signer.Account, r.Signer.Key, r.Signer.Type = verifyPayloadWithSshKeys(ctx, t.Committer.Account, t.CommitSig, t.Payload, sshMap)
 			} else if sig.IsGPGSig() {
-				r.Verified, r.Signer.Account, r.Signer.Key, r.Signer.Type = verifyCommitWithGpgKeys(ctx, &t, gpgMap, gpgIdMap)
+				r.Verified, r.Signer.Account, r.Signer.Key, r.Signer.Type = verifyPayloadWithGpgKeys(ctx, t.Committer.Account, t.CommitSig, t.Payload, gpgMap, gpgIdMap)
 			}
 		}
 		return r
@@ -1182,34 +1235,48 @@ func HistoryCommits(ctx context.Context, reqDTO HistoryCommitsReqDTO) (HistoryCo
 			accountList = append(accountList, commit.Signer.Account)
 		}
 	}
-	users, err := usermd.ListUserByAccounts(ctx, listutil.Distinct(accountList...), []string{"account", "avatar_url", "name"})
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return HistoryCommitsRespDTO{}, util.InternalError(err)
+	if len(accountList) > 0 {
+		userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accountList...)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return HistoryCommitsRespDTO{}, err
+		}
+		for i := range ret.Data {
+			if ret.Data[i].Signer.Account != "" {
+				user := userMap[ret.Data[i].Signer.Account]
+				ret.Data[i].Signer.Name = user.Name
+				ret.Data[i].Signer.AvatarUrl = user.AvatarUrl
+			}
+		}
 	}
-	avatarMap := make(map[string]usermd.User, len(users))
-	for _, user := range users {
-		avatarMap[user.Account] = user
-	}
-	for i := range ret.Data {
-		if ret.Data[i].Signer.Account != "" {
-			user := avatarMap[ret.Data[i].Signer.Account]
-			ret.Data[i].Signer.Name = user.Name
-			ret.Data[i].Signer.AvatarUrl = user.AvatarUrl
+	emailList := listutil.MapNe(ret.Data, func(t CommitDTO) string {
+		return t.Committer.Email
+	})
+	if len(emailList) > 0 {
+		userMap, err := usersrv.GetUsersNameAndAvatarMapByEmails(ctx, emailList...)
+		if err != nil {
+			logger.Logger.WithContext(ctx).Error(err)
+			return HistoryCommitsRespDTO{}, err
+		}
+		for i := range ret.Data {
+			ret.Data[i].Committer.AvatarUrl = userMap[ret.Data[i].Committer.Email].AvatarUrl
+			ret.Data[i].Committer.Name = userMap[ret.Data[i].Committer.Email].Name
+			if userMap[ret.Data[i].Committer.Email].Account != "" {
+				ret.Data[i].Committer.Account = userMap[ret.Data[i].Committer.Email].Account
+			}
 		}
 	}
 	return ret, nil
 }
 
-func verifyCommitWithSshKeys(ctx context.Context, commit *reqvo.CommitVO, sshMap map[string][]sshkeysrv.InnerSshKeyDTO) (bool, string, string, string) {
-	account := commit.Committer.Account
+func verifyPayloadWithSshKeys(ctx context.Context, account, sign, payload string, sshMap map[string][]sshkeysrv.InnerSshKeyDTO) (bool, string, string, string) {
 	keys, b := sshMap[account]
 	if !b {
 		keys = sshkeysrv.ListAllPubKeyByAccount(ctx, account)
 		sshMap[account] = keys
 	}
 	for _, key := range keys {
-		err := signature.VerifySshSignature(commit.CommitSig, commit.Payload, key.Content)
+		err := signature.VerifySshSignature(sign, payload, key.Content)
 		if err == nil {
 			return true, account, key.Fingerprint, "SSH"
 		}
@@ -1217,8 +1284,8 @@ func verifyCommitWithSshKeys(ctx context.Context, commit *reqvo.CommitVO, sshMap
 	return false, "", "", ""
 }
 
-func verifyCommitWithGpgKeys(ctx context.Context, commit *reqvo.CommitVO, gpgKeysMap map[string][]gpgkeymd.GpgKey, gpgKeyIdMap map[string]gpgkeymd.GpgKey) (bool, string, string, string) {
-	sig, err := signature.ExtractGpgSignature(commit.CommitSig)
+func verifyPayloadWithGpgKeys(ctx context.Context, account, sign, payload string, gpgKeysMap map[string][]gpgkeymd.GpgKey, gpgKeyIdMap map[string]gpgkeymd.GpgKey) (bool, string, string, string) {
+	sig, err := signature.ExtractGpgSignature(sign)
 	if err != nil {
 		return false, "", "", ""
 	}
@@ -1237,12 +1304,11 @@ func verifyCommitWithGpgKeys(ctx context.Context, commit *reqvo.CommitVO, gpgKey
 				key, _ = gpgkeysrv.GetByKeyId(ctx, keyId)
 				gpgKeyIdMap[keyId] = key
 			}
-			return verifyCommitWithGpgKey(&key, sig, commit), key.Account, key.KeyId, "GPG"
+			return verifyPayloadWithGpgKey(&key, sig, payload), key.Account, key.KeyId, "GPG"
 		}
 	}
 	// 匹配committer
 	{
-		account := commit.Committer.Account
 		if account != "" {
 			keys, b := gpgKeysMap[account]
 			if !b {
@@ -1250,7 +1316,7 @@ func verifyCommitWithGpgKeys(ctx context.Context, commit *reqvo.CommitVO, gpgKey
 				gpgKeysMap[account] = keys
 			}
 			for _, key := range keys {
-				if verifyCommitWithGpgKey(&key, sig, commit) {
+				if verifyPayloadWithGpgKey(&key, sig, payload) {
 					return true, key.Account, key.KeyId, "GPG"
 				}
 			}
@@ -1259,14 +1325,14 @@ func verifyCommitWithGpgKeys(ctx context.Context, commit *reqvo.CommitVO, gpgKey
 	return false, "", "", ""
 }
 
-func verifyCommitWithGpgKey(gpgKey *gpgkeymd.GpgKey, sig *packet.Signature, commit *reqvo.CommitVO) bool {
+func verifyPayloadWithGpgKey(gpgKey *gpgkeymd.GpgKey, sig *packet.Signature, payload string) bool {
 	if gpgKey.KeyId == "" {
 		return false
 	}
 	pk, err := signature.Base64DecGPGPubKey(gpgKey.Content)
 	if err == nil && pk.CanSign() {
 		hash := sig.Hash.New()
-		_, err = hash.Write([]byte(commit.Payload))
+		_, err = hash.Write([]byte(payload))
 		if err != nil {
 			return false
 		}
@@ -1279,7 +1345,7 @@ func verifyCommitWithGpgKey(gpgKey *gpgkeymd.GpgKey, sig *packet.Signature, comm
 		pk, err = signature.Base64DecGPGPubKey(subKey.Content)
 		if err == nil && pk.CanSign() {
 			hash := sig.Hash.New()
-			_, err = hash.Write([]byte(commit.Payload))
+			_, err = hash.Write([]byte(payload))
 			if err != nil {
 				return false
 			}
@@ -1395,8 +1461,8 @@ func TransferTeam(ctx context.Context, reqDTO TransferTeamReqDTO) (err error) {
 	return
 }
 
-// PageBranchCommits 分页获取分支+提交信息
-func PageBranchCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]BranchCommitDTO, int64, error) {
+// ListBranchCommits 分页获取分支+提交信息
+func ListBranchCommits(ctx context.Context, reqDTO ListRefCommitsReqDTO) ([]BranchCommitDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
@@ -1415,7 +1481,7 @@ func PageBranchCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]Bran
 	if err != nil {
 		return nil, 0, err
 	}
-	branches, totalCount, err := client.PageBranchAndLastCommit(ctx, reqvo.PageRefCommitsReq{
+	branches, totalCount, err := client.ListBranchAndLastCommit(ctx, reqvo.ListRefCommitsReq{
 		RepoPath: repo.Path,
 		PageNum:  reqDTO.PageNum,
 	})
@@ -1467,8 +1533,8 @@ func PageBranchCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]Bran
 	return data, totalCount, nil
 }
 
-// PageTagCommits 分页获取tag+提交信息
-func PageTagCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]TagCommitDTO, int64, error) {
+// ListTagCommits 分页获取tag+提交信息
+func ListTagCommits(ctx context.Context, reqDTO ListRefCommitsReqDTO) ([]TagCommitDTO, int64, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, 0, err
 	}
@@ -1487,7 +1553,7 @@ func PageTagCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]TagComm
 	if err != nil {
 		return nil, 0, err
 	}
-	tags, totalCount, err := client.PageTagAndCommit(ctx, reqvo.PageRefCommitsReq{
+	tags, totalCount, err := client.ListTagAndCommit(ctx, reqvo.ListRefCommitsReq{
 		RepoPath: repo.Path,
 		PageNum:  reqDTO.PageNum,
 	})
@@ -1495,12 +1561,44 @@ func PageTagCommits(ctx context.Context, reqDTO PageRefCommitsReqDTO) ([]TagComm
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
+	// 缓存 用于校验签名
+	gpgMap := make(map[string][]gpgkeymd.GpgKey)
+	gpgIdMap := make(map[string]gpgkeymd.GpgKey)
+	sshMap := make(map[string][]sshkeysrv.InnerSshKeyDTO)
 	data := listutil.MapNe(tags, func(t reqvo.RefCommitVO) TagCommitDTO {
+		r := commit2Dto(t.Commit)
+		if t.Commit.TagSig != "" {
+			sig := signature.Sig(t.Commit.TagSig)
+			if sig.IsSSHSig() {
+				r.Verified, r.Signer.Account, r.Signer.Key, r.Signer.Type = verifyPayloadWithSshKeys(ctx, t.Commit.Tagger.Account, t.Commit.TagSig, t.Commit.TagPayload, sshMap)
+			} else if sig.IsGPGSig() {
+				r.Verified, r.Signer.Account, r.Signer.Key, r.Signer.Type = verifyPayloadWithGpgKeys(ctx, t.Commit.Tagger.Account, t.Commit.TagSig, t.Commit.TagPayload, gpgMap, gpgIdMap)
+			}
+		}
 		return TagCommitDTO{
 			Name:   t.Name,
-			Commit: commit2Dto(t.Commit),
+			Commit: r,
 		}
 	})
+	// 查找头像和姓名
+	accountList := make([]string, 0)
+	for _, tag := range data {
+		if tag.Commit.Signer.Account != "" {
+			accountList = append(accountList, tag.Commit.Signer.Account)
+		}
+	}
+	avatarMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accountList...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
+	for i := range data {
+		if data[i].Commit.Signer.Account != "" {
+			user := avatarMap[data[i].Commit.Signer.Account]
+			data[i].Commit.Signer.Name = user.Name
+			data[i].Commit.Signer.AvatarUrl = user.AvatarUrl
+		}
+	}
 	return data, totalCount, nil
 }
 

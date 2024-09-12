@@ -1,12 +1,7 @@
 <template>
   <div class="body" :style="props.style">
-    <div class="copy-icon">
-      <a-tooltip placement="top">
-        <template #title>
-          <span>Copy Sha</span>
-        </template>
-        <copy-outlined @click="copy()" />
-      </a-tooltip>
+    <div class="copy-icon" @click="copy()">
+      <CopyOutlined />
     </div>
     <div class="sha">
       <span>{{children}}</span>
@@ -17,11 +12,13 @@
 import { CopyOutlined } from "@ant-design/icons-vue";
 import { defineProps, useSlots } from "vue";
 import { message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const props = defineProps(["style"]);
 const slots = useSlots();
 const children = slots.default?.()[0].children;
 const copy = () => {
-  message.success("复制成功");
+  message.success(t("copySuccess"));
   window.navigator.clipboard.writeText(children);
 };
 </script>

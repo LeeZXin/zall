@@ -6,7 +6,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/ginutil"
 	"time"
 )
 
@@ -130,13 +129,13 @@ func (r *TriggerWorkflowReqDTO) IsValid() error {
 }
 
 type ListTaskReqDTO struct {
-	WorkflowId int64 `json:"workflowId"`
-	ginutil.Page2Req
-	Operator apisession.UserInfo `json:"operator"`
+	WorkflowId int64               `json:"workflowId"`
+	PageNum    int                 `json:"pageNum"`
+	Operator   apisession.UserInfo `json:"operator"`
 }
 
 func (r *ListTaskReqDTO) IsValid() error {
-	if r.WorkflowId <= 0 || r.PageNum <= 0 || r.PageSize <= 0 || r.PageSize > 1000 {
+	if r.WorkflowId <= 0 || r.PageNum <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
@@ -166,7 +165,7 @@ type TaskWithoutYamlContentDTO struct {
 	TriggerType workflowmd.TriggerType
 	Branch      string
 	PrId        int64
-	Operator    string
+	Operator    util.User
 	Created     time.Time
 	Duration    int64
 	WorkflowId  int64

@@ -233,7 +233,7 @@ type PlanDTO struct {
 	ArtifactVersion string
 	PlanStatus      deploymd.PlanStatus
 	Env             string
-	Creator         string
+	Creator         util.User
 	Created         time.Time
 }
 
@@ -246,7 +246,7 @@ type PlanDetailDTO struct {
 	ArtifactVersion string
 	PlanStatus      deploymd.PlanStatus
 	Env             string
-	Creator         string
+	Creator         util.User
 	Created         time.Time
 }
 

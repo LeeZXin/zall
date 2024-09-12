@@ -7,23 +7,28 @@
     <div class="desc">
       <PrStatusTag :status="prStore.prStatus" />
       <span style="font-size:14px">
-        {{prStore.head}}
+        <span style="margin-right:6px">{{prStore.head}}</span>
         <ArrowLeftOutlined style="color:gray" />
-        {{prStore.target}}
+        <span style="margin-left:6px">{{prStore.target}}</span>
       </span>
     </div>
     <div>
       <a-tabs style="width: 100%;" @change="selectTab">
-        <a-tab-pane key="timeline" tab="时间轴">
+        <a-tab-pane key="timeline" :tab="t('pullRequest.timeline')">
           <div class="timeline">
             <a-timeline style="margin-top:20px;width:calc(100% - 416px)">
               <a-timeline-item v-if="prStore.prStatus === 1">
                 <div class="message-card">
                   <div class="card-title">
                     <template v-if="canMergeDetectLoaded">
-                      <CheckCircleOutlined v-if="canMergeDetect.canMerge === true" />
-                      <WarningOutlined v-else-if="canMergeDetect.canMerge === false" />
-                      <span style="margin-left:4px">{{canMergeDetect.canMerge?'该请求能合并':'该请求不能合并'}}</span>
+                      <template v-if="mergeDetect.canMerge">
+                        <CheckCircleOutlined />
+                        <span style="margin-left:8px">{{t('pullRequest.thisPrCanMerge')}}</span>
+                      </template>
+                      <template v-else>
+                        <WarningOutlined />
+                        <span style="margin-left:8px">{{t('pullRequest.thisPrCantMerge')}}</span>
+                      </template>
                     </template>
                     <template v-else>
                       <LoadingOutlined />
@@ -31,48 +36,46 @@
                   </div>
                   <div class="card-content" v-if="canMergeDetectLoaded">
                     <div
-                      v-if="canMergeDetect.isProtectedBranch === true"
-                      style="font-size:14px;color:green;"
+                      v-if="mergeDetect.isProtectedBranch"
+                      style="font-size:14px;color:green;margin-bottom:10px"
                     >
                       <FileProtectOutlined />
-                      <span style="margin-left:4px">受保护分支规则保护</span>
+                      <span style="margin-left:8px">{{t('pullRequest.protectedByProtectedBranch')}}</span>
                     </div>
-                    <div v-if="canMergeDetect.canMerge === true">
+                    <div v-if="mergeDetect.canMerge">
                       <a-button
                         @click="mergePr"
                         type="primary"
-                        style="margin-top:10px"
                         v-if="repoStore.perm?.canSubmitPullRequest"
                       >
                         <LoadingOutlined v-if="merging" />
-                        <span>提交合并请求</span>
+                        <span>{{t('pullRequest.mergePr')}}</span>
                       </a-button>
                     </div>
-                    <div v-else class="can-not-merge-reason">
+                    <div v-else class="can-not-merge-reason" style="margin-top:4px">
                       <WarningOutlined />
-                      <span style="margin-left:4px">{{cannotMergeReason}}</span>
+                      <span style="margin-left:8px">{{cannotMergeReason}}</span>
                     </div>
                   </div>
                 </div>
               </a-timeline-item>
               <a-timeline-item v-for="item in timelines" v-bind:key="item.id">
                 <template v-if="item.action.actionType === 3">
-                  <div class="timeline-text">
-                    <CloseCircleFilled
-                      style="font-size:20px;color:red"
-                      v-if="item.action.pr.status === 2"
-                    />
-                    <CheckCircleFilled style="font-size:20px;color:green" v-else />
-                    <span style="font-weight:bold">{{item.account}}</span>
-                    <span>{{prStatusMap[item.action.pr.status]}}</span>
+                  <!-- 创建、合并、关闭合并请求 -->
+                  <div class="timeline-text no-wrap">
+                    <CloseCircleFilled style="color:red;margin-right:6px" v-if="item.action?.pr?.status === 2" />
+                    <CheckCircleFilled style="color:green;margin-right:6px" v-else />
+                    <ZAvatar :url="item.avatarUrl" :name="item.name" :showName="true" />
+                    <span>{{t(prStatusMap[item.action?.pr?.status])}}</span>
                     <span style="color:gray">{{readableTimeComparingNow(item.created)}}</span>
                   </div>
                 </template>
                 <template v-if="item.action.actionType === 4">
-                  <div class="timeline-text">
-                    <CheckCircleFilled style="font-size:20px;color:green" />
-                    <span style="font-weight:bold">{{item.account}}</span>
-                    <span>评审并同意合并</span>
+                  <!-- 评审并同意合并 -->
+                  <div class="timeline-text no-wrap">
+                    <CheckCircleFilled style="color:green;margin-right:6px" />
+                    <ZAvatar :url="item.avatarUrl" :name="item.name" :showName="true" />
+                    <span>{{t('pullRequest.reviewedAndAgreedMerge')}}</span>
                     <span style="color:gray">{{readableTimeComparingNow(item.created)}}</span>
                   </div>
                 </template>
@@ -80,41 +83,42 @@
                   class="message-card"
                   v-else-if="item.action.actionType === 1 || item.action.actionType === 2"
                 >
-                  <div class="card-title no-wrap" :id="`comment-${item.id}`">
-                    <span style="font-weight:bold">{{item.account}}</span>
-                    <span>发表评论</span>
-                    <span style="color:gray">{{readableTimeComparingNow(item.created)}}</span>
+                  <!-- 评论或回复评论 -->
+                  <div class="card-title no-wrap flex-between" :id="`comment-${item.id}`">
+                    <div class="inline-flex-center">
+                      <ZAvatar :url="item.avatarUrl" :name="item.name" :showName="true" />
+                      <span>{{t('pullRequest.madeComment')}}</span>
+                      <span style="color:gray;margin-left:6px">{{readableTimeComparingNow(item.created)}}</span>
+                    </div>
                     <a-popover placement="bottomRight" trigger="hover">
                       <template #content>
                         <ul class="op-list">
-                          <li @click="selectReply(item)" v-if="prStore.prStatus === 1">
+                          <li @click="selectReply(item)">
                             <EditOutlined />
-                            <span style="margin-left:4px">回复</span>
+                            <span style="margin-left:6px">{{t('pullRequest.reply')}}</span>
                           </li>
-                          <li @click="deleteComment(item.id)" v-if="user.account === item.account">
+                          <li @click="deleteComment(item.id)">
                             <DeleteOutlined />
-                            <span style="margin-left:4px">删除</span>
+                            <span style="margin-left:6px">{{t('pullRequest.delete')}}</span>
                           </li>
                         </ul>
                       </template>
-                      <div
-                        class="op-icon"
-                        style="float:right"
-                        v-if="prStore.prStatus === 1 || user.account === item.account"
-                      >
+                      <div class="op-icon" v-if="prStore.prStatus === 1">
                         <EllipsisOutlined />
                       </div>
                     </a-popover>
                   </div>
-                  <div class="card-content" v-if="item.action.actionType === 1">
-                    <div class="comment-text">{{item.action.comment.comment}}</div>
-                  </div>
-                  <div class="card-content" v-else-if="item.action.actionType === 2">
-                    <div
-                      class="comment-reply no-wrap"
-                      @click="scrollToComment(item.action.reply.fromId)"
-                    >{{item.action.reply.fromAccount}}:{{item.action.reply.fromComment}}</div>
-                    <div class="comment-text">{{item.action.reply.replyComment}}</div>
+                  <div class="card-content">
+                    <template v-if="item.action.actionType === 1">
+                      <div class="comment-text">{{item.action?.comment?.comment}}</div>
+                    </template>
+                    <template v-else-if="item.action.actionType === 2">
+                      <div
+                        class="comment-reply no-wrap"
+                        @click="scrollToComment(item.action.reply.fromId)"
+                      >{{item.action.reply.fromAccount}}:{{item.action.reply.fromComment}}</div>
+                      <div class="comment-text">{{item.action?.reply?.replyComment}}</div>
+                    </template>
                   </div>
                 </div>
               </a-timeline-item>
@@ -122,23 +126,22 @@
                 <div class="message-card">
                   <div class="card-title">
                     <NodeIndexOutlined />
-                    <span style="padding-left:4px">工作流</span>
+                    <span style="padding-left:4px">{{t('pullRequest.workflow')}}</span>
                   </div>
-                  <ul class="workflow-task-list">
+                  <ul class="workflow-task-ul">
                     <li v-for="item in workflowTaskList" v-bind:key="'task_' + item.id">
-                      <div style="display:flex;justify-content:space-between">
-                        <span @click="getWorkflowTaskStatus(item)" style="cursor:pointer">
+                      <div>
+                        <span style="cursor:pointer" @click="getWorkflowTaskStatus(item)">
                           <DownOutlined v-if="item.showJobs" />
                           <RightOutlined v-else />
-                          <TaskStatusTag :status="item.taskStatus" style="margin-left:10px" />
-                          <span>{{item.name}}</span>
                         </span>
-                        <span class="task-detail-btn" @click="gotoTaskDetailPage(item)">查看详情</span>
+                        <TaskStatusTag :status="item.taskStatus" style="margin-left:10px" />
+                        <span
+                          class="task-detail-btn"
+                          @click="gotoTaskDetailPage(item)"
+                        >{{item.name}}</span>
                       </div>
-                      <ul
-                        class="workflow-job-list"
-                        v-if="item.showJobs && item?.jobsList?.length > 0"
-                      >
+                      <ul class="workflow-job-ul" v-if="item.showJobs && item.jobsList?.length > 0">
                         <li v-for="job in item.jobsList" v-bind:key="`job_${job.jobName}`">
                           <RunStatus :status="job.status" :hideText="true" />
                           <span style="padding-left:10px">{{job.jobName}}</span>
@@ -154,12 +157,12 @@
                 <div class="message-card">
                   <div class="card-title">
                     <EditOutlined />
-                    <span style="padding-left: 4px">编写评论</span>
+                    <span style="padding-left: 6px">{{t('pullRequest.writeComment')}}</span>
                   </div>
                   <div class="card-content">
                     <div class="reply-text" v-if="replyItem.replyFrom > 0">
                       <div style="width:calc(100% - 50px)" class="no-wrap">
-                        <span>回复:</span>
+                        <span>{{t('pullRequest.reply')}}:</span>
                         <span>{{replyItem.fromAccount}}:</span>
                         <span>{{replyItem.fromComment}}</span>
                       </div>
@@ -168,13 +171,16 @@
                       </span>
                     </div>
                     <a-textarea
-                      placeholder="评论"
                       :auto-size="{ minRows: 5, maxRows: 10 }"
                       v-model:value="replyItem.replyComment"
                       ref="commentInput"
                     />
                     <div style="text-align:right;margin-top:10px">
-                      <a-button type="primary" style="margin-left:10px" @click="addComment">提交</a-button>
+                      <a-button
+                        type="primary"
+                        style="margin-left:10px"
+                        @click="addComment"
+                      >{{t('pullRequest.submit')}}</a-button>
                     </div>
                   </div>
                 </div>
@@ -184,26 +190,37 @@
               <div class="reviewer-section">
                 <div class="title">
                   <UserOutlined />
-                  <span style="padding-left:4px">指定评审人</span>
+                  <span style="padding-left:6px">{{t('pullRequest.assignedReviewer')}}</span>
                 </div>
                 <ul
-                  class="reviewer-account-list"
-                  v-if="canMergeDetect?.protectedBranchCfg?.reviewerList?.length > 0"
+                  class="reviewer-account-ul"
+                  v-if="mergeDetect.protectedBranchCfg?.reviewerList?.length > 0"
                 >
                   <li
-                    v-for="item in canMergeDetect.protectedBranchCfg.reviewerList"
-                    v-bind:key="item"
-                  >{{item}}</li>
+                    v-for="item in mergeDetect.protectedBranchCfg.reviewerList"
+                    v-bind:key="item.account"
+                  >
+                    <ZAvatar :url="item.avatarUrl" :name="item.name" :showName="true" />
+                  </li>
                 </ul>
-                <div class="no-reviewer-msg" v-else>未指定任何评审人</div>
+                <div class="no-reviewer-msg" v-else>{{t('pullRequest.noAssignedReviewer')}}</div>
               </div>
               <div style="margin-top:6px" v-if="repoStore.perm?.canSubmitPullRequest">
-                <a-button danger @click="closePr" style="width:100%" type="primary">关闭合并请求</a-button>
+                <a-button
+                  danger
+                  @click="closePr"
+                  style="width:100%"
+                  type="primary"
+                >{{t('pullRequest.closePr')}}</a-button>
               </div>
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane key="diff" tab="代码差异" v-if="prStore.prStatus === 1 || prStore.prStatus === 3">
+        <a-tab-pane
+          key="diff"
+          :tab="t('pullRequest.codeDiff')"
+          v-if="prStore.prStatus === 1 || prStore.prStatus === 3"
+        >
           <div style="width:calc(100% - 416px)">
             <ConflictFiles v-if="conflictFiles.length > 0" :conflictFiles="conflictFiles" />
             <CommitList :commits="commits" :diffNumsStats="diffNumsStats" />
@@ -219,7 +236,11 @@
             </div>
           </div>
         </a-tab-pane>
-        <a-tab-pane key="review" tab="评审代码" v-if="prStore.prStatus === 1 || prStore.prStatus === 3">
+        <a-tab-pane
+          key="review"
+          :tab="t('pullRequest.codeReview')"
+          v-if="prStore.prStatus === 1 || prStore.prStatus === 3"
+        >
           <div style="padding:10px;width:calc(100% - 416px)">
             <div class="section" style="margin-bottom:10px" v-if="prStore.prStatus === 1">
               <template v-if="canReviewLoaded">
@@ -227,7 +248,7 @@
                   <span>{{canReviewMsg}}</span>
                 </div>
                 <div class="section-body" v-if="canReviewState.canReview">
-                  <a-button type="primary" @click="agreeReview">同意合并</a-button>
+                  <a-button type="primary" @click="agreeReview">{{t('pullRequest.agreeMerge')}}</a-button>
                 </div>
               </template>
               <div style="padding:14px" v-else>
@@ -245,7 +266,7 @@
                   <span>{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
                 </template>
                 <template v-else>
-                  <span>{{dataItem[dataIndex]}}</span>
+                  <ZAvatar :url="dataItem['avatarUrl']" :name="dataItem['name']" :showName="true" />
                 </template>
               </template>
             </ZTable>
@@ -256,13 +277,13 @@
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import TaskStatusTag from "@/components/git/WorkflowTaskStatusTag";
 import ZTable from "@/components/common/ZTable";
 import FileDiffDetail from "@/components/git/FileDiffDetail";
 import CommitList from "@/components/git/CommitList";
 import ConflictFiles from "@/components/git/ConflictFiles";
 import { ref, reactive, createVNode, nextTick, inject, onUnmounted } from "vue";
-import { useUserStore } from "@/pinia/userStore";
 import { useRepoStore } from "@/pinia/repoStore";
 import {
   getPullRequestRequest,
@@ -304,26 +325,22 @@ import {
 import { readableTimeComparingNow } from "@/utils/time";
 import { prCommentRegexp } from "@/utils/regexp";
 import RunStatus from "@/components/git/WorkflowRunStatus";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const reviewColumns = [
   {
-    title: "评审人",
+    i18nTitle: "pullRequest.reviewer",
     dataIndex: "reviewer",
     key: "reviewer"
   },
   {
-    title: "操作时间",
+    i18nTitle: "pullRequest.agreeTime",
     dataIndex: "updated",
     key: "updated"
-  },
-  {
-    title: "状态",
-    dataIndex: "reviewStatus",
-    key: "reviewStatus"
   }
 ];
 const router = useRouter();
 const reviewList = ref([]);
-const user = useUserStore();
 const reload = inject("gitRepoLayoutReload");
 const scrollToElem = inject("gitRepoLayoutScrollToElem");
 const scrollToBottom = inject("gitRepoLayoutScrollToBottom");
@@ -369,6 +386,7 @@ const selectTab = key => {
       break;
   }
 };
+// 获取审批列表
 const listReview = () => {
   listReviewRequest(route.params.prId).then(res => {
     reviewList.value = res.data.map(item => {
@@ -380,9 +398,9 @@ const listReview = () => {
   });
 };
 const prStatusMap = {
-  1: "创建合并请求",
-  2: "关闭合并请求",
-  3: "提交合并请求"
+  1: "pullRequest.createPrStatus",
+  2: "pullRequest.closePrStatus",
+  3: "pullRequest.mergePrStatus"
 };
 const canReviewState = reactive({
   canReview: false,
@@ -394,7 +412,7 @@ const canReviewState = reactive({
 const merging = ref(false);
 const canMerge = ref(false);
 const canMergeDetectLoaded = ref(false);
-const canMergeDetect = ref({});
+const mergeDetect = ref({});
 const route = useRoute();
 const prStore = reactive({
   commentCount: 0,
@@ -420,11 +438,13 @@ const replyItem = reactive({
   fromAccount: "",
   replyComment: ""
 });
+// 获取时间轴列表
 const listTimeline = () => {
   listTimelineRequest(prStore.id).then(res => {
     timelines.value = res.data;
   });
 };
+// 检查是否可以合并
 const detectCanMerge = () => {
   canMergeDetectLoaded.value = false;
   nextTick(() => {
@@ -434,21 +454,21 @@ const detectCanMerge = () => {
         return;
       }
       canMergeDetectLoaded.value = true;
-      canMergeDetect.value = res.data;
+      mergeDetect.value = res.data;
       if (!res.data.canMerge) {
         if (res.data.gitCommitCount === 0) {
-          cannotMergeReason.value = "无任何代码提交";
+          cannotMergeReason.value = t("pullRequest.noCommits");
         } else if (
           res.data.gitConflictFiles &&
           res.data.gitConflictFiles.length > 0
         ) {
-          cannotMergeReason.value = "存在冲突文件";
+          cannotMergeReason.value = t("pullRequest.existConflictFiles");
         } else if (
           res.data.protectedBranchCfg?.reviewCountWhenCreatePr &&
           res.data.protectedBranchCfg.reviewCountWhenCreatePr >
             res.data.reviewCount
         ) {
-          cannotMergeReason.value = "评审数量不足";
+          cannotMergeReason.value = t("pullRequest.reviewNotEnough");
         }
       }
     });
@@ -530,7 +550,7 @@ const fileDetails = ref([]);
 // 关闭合并请求
 const closePr = () => {
   Modal.confirm({
-    title: "你确定要关闭?",
+    title: `${t("pullRequest.confirmClosePr")}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       closePullRequestRequest(route.params.prId).then(res => {
@@ -538,7 +558,7 @@ const closePr = () => {
           reload();
           return;
         }
-        message.success("关闭成功");
+        message.success(t("operationSuccess"));
         prStore.prStatus = 2;
         listTimeline();
       });
@@ -549,11 +569,11 @@ const closePr = () => {
 // 删除评论
 const deleteComment = id => {
   Modal.confirm({
-    title: "你确定要删除?",
+    title: `${t("pullRequest.confirmDeleteComment")}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteCommentRequest(id).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         listTimeline();
       });
     },
@@ -589,39 +609,32 @@ const canReview = () => {
       }
       canReviewLoaded.value = true;
       canReviewState.canReview = res.data.canReview;
-      canReviewState.isInReviewerList = res.data.isInReviewerList;
-      canReviewState.isProtectedBranch = res.data.isProtectedBranch;
-      canReviewState.reviewerList = res.data.reviewerList;
-      canReviewState.hasAgree = res.data.hasAgree;
       if (
         res.data.canReview &&
         res.data.isProtectedBranch &&
         res.data.reviewerList.length === 0
       ) {
-        canReviewMsg.value = "无指定任何评审人, 你可以评审该合并请求";
+        canReviewMsg.value = t("pullRequest.noAssignedReviewerAndCanReviewPr");
       } else if (
-        canReviewState.canReview &&
-        canReviewState.isProtectedBranch &&
-        canReviewState.reviewerList.length > 0 &&
-        canReviewState.isInReviewerList
+        res.data.canReview &&
+        res.data.isProtectedBranch &&
+        res.data.reviewerList?.length > 0 &&
+        res.data.isInReviewerList
       ) {
-        canReviewMsg.value = "你在指定评审名单里, 你可以评审该合并请求";
-      } else if (
-        canReviewState.canReview &&
-        !canReviewState.isProtectedBranch
-      ) {
-        canReviewMsg.value = "非保护分支, 你可以评审该合并请求";
-      } else if (!canReviewState.canReview && canReviewState.hasAgree) {
-        canReviewMsg.value = "你已同意合并该请求";
-      } else if (!canReviewState.canReview) {
-        canReviewMsg.value = "你不可以评审该合并请求";
+        canReviewMsg.value = t("pullRequest.inReviewerListAndCanReviewPr");
+      } else if (res.data.canReview && !res.data.isProtectedBranch) {
+        canReviewMsg.value = t("pullRequest.notProtectedBranchAndCanReviewPr");
+      } else if (!res.data.canReview && res.data.hasAgree) {
+        canReviewMsg.value = t("pullRequest.hasAgreePr");
+      } else if (!res.data.canReview) {
+        canReviewMsg.value = t("pullRequest.cantReviewPr");
       }
     });
   });
 };
 const addComment = () => {
   if (!prCommentRegexp.test(replyItem.replyComment)) {
-    message.warn("评论格式不合法");
+    message.warn(t("pullRequest.commentFormatErr"));
     return;
   }
   addCommentRequest({
@@ -630,7 +643,7 @@ const addComment = () => {
     comment: replyItem.replyComment,
     replyFrom: replyItem.replyFrom
   }).then(() => {
-    message.success("提交成功");
+    message.success(t("operationSuccess"));
     replyItem.replyFrom = 0;
     replyItem.replyComment = "";
     listTimeline();
@@ -638,7 +651,7 @@ const addComment = () => {
 };
 const mergePr = () => {
   Modal.confirm({
-    title: "你确定要提交合并吗?",
+    title: `${t("pullRequest.confirmMergePr")}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       merging.value = true;
@@ -646,7 +659,7 @@ const mergePr = () => {
         .then(res => {
           if (!res.data.statusChange) {
             merging.value = false;
-            message.success("合并成功");
+            message.success(t("operationSuccess"));
           }
           reload();
         })
@@ -663,7 +676,7 @@ const agreeReview = () => {
       reload();
       return;
     }
-    message.success("操作成功");
+    message.success(t("operationSuccess"));
     canReview();
     listReview();
   });
@@ -762,7 +775,7 @@ getPullRequest();
   color: gray;
 }
 .pr-title {
-  font-size: 18px;
+  font-size: 16px;
   margin-bottom: 10px;
 }
 .pr-title > span + span {
@@ -770,7 +783,7 @@ getPullRequest();
 }
 .desc {
   font-size: 14px;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 .desc > span + span {
   margin-left: 4px;
@@ -802,7 +815,6 @@ getPullRequest();
 .card-title {
   padding: 14px;
   font-size: 14px;
-  border-bottom: 1px solid #d9d9d9;
 }
 .card-title > span + span,
 .message-card > .text > span + span {
@@ -818,6 +830,7 @@ getPullRequest();
   padding-left: 4px;
 }
 .card-content {
+  border-top: 1px solid #d9d9d9;
   padding: 14px;
 }
 .comment-reply {
@@ -874,10 +887,11 @@ getPullRequest();
 .can-not-merge-reason + .can-not-merge-reason {
   margin-top: 10px;
 }
-.workflow-task-list {
+.workflow-task-ul {
+  border-top: 1px solid #d9d9d9;
   width: 100%;
 }
-.workflow-task-list > li {
+.workflow-task-ul > li {
   width: 100%;
   line-height: 42px;
   font-size: 14px;
@@ -888,11 +902,12 @@ getPullRequest();
   padding: 0 10px 10px 10px;
   border-radius: 4px;
 }
-.workflow-job-list {
+.workflow-job-ul {
   width: 100%;
   background-color: #f7f7f7;
+  border-radius: 4px;
 }
-.workflow-job-list > li {
+.workflow-job-ul > li {
   width: 100%;
   line-height: 42px;
   font-size: 14px;
@@ -917,15 +932,18 @@ getPullRequest();
   text-align: center;
   padding: 10px;
 }
-.reviewer-account-list {
+.reviewer-account-ul {
   width: 100%;
 }
-.reviewer-account-list > li {
+.reviewer-account-ul > li {
   width: 100%;
   font-size: 14px;
-  padding: 10px 20px;
+  height: 40px;
+  padding-top: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
 }
-.reviewer-account-list > li + li {
+.reviewer-account-ul > li + li {
   border-top: 1px solid #d9d9d9;
 }
 .task-detail-btn:hover {

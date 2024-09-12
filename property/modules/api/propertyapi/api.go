@@ -50,7 +50,7 @@ func InitApi() {
 			// 获取最新版本的配置
 			group.GET("/getByVersion", getHistoryByVersion)
 			// 版本列表
-			group.GET("/list", pageHistory)
+			group.GET("/list", listHistory)
 			// 新增版本
 			group.POST("/newVersion", newVersion)
 			// 发布配置
@@ -335,7 +335,7 @@ func listFile(c *gin.Context) {
 	})
 }
 
-func pageHistory(c *gin.Context) {
+func listHistory(c *gin.Context) {
 	var req PageHistoryReqVO
 	if util.ShouldBindQuery(&req, c) {
 		histories, cursor, err := propertysrv.ListHistory(c, propertysrv.ListHistoryReqDTO{

@@ -2,6 +2,7 @@ package timerapi
 
 import (
 	"github.com/LeeZXin/zall/pkg/timer"
+	"github.com/LeeZXin/zall/util"
 )
 
 type CreateTimerReqVO struct {
@@ -27,7 +28,7 @@ type TimerVO struct {
 	TeamId    int64      `json:"teamId"`
 	IsEnabled bool       `json:"isEnabled"`
 	Env       string     `json:"env"`
-	Creator   string     `json:"creator"`
+	Creator   util.User  `json:"creator"`
 }
 
 type ListLogReqVO struct {
@@ -40,7 +41,7 @@ type TaskLogVO struct {
 	Task        timer.Task        `json:"task"`
 	ErrLog      string            `json:"errLog"`
 	TriggerType timer.TriggerType `json:"triggerType"`
-	TriggerBy   string            `json:"triggerBy"`
+	TriggerBy   util.User         `json:"triggerBy"`
 	IsSuccess   bool              `json:"isSuccess"`
 	Created     string            `json:"created"`
 }

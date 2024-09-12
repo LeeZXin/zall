@@ -30,8 +30,10 @@ type EntriesRepoReqVO struct {
 }
 
 type UserVO struct {
-	Account string `json:"account"`
-	Email   string `json:"email"`
+	Account   string `json:"account"`
+	Email     string `json:"email"`
+	AvatarUrl string `json:"avatarUrl,omitempty"`
+	Name      string `json:"name,omitempty"`
 }
 
 type CommitVO struct {
@@ -126,11 +128,12 @@ type CatFileVO struct {
 	Commit   CommitVO `json:"commit"`
 }
 
-type SimpleInfoVO struct {
-	Branches     []string `json:"branches"`
-	Tags         []string `json:"tags"`
-	CloneHttpUrl string   `json:"cloneHttpUrl"`
-	CloneSshUrl  string   `json:"cloneSshUrl"`
+type BaseInfoVO struct {
+	Branches      []string `json:"branches"`
+	Tags          []string `json:"tags"`
+	CloneHttpUrl  string   `json:"cloneHttpUrl"`
+	CloneSshUrl   string   `json:"cloneSshUrl"`
+	DefaultBranch string   `json:"defaultBranch"`
 }
 
 type DiffRefsReqVO struct {
@@ -252,7 +255,7 @@ type DeleteBranchReqVO struct {
 	Branch string `json:"branch"`
 }
 
-type PageRefCommitsReqVO struct {
+type ListRefCommitsReqVO struct {
 	RepoId  int64 `json:"repoId"`
 	PageNum int   `json:"pageNum"`
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -547,6 +548,11 @@ func GetHistoryByVersion(ctx context.Context, reqDTO GetHistoryByVersionReqDTO) 
 	if !b {
 		return HistoryDTO{}, false, nil
 	}
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, history.Creator)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return HistoryDTO{}, false, util.InternalError(err)
+	}
 	return HistoryDTO{
 		Id:          history.Id,
 		FileName:    file.Name,
@@ -555,7 +561,7 @@ func GetHistoryByVersion(ctx context.Context, reqDTO GetHistoryByVersionReqDTO) 
 		Version:     history.Version,
 		LastVersion: history.LastVersion,
 		Created:     history.Created,
-		Creator:     history.Creator,
+		Creator:     userMap[history.Creator],
 		Env:         file.Env,
 	}, true, nil
 }
@@ -633,6 +639,14 @@ func ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]HistoryDTO, i
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(histories, func(t propertymd.History) string {
+		return t.Creator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	ret := listutil.MapNe(histories, func(t propertymd.History) HistoryDTO {
 		return HistoryDTO{
 			Id:          t.Id,
@@ -642,7 +656,7 @@ func ListHistory(ctx context.Context, reqDTO ListHistoryReqDTO) ([]HistoryDTO, i
 			Version:     t.Version,
 			LastVersion: t.LastVersion,
 			Created:     t.Created,
-			Creator:     t.Creator,
+			Creator:     userMap[t.Creator],
 			Env:         file.Env,
 		}
 	})
@@ -664,12 +678,20 @@ func ListDeploy(ctx context.Context, reqDTO ListDeployReqDTO) ([]DeployDTO, erro
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(deploys, func(t propertymd.Deploy) string {
+		return t.Creator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, util.InternalError(err)
+	}
 	ret := listutil.MapNe(deploys, func(t propertymd.Deploy) DeployDTO {
 		return DeployDTO{
 			NodeName:  t.NodeName,
 			Endpoints: t.Endpoints,
 			Created:   t.Created,
-			Creator:   t.Creator,
+			Creator:   userMap[t.Creator],
 		}
 	})
 	return ret, nil

@@ -6,6 +6,7 @@ import (
 	"github.com/LeeZXin/zall/alert/modules/model/alertmd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -171,6 +172,14 @@ func ListConfig(ctx context.Context, reqDTO ListConfigReqDTO) ([]ConfigDTO, int6
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(configs, func(t alertmd.Config) string {
+		return t.Creator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	data := listutil.MapNe(configs, func(t alertmd.Config) ConfigDTO {
 		return ConfigDTO{
 			Id:          t.Id,
@@ -179,7 +188,7 @@ func ListConfig(ctx context.Context, reqDTO ListConfigReqDTO) ([]ConfigDTO, int6
 			Content:     t.GetContent(),
 			IntervalSec: t.IntervalSec,
 			IsEnabled:   t.IsEnabled,
-			Creator:     t.Creator,
+			Creator:     userMap[t.Creator],
 			Env:         t.Env,
 		}
 	})

@@ -2,6 +2,7 @@ package alertapi
 
 import (
 	"github.com/LeeZXin/zall/pkg/alert"
+	"github.com/LeeZXin/zall/util"
 )
 
 type CreateConfigReqVO struct {
@@ -32,6 +33,6 @@ type ConfigVO struct {
 	Content     alert.Alert `json:"content"`
 	IntervalSec int         `json:"intervalSec"`
 	IsEnabled   bool        `json:"isEnabled"`
-	Creator     string      `json:"creator"`
+	Creator     util.User   `json:"creator"`
 	Env         string      `json:"env"`
 }

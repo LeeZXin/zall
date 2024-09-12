@@ -43,7 +43,7 @@
           />
         </div>
       </div>
-      <div class="form-item">
+      <div class="section-item">
         <a-checkbox v-model:checked="formState.executeImmediatelyAfterApproval">
           <div>{{t("mysqlDataUpdateApply.executeImmediatelyAfterApproval")}}</div>
         </a-checkbox>

@@ -4,6 +4,7 @@ import (
 	"github.com/LeeZXin/zall/git/modules/model/pullrequestmd"
 	"github.com/LeeZXin/zall/pkg/branch"
 	"github.com/LeeZXin/zall/pkg/git"
+	"github.com/LeeZXin/zall/util"
 )
 
 type SubmitPullRequestReqVO struct {
@@ -44,11 +45,13 @@ type PullRequestVO struct {
 }
 
 type TimelineVO struct {
-	Id      int64                `json:"id"`
-	PrId    int64                `json:"prId"`
-	Action  pullrequestmd.Action `json:"action"`
-	Account string               `json:"account"`
-	Created string               `json:"created"`
+	Id        int64                `json:"id"`
+	PrId      int64                `json:"prId"`
+	Action    pullrequestmd.Action `json:"action"`
+	Account   string               `json:"account"`
+	Created   string               `json:"created"`
+	AvatarUrl string               `json:"avatarUrl"`
+	Name      string               `json:"name"`
 }
 
 type ReviewVO struct {
@@ -56,6 +59,8 @@ type ReviewVO struct {
 	Reviewer     string `json:"reviewer"`
 	ReviewStatus string `json:"reviewStatus"`
 	Updated      string `json:"updated"`
+	AvatarUrl    string `json:"avatarUrl"`
+	Name         string `json:"name"`
 }
 
 type AddCommentReqVO struct {
@@ -65,15 +70,21 @@ type AddCommentReqVO struct {
 	HasReply  bool   `json:"hasReply"`
 }
 
+type ProtectedBranchCfgVO struct {
+	PushOption              branch.PushOption `json:"pushOption"`
+	ReviewCountWhenCreatePr int               `json:"reviewCountWhenCreatePr"`
+	ReviewerList            []util.User       `json:"reviewerList"`
+}
+
 type CanMergePullRequestRespVO struct {
-	StatusChange       bool                      `json:"statusChange"`
-	CanMerge           bool                      `json:"canMerge"`
-	IsProtectedBranch  bool                      `json:"isProtectedBranch"`
-	ProtectedBranchCfg branch.ProtectedBranchCfg `json:"protectedBranchCfg"`
-	ReviewCount        int                       `json:"reviewCount"`
-	GitCanMerge        bool                      `json:"gitCanMerge"`
-	GitConflictFiles   []string                  `json:"gitConflictFiles"`
-	GitCommitCount     int                       `json:"gitCommitCount"`
+	StatusChange       bool                 `json:"statusChange"`
+	CanMerge           bool                 `json:"canMerge"`
+	IsProtectedBranch  bool                 `json:"isProtectedBranch"`
+	ProtectedBranchCfg ProtectedBranchCfgVO `json:"protectedBranchCfg"`
+	ReviewCount        int                  `json:"reviewCount"`
+	GitCanMerge        bool                 `json:"gitCanMerge"`
+	GitConflictFiles   []string             `json:"gitConflictFiles"`
+	GitCommitCount     int                  `json:"gitCommitCount"`
 }
 
 type CanReviewPullRequestRespVO struct {

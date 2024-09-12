@@ -37,7 +37,7 @@ func InitApi() {
 			// 停止工作流
 			group.PUT("/kill/:taskId", killWorkflowTask)
 			// 获取执行任务列表
-			group.GET("/list/:workflowId", listTask)
+			group.GET("/list", listTask)
 			// 获取执行任务状态
 			group.GET("/status/:taskId", getTaskStatus)
 			// 获取日志详情
@@ -292,11 +292,11 @@ func triggerWorkflow(c *gin.Context) {
 }
 
 func listTask(c *gin.Context) {
-	var req ginutil.Page2Req
+	var req ListTaskReqVO
 	if util.ShouldBindQuery(&req, c) {
 		tasks, total, err := workflowsrv.ListTask(c, workflowsrv.ListTaskReqDTO{
-			WorkflowId: cast.ToInt64(c.Param("workflowId")),
-			Page2Req:   req,
+			WorkflowId: req.WorkflowId,
+			PageNum:    req.PageNum,
 			Operator:   apisession.MustGetLoginUser(c),
 		})
 		if err != nil {

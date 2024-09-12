@@ -144,6 +144,6 @@ type ConfigDTO struct {
 	Content     alert.Alert
 	IntervalSec int
 	IsEnabled   bool
-	Creator     string
+	Creator     util.User
 	Env         string
 }

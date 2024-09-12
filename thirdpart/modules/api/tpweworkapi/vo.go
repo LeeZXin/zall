@@ -1,5 +1,7 @@
 package tpweworkapi
 
+import "github.com/LeeZXin/zall/util"
+
 type ListWeworkAccessTokenReqVO struct {
 	PageNum int    `json:"pageNum"`
 	Key     string `json:"key"`
@@ -7,15 +9,15 @@ type ListWeworkAccessTokenReqVO struct {
 }
 
 type AccessTokenVO struct {
-	Id      int64  `json:"id"`
-	TeamId  int64  `json:"teamId"`
-	Name    string `json:"name"`
-	CorpId  string `json:"corpId"`
-	Creator string `json:"creator"`
-	Secret  string `json:"secret"`
-	Token   string `json:"token"`
-	Expired string `json:"expired"`
-	ApiKey  string `json:"apiKey"`
+	Id      int64     `json:"id"`
+	TeamId  int64     `json:"teamId"`
+	Name    string    `json:"name"`
+	CorpId  string    `json:"corpId"`
+	Creator util.User `json:"creator"`
+	Secret  string    `json:"secret"`
+	Token   string    `json:"token"`
+	Expired string    `json:"expired"`
+	ApiKey  string    `json:"apiKey"`
 }
 
 type CreateAccessTokenReqVO struct {

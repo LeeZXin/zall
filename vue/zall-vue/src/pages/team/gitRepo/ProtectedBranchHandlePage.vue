@@ -8,7 +8,6 @@
       <div class="section">
         <div class="section-title">
           <span>保护分支名称模式</span>
-          <span style="color:darkred">*</span>
         </div>
         <div class="section-body">
           <a-input style="width:100%" v-model:value="formState.pattern" />
@@ -94,9 +93,11 @@ const getMode = () => {
   return s[s.length - 1];
 };
 const protectedBranchStore = useProtectedBranchStore();
+// 团队成员列表
 const userList = ref([]);
 const router = useRouter();
 const mode = getMode();
+// 表单数据
 const formState = reactive({
   pattern: "",
   pushOption: 0,
@@ -108,9 +109,11 @@ const radioStyle = reactive({
   display: "flex",
   alignItems: "flex-start"
 });
+// 成员列表下拉框过滤
 const filterUserListOption = (input, option) => {
   return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
+// 获取团队成员
 const listUser = () => {
   listUserByTeamIdRequest(repoStore.teamId).then(res => {
     userList.value = res.data.map(item => {
@@ -121,6 +124,7 @@ const listUser = () => {
     });
   });
 };
+// 新增或编辑保护分支
 const createOrUpdateProtectedBranch = () => {
   if (!protectedBranchPatternRegexp.test(formState.pattern)) {
     message.warn("分支模式错误");

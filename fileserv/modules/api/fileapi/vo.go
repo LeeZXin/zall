@@ -1,10 +1,12 @@
 package fileapi
 
+import "github.com/LeeZXin/zall/util"
+
 type ArtifactVO struct {
-	Id      int64  `json:"id"`
-	Name    string `json:"name"`
-	Creator string `json:"creator"`
-	Created string `json:"created"`
+	Id      int64     `json:"id"`
+	Name    string    `json:"name"`
+	Creator util.User `json:"creator"`
+	Created string    `json:"created"`
 }
 
 type ListArtifactReqVO struct {

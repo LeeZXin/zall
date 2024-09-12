@@ -1,5 +1,7 @@
 package tpfeishuapi
 
+import "github.com/LeeZXin/zall/util"
+
 type ListWeworkAccessTokenReqVO struct {
 	PageNum int    `json:"pageNum"`
 	Key     string `json:"key"`
@@ -7,16 +9,16 @@ type ListWeworkAccessTokenReqVO struct {
 }
 
 type AccessTokenVO struct {
-	Id          int64  `json:"id"`
-	TeamId      int64  `json:"teamId"`
-	Name        string `json:"name"`
-	AppId       string `json:"appId"`
-	Creator     string `json:"creator"`
-	Secret      string `json:"secret"`
-	Token       string `json:"token"`
-	TenantToken string `json:"tenantToken"`
-	Expired     string `json:"expired"`
-	ApiKey      string `json:"apiKey"`
+	Id          int64     `json:"id"`
+	TeamId      int64     `json:"teamId"`
+	Name        string    `json:"name"`
+	AppId       string    `json:"appId"`
+	Creator     util.User `json:"creator"`
+	Secret      string    `json:"secret"`
+	Token       string    `json:"token"`
+	TenantToken string    `json:"tenantToken"`
+	Expired     string    `json:"expired"`
+	ApiKey      string    `json:"apiKey"`
 }
 
 type CreateAccessTokenReqVO struct {

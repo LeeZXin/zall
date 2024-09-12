@@ -20,7 +20,14 @@
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
+        <div v-if="dataIndex === 'account'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.account?.avatarUrl"
+            :name="dataItem.account?.name"
+            :showName="true"
+          />
+        </div>
+        <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deleteReadPerm(dataItem)">
             <DeleteOutlined />
@@ -71,11 +78,23 @@
         </li>
         <li>
           <div class="item-name">{{t('mysqlReadPermApply.account')}}</div>
-          <div class="item-value">{{applyModal.account}}</div>
+          <div class="item-value">
+            <ZAvatar
+              :url="applyModal.account?.avatarUrl"
+              :name="applyModal.account?.name"
+              :showName="true"
+            />
+          </div>
         </li>
         <li>
           <div class="item-name">{{t('mysqlReadPermApply.auditor')}}</div>
-          <div class="item-value">{{applyModal.auditor}}</div>
+          <div class="item-value">
+            <ZAvatar
+              :url="applyModal.auditor?.avatarUrl"
+              :name="applyModal.auditor?.name"
+              :showName="true"
+            />
+          </div>
         </li>
         <li>
           <div class="item-name">{{t('mysqlReadPermApply.applyReason')}}</div>
@@ -94,6 +113,7 @@
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import ZTable from "@/components/common/ZTable";
 import {
   listReadPermByDbaRequest,
@@ -288,10 +308,10 @@ listPerm();
   width: 100%;
 }
 .apply-ul > li + li {
-  margin-top: 12px;
+  margin-top: 16px;
 }
 .item-name {
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 4px;
 }
 .item-value {

@@ -51,6 +51,20 @@ func GetByAccount(ctx context.Context, account string) (User, bool, error) {
 	return ret, b, err
 }
 
+func GetByEmail(ctx context.Context, email string) (User, bool, error) {
+	var ret User
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("email = ?", email).
+		Get(&ret)
+	return ret, b, err
+}
+
+func ExistByEmail(ctx context.Context, email string) (bool, error) {
+	return xormutil.MustGetXormSession(ctx).
+		Where("email = ?", email).
+		Exist(new(User))
+}
+
 func ExistByAccount(ctx context.Context, account string) (bool, error) {
 	return xormutil.MustGetXormSession(ctx).
 		Where("account = ?", account).
@@ -67,10 +81,14 @@ func ListUserByAccounts(ctx context.Context, accounts, cols []string) ([]User, e
 	return ret, err
 }
 
-func CountUserByAccounts(ctx context.Context, accounts []string) (int64, error) {
-	return xormutil.MustGetXormSession(ctx).
-		In("account", accounts).
-		Count(new(User))
+func ListUserByEmails(ctx context.Context, emails, cols []string) ([]User, error) {
+	ret := make([]User, 0)
+	session := xormutil.MustGetXormSession(ctx).In("email", emails)
+	if len(cols) > 0 {
+		session.Cols(cols...)
+	}
+	err := session.Find(&ret)
+	return ret, err
 }
 
 func CountAllUsers(ctx context.Context) (int64, error) {

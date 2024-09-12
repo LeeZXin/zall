@@ -22,9 +22,30 @@
         >{{item.label}}</a-select-option>
       </a-select>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1800}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <StatusTag v-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
+        <div v-if="dataIndex === 'account'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.account?.avatarUrl"
+            :name="dataItem.account?.name"
+            :showName="true"
+          />
+        </div>
+        <div v-else-if="dataIndex === 'auditor'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.auditor?.avatarUrl"
+            :name="dataItem.auditor?.name"
+            :showName="true"
+          />
+        </div>
+        <div v-else-if="dataIndex === 'executor'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.executor?.avatarUrl"
+            :name="dataItem.executor?.name"
+            :showName="true"
+          />
+        </div>
+        <StatusTag v-else-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
         <span
           v-else-if="dataIndex === 'executeImmediatelyAfterApproval'"
         >{{dataItem[dataIndex]?t("mysqlDataUpdateApply.yes"): t("mysqlDataUpdateApply.no")}}</span>
@@ -125,6 +146,7 @@
 /*
   数据更新申请审批页
 */
+import ZAvatar from "@/components/user/ZAvatar";
 import ZTable from "@/components/common/ZTable";
 import StatusTag from "@/components/db/MysqlDataUpdateApplyStatutsTag";
 import {
@@ -594,7 +616,7 @@ const searchApply = () => {
 // 同意申请
 const agreeApply = item => {
   Modal.confirm({
-    title: `${t("mysqlDataUpdateApply.confirmAgree")} ${item.account}?`,
+    title: `${t("mysqlDataUpdateApply.confirmAgree")} ${item.account?.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       agreeDataUpdateApplyRequest(item.id).then(() => {
@@ -608,7 +630,7 @@ const agreeApply = item => {
 // 执行申请
 const executeApply = item => {
   Modal.confirm({
-    title: `${t("mysqlDataUpdateApply.confirmExecute")} ${item.account}?`,
+    title: `${t("mysqlDataUpdateApply.confirmExecute")} ${item.account?.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       executeDataUpdateApplyRequest(item.id).then(() => {

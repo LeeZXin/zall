@@ -1,38 +1,23 @@
 <template>
   <div style="padding:10px;">
-    <div style="height:32px">
-      <BranchTagSelect
-        @select="onBranchTagSelect"
-        :branches="branches"
-        :tags="tags"
-        v-if="branches.length > 0"
-      />
+    <div v-if="branches.length > 0">
+      <BranchTagSelect @select="onBranchTagSelect" :branches="branches" :tags="tags" />
       <a-popover v-model:open="cloneDownloadVisible" trigger="click" placement="bottomRight">
         <template #content>
           <a-tabs style="width: 300px;padding-bottom:12px" size="small">
             <a-tab-pane key="1" tab="HTTP">
-              <div style="display:flex;align-items:center;margin-top:10px">
-                <a-input type="input" v-model:value="gitHttpUrl" readonly />
+              <div class="clone-input">
+                <a-input v-model:value="gitHttpUrl" readonly />
                 <div class="copy-icon" @click="copy(0)">
-                  <a-tooltip placement="top">
-                    <template #title>
-                      <span>Copy</span>
-                    </template>
-                    <copy-outlined />
-                  </a-tooltip>
+                  <CopyOutlined />
                 </div>
               </div>
             </a-tab-pane>
             <a-tab-pane key="2" tab="SSH">
-              <div style="display:flex;align-items:center;margin-top:10px">
-                <a-input type="input" v-model:value="gitSshUrl" readonly />
+              <div class="clone-input">
+                <a-input v-model:value="gitSshUrl" readonly />
                 <div class="copy-icon" @click="copy(1)">
-                  <a-tooltip placement="top">
-                    <template #title>
-                      <span>Copy</span>
-                    </template>
-                    <copy-outlined />
-                  </a-tooltip>
+                  <CopyOutlined />
                 </div>
               </div>
             </a-tab-pane>
@@ -45,12 +30,12 @@
               @click="downloadZip"
               v-if="branches.length > 0 && selectedRef.refType === 'branch'"
               :icon="h(DownloadOutlined)"
-            >下载zip</a-button>
+            >{{t('repoIndex.downloadZip')}}</a-button>
           </div>
         </template>
-        <a-button type="primary" style="float:right">
-          <span>克隆</span>
-          <caret-down-outlined style="font-size:12px" />
+        <a-button type="primary" style="float:right;font-size:14px">
+          <span>{{t('repoIndex.clone')}}</span>
+          <CaretDownOutlined />
         </a-button>
       </a-popover>
     </div>
@@ -58,8 +43,8 @@
       <div v-show="showDir">
         <div class="dir-table">
           <div class="first-line">
-            <div class="commit-text">
-              <span style="margin-right:4px">{{latestCommit.committer}}</span>
+            <div class="commit-text flex-center">
+              <ZAvatar :url="latestCommit.avatarUrl" :name="latestCommit.name" :showName="true" />
               <span>{{latestCommit.commitMsg}}</span>
             </div>
             <div class="commit-text">
@@ -79,28 +64,20 @@
             >{{readableTimeComparingNow(item.commit.committedTime)}}</div>
           </div>
         </div>
-        <div class="dir-table">
+        <div class="dir-table" v-if="showAddReadmeContent">
           <div class="first-line">
             <file-outlined />
             <span style="padding-left:6px">README.md</span>
           </div>
-          <div class="readme-content" v-if="showAddReadmeContent">
+          <div class="readme-content">
             <v-md-editor v-model="readmeContent" mode="preview" />
-          </div>
-          <div class="add-readme" v-if="!showAddReadmeContent">
-            <div style="text-align:center;font-size:24px;line-height:60px;">
-              <file-outlined />
-            </div>
-            <div
-              style="font-weight:bold;text-align:center;font-size:22px;line-height:30px;padding:24px;"
-            >Try to Add a README to let everyone interested in this repository understands yours project</div>
           </div>
         </div>
       </div>
     </div>
     <div v-else>
       <div class="help-section">
-        <div class="help-title">从命令行创建一个新的仓库</div>
+        <div class="help-title">{{t('repoIndex.createRepoFromCmd')}}</div>
         <div class="help-text">
           <div>touch README.md</div>
           <div>git init</div>
@@ -108,20 +85,21 @@
           <div>git add README.md</div>
           <div>git commit -m "first commit"</div>
           <div>git remote add origin {{gitSshUrl}}</div>
-          <div>git push -u origin main</div>
+          <div>git push -u origin {{defaultBranch}}</div>
         </div>
       </div>
       <div class="help-section">
-        <div class="help-title">从命令行推送已经创建的仓库</div>
+        <div class="help-title">{{t('repoIndex.pushCreatedRepoFromCmd')}}</div>
         <div class="help-text">
           <div>git remote add origin {{gitSshUrl}}</div>
-          <div>git push -u origin main</div>
+          <div>git push -u origin {{defaultBranch}}</div>
         </div>
       </div>
     </div>
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import { ref, reactive, h } from "vue";
 import {
   CaretDownOutlined,
@@ -137,10 +115,12 @@ import "@kangc/v-md-editor/lib/plugins/todo-list/todo-list.css";
 import githubTheme from "@kangc/v-md-editor/lib/theme/github.js";
 import "@kangc/v-md-editor/lib/theme/style/github.css";
 import BranchTagSelect from "@/components/git/BranchTagSelect";
-import { treeRepoRequest, simpleInfoRequest } from "@/api/git/repoApi";
+import { treeRepoRequest, getBaseInfoRequest } from "@/api/git/repoApi";
 import { useRoute, useRouter } from "vue-router";
 import { message } from "ant-design-vue";
 import { readableTimeComparingNow } from "@/utils/time";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 VMdEditor.use(githubTheme);
@@ -161,6 +141,8 @@ const files = ref([]);
 const gitHttpUrl = ref("");
 // git clone ssh://xxxx
 const gitSshUrl = ref("");
+// 默认分支
+const defaultBranch = ref("");
 // 选择的分支或标签
 const selectedRef = reactive({
   ref: "",
@@ -177,14 +159,20 @@ const latestCommit = reactive({
   committer: "",
   commitMsg: "",
   shortCommitId: "",
-  committedTime: ""
+  committedTime: "",
+  avatarUrl: "",
+  name: ""
 });
-simpleInfoRequest(repoId).then(res => {
-  branches.value = res.data.branches;
-  tags.value = res.data.tags;
-  gitHttpUrl.value = res.data.cloneHttpUrl;
-  gitSshUrl.value = res.data.cloneSshUrl;
-});
+// 获取基本信息
+const getBaseInfo = () => {
+  getBaseInfoRequest(repoId).then(res => {
+    branches.value = res.data.branches;
+    tags.value = res.data.tags;
+    gitHttpUrl.value = res.data.cloneHttpUrl;
+    gitSshUrl.value = res.data.cloneSshUrl;
+    defaultBranch.value = res.data.defaultBranch;
+  });
+};
 // getTreeRepo 获取代码信息
 const getTreeRepo = (ref, refType) => {
   treeRepoRequest({
@@ -194,6 +182,8 @@ const getTreeRepo = (ref, refType) => {
   }).then(res => {
     if (res.latestCommit) {
       latestCommit.committer = res.latestCommit.committer.account;
+      latestCommit.avatarUrl = res.latestCommit.committer.avatarUrl;
+      latestCommit.name = res.latestCommit.committer.name;
       latestCommit.commitMsg = res.latestCommit.commitMsg;
       latestCommit.shortCommitId = res.latestCommit.shortId;
       latestCommit.committedTime = res.latestCommit.committedTime;
@@ -212,7 +202,7 @@ const copy = type => {
   } else {
     window.navigator.clipboard.writeText(gitSshUrl.value);
   }
-  message.success("复制成功");
+  message.success(t("copySuccess"));
 };
 // 跳转代码详情页
 const toRepoTree = path => {
@@ -225,6 +215,7 @@ const downloadZip = () => {
     `/api/gitRepo/archive?repoId=${repoId}&fileName=${selectedRef.ref}.zip`
   );
 };
+getBaseInfo();
 </script>
 <style scoped>
 .dir-table {
@@ -233,9 +224,8 @@ const downloadZip = () => {
   border: 1px solid #dadee3;
 }
 .dir-table > .first-line {
-  height: 42px;
-  line-height: 42px;
-  padding: 0 16px;
+  line-height: 48px;
+  padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -247,9 +237,8 @@ const downloadZip = () => {
   border-top: 1px solid #dadee3;
 }
 .dir-line-item {
-  height: 42px;
-  line-height: 42px;
-  padding: 0 16px;
+  line-height: 48px;
+  padding: 0 20px;
   overflow: hidden;
   width: 33.33%;
   white-space: nowrap;
@@ -281,6 +270,8 @@ const downloadZip = () => {
 .help-section {
   border-radius: 4px;
   border: 1px solid #d9d9d9;
+}
+.help-section + .help-section {
   margin-top: 10px;
 }
 .help-title {
@@ -293,8 +284,13 @@ const downloadZip = () => {
   overflow: hidden;
 }
 .help-text {
-  padding: 20px 16px;
+  padding: 10px 14px;
   font-size: 14px;
-  line-height: 22px;
+  line-height: 32px;
+}
+.clone-input {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
 }
 </style>

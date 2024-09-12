@@ -81,8 +81,8 @@ func min(a, b int) int {
 	return b
 }
 
-// PageBranchAndLastCommit 分页获取分支+最后提交信息
-func PageBranchAndLastCommit(ctx context.Context, req reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
+// ListBranchAndLastCommit 分页获取分支+最后提交信息
+func ListBranchAndLastCommit(ctx context.Context, req reqvo.ListRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	ret, err := git.GetAllBranchList(ctx, repoPath)
 	if err != nil {
@@ -112,8 +112,8 @@ func PageBranchAndLastCommit(ctx context.Context, req reqvo.PageRefCommitsReq) (
 	return data, int64(totalCount), nil
 }
 
-// PageTagAndCommit 分页获取tag+提交信息
-func PageTagAndCommit(ctx context.Context, req reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
+// ListTagAndCommit 分页获取tag+提交信息
+func ListTagAndCommit(ctx context.Context, req reqvo.ListRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
 	ret, err := git.GetAllTagList(ctx, repoPath)
 	if err != nil {
@@ -740,7 +740,7 @@ func commit2Vo(c git.Commit) reqvo.CommitVO {
 		CommitMsg:     c.CommitMsg,
 		CommitId:      c.Id,
 		ShortId:       util.LongCommitId2ShortId(c.Id),
-		CommitSig:     c.CommitSig.String(),
+		CommitSig:     c.CommitSig,
 		Payload:       c.Payload,
 	}
 	if c.Tag != nil {
@@ -751,6 +751,8 @@ func commit2Vo(c git.Commit) reqvo.CommitVO {
 		ret.TaggerTime = c.Tag.TagTime.UnixMilli()
 		ret.ShortTagId = util.LongCommitId2ShortId(c.Tag.Id)
 		ret.TagCommitMsg = c.Tag.CommitMsg
+		ret.TagSig = c.Tag.Sig
+		ret.TagPayload = c.Tag.Payload
 	}
 	return ret
 }

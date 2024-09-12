@@ -3,7 +3,7 @@
     <div style="margin-bottom:10px">
       <a-input
         v-model:value="searchRepo"
-        :placeholder="t('gitRepo.searchText')"
+        :placeholder="t('gitRepo.searchName')"
         style="width:240px;margin-right:10px"
         @change="searchChange"
       >
@@ -16,7 +16,7 @@
         @click="gotoCreatePage"
         v-if="teamStore.isAdmin"
         :icon="h(PlusOutlined)"
-      >{{t("gitRepo.createRepoText")}}</a-button>
+      >{{t("gitRepo.createRepo")}}</a-button>
       <a-button
         type="primary"
         @click="gotoRecyclePage"
@@ -24,11 +24,15 @@
         danger
         style="float:right"
         v-if="teamStore.isAdmin"
-      >仓库回收站</a-button>
+      >{{t('gitRepo.recycle')}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="repoList" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <span @click="checkRepo(dataItem)" class="check-btn" v-if="dataIndex === 'operation'">查看</span>
+        <span
+          @click="checkRepo(dataItem)"
+          class="check-btn"
+          v-if="dataIndex === 'operation'"
+        >{{t('gitRepo.view')}}</span>
         <span v-else-if="dataIndex === 'gitSize'">{{readableVolumeSize(dataItem[dataIndex])}}</span>
         <span v-else-if="dataIndex === 'lfsSize'">{{readableVolumeSize(dataItem[dataIndex])}}</span>
         <span
@@ -36,7 +40,11 @@
         >{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
         <span v-else-if="dataIndex === 'name'">
           <span>{{dataItem[dataIndex]}}</span>
-          <a-tag v-if="dataItem['isArchived']" color="red" style="margin-left:4px">已归档</a-tag>
+          <a-tag
+            v-if="dataItem['isArchived']"
+            color="red"
+            style="margin-left:4px"
+          >{{t("gitRepo.archived")}}</a-tag>
         </span>
         <span v-else>{{dataItem[dataIndex]}}</span>
       </template>
@@ -88,32 +96,32 @@ const gotoRecyclePage = () => {
 };
 const columns = [
   {
-    title: "仓库名称",
+    i18nTitle: "gitRepo.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "描述",
+    i18nTitle: "gitRepo.repoDesc",
     dataIndex: "repoDesc",
     key: "repoDesc"
   },
   {
-    title: "仓库大小",
+    i18nTitle: "gitRepo.gitSize",
     dataIndex: "gitSize",
     key: "gitSize"
   },
   {
-    title: "lfs大小",
+    i18nTitle: "gitRepo.lfsSize",
     dataIndex: "lfsSize",
     key: "lfsSize"
   },
   {
-    title: "最近更新时间",
+   i18nTitle: "gitRepo.lastOperated",
     dataIndex: "lastOperated",
     key: "lastOperated"
   },
   {
-    title: "操作",
+    i18nTitle: "gitRepo.operation",
     dataIndex: "operation",
     key: "operation",
     width: 130,

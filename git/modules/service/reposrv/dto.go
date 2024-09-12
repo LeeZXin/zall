@@ -225,8 +225,10 @@ func (r *ListRepoReqDTO) IsValid() error {
 }
 
 type UserDTO struct {
-	Account string `json:"account"`
-	Email   string `json:"email"`
+	Account   string `json:"account"`
+	Email     string `json:"email"`
+	AvatarUrl string `json:"avatarUrl"`
+	Name      string `json:"name"`
 }
 
 type CommitDTO struct {
@@ -539,12 +541,12 @@ func (r *TransferTeamReqDTO) IsValid() error {
 	return nil
 }
 
-type GetSimpleInfoReqDTO struct {
+type GetBaseInfoReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *GetSimpleInfoReqDTO) IsValid() error {
+func (r *GetBaseInfoReqDTO) IsValid() error {
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -569,11 +571,12 @@ func (r *GetDetailInfoReqDTO) IsValid() error {
 	return nil
 }
 
-type SimpleInfoDTO struct {
-	Branches     []string `json:"branches"`
-	Tags         []string `json:"tags"`
-	CloneHttpUrl string   `json:"cloneHttpUrl"`
-	CloneSshUrl  string   `json:"cloneSshUrl"`
+type BaseInfoDTO struct {
+	Branches      []string `json:"branches"`
+	Tags          []string `json:"tags"`
+	CloneHttpUrl  string   `json:"cloneHttpUrl"`
+	CloneSshUrl   string   `json:"cloneSshUrl"`
+	DefaultBranch string   `json:"defaultBranch"`
 }
 
 type BlameLineDTO struct {
@@ -581,13 +584,13 @@ type BlameLineDTO struct {
 	Commit CommitDTO `json:"commit"`
 }
 
-type PageRefCommitsReqDTO struct {
+type ListRefCommitsReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	PageNum  int                 `json:"pageNum"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
-func (r *PageRefCommitsReqDTO) IsValid() error {
+func (r *ListRefCommitsReqDTO) IsValid() error {
 	if r.RepoId <= 0 {
 		return util.InvalidArgsError()
 	}

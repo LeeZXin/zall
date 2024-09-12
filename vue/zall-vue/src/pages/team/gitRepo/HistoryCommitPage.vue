@@ -15,9 +15,9 @@
             <div class="commit-msg no-wrap">
               <span class="commit-msg-text" @click="treeCommit(item)">{{item.commitMsg}}</span>
             </div>
-            <div class="commit-desc no-wrap">
-              <span>{{item.committer.account}}</span>
-              <span>提交于</span>
+            <div class="commit-desc no-wrap flex-center">
+              <ZAvatar :url="item.committer?.avatarUrl" :name="item.committer?.name" :showName="true"/>
+              <span>{{t('commitList.committedAt')}}</span>
               <span>{{readableTimeComparingNow(item.committedTime)}}</span>
             </div>
           </div>
@@ -27,7 +27,7 @@
                 <div style="width: 300px;font-size:14px;padding:6px">
                   <div style="margin-bottom: 12px;" class="flex-center no-wrap">
                     <CheckCircleFilled style="color:green;margin-right:10px" />
-                    <span>该提交已被验证</span>
+                    <span>{{t('commitList.thisCommitIsVerified')}}</span>
                   </div>
                   <div class="flex-center" style="margin-bottom: 12px;">
                     <ZAvatar :url="item.signer?.avatarUrl" :name="item.signer?.name" size="medium" />
@@ -41,25 +41,18 @@
                 </div>
               </template>
               <span style="cursor:pointer">
-                <a-tag color="green">已验证</a-tag>
+                <a-tag color="green">{{t('commitList.verified')}}</a-tag>
               </span>
             </a-popover>
             <CommitSha>{{item.shortId}}</CommitSha>
           </div>
         </li>
         <li v-if="lastLoadCount >= 10">
-          <div style="width:100%;text-align:center;cursor:pointer" @click="getCommits()">加载更多...</div>
+          <div class="more-btn" @click="getCommits()">{{t('commitList.loadMore')}}...</div>
         </li>
       </ul>
     </template>
-    <ZNoData v-else>
-      <template #desc>
-        <div style="text-align:center;font-size:14px">
-          <span>无提交数据, 尝试去</span>
-          <span class="suggest-text" @click="gotoIndex">提交代码</span>
-        </div>
-      </template>
-    </ZNoData>
+    <ZNoData v-else />
   </div>
 </template>
 <script setup>
@@ -72,15 +65,21 @@ import { ref, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { readableTimeComparingNow } from "@/utils/time";
 import { CheckCircleFilled } from "@ant-design/icons-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const branches = ref([]);
 const commits = ref([]);
 const lastLoadCount = ref(0);
 const selectedBranch = ref("");
-allBranchesRequest(route.params.repoId).then(res => {
-  branches.value = res.data;
-});
+// 获取分支
+const getBranches = () => {
+  allBranchesRequest(route.params.repoId).then(res => {
+    branches.value = res.data;
+  });
+};
+// 获取列表
 const getCommits = () => {
   historyCommitsRequest({
     repoId: route.params.repoId,
@@ -91,6 +90,7 @@ const getCommits = () => {
     lastLoadCount.value = res.data.length;
   });
 };
+// 分支选择
 const onBranchSelect = ({ value }) => {
   router.replace(
     `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/commit/list/${value}`
@@ -101,16 +101,13 @@ const onBranchSelect = ({ value }) => {
     getCommits();
   });
 };
+// 跳转提交详情页
 const treeCommit = item => {
   router.push(
     `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/commit/diff/${item.commitId}`
   );
 };
-const gotoIndex = () => {
-  router.push(
-    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/index`
-  );
-};
+getBranches();
 </script>
 <style scoped>
 .commit-list {
@@ -134,7 +131,7 @@ const gotoIndex = () => {
   padding-bottom: 10px;
 }
 .commit-desc {
-  font-size: 13px;
+  font-size: 14px;
 }
 .commit-desc > span + span {
   margin-left: 4px;
@@ -146,6 +143,14 @@ const gotoIndex = () => {
 }
 .commit-msg-text:hover {
   cursor: pointer;
+  color: #1677ff;
+}
+.more-btn {
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+}
+.more-btn:hover {
   color: #1677ff;
 }
 </style>

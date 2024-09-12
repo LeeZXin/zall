@@ -19,9 +19,30 @@
         :icon="h(PlusOutlined)"
       >{{t("mysqlDataUpdateApply.title")}}</a-button>
     </div>
-    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1300}">
+    <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1800}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <StatusTag v-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
+        <div v-if="dataIndex === 'account'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.account?.avatarUrl"
+            :name="dataItem.account?.name"
+            :showName="true"
+          />
+        </div>
+        <div v-else-if="dataIndex === 'auditor'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.auditor?.avatarUrl"
+            :name="dataItem.auditor?.name"
+            :showName="true"
+          />
+        </div>
+        <div v-else-if="dataIndex === 'executor'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.executor?.avatarUrl"
+            :name="dataItem.executor?.name"
+            :showName="true"
+          />
+        </div>
+        <StatusTag v-else-if="dataIndex === 'applyStatus'" :status="dataItem[dataIndex]" />
         <span
           v-else-if="dataIndex === 'executeImmediatelyAfterApproval'"
         >{{dataItem[dataIndex]?t("mysqlDataUpdateApply.yes"): t("mysqlDataUpdateApply.no")}}</span>
@@ -109,6 +130,7 @@
 /*
   数据更新申请列表页
 */
+import ZAvatar from "@/components/user/ZAvatar";
 import ZTable from "@/components/common/ZTable";
 import StatusTag from "@/components/db/MysqlDataUpdateApplyStatutsTag";
 import {
@@ -177,7 +199,8 @@ const columns = ref([
   {
     i18nTitle: "mysqlDataUpdateApply.applyReason",
     dataIndex: "applyReason",
-    key: "applyReason"
+    key: "applyReason",
+    width: 160
   },
   {
     i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
@@ -220,7 +243,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
@@ -261,7 +285,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
@@ -271,7 +296,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.auditor",
           dataIndex: "auditor",
-          key: "auditor"
+          key: "auditor",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.created",
@@ -317,17 +343,20 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.disagreeReason",
           dataIndex: "disagreeReason",
-          key: "disagreeReason"
+          key: "disagreeReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.auditor",
           dataIndex: "auditor",
-          key: "auditor"
+          key: "auditor",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.created",
@@ -368,7 +397,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
@@ -414,7 +444,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
@@ -424,7 +455,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.auditor",
           dataIndex: "auditor",
-          key: "auditor"
+          key: "auditor",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.created",
@@ -465,7 +497,8 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.applyReason",
           dataIndex: "applyReason",
-          key: "applyReason"
+          key: "applyReason",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.executeImmediatelyAfterApprovalCol",
@@ -475,7 +508,14 @@ const selectApplyStatus = () => {
         {
           i18nTitle: "mysqlDataUpdateApply.auditor",
           dataIndex: "auditor",
-          key: "auditor"
+          key: "auditor",
+          width: 160
+        },
+        {
+          i18nTitle: "mysqlDataUpdateApply.executor",
+          dataIndex: "executor",
+          key: "executor",
+          width: 160
         },
         {
           i18nTitle: "mysqlDataUpdateApply.created",

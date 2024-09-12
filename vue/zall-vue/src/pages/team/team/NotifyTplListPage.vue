@@ -4,6 +4,7 @@
       <a-input
         v-model:value="searchNameKey"
         style="width:240px;margin-right:6px"
+        :placeholder="t('notifyTpl.searchName')"
         @pressEnter="searchTpl"
       >
         <template #suffix>
@@ -160,11 +161,11 @@ const listTpl = () => {
 // 变更api key
 const changeApiKey = item => {
   Modal.confirm({
-    title: `${t('notifyTpl.confirmChangeApiKey')} ${item.name}?`,
+    title: `${t("notifyTpl.confirmChangeApiKey")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       changeNotifyTplApiKeyRequest(item.id).then(() => {
-        message.success(t('operationSuccess'));
+        message.success(t("operationSuccess"));
         listTpl();
       });
     }
@@ -173,11 +174,11 @@ const changeApiKey = item => {
 // 删除模板
 const deleteTpl = item => {
   Modal.confirm({
-    title: `${t('notifyTpl.confirmDelete')} ${item.name}?`,
+    title: `${t("notifyTpl.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteNotifyTplRequest(item.id).then(() => {
-        message.success(t('operationSuccess'));
+        message.success(t("operationSuccess"));
         searchTpl();
       });
     }

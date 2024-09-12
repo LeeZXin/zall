@@ -119,7 +119,7 @@ type TimerDTO struct {
 	TeamId    int64      `json:"teamId"`
 	IsEnabled bool       `json:"isEnabled"`
 	Env       string     `json:"env"`
-	Creator   string     `json:"creator"`
+	Creator   util.User  `json:"creator"`
 }
 
 type ListLogReqDTO struct {
@@ -149,7 +149,7 @@ type LogDTO struct {
 	Task        timer.Task
 	ErrLog      string
 	TriggerType timer.TriggerType
-	TriggerBy   string
+	TriggerBy   util.User
 	IsSuccess   bool
 	Created     time.Time
 }

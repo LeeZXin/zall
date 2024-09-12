@@ -14,11 +14,11 @@ const treeRepoRequest = (data) => request.get("/api/gitRepo/index", { params: da
 // 所有分支
 const allBranchesRequest = (repoId) => request.get("/api/gitRepo/allBranches/" + repoId);
 // 分页分支+最后提交信息
-const pageBranchCommitsRequest = (data) => request.get("/api/gitRepo/pageBranchCommits", { params: data });
+const listBranchCommitsRequest = (data) => request.get("/api/gitRepo/listBranchCommits", { params: data });
 // 分页标签+提交信息
-const pageTagCommitsRequest = (data) => request.get("/api/gitRepo/pageTagCommits", { params: data });
+const listTagCommitsRequest = (data) => request.get("/api/gitRepo/listTagCommits", { params: data });
 // 基本信息
-const simpleInfoRequest = (repoId) => request.get("/api/gitRepo/simpleInfo/" + repoId);
+const getBaseInfoRequest = (repoId) => request.get("/api/gitRepo/base/" + repoId);
 // 文件列表
 const entriesRepoRequest = (data) => request.get("/api/gitRepo/entries", { params: data });
 // 文件详细内容
@@ -64,17 +64,17 @@ export {
     getRepoRequest,
     treeRepoRequest,
     allBranchesRequest,
-    simpleInfoRequest,
+    getBaseInfoRequest,
     entriesRepoRequest,
     catFileRequest,
     blameRequest,
     diffRefsRequest,
     diffFileRequest,
-    pageBranchCommitsRequest,
+    listBranchCommitsRequest,
     deleteBranchRequest,
     historyCommitsRequest,
     diffCommitsRequest,
-    pageTagCommitsRequest,
+    listTagCommitsRequest,
     deleteTagRequest,
     gcRequest,
     updateRepoRequest,

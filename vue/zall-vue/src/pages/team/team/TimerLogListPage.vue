@@ -23,7 +23,14 @@
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0px" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <template v-if="dataIndex === 'isSuccess'">
+        <div v-if="dataIndex === 'triggerBy'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.triggerBy?.avatarUrl"
+            :name="dataItem.triggerBy?.name"
+            :showName="true"
+          />
+        </div>
+        <template v-else-if="dataIndex === 'isSuccess'">
           <span v-if="dataItem[dataIndex]">
             <CheckCircleFilled style="color:green" />
             <span style="margin-left:4px">{{t('timerTask.successful')}}</span>
@@ -113,6 +120,7 @@
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import ZTable from "@/components/common/ZTable";
 import { ref, reactive, h } from "vue";
 import { useRoute, useRouter } from "vue-router";

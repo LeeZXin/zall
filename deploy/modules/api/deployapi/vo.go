@@ -3,6 +3,7 @@ package deployapi
 import (
 	"github.com/LeeZXin/zall/deploy/modules/model/deploymd"
 	"github.com/LeeZXin/zall/pkg/deploy"
+	"github.com/LeeZXin/zall/util"
 )
 
 type CreatePlanReqVO struct {
@@ -25,7 +26,7 @@ type PlanVO struct {
 	ArtifactVersion string              `json:"artifactVersion"`
 	PlanStatus      deploymd.PlanStatus `json:"planStatus"`
 	Env             string              `json:"env"`
-	Creator         string              `json:"creator"`
+	Creator         util.User           `json:"creator"`
 	Created         string              `json:"created"`
 }
 
@@ -38,7 +39,7 @@ type PlanDetailVO struct {
 	ArtifactVersion string              `json:"artifactVersion"`
 	PlanStatus      deploymd.PlanStatus `json:"planStatus"`
 	Env             string              `json:"env"`
-	Creator         string              `json:"creator"`
+	Creator         util.User           `json:"creator"`
 	Created         string              `json:"created"`
 }
 

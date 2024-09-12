@@ -94,12 +94,12 @@ func DeleteBranch(ctx context.Context, req reqvo.DeleteBranchReq) error {
 	return nil
 }
 
-// PageBranchAndLastCommit 分页获取分支+最后提交信息
-func PageBranchAndLastCommit(ctx context.Context, req reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
+// ListBranchAndLastCommit 分页获取分支+最后提交信息
+func ListBranchAndLastCommit(ctx context.Context, req reqvo.ListRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
 	var resp ginutil.Page2Resp[reqvo.RefCommitVO]
 	err := postHttp(
 		ctx,
-		"/api/v1/git/store/pageBranchAndLastCommit",
+		"/api/v1/git/store/listBranchAndLastCommit",
 		req,
 		&resp,
 	)
@@ -112,12 +112,12 @@ func PageBranchAndLastCommit(ctx context.Context, req reqvo.PageRefCommitsReq) (
 	return resp.Data, resp.TotalCount, nil
 }
 
-// PageTagAndCommit 分页获取tag+提交信息
-func PageTagAndCommit(ctx context.Context, req reqvo.PageRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
+// ListTagAndCommit 分页获取tag+提交信息
+func ListTagAndCommit(ctx context.Context, req reqvo.ListRefCommitsReq) ([]reqvo.RefCommitVO, int64, error) {
 	var resp ginutil.Page2Resp[reqvo.RefCommitVO]
 	err := postHttp(
 		ctx,
-		"/api/v1/git/store/pageTagAndCommit",
+		"/api/v1/git/store/listTagAndCommit",
 		req,
 		&resp,
 	)

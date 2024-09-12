@@ -1,15 +1,19 @@
 <template>
   <div style="padding:10px">
-    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" v-if="totalCount > 0" :scroll="{x:1300}">
+    <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'pullRequest'">
           <template v-if="dataItem[dataIndex]">
-            <PrIdTag :repoId="route.params.repoId" :prId="dataItem[dataIndex].id" :teamId="route.params.teamId"/>
+            <PrIdTag
+              :repoId="route.params.repoId"
+              :prId="dataItem[dataIndex].id"
+              :teamId="route.params.teamId"
+            />
             <PrStatusTag :status="dataItem[dataIndex].prStatus" />
           </template>
         </template>
         <template v-else-if="dataIndex === 'isProtectedBranch'">
-          <span>{{dataItem[dataIndex]?'是':'否'}}</span>
+          <span>{{dataItem[dataIndex]?t('branchList.yes'):t('branchList.no')}}</span>
         </template>
         <template v-else-if="dataIndex === 'lastCommitTime'">
           <span>{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
@@ -18,20 +22,19 @@
           <span>{{dataItem[dataIndex]}}</span>
         </template>
         <template v-else>
-          <div class="op-icon" v-if="!dataItem['isProtectedBranch']">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete Branch</span>
-              </template>
-              <delete-outlined @click="deleteBranch(dataItem['name'])" />
-            </a-tooltip>
+          <div
+            class="op-icon"
+            v-if="!dataItem['isProtectedBranch']"
+            @click="deleteBranch(dataItem['name'])"
+          >
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="goToHistoryCommits(dataItem['name'])">
-                  <control-outlined />
-                  <span style="margin-left:4px">查看所有的活动</span>
+                  <ControlOutlined />
+                  <span style="margin-left:4px">{{t('branchList.viewCommits')}}</span>
                 </li>
               </ul>
             </template>
@@ -42,19 +45,11 @@
         </template>
       </template>
     </ZTable>
-    <ZNoData v-else>
-      <template #desc>
-        <div style="font-size:14px;text-align:center">
-          <span>无分支数据, 尝试去</span>
-          <span class="suggest-text" @click="gotoIndex">提交代码</span>
-        </div>
-      </template>
-    </ZNoData>
     <a-pagination
-      v-model:current="currPage"
-      :total="totalCount"
+      v-model:current="dataPage.current"
+      :total="dataPage.totalCount"
       show-less-items
-      :pageSize="pageSize"
+      :pageSize="dataPage.pageSize"
       style="margin-top:10px"
       :hideOnSinglePage="true"
       :showSizeChanger="false"
@@ -64,9 +59,8 @@
 </template>
 <script setup>
 import PrIdTag from "@/components/git/PrIdTag";
-import ZNoData from "@/components/common/ZNoData";
 import ZTable from "@/components/common/ZTable";
-import { ref, createVNode } from "vue";
+import { ref, createVNode, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   DeleteOutlined,
@@ -75,53 +69,60 @@ import {
   EllipsisOutlined
 } from "@ant-design/icons-vue";
 import {
-  pageBranchCommitsRequest,
+  listBranchCommitsRequest,
   deleteBranchRequest
 } from "@/api/git/repoApi";
 import { readableTimeComparingNow } from "@/utils/time";
 import PrStatusTag from "@/components/git/PrStatusTag";
 import { Modal, message } from "ant-design-vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const dataSource = ref([]);
-const currPage = ref(1);
-const pageSize = 10;
-const totalCount = ref(0);
+// 分页
+const dataPage = reactive({
+  current: 1,
+  totalCount: 0,
+  pageSize: 10
+});
+// 数据项
 const columns = [
   {
-    title: "分支",
+    i18nTitle: "branchList.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "最后更新时间",
+    i18nTitle: "branchList.lastCommitTime",
     dataIndex: "lastCommitTime",
     key: "lastCommitTime"
   },
   {
-    title: "是否是保护分支",
+    i18nTitle: "branchList.isProtectedBranch",
     dataIndex: "isProtectedBranch",
     key: "isProtectedBranch"
   },
   {
-    title: "合并请求",
+    i18nTitle: "branchList.pullRequest",
     dataIndex: "pullRequest",
     key: "pullRequest"
   },
   {
-    title: "操作",
+    i18nTitle: "branchList.operation",
     dataIndex: "operation",
     key: "operation",
     width: 130,
     fixed: "right"
   }
 ];
+// 获取列表
 const listBranch = () => {
-  pageBranchCommitsRequest({
+  listBranchCommitsRequest({
     repoId: route.params.repoId,
-    pageNum: currPage.value
+    pageNum: dataPage.current
   }).then(res => {
-    totalCount.value = res.totalCount;
+    dataPage.totalCount = res.totalCount;
     dataSource.value = res.data.map(item => {
       return {
         key: item.name,
@@ -133,33 +134,28 @@ const listBranch = () => {
     });
   });
 };
+// 删除分支
 const deleteBranch = branch => {
   Modal.confirm({
-    title: `你确定要删除${branch}吗?`,
+    title: `${t("branchList.confirmDelete")} ${branch}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteBranchRequest({
         repoId: parseInt(route.params.repoId),
         branch
       }).then(() => {
-        if (totalCount.value - 1 <= (currPage.value - 1) * pageSize) {
-          currPage.value -= 1;
-        }
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
+        dataPage.current = 1;
         listBranch();
       });
     },
     onCancel() {}
   });
 };
+// 跳转提交列表
 const goToHistoryCommits = branch => {
   router.push(
     `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/commit/list/${branch}`
-  );
-};
-const gotoIndex = () => {
-  router.push(
-    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/index`
   );
 };
 listBranch();

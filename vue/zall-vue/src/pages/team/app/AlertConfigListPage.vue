@@ -13,7 +13,14 @@
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" style="margin-top:0" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <template v-if="dataIndex === 'isEnabled'">
+        <div v-if="dataIndex === 'creator'" class="flex-center">
+          <ZAvatar
+            :url="dataItem.creator?.avatarUrl"
+            :name="dataItem.creator?.name"
+            :showName="true"
+          />
+        </div>
+        <template v-else-if="dataIndex === 'isEnabled'">
           <a-switch :checked="dataItem[dataIndex]" @click="enableOrDisableAlertConfig(dataItem)" />
         </template>
         <template v-else-if="dataIndex !== 'operation'">
@@ -52,6 +59,7 @@
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import ZTable from "@/components/common/ZTable";
 import { ref, createVNode, h, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -129,7 +137,7 @@ const listAlertConfig = () => {
 // 删除配置
 const deleteAlertConfig = item => {
   Modal.confirm({
-    title: `${t('alertConfig.confirmDelete')} ${item.name}?`,
+    title: `${t("alertConfig.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteAlertConfigRequest(item.id).then(() => {

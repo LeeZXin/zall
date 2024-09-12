@@ -3,6 +3,7 @@ package mysqldbapi
 import (
 	"github.com/LeeZXin/zall/dbaudit/modules/model/mysqldbmd"
 	"github.com/LeeZXin/zall/dbaudit/modules/service/mysqldbsrv/command"
+	"github.com/LeeZXin/zall/util"
 )
 
 type CreateDbReqVO struct {
@@ -65,13 +66,13 @@ type listReadPermApplyByOperatorReqVO struct {
 
 type ReadPermApplyVO struct {
 	Id             int64                         `json:"id"`
-	Account        string                        `json:"account"`
+	Account        util.User                     `json:"account"`
 	DbId           int64                         `json:"dbId"`
 	DbName         string                        `json:"dbName"`
 	AccessBase     string                        `json:"accessBase"`
 	AccessTables   string                        `json:"accessTables"`
 	ApplyStatus    mysqldbmd.ReadPermApplyStatus `json:"applyStatus"`
-	Auditor        string                        `json:"auditor"`
+	Auditor        util.User                     `json:"auditor"`
 	ExpireDay      int                           `json:"expireDay"`
 	ApplyReason    string                        `json:"applyReason"`
 	DisagreeReason string                        `json:"disagreeReason"`
@@ -92,14 +93,14 @@ type ListDataUpdateApplyByOperatorReqVO struct {
 
 type DataUpdateApplyVO struct {
 	Id                              int64                           `json:"id"`
-	Account                         string                          `json:"account"`
+	Account                         util.User                       `json:"account"`
 	DbId                            int64                           `json:"dbId"`
 	DbName                          string                          `json:"dbName"`
 	AccessBase                      string                          `json:"accessBase"`
 	UpdateCmd                       string                          `json:"updateCmd"`
 	ApplyStatus                     mysqldbmd.DataUpdateApplyStatus `json:"applyStatus"`
-	Executor                        string                          `json:"executor"`
-	Auditor                         string                          `json:"auditor"`
+	Executor                        util.User                       `json:"executor"`
+	Auditor                         util.User                       `json:"auditor"`
 	ApplyReason                     string                          `json:"applyReason"`
 	DisagreeReason                  string                          `json:"disagreeReason"`
 	ExecuteLog                      string                          `json:"executeLog"`
@@ -110,15 +111,15 @@ type DataUpdateApplyVO struct {
 }
 
 type ReadPermVO struct {
-	Id          int64  `json:"id"`
-	Account     string `json:"account"`
-	DbId        int64  `json:"dbId"`
-	DbName      string `json:"dbName"`
-	AccessBase  string `json:"accessBase"`
-	AccessTable string `json:"accessTable"`
-	Created     string `json:"created"`
-	Expired     string `json:"expired"`
-	ApplyId     int64  `json:"applyId"`
+	Id          int64     `json:"id"`
+	Account     util.User `json:"account"`
+	DbId        int64     `json:"dbId"`
+	DbName      string    `json:"dbName"`
+	AccessBase  string    `json:"accessBase"`
+	AccessTable string    `json:"accessTable"`
+	Created     string    `json:"created"`
+	Expired     string    `json:"expired"`
+	ApplyId     int64     `json:"applyId"`
 }
 
 type ExecuteSelectSqlReqVO struct {

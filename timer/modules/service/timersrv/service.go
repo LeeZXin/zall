@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
+	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/event"
@@ -146,6 +147,14 @@ func ListTimer(ctx context.Context, reqDTO ListTimerReqDTO) ([]TimerDTO, int64, 
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(timers, func(t timermd.Timer) string {
+		return t.Creator
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	ret := listutil.MapNe(timers, func(t timermd.Timer) TimerDTO {
 		return TimerDTO{
 			Id:        t.Id,
@@ -155,7 +164,7 @@ func ListTimer(ctx context.Context, reqDTO ListTimerReqDTO) ([]TimerDTO, int64, 
 			TeamId:    t.TeamId,
 			IsEnabled: t.IsEnabled,
 			Env:       t.Env,
-			Creator:   t.Creator,
+			Creator:   userMap[t.Creator],
 		}
 	})
 	return ret, total, nil
@@ -340,12 +349,20 @@ func ListLog(ctx context.Context, reqDTO ListLogReqDTO) ([]LogDTO, int64, error)
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, util.InternalError(err)
 	}
+	accounts := listutil.MapNe(logs, func(t timermd.Log) string {
+		return t.TriggerBy
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, util.InternalError(err)
+	}
 	ret := listutil.MapNe(logs, func(t timermd.Log) LogDTO {
 		return LogDTO{
 			Task:        t.GetTaskContent(),
 			ErrLog:      t.ErrLog,
 			TriggerType: t.TriggerType,
-			TriggerBy:   t.TriggerBy,
+			TriggerBy:   userMap[t.TriggerBy],
 			IsSuccess:   t.IsSuccess,
 			Created:     t.Created,
 		}

@@ -5,6 +5,7 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"regexp"
+	"xorm.io/builder"
 )
 
 func IsZalletNodeIdValid(nodeId string) bool {
@@ -47,7 +48,11 @@ func ExistZalletNodeByNodeId(ctx context.Context, nodeId string) (bool, error) {
 func ListZalletNode(ctx context.Context, reqDTO ListZalletNodeReqDTO) ([]ZalletNode, int64, error) {
 	session := xormutil.MustGetXormSession(ctx)
 	if reqDTO.Name != "" {
-		session.And("name like ?", reqDTO.Name+"%")
+		session.And(
+			builder.Or(
+				builder.Expr("name like ?", reqDTO.Name+"%"),
+				builder.Expr("node_id like ?", reqDTO.Name+"%"),
+			))
 	}
 	if len(reqDTO.Cols) > 0 {
 		session.Cols(reqDTO.Cols...)

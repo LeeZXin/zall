@@ -1,12 +1,12 @@
 <template>
   <div style="padding:10px">
     <div style="margin-bottom:16px">
-      <div style="font-size:16px;font-weight:bold;margin-bottom:8px">仓库回收站</div>
+      <div style="font-size:16px;font-weight:bold;margin-bottom:8px">{{t('gitRepo.recycle')}}</div>
     </div>
     <div style="margin-bottom:10px">
       <a-input
         v-model:value="searchRepo"
-        :placeholder="t('gitRepo.searchText')"
+        :placeholder="t('gitRepo.searchName')"
         style="width:240px;margin-right:10px"
         @change="searchChange"
       />
@@ -19,11 +19,11 @@
               <ul class="op-list">
                 <li @click="deleteRepoPermanently(dataItem)">
                   <DeleteOutlined />
-                  <span style="margin-left:4px">永久删除</span>
+                  <span style="margin-left:4px">{{t('gitRepo.deletePermanently')}}</span>
                 </li>
                 <li @click="recoverRepo(dataItem)">
                   <RollbackOutlined />
-                  <span style="margin-left:4px">恢复</span>
+                  <span style="margin-left:4px">{{t('gitRepo.recoverFromRecycle')}}</span>
                 </li>
               </ul>
             </template>
@@ -80,32 +80,32 @@ const searchChange = () => {
 };
 const columns = [
   {
-    title: "仓库名称",
+    i18nTitle: "gitRepo.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "描述",
+    i18nTitle: "gitRepo.repoDesc",
     dataIndex: "repoDesc",
     key: "repoDesc"
   },
   {
-    title: "仓库大小",
+    i18nTitle: "gitRepo.gitSize",
     dataIndex: "gitSize",
     key: "gitSize"
   },
   {
-    title: "lfs大小",
+    i18nTitle: "gitRepo.lfsSize",
     dataIndex: "lfsSize",
     key: "lfsSize"
   },
   {
-    title: "删除时间",
+    i18nTitle: "gitRepo.deleteTime",
     dataIndex: "deleted",
     key: "deleted"
   },
   {
-    title: "操作",
+    i18nTitle: "gitRepo.operation",
     dataIndex: "operation",
     key: "operation",
     width: 130,
@@ -127,11 +127,11 @@ const getDeletedRepo = () => {
 };
 const deleteRepoPermanently = item => {
   Modal.confirm({
-    title: `你确定要永久删除${item.name}吗?`,
+    title: `你确定要永久删除${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteRepoPermanentlyRequest(item.repoId).then(() => {
-        message.success("删除成功");
+        message.success(t("operationSuccess"));
         getDeletedRepo();
       });
     },
@@ -140,11 +140,11 @@ const deleteRepoPermanently = item => {
 };
 const recoverRepo = item => {
   Modal.confirm({
-    title: `你确定要恢复${item.name}吗?`,
+    title: `你确定要恢复${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       reoverFromRecycleRequest(item.repoId).then(() => {
-        message.success("恢复成功");
+        message.success(t("operationSuccess"));
         getDeletedRepo();
       });
     },

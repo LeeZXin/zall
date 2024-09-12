@@ -3,7 +3,6 @@
     <div style="margin-bottom:10px">
       <a-input
         v-model:value="searchKey"
-        placeholder="搜索名称"
         style="width:240px;margin-right:6px"
         @pressEnter="searchZalletNode"
       >
@@ -11,26 +10,25 @@
           <SearchOutlined />
         </template>
       </a-input>
-      <a-button type="primary" @click="gotoCreatePage" :icon="h(PlusOutlined)">创建节点</a-button>
+      <a-button
+        type="primary"
+        @click="gotoCreatePage"
+        :icon="h(PlusOutlined)"
+      >{{t('zallet.createNode')}}</a-button>
     </div>
     <ZTable :columns="columns" :dataSource="dataSource">
       <template #bodyCell="{dataIndex, dataItem}">
         <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
         <div v-else>
           <div class="op-icon" @click="deleteZalletNode(dataItem)">
-            <a-tooltip placement="top">
-              <template #title>
-                <span>Delete Node</span>
-              </template>
-              <DeleteOutlined />
-            </a-tooltip>
+            <DeleteOutlined />
           </div>
           <a-popover placement="bottomRight" trigger="hover">
             <template #content>
               <ul class="op-list">
                 <li @click="gotoUpdatePage(dataItem)">
                   <EditOutlined />
-                  <span style="margin-left:4px">编辑节点</span>
+                  <span style="margin-left:4px">{{t('zallet.updateNode')}}</span>
                 </li>
               </ul>
             </template>
@@ -71,6 +69,8 @@ import { ref, h, reactive, createVNode } from "vue";
 import { useRouter } from "vue-router";
 import { Modal, message } from "ant-design-vue";
 import { useZalletNodeStore } from "@/pinia/zalletNodeStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const zalletNodeStore = useZalletNodeStore();
 // 分页数据
 const dataPage = reactive({
@@ -84,23 +84,24 @@ const router = useRouter();
 // 数据
 const dataSource = ref([]);
 // 数据项
-const columns = [{
-    title: "nodeId",
+const columns = [
+  {
+    i18nTitle: "zallet.nodeId",
     dataIndex: "nodeId",
     key: "nodeId"
   },
   {
-    title: "名称",
+    i18nTitle: "zallet.name",
     dataIndex: "name",
     key: "name"
   },
   {
-    title: "代理host",
+    i18nTitle: "zallet.agentHost",
     dataIndex: "agentHost",
     key: "agentHost"
   },
   {
-    title: "操作",
+    i18nTitle: "zallet.operation",
     dataIndex: "operation",
     key: "operation",
     width: 130,
@@ -138,20 +139,20 @@ const listZalletNode = () => {
 // 删除节点
 const deleteZalletNode = item => {
   Modal.confirm({
-    title: `是否要删除${item.name}?`,
+    title: `${t("zallet.confirmDelete")} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteZalletNodeRequest(item.id).then(() => {
-        message.success("操作成功");
+        message.success(t("operationSuccess"));
         searchZalletNode();
       });
     }
   });
 };
 const searchZalletNode = () => {
-    dataPage.current = 1;
-    listZalletNode();
-}
+  dataPage.current = 1;
+  listZalletNode();
+};
 listZalletNode();
 </script>
 <style scoped>

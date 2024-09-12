@@ -1,34 +1,34 @@
 <template>
   <div style="padding:10px">
     <div class="header">
-      <div class="title">Compare changes</div>
-      <div class="desc">Compare changes across branches, commits, tags, and more below</div>
+      <div class="title">{{t('pullRequest.compareChange')}}</div>
+      <div class="desc">{{t('pullRequest.compareChangeDesc')}}</div>
     </div>
     <div class="merge-select">
       <div class="merge-select-left">
         <BranchTagSelect
-          style="margin-right:6px"
+          style="margin-right:8px"
           :branches="branches"
           :tags="tags"
           @select="headSelect"
         />
         <arrow-left-outlined />
         <BranchTagSelect
-          style="margin-left:6px"
+          style="margin-left:8px"
           :branches="branches"
           :tags="tags"
           @select="targetSelect"
         />
-        <div style="margin: 0 4px" v-show="showLoading">
+        <div style="margin: 0 8px" v-show="showLoading">
           <loading-outlined />
         </div>
         <div class="merge-warn" v-show="!canMerge">
           <close-outlined style="color:red" />
-          <span style="padding-left:4px">Can’t merge</span>
+          <span style="padding-left:4px">{{t('pullRequest.cantMerge')}}</span>
         </div>
         <div class="merge-warn" v-show="canMerge">
           <check-outlined style="color:green" />
-          <span style="padding-left:4px">Can merge</span>
+          <span style="padding-left:4px">{{t('pullRequest.canMerge')}}</span>
         </div>
       </div>
       <a-button
@@ -37,22 +37,31 @@
         v-show="!submitFormVisible"
         @click="showSubmitForm"
         :icon="h(PlusOutlined)"
-      >创建合并请求</a-button>
+      >{{t('pullRequest.submitPr')}}</a-button>
     </div>
     <div class="submit-form" v-if="submitFormVisible">
-      <a-input placeholder="标题" v-model:value="submitInput.title" />
-      <a-textarea
-        style="margin-top:10px"
-        placeholder="评论"
-        :auto-size="{ minRows: 5, maxRows: 10 }"
-        v-model:value="submitInput.comment"
-      />
+      <div class="form-item">
+        <div class="left">{{t('pullRequest.title')}}</div>
+        <div class="right">
+          <a-input v-model:value="submitInput.title" />
+        </div>
+      </div>
+      <div class="form-item">
+        <div class="left">{{t('pullRequest.comment')}}</div>
+        <div class="right">
+          <a-textarea :auto-size="{ minRows: 5, maxRows: 10 }" v-model:value="submitInput.comment" />
+        </div>
+      </div>
       <div style="margin-top:10px;text-align:right">
-        <a-button type="primary" @click="submitPr">创建合并请求</a-button>
+        <a-button
+          type="primary"
+          @click="submitPr"
+          :icon="h(PlusOutlined)"
+        >{{t('pullRequest.submitPr')}}</a-button>
       </div>
     </div>
-    <ConflictFiles v-if="conflictFiles.length > 0" :conflictFiles="conflictFiles"/>
-    <CommitList :commits="commits" :diffNumsStats="diffNumsStats"/>
+    <ConflictFiles v-if="conflictFiles.length > 0" :conflictFiles="conflictFiles" />
+    <CommitList :commits="commits" :diffNumsStats="diffNumsStats" />
     <div>
       <FileDiffDetail
         v-for="item in fileDetails"
@@ -76,13 +85,15 @@ import {
 import FileDiffDetail from "@/components/git/FileDiffDetail";
 import BranchTagSelect from "@/components/git/BranchTagSelect";
 import { ref, reactive, nextTick, h } from "vue";
-import { simpleInfoRequest, diffRefsRequest } from "@/api/git/repoApi";
+import { getBaseInfoRequest, diffRefsRequest } from "@/api/git/repoApi";
 import { submitPullRequestRequest } from "@/api/git/prApi";
 import { useRoute, useRouter } from "vue-router";
 import { prTitleRegexp } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import CommitList from "@/components/git/CommitList";
 import ConflictFiles from "@/components/git/ConflictFiles";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const repoId = parseInt(route.params.repoId);
@@ -202,7 +213,7 @@ const diffRefs = () => {
 const submitPr = () => {
   // 校验标题
   if (!prTitleRegexp.test(submitInput.title)) {
-    message.warn("标题不合法");
+    message.warn(t("pullRequest.titleFormatErr"));
     return;
   }
   submitPullRequestRequest({
@@ -214,28 +225,31 @@ const submitPr = () => {
     title: submitInput.title,
     comment: submitInput.comment
   }).then(() => {
-    message.success("创建成功");
+    message.success(t("operationSuccess"));
     setTimeout(() => {
-      router.push(`/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/list`);
+      router.push(
+        `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/list`
+      );
     }, 1000);
   });
 };
 // 获取分支或tag列表
-simpleInfoRequest(repoId).then(res => {
+getBaseInfoRequest(repoId).then(res => {
   branches.value = res.data.branches;
   tags.value = res.data.tags;
 });
 </script>
 <style scoped>
 .header {
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 .header > .title {
-  font-size: 16px;
-  padding-bottom: 4px;
+  font-size: 18px;
+  font-weight: bold;
+  padding-bottom: 8px;
 }
 .header > .desc {
-  font-size: 12px;
+  font-size: 14px;
   color: gray;
 }
 .merge-select {
@@ -248,7 +262,7 @@ simpleInfoRequest(repoId).then(res => {
 }
 .merge-warn {
   font-size: 14px;
-  margin-left: 6px;
+  margin-left: 12px;
 }
 .merge-select-left {
   display: flex;
@@ -259,5 +273,20 @@ simpleInfoRequest(repoId).then(res => {
   border: 1px solid #d9d9d9;
   margin-top: 10px;
   padding: 10px;
+  width: 50%;
+}
+.submit-form > .form-item {
+  width: 100%;
+  display: flex;
+}
+.submit-form > .form-item > .left {
+  line-height: 32px;
+  width: 80px;
+}
+.submit-form > .form-item > .right {
+  width: calc(100% - 80px);
+}
+.submit-form > .form-item + .form-item {
+  margin-top: 12px;
 }
 </style>
