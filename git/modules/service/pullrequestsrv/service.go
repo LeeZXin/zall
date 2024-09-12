@@ -52,7 +52,7 @@ func initPsub() {
 						}
 					}
 				}
-				if req.Action == event.PullRequestEventSubmitAction {
+				if req.Action == event.PullRequestEventMergeAction {
 					// 触发工作流
 					workflowsrv.FindAndExecute(workflowsrv.FindAndExecuteWorkflowReqDTO{
 						RepoId:      req.RepoId,
