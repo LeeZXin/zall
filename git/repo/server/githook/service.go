@@ -232,7 +232,7 @@ func initPsub() {
 				}
 				// 触发工作流
 				for _, wf := range workflowList {
-					if req.RefType == "commit" {
+					if req.RefType == "branch" {
 						ref := strings.TrimPrefix(req.Ref, git.BranchPrefix)
 						if wf.Source.MatchBranchBySource(workflowmd.BranchTriggerSource, ref) {
 							workflowsrv.Execute(wf, workflowsrv.ExecuteWorkflowReqDTO{

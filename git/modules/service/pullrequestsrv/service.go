@@ -52,16 +52,18 @@ func initPsub() {
 						}
 					}
 				}
-				// 触发工作流
-				workflowsrv.FindAndExecute(workflowsrv.FindAndExecuteWorkflowReqDTO{
-					RepoId:      req.RepoId,
-					RepoPath:    req.RepoPath,
-					Operator:    req.Operator,
-					TriggerType: workflowmd.HookTriggerType,
-					Branch:      req.Ref,
-					Source:      workflowmd.PullRequestTriggerSource,
-					PrId:        req.PrId,
-				})
+				if req.Action == event.PullRequestEventSubmitAction {
+					// 触发工作流
+					workflowsrv.FindAndExecute(workflowsrv.FindAndExecuteWorkflowReqDTO{
+						RepoId:      req.RepoId,
+						RepoPath:    req.RepoPath,
+						Operator:    req.Operator,
+						TriggerType: workflowmd.HookTriggerType,
+						Branch:      req.HeadRef,
+						Source:      workflowmd.PullRequestTriggerSource,
+						PrId:        req.PrId,
+					})
+				}
 				// 触发teamhook
 				teamhooksrv.TriggerTeamHook(&req, req.TeamId, func(events *teamhook.Events) bool {
 					switch req.Action {
@@ -887,11 +889,17 @@ func checkAddCommentPermByRepoId(ctx context.Context, repoId int64, operator api
 func notifyEvent(repo repomd.Repo, team teammd.Team, operator apisession.UserInfo, pr pullrequestmd.PullRequest, action event.PullRequestEventAction) {
 	initPsub()
 	psub.Publish(event.PullRequestTopic, event.PullRequestEvent{
-		PrId:    pr.Id,
-		PrTitle: pr.PrTitle,
-		Ref:     pr.Target,
-		RefType: pr.TargetType.String(),
-		Action:  action,
+		PrId:          pr.Id,
+		PrTitle:       pr.PrTitle,
+		TargetRef:     pr.Target,
+		TargetRefType: pr.TargetType.String(),
+		HeadRef:       pr.Head,
+		HeadRefType:   pr.HeadType.String(),
+		Action:        action,
+		BaseTeam: event.BaseTeam{
+			TeamId:   team.Id,
+			TeamName: team.Name,
+		},
 		BaseRepo: event.BaseRepo{
 			RepoPath: repo.Path,
 			RepoId:   repo.Id,
@@ -901,10 +909,6 @@ func notifyEvent(repo repomd.Repo, team teammd.Team, operator apisession.UserInf
 			Operator:     operator.Account,
 			OperatorName: operator.Name,
 			EventTime:    time.Now().Format(time.DateTime),
-		},
-		BaseTeam: event.BaseTeam{
-			TeamId:   team.Id,
-			TeamName: team.Name,
 		},
 	})
 }
