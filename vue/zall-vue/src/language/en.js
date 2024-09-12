@@ -214,8 +214,8 @@ export default {
     },
     gitRepo: {
         searchName: "Search name",
-        createRepo: "Create Repository",
-        switchRepo: "Switch Repository",
+        createRepo: "Create repository",
+        switchRepo: "switch repository",
         recycle: "Repository recycle",
         view: "View",
         archived: "Archived",

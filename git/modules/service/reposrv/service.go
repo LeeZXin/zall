@@ -1035,8 +1035,17 @@ func DiffCommits(ctx context.Context, reqDTO DiffCommitsReqDTO) (DiffCommitsResp
 		logger.Logger.WithContext(ctx).Error(err)
 		return DiffCommitsRespDTO{}, util.InternalError(err)
 	}
+	userMap, err := usersrv.GetUsersNameAndAvatarMapByEmails(ctx, refs.Commit.Committer.Email)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return DiffCommitsRespDTO{}, util.InternalError(err)
+	}
+	commit := commit2Dto(refs.Commit)
+	commit.Committer.AvatarUrl = userMap[refs.Commit.Committer.Email].AvatarUrl
+	commit.Committer.Name = userMap[refs.Commit.Committer.Email].Name
+	commit.Committer.Account = userMap[refs.Commit.Committer.Email].Account
 	ret := DiffCommitsRespDTO{
-		Commit:   commit2Dto(refs.Commit),
+		Commit:   commit,
 		NumFiles: refs.NumFiles,
 		DiffNumsStats: DiffNumsStatInfoDTO{
 			FileChangeNums: refs.DiffNumsStats.FileChangeNums,

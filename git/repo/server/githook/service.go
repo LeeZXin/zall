@@ -76,16 +76,18 @@ func doPreReceive(ctx context.Context, opts githook.Opts) error {
 			}
 			isProtectedBranch, protectedBranch := pbList.IsProtectedBranch(strings.TrimPrefix(ref, git.BranchPrefix))
 			if isProtectedBranch {
-				// 检查该分支是否可推送
-				cfg := protectedBranch.GetCfg()
-				switch cfg.PushOption {
-				case branch.NotAllowPush:
-					return util.NewBizErr(apicode.ProtectedBranchNotAllowPushCode, i18n.ProtectedBranchNotAllowPush)
-				case branch.WhiteListPush:
-					if !cfg.PushWhiteList.Contains(opts.PusherAccount) {
+				if opts.PrId == 0 {
+					// 检查该分支是否可推送
+					cfg := protectedBranch.GetCfg()
+					switch cfg.PushOption {
+					case branch.NotAllowPush:
 						return util.NewBizErr(apicode.ProtectedBranchNotAllowPushCode, i18n.ProtectedBranchNotAllowPush)
+					case branch.WhiteListPush:
+						if !cfg.PushWhiteList.Contains(opts.PusherAccount) {
+							return util.NewBizErr(apicode.ProtectedBranchNotAllowPushCode, i18n.ProtectedBranchNotAllowPush)
+						}
+					case branch.AllowPush:
 					}
-				case branch.AllowPush:
 				}
 				// 不允许删除保护分支
 				if info.NewCommitId == git.ZeroCommitId {

@@ -103,6 +103,10 @@ func GetUsersNameAndAvatarMapByEmails(ctx context.Context, emails ...string) (ma
 			AvatarUrl: userMap[email].AvatarUrl,
 		}
 	}
+	ret["zgit@fake.local"] = util.User{
+		Account: "ZGIT",
+		Name:    "ZGIT",
+	}
 	return ret, nil
 }
 

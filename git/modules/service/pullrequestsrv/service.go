@@ -495,7 +495,7 @@ func mergeWithTx(ctx context.Context, pr pullrequestmd.PullRequest, repo repomd.
 			PusherAccount: operator.Account,
 			PusherName:    operator.Name,
 			PusherEmail:   operator.Email,
-			Message:       fmt.Sprintf("merge %s from %s", pr.Head, pr.Target),
+			Message:       fmt.Sprintf("merge %s from %s with #%d", pr.Head, pr.Target, pr.Id),
 		},
 	})
 	if err != nil {
