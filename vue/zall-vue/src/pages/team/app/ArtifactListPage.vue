@@ -124,6 +124,7 @@ const onEnvChange = e => {
     `/team/${route.params.teamId}/app/${route.params.appId}/artifact/list/${e.newVal}`
   );
   selectedEnv.value = e.newVal;
+  dataPage.current = 1;
   listArtifact();
 };
 </script>

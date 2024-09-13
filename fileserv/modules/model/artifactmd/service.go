@@ -52,6 +52,17 @@ func ListArtifact(ctx context.Context, reqDTO ListArtifactReqDTO) ([]Artifact, i
 	return ret, total, err
 }
 
+func ListByAppIdOffsetN(ctx context.Context, appId, env string, offset int) ([]Artifact, error) {
+	ret := make([]Artifact, 0)
+	err := xormutil.MustGetXormSession(ctx).
+		Where("app_id = ?", appId).
+		And("env = ?", env).
+		Desc("id").
+		Limit(99999, offset).
+		Find(&ret)
+	return ret, err
+}
+
 func ListLatestArtifact(ctx context.Context, appId, env string, size int) ([]Artifact, error) {
 	ret := make([]Artifact, 0)
 	err := xormutil.MustGetXormSession(ctx).

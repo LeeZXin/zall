@@ -187,8 +187,7 @@ const onEnvChange = e => {
   router.replace(
     `/team/${route.params.teamId}/app/${route.params.appId}/alertConfig/list/${e.newVal}`
   );
-  dataPage.current = 1;
-  listAlertConfig();
+  searchAlertConfig();
 };
 const searchAlertConfig = () => {
   dataPage.current = 1;

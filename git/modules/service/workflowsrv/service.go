@@ -253,7 +253,7 @@ func Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO) error {
 		envs["GIT_REPO_PATH"] = reqDTO.RepoPath
 		envs["GIT_TOKEN"] = gitToken
 		envs["GIT_TRIGGER_TYPE"] = strconv.Itoa(int(reqDTO.TriggerType))
-		envs["GIT_BUILD_NUM"] = time.Now().Format("200601021504") + strutil.RandomStr(4)
+		envs["GIT_BUILD_NUM"] = time.Now().Format("2006010215") + strings.ToUpper(strutil.RandomStr(6))
 		envs[action.EnvCallBackUrl] = url
 		envs[action.EnvCallBackToken] = static.GetString("workflow.callback.token")
 		for _, vars := range varsList {

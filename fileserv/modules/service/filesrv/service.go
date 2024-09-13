@@ -8,9 +8,11 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
+	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
+	"github.com/LeeZXin/zall/pkg/crontask"
 	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/files"
 	"github.com/LeeZXin/zall/pkg/i18n"
@@ -21,6 +23,7 @@ import (
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf-utils/typesniffer"
+	"github.com/LeeZXin/zsf/http/httptask"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
@@ -58,6 +61,62 @@ func InitStorage() {
 	avatarStorage, _ = files.NewLocalStorage(avatarDir, avatarTempDir)
 	artifactStorage, _ = files.NewLocalStorage(artifactDir, artifactTempDir)
 	domain = static.GetString("files.domain")
+	// 定时清除制品
+	cleanArtifactCron := static.GetString("artifacts.clean.cron")
+	if cleanArtifactCron == "" {
+		// 默认凌晨清除
+		cleanArtifactCron = "0 0 * * ?"
+	}
+	err = crontask.AddFunc(cleanArtifactCron, cleanArtifact)
+	if err != nil {
+		logger.Logger.Fatalf("add clean artifact cron func err: %v", err)
+	}
+	// 创建httptask任务
+	httptask.AppendHttpTask("cleanArtifact", func(_ []byte, _ url.Values) {
+		cleanArtifact()
+	})
+}
+
+// cleanArtifact 每个应用服务每个环境最多保留10个制品
+func cleanArtifact() {
+	ctx, closer := xormstore.Context(context.Background())
+	defer closer.Close()
+	envs, err := cfgsrv.GetEnvCfgFromDB(ctx)
+	if err != nil {
+		logger.Logger.Error(err)
+		return
+	}
+	apps, err := appmd.ListAllApp(ctx, []string{"app_id"})
+	if err != nil {
+		logger.Logger.Error(err)
+		return
+	}
+	for _, app := range apps {
+		for _, env := range envs {
+			artifacts, err := artifactmd.ListByAppIdOffsetN(ctx, app.AppId, env, 10)
+			if err != nil {
+				logger.Logger.Error(err)
+				return
+			}
+			for _, artifact := range artifacts {
+				p := filepath.Join(artifact.Env, artifact.AppId, artifact.Name)
+				exists, err := artifactStorage.Exists(ctx, p)
+				if err != nil {
+					logger.Logger.Error(err)
+					return
+				}
+				if exists {
+					_, err2 := artifactmd.DeleteArtifactById(ctx, artifact.Id)
+					if err2 != nil {
+						logger.Logger.Error(err)
+						return
+					}
+					artifactStorage.Delete(ctx, p)
+					logger.Logger.Infof("delete artifact id: %v app: %v path: %v", artifact.Id, artifact.AppId, artifact.Name)
+				}
+			}
+		}
+	}
 }
 
 func initPsub() {

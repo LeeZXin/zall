@@ -21,7 +21,8 @@ func DefaultRouter() gin.HandlerFunc {
 			c.Request.Method != http.MethodGet ||
 			strings.HasSuffix(p, "/info/refs") ||
 			strings.HasSuffix(p, "/git-upload-pack") ||
-			strings.HasSuffix(p, "/git-receive-pack") {
+			strings.HasSuffix(p, "/git-receive-pack") ||
+			strings.HasPrefix(p, "/httpTask") {
 			c.Next()
 		} else {
 			switch path.Ext(p) {
