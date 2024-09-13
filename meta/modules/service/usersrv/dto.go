@@ -212,8 +212,7 @@ func (r *UpdateUserReqDTO) IsValid() error {
 	if !usermd.IsEmailValid(r.Email) {
 		return util.InvalidArgsError()
 	}
-	parsedUrl, err := url.Parse(r.AvatarUrl)
-	if err != nil || strings.HasPrefix(parsedUrl.Scheme, "http") {
+	if r.AvatarUrl == "" {
 		return util.InvalidArgsError()
 	}
 	return nil

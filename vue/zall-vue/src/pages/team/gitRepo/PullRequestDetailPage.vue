@@ -63,9 +63,17 @@
                 <template v-if="item.action.actionType === 3">
                   <!-- 创建、合并、关闭合并请求 -->
                   <div class="timeline-text no-wrap">
-                    <CloseCircleFilled style="color:red;margin-right:6px" v-if="item.action?.pr?.status === 2" />
+                    <CloseCircleFilled
+                      style="color:red;margin-right:6px"
+                      v-if="item.action?.pr?.status === 2"
+                    />
                     <CheckCircleFilled style="color:green;margin-right:6px" v-else />
-                    <ZAvatar :url="item.avatarUrl" :name="item.name" :showName="true" />
+                    <ZAvatar
+                      :url="item.avatarUrl"
+                      :name="item.name"
+                      :account="item.account"
+                      :showName="true"
+                    />
                     <span>{{t(prStatusMap[item.action?.pr?.status])}}</span>
                     <span style="color:gray">{{readableTimeComparingNow(item.created)}}</span>
                   </div>
@@ -74,7 +82,12 @@
                   <!-- 评审并同意合并 -->
                   <div class="timeline-text no-wrap">
                     <CheckCircleFilled style="color:green;margin-right:6px" />
-                    <ZAvatar :url="item.avatarUrl" :name="item.name" :showName="true" />
+                    <ZAvatar
+                      :url="item.avatarUrl"
+                      :name="item.name"
+                      :account="item.account"
+                      :showName="true"
+                    />
                     <span>{{t('pullRequest.reviewedAndAgreedMerge')}}</span>
                     <span style="color:gray">{{readableTimeComparingNow(item.created)}}</span>
                   </div>
@@ -86,24 +99,35 @@
                   <!-- 评论或回复评论 -->
                   <div class="card-title no-wrap flex-between" :id="`comment-${item.id}`">
                     <div class="inline-flex-center">
-                      <ZAvatar :url="item.avatarUrl" :name="item.name" :showName="true" />
+                      <ZAvatar
+                        :url="item.avatarUrl"
+                        :name="item.name"
+                        :account="item.account"
+                        :showName="true"
+                      />
                       <span>{{t('pullRequest.madeComment')}}</span>
-                      <span style="color:gray;margin-left:6px">{{readableTimeComparingNow(item.created)}}</span>
+                      <span
+                        style="color:gray;margin-left:6px"
+                      >{{readableTimeComparingNow(item.created)}}</span>
                     </div>
-                    <a-popover placement="bottomRight" trigger="hover">
+                    <a-popover
+                      placement="bottomRight"
+                      trigger="hover"
+                      v-if="prStore.prStatus === 1"
+                    >
                       <template #content>
                         <ul class="op-list">
                           <li @click="selectReply(item)">
                             <EditOutlined />
                             <span style="margin-left:6px">{{t('pullRequest.reply')}}</span>
                           </li>
-                          <li @click="deleteComment(item.id)">
+                          <li @click="deleteComment(item.id)" v-if="user.account === item.account">
                             <DeleteOutlined />
                             <span style="margin-left:6px">{{t('pullRequest.delete')}}</span>
                           </li>
                         </ul>
                       </template>
-                      <div class="op-icon" v-if="prStore.prStatus === 1">
+                      <div class="op-icon">
                         <EllipsisOutlined />
                       </div>
                     </a-popover>
@@ -200,7 +224,12 @@
                     v-for="item in mergeDetect.protectedBranchCfg.reviewerList"
                     v-bind:key="item.account"
                   >
-                    <ZAvatar :url="item.avatarUrl" :name="item.name" :showName="true" />
+                    <ZAvatar
+                      :url="item.avatarUrl"
+                      :name="item.name"
+                      :account="item.account"
+                      :showName="true"
+                    />
                   </li>
                 </ul>
                 <div class="no-reviewer-msg" v-else>{{t('pullRequest.noAssignedReviewer')}}</div>
@@ -266,7 +295,12 @@
                   <span>{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
                 </template>
                 <template v-else>
-                  <ZAvatar :url="dataItem['avatarUrl']" :name="dataItem['name']" :showName="true" />
+                  <ZAvatar
+                    :url="dataItem.avatarUrl"
+                    :name="dataItem.name"
+                    :account="dataItem.account"
+                    :showName="true"
+                  />
                 </template>
               </template>
             </ZTable>
@@ -326,6 +360,8 @@ import { readableTimeComparingNow } from "@/utils/time";
 import { prCommentRegexp } from "@/utils/regexp";
 import RunStatus from "@/components/git/WorkflowRunStatus";
 import { useI18n } from "vue-i18n";
+import { useUserStore } from "@/pinia/userStore";
+const user = useUserStore();
 const { t } = useI18n();
 const reviewColumns = [
   {

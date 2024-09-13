@@ -99,10 +99,14 @@ func execute(sshHost, command string, cmd io.Reader, envs map[string]string) (st
 	session.Stdout = output
 	session.Stderr = stderr
 	err = session.Run(command)
-	if err != nil {
-		return "", fmt.Errorf("%w - %s", err, stderr.String())
+	outputContent, err2 := io.ReadAll(io.LimitReader(output, 2*1024*1024))
+	if err2 != nil {
+		return "", err2
 	}
-	return output.String(), nil
+	if err != nil {
+		return string(outputContent), fmt.Errorf("%w - %s", err, stderr.String())
+	}
+	return string(outputContent), nil
 }
 
 func (c *ServiceCommand) Execute(cmd io.Reader, envs map[string]string, taskId string) (string, error) {

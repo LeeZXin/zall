@@ -24,6 +24,7 @@
           <ZAvatar
             :url="dataItem.account?.avatarUrl"
             :name="dataItem.account?.name"
+            :account="dataItem.account?.account"
             :showName="true"
           />
         </div>
@@ -82,6 +83,7 @@
             <ZAvatar
               :url="applyModal.account?.avatarUrl"
               :name="applyModal.account?.name"
+              :account="applyModal.account?.account"
               :showName="true"
             />
           </div>
@@ -92,6 +94,7 @@
             <ZAvatar
               :url="applyModal.auditor?.avatarUrl"
               :name="applyModal.auditor?.name"
+              :account="applyModal.auditor?.account"
               :showName="true"
             />
           </div>

@@ -28,6 +28,7 @@
           <ZAvatar
             :url="dataItem.account?.avatarUrl"
             :name="dataItem.account?.name"
+            :account="dataItem.account?.account"
             :showName="true"
           />
         </div>
@@ -35,6 +36,7 @@
           <ZAvatar
             :url="dataItem.auditor?.avatarUrl"
             :name="dataItem.auditor?.name"
+            :account="dataItem.auditor?.account"
             :showName="true"
           />
         </div>
@@ -42,6 +44,7 @@
           <ZAvatar
             :url="dataItem.executor?.avatarUrl"
             :name="dataItem.executor?.name"
+            :account="dataItem.executor?.account"
             :showName="true"
           />
         </div>

@@ -1,26 +1,63 @@
 <template>
-  <div class="inline-flex-center" style="margin-right: 6px">
-    <img
-      v-if="props.url"
-      :src="props.url"
-      :class="['avatar', avatarSizeMap[props.size]?avatarSizeMap[props.size]:'small-avatar']"
-    />
-    <div
-      v-else
-      :class="['text', textSizeMap[props.size]?textSizeMap[props.size]:'small-text']"
-    >{{props.name?.length > 0?props.name.substring(0,1):''}}</div>
-    <div
-      v-if="props.showName"
-      style="font-size:14px;margin-left:6px"
-      :class="[nameSizeMap[props.size]?nameSizeMap[props.size]:'small-name']"
-    >{{props.name}}</div>
-  </div>
+  <template v-if="props.disablePopover">
+    <div class="inline-flex-center" style="margin-right: 6px;">
+      <img
+        v-if="props.url"
+        :src="props.url"
+        :class="['avatar', avatarSizeMap[props.size]?avatarSizeMap[props.size]:'small-avatar']"
+      />
+      <div
+        v-else
+        :class="['text', textSizeMap[props.size]?textSizeMap[props.size]:'small-text']"
+      >{{props.name?.length > 0?props.name.substring(0,1):''}}</div>
+      <div
+        v-if="props.showName"
+        style="font-size:14px;margin-left:6px"
+        :class="[nameSizeMap[props.size]?nameSizeMap[props.size]:'small-name']"
+      >{{props.name}}</div>
+    </div>
+  </template>
+  <a-popover placement="bottom" v-else>
+    <template #content>
+      <div class="flex-center" style="width: 200px;font-size:14px;padding:6px">
+        <img v-if="props.url" :src="props.url" class="avatar medium-avatar" />
+        <div class="text medium-text" v-else>{{props.name?.length > 0?props.name.substring(0,1):''}}</div>
+        <div style="margin-left:8px">
+          <div style="margin-bottom: 3px" class="no-wrap">{{props.account}}</div>
+          <div class="no-wrap">{{props.name}}</div>
+        </div>
+      </div>
+    </template>
+    <div class="inline-flex-center" style="margin-right: 6px;cursor:pointer">
+      <img
+        v-if="props.url"
+        :src="props.url"
+        :class="['avatar', avatarSizeMap[props.size]?avatarSizeMap[props.size]:'small-avatar']"
+      />
+      <div
+        v-else
+        :class="['text', textSizeMap[props.size]?textSizeMap[props.size]:'small-text']"
+      >{{props.name?.length > 0?props.name.substring(0,1):''}}</div>
+      <div
+        v-if="props.showName"
+        style="font-size:14px;margin-left:6px"
+        :class="[nameSizeMap[props.size]?nameSizeMap[props.size]:'small-name']"
+      >{{props.name}}</div>
+    </div>
+  </a-popover>
 </template>
 
 <script setup>
 import { defineProps } from "vue";
 
-const props = defineProps(["url", "name", "size", "showName"]);
+const props = defineProps([
+  "url",
+  "name",
+  "size",
+  "showName",
+  "account",
+  "disablePopover"
+]);
 
 const avatarSizeMap = {
   small: "small-avatar",

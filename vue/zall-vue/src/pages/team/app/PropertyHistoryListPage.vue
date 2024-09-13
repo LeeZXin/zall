@@ -13,6 +13,7 @@
             <ZAvatar
               :url="dataItem.creator?.avatarUrl"
               :name="dataItem.creator?.name"
+              :account="dataItem.creator?.account"
               :showName="true"
             />
           </div>
@@ -90,6 +91,7 @@
                 <ZAvatar
                   :url="dataItem.creator?.avatarUrl"
                   :name="dataItem.creator?.name"
+                  :account="dataItem.creator?.account"
                   :showName="true"
                 />
               </div>

@@ -23,6 +23,8 @@ func UploadPack(ctx context.Context, reqDTO UploadPackReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
 	cfg, err := cfgsrv.GetGitCfgFromDB(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -48,6 +50,8 @@ func ReceivePack(ctx context.Context, reqDTO ReceivePackReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
+	ctx, closer := xormstore.Context(ctx)
+	defer closer.Close()
 	cfg, err := cfgsrv.GetGitCfgFromDB(ctx)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

@@ -180,7 +180,7 @@ func runAgentScript(stage deploymd.Stage, args map[string]string) bool {
 	log, err := sshagent.NewServiceCommand(stage.AgentHost, stage.AgentToken, stage.AppId).
 		Execute(strings.NewReader(stage.Script), args, stage.TaskId)
 	if err != nil {
-		updateStageStatusAndLog(stage, err.Error(), deploymd.FailedStageStatus, deploymd.RunningStageStatus)
+		updateStageStatusAndLog(stage, log+"\n"+err.Error(), deploymd.FailedStageStatus, deploymd.RunningStageStatus)
 		return false
 	}
 	updateStageStatusAndLog(stage, log, deploymd.SuccessfulStageStatus, deploymd.RunningStageStatus)

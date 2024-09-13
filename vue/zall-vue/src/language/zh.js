@@ -238,7 +238,9 @@ export default {
         addReadme: "添加Readme",
         nameFormatErr: "名称格式错误",
         repoDescFormatErr: "仓库描述格式错误",
-        defaultBranchFormatErr: "默认分支格式错误"
+        defaultBranchFormatErr: "默认分支格式错误",
+        confirmDeletePermanently: "你确定要永久删除",
+        confirmRecover: "你确定要恢复"
     },
     appService: {
         switchApp: "切换应用",
@@ -347,7 +349,7 @@ export default {
         host: "主机",
         stageStatus: "状态",
         executeLog: "执行日志",
-        Redo: "重新执行",
+        redo: "重新执行",
         confirmForcefullyRedo: "你确定要强制重新执行",
         confirmStartPlan: "你确定要执行发布计划",
         confirmKillStage: "你确定要中止执行",
@@ -1018,8 +1020,8 @@ export default {
     cfgList: {
         systemCfg: "系统配置",
         save: "保存",
-        disallowUserRegisterAccount: "禁止用户注册帐号",
-        disallowUserRegisterAccountDesc: "用户不可自行注册帐号, 只允许超级管理员创建用户帐号",
+        disallowUserRegisterAccount: "禁止用户注册账号",
+        disallowUserRegisterAccountDesc: "用户不可自行注册账号, 只允许超级管理员创建用户账号",
         allowUserCreateTeam: "允许用户创建团队",
         allowUserCreateTeamDesc: "允许用户自行创建团队并成为团队的管理员",
         envCfg: "环境配置",
@@ -1056,10 +1058,10 @@ export default {
     },
     userManage: {
         createUser: "创建用户",
+        updateUser: "编辑用户",
         yes: "是",
         no: "否",
         resetPwd: "重置密码",
-        updateUser: "编辑用户",
         revokeDba: "取消DBA",
         grantDba: "成为DBA",
         disableAccount: "禁用账号",
@@ -1081,7 +1083,19 @@ export default {
         confirmDisable: "你确定是否禁用",
         confirmEnable: "你确定是否启动",
         confirmDelete: "你确定是否删除",
-        confirmResetPwd: "是否重置密码"
+        confirmResetPwd: "是否重置密码",
+        pwd: "密码",
+        save: "立即保存",
+        clickUpload: "点击上传",
+        cropper: "裁剪头像",
+        notImage: "不是图像",
+        updateSelfAndReLogin: "你已编辑自己的信息, 将重新登录",
+        accountFormatErr: "账号格式错误",
+        nameFormatErr: "名称格式错误",
+        emailFormatErr: "邮箱格式错误",
+        pleaseUploadAvatar: "请上传头像",
+        pwdFormatErr: "密码格式错误",
+        searchUser: "搜索账号"
     },
     propertySource: {
         createSource: "创建配置来源",

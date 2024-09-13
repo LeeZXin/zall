@@ -23,6 +23,7 @@
           <ZAvatar
             :url="dataItem.auditor?.avatarUrl"
             :name="dataItem.auditor?.name"
+            :account="dataItem.auditor?.account"
             :showName="true"
           />
         </div>

@@ -66,7 +66,12 @@
         <div class="workflow-status">
           <WorkflowTaskStatusIconText :status="item.lastTask?.taskStatus" />
           <div v-if="item.lastTask" class="flex-center no-wrap" style="margin-top:10px;">
-            <ZAvatar :url="item.lastTask?.operator.avatarUrl" :name="item.lastTask?.operator.name" :showName="true" />
+            <ZAvatar
+              :url="item.lastTask?.operator.avatarUrl"
+              :name="item.lastTask?.operator.name"
+              :account="item.lastTask?.operator.account"
+              :showName="true"
+            />
             <span style="padding-left:4px">{{t('gitWorkflow.push')}}</span>
             <span style="padding-left:4px">{{item.lastTask.branch}}</span>
             <span style="padding-left:4px">{{readableTimeComparingNow(item.lastTask.created)}}</span>

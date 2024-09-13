@@ -44,7 +44,12 @@
         <div class="dir-table">
           <div class="first-line">
             <div class="commit-text flex-center">
-              <ZAvatar :url="latestCommit.avatarUrl" :name="latestCommit.name" :showName="true" />
+              <ZAvatar
+                :url="latestCommit.avatarUrl"
+                :name="latestCommit.name"
+                :account="latestCommit.committer"
+                :showName="true"
+              />
               <span>{{latestCommit.commitMsg}}</span>
             </div>
             <div class="commit-text">

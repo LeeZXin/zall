@@ -82,7 +82,7 @@ func auth(c *gin.Context) {
 	account, password, ok := c.Request.BasicAuth()
 	if !ok {
 		c.Header("WWW-Authenticate", "Basic realm=\".\"")
-		c.String(http.StatusUnauthorized, "wrong authorization")
+		c.String(http.StatusUnauthorized, "")
 		c.Abort()
 		return
 	}

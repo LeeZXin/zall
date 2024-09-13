@@ -256,6 +256,7 @@ func StartPlan(ctx context.Context, reqDTO StartPlanReqDTO) error {
 		deploy.CurrentArtifactVersionKey: plan.ArtifactVersion,
 		deploy.OperatorAccountKey:        reqDTO.Operator.Account,
 		deploy.AppKey:                    plan.AppId,
+		deploy.EnvKey:                    plan.Env,
 	})
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		b2, err2 := deploymd.StartPlan(ctx, reqDTO.PlanId, pipeline.Config)
@@ -411,6 +412,7 @@ func ForceRedoNotSuccessfulAgentStages(ctx context.Context, reqDTO ForceRedoNotS
 	args[deploy.CurrentArtifactVersionKey] = plan.ArtifactVersion
 	args[deploy.OperatorAccountKey] = reqDTO.Operator.Account
 	args[deploy.AppKey] = plan.AppId
+	args[deploy.EnvKey] = plan.Env
 	err = redoAgentStagesInRunner(dp, notSuccessfulStages, util.MergeMap(varsMap, args))
 	if err != nil {
 		return util.OperationFailedError()
@@ -996,6 +998,7 @@ func ConfirmInteractStage(ctx context.Context, reqDTO ConfirmInteractStageReqDTO
 	filteredArgs[deploy.CurrentArtifactVersionKey] = plan.ArtifactVersion
 	filteredArgs[deploy.OperatorAccountKey] = reqDTO.Operator.Account
 	filteredArgs[deploy.AppKey] = plan.AppId
+	filteredArgs[deploy.EnvKey] = plan.Env
 	if len(stage.Confirm.Form) > 0 {
 		b, extra := stage.Confirm.CheckForm(args)
 		if !b {

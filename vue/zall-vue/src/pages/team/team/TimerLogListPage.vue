@@ -27,6 +27,7 @@
           <ZAvatar
             :url="dataItem.triggerBy?.avatarUrl"
             :name="dataItem.triggerBy?.name"
+            :account="dataItem.triggerBy?.account"
             :showName="true"
           />
         </div>

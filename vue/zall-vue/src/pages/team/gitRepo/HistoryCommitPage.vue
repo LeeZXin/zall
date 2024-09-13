@@ -16,7 +16,12 @@
               <span class="commit-msg-text" @click="treeCommit(item)">{{item.commitMsg}}</span>
             </div>
             <div class="commit-desc no-wrap flex-center">
-              <ZAvatar :url="item.committer?.avatarUrl" :name="item.committer?.name" :showName="true"/>
+              <ZAvatar
+                :url="item.committer?.avatarUrl"
+                :name="item.committer?.name"
+                :account="item.committer?.account"
+                :showName="true"
+              />
               <span>{{t('commitList.committedAt')}}</span>
               <span>{{readableTimeComparingNow(item.committedTime)}}</span>
             </div>
@@ -30,7 +35,12 @@
                     <span>{{t('commitList.thisCommitIsVerified')}}</span>
                   </div>
                   <div class="flex-center" style="margin-bottom: 12px;">
-                    <ZAvatar :url="item.signer?.avatarUrl" :name="item.signer?.name" size="medium" />
+                    <ZAvatar
+                      :url="item.signer?.avatarUrl"
+                      :name="item.signer?.name"
+                      size="medium"
+                      :disablePopover="true"
+                    />
                     <div style="margin-left:8px">
                       <div style="margin-bottom: 3px" class="no-wrap">{{item.signer?.account}}</div>
                       <div class="no-wrap">{{item.signer?.name}}</div>

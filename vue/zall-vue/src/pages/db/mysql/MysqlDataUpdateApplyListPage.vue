@@ -21,17 +21,11 @@
     </div>
     <ZTable :columns="columns" :dataSource="dataSource" :scroll="{x:1800}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <div v-if="dataIndex === 'account'" class="flex-center">
-          <ZAvatar
-            :url="dataItem.account?.avatarUrl"
-            :name="dataItem.account?.name"
-            :showName="true"
-          />
-        </div>
-        <div v-else-if="dataIndex === 'auditor'" class="flex-center">
+        <div v-if="dataIndex === 'auditor'" class="flex-center">
           <ZAvatar
             :url="dataItem.auditor?.avatarUrl"
             :name="dataItem.auditor?.name"
+            :account="dataItem.auditor?.account"
             :showName="true"
           />
         </div>
@@ -39,6 +33,7 @@
           <ZAvatar
             :url="dataItem.executor?.avatarUrl"
             :name="dataItem.executor?.name"
+            :account="dataItem.executor?.account"
             :showName="true"
           />
         </div>

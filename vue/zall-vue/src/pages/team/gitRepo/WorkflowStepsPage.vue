@@ -13,6 +13,7 @@
           <ZAvatar
             :url="taskStore.operator?.avatarUrl"
             :name="taskStore.operator?.name"
+            :account="taskStore.operator?.account"
             :showName="true"
           />
         </div>

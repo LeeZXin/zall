@@ -237,7 +237,9 @@ export default {
         addReadme: "add readme",
         nameFormatErr: "Name format is error",
         repoDescFormatErr: "Repository description format is wrong",
-        defaultBranchFormatErr: "Default branch format is wrong"
+        defaultBranchFormatErr: "Default branch format is wrong",
+        confirmDeletePermanently: "Do you confirm to permanently delete",
+        confirmRecover: "Do you confirm to recover"
     },
     appService: {
         switchApp: "Switch App",
@@ -1056,10 +1058,10 @@ export default {
     },
     userManage: {
         createUser: "Create user",
+        updateUser: "Update user",
         yes: "Yes",
         no: "No",
         resetPwd: "Reset password",
-        updateUser: "Update user",
         revokeDba: "Revoke DBA",
         grantDba: "Grant DBA",
         disableAccount: "Disable account",
@@ -1081,7 +1083,19 @@ export default {
         confirmDisable: "Do you confirm to disable",
         confirmEnable: "Do you confirm to enable",
         confirmDelete: "Do you confirm to delete",
-        confirmResetPwd: "Do you confirm to reset password"
+        confirmResetPwd: "Do you confirm to reset password",
+        pwd: "Password",
+        save: "Save now",
+        clickUpload: "Click to upload",
+        cropper: "Crop avatar",
+        notImage: "It's not image",
+        updateSelfAndReLogin: "You updated your own profile, and will re-login again",
+        accountFormatErr: "Account format is wrong",
+        nameFormatErr: "Name format is wrong",
+        emailFormatErr: "Email format is wrong",
+        pleaseUploadAvatar: "Please upload avatar",
+        pwdFormatErr: "Password format is wrong",
+        searchUser: "Search account"
     },
     propertySource: {
         createSource: "Create source",

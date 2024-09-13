@@ -57,7 +57,12 @@
         <li>
           <div class="item-name">{{t('mysqlReadPermApply.auditor')}}</div>
           <div class="item-value flex-center">
-            <ZAvatar :url="apply.auditor?.avatarUrl" :name="apply.auditor?.name" :showName="true" />
+            <ZAvatar
+              :url="apply.auditor?.avatarUrl"
+              :name="apply.auditor?.name"
+              :account="apply.auditor?.account"
+              :showName="true"
+            />
           </div>
         </li>
         <li>

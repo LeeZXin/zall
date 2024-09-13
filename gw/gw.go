@@ -4,6 +4,7 @@ import (
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"path"
 	"path/filepath"
 	"strings"
@@ -16,7 +17,11 @@ func Init() {
 func DefaultRouter() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		p := c.Request.URL.Path
-		if strings.HasPrefix(p, "/api") {
+		if strings.HasPrefix(p, "/api") ||
+			c.Request.Method != http.MethodGet ||
+			strings.HasSuffix(p, "/info/refs") ||
+			strings.HasSuffix(p, "/git-upload-pack") ||
+			strings.HasSuffix(p, "/git-receive-pack") {
 			c.Next()
 		} else {
 			switch path.Ext(p) {
@@ -25,6 +30,7 @@ func DefaultRouter() gin.HandlerFunc {
 			default:
 				c.File(filepath.Join(common.ResourcesDir, "dist", "index.html"))
 			}
+			c.Abort()
 		}
 	}
 }

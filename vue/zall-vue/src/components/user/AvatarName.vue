@@ -1,6 +1,6 @@
 <template>
   <div class="avatar-name" :style="props.style" @click="showDrawer">
-    <ZAvatar :url="user.avatarUrl" :name="user.name" size="medium" />
+    <ZAvatar :url="user.avatarUrl" :name="user.name" size="medium" :disablePopover="true"/>
     <span style="margin-left: 8px">{{user.name}}</span>
   </div>
   <a-drawer :title="user.name" :closable="false" :open="visible" @close="closeDrawer">

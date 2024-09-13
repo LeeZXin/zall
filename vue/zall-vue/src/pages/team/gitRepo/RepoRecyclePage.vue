@@ -127,7 +127,7 @@ const getDeletedRepo = () => {
 };
 const deleteRepoPermanently = item => {
   Modal.confirm({
-    title: `你确定要永久删除${item.name}?`,
+    title: `${t('gitRepo.confirmDeletePermanently')} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       deleteRepoPermanentlyRequest(item.repoId).then(() => {
@@ -140,7 +140,7 @@ const deleteRepoPermanently = item => {
 };
 const recoverRepo = item => {
   Modal.confirm({
-    title: `你确定要恢复${item.name}?`,
+    title: `${t('gitRepo.confirmRecover')} ${item.name}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
       reoverFromRecycleRequest(item.repoId).then(() => {

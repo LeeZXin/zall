@@ -105,7 +105,7 @@ func initTemporaryRepository(ctx context.Context, tmpDir string, opts InitRepoOp
 	if opts.GitIgnoreName != "" {
 		content, err := os.ReadFile(filepath.Join(gitIgnoreResourcesPath, opts.GitIgnoreName))
 		if err == nil {
-			util.WriteFile(filepath.Join(tmpDir, ".gitIgnore"), content)
+			util.WriteFile(filepath.Join(tmpDir, ".gitignore"), content)
 		}
 	}
 	return commitAndPushRepository(ctx, CommitAndPushOpts{

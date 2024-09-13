@@ -8,6 +8,7 @@
           <ZAvatar
             :url="dataItem.operator?.avatarUrl"
             :name="dataItem.operator?.name"
+            :account="dataItem.operator?.account"
             :showName="true"
           />
         </div>

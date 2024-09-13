@@ -2,40 +2,36 @@
   <div style="padding:10px">
     <div class="container">
       <div class="header">
-        <span v-if="mode === 'create'">创建用户</span>
-        <span v-else-if="mode === 'update'">编辑用户</span>
+        <span v-if="mode === 'create'">{{t('userManage.createUser')}}</span>
+        <span v-else-if="mode === 'update'">{{t('userManage.updateUser')}}</span>
       </div>
       <div class="section">
-        <div class="section-title">帐号</div>
+        <div class="section-title">{{t('userManage.account')}}</div>
         <div class="section-body" v-if="mode === 'create'">
           <a-input v-model:value="formState.account" />
-          <div class="input-desc">用户唯一标识, 长度为4-32</div>
         </div>
         <div class="section-body" v-else>{{formState.account}}</div>
       </div>
       <div class="section">
-        <div class="section-title">名称</div>
+        <div class="section-title">{{t('userManage.name')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.name" />
-          <div class="input-desc">用户名称, 长度为1-32</div>
         </div>
       </div>
       <div class="section" v-if="mode === 'create'">
-        <div class="section-title">密码</div>
+        <div class="section-title">{{t('userManage.pwd')}}</div>
         <div class="section-body">
           <a-input-password v-model:value="formState.password" />
-          <div class="input-desc">帐号密码, 长度为6-255</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">邮箱</div>
+        <div class="section-title">{{t('userManage.email')}}</div>
         <div class="section-body">
           <a-input v-model:value="formState.email" />
-          <div class="input-desc">邮箱格式</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">头像</div>
+        <div class="section-title">{{t('userManage.avatarUrl')}}</div>
         <div class="section-body">
           <a-upload
             v-model:file-list="formState.avatar"
@@ -45,16 +41,16 @@
             :before-upload="beforeUpload"
             @change="uploadChange"
           >
-            <a-button :icon="h(UploadOutlined)">点击上传</a-button>
+            <a-button :icon="h(UploadOutlined)">{{t('userManage.clickUpload')}}</a-button>
           </a-upload>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="saveOrUpdateUser">立即保存</a-button>
+        <a-button type="primary" @click="saveOrUpdateUser">{{t('userManage.save')}}</a-button>
       </div>
     </div>
     <a-modal
-      title="裁剪头像"
+      :title="t('userManage.cropper')"
       v-model:open="cropModal.open"
       :width="448"
       @ok="handleCropModalOk"
@@ -96,6 +92,8 @@ import {
 } from "@/utils/regexp";
 import { useUserManageStore } from "@/pinia/userManageStore";
 import { useUserStore } from "@/pinia/userStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const cropper = ref(null);
 const userStore = useUserStore();
 const userManageStore = useUserManageStore();
@@ -142,7 +140,7 @@ const handleCropModalCancel = () => {
 // 上传头像change
 const uploadChange = info => {
   if (info.file.status === "done" && info.file.response.filePath) {
-    message.success("上传成功");
+    message.success(t("operationSuccess"));
     info.file.url = info.file.response.filePath;
   } else if (info.file.status === "error" && info.file.response.error) {
     message.error(info.file.response.error);
@@ -157,7 +155,7 @@ const beforeUpload = file => {
   return new Promise((resolve, reject) => {
     const isJpgOrPng = file.type === "image/jpeg" || file.type === "image/png";
     if (!isJpgOrPng) {
-      message.error("不是图像");
+      message.error(t("userManage.notImage"));
       reject();
       return;
     }
@@ -174,24 +172,24 @@ const beforeUpload = file => {
 // 创建或编辑用户
 const saveOrUpdateUser = () => {
   if (!accountRegexp.test(formState.account)) {
-    message.warn("帐号格式错误");
+    message.warn(t("userManage.accountFormatErr"));
     return;
   }
   if (!usernameRegexp.test(formState.name)) {
-    message.warn("名称格式错误");
+    message.warn(t("userManage.nameFormatErr"));
     return;
   }
   if (!emailRegexp.test(formState.email)) {
-    message.warn("邮箱格式错误");
+    message.warn(t("userManage.emailFormatErr"));
     return;
   }
   if (formState.avatar.length === 0 || !formState.avatar[0].url) {
-    message.warn("请上传头像");
+    message.warn(t("userManage.pleaseUploadAvatar"));
     return;
   }
   if (mode === "create") {
     if (!passwordRegexp.test(formState.password)) {
-      message.warn("密码格式错误");
+      message.warn(t("userManage.pwdFormatErr"));
       return;
     }
     createUserRequest({
@@ -201,7 +199,7 @@ const saveOrUpdateUser = () => {
       email: formState.email,
       avatarUrl: formState.avatar[0].url
     }).then(() => {
-      message.success("创建成功");
+      message.success(t("operationSuccess"));
       router.push("/sa/user/list");
     });
   } else {
@@ -212,12 +210,12 @@ const saveOrUpdateUser = () => {
       avatarUrl: formState.avatar[0].url
     }).then(() => {
       if (formState.account === userStore.account) {
-        message.info("你已编辑自己的信息, 将重新登录");
+        message.info(t("userManage.updateSelfAndReLogin"));
         setTimeout(() => {
           router.push("/login/login");
         }, 1000);
       } else {
-        message.success("编辑成功");
+        message.success(t("operationSuccess"));
         router.push("/sa/user/list");
       }
     });

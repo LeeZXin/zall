@@ -15,7 +15,12 @@
         <div class="commit-item">
           <div class="title">{{item.commitMsg}}</div>
           <div class="desc flex-center">
-            <ZAvatar :url="item.committer?.avatarUrl" :name="item.committer?.name" :showName="true"/>
+            <ZAvatar
+              :url="item.committer?.avatarUrl"
+              :name="item.committer?.name"
+              :account="item.committer?.account"
+              :showName="true"
+            />
             <span>{{t('commitList.committedAt')}}</span>
             <span>{{readableTimeComparingNow(item.committedTime)}}</span>
           </div>

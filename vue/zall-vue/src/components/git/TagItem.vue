@@ -55,6 +55,7 @@
                 <ZAvatar
                   :url="props.data.signer?.avatarUrl"
                   :name="props.data.signer?.name"
+                  :disablePopover="true"
                   size="medium"
                 />
                 <div style="margin-left:8px">

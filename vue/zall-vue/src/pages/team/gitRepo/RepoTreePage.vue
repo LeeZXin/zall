@@ -25,7 +25,12 @@
         <template v-if="showRight">
           <div class="commit-info">
             <div class="left flex-center">
-              <ZAvatar :url="latestCommit.avatarUrl" :name="latestCommit.name" :showName="true" />
+              <ZAvatar
+                :url="latestCommit.avatarUrl"
+                :name="latestCommit.name"
+                :account="latestCommit.committer"
+                :showName="true"
+              />
               <span>{{latestCommit.commitMsg}}</span>
             </div>
             <div class="right">

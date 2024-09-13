@@ -20,6 +20,7 @@
           <ZAvatar
             :url="planDetail.creator?.avatarUrl"
             :name="planDetail.creator?.name"
+            :account="planDetail.creator?.account"
             :showName="true"
           />
         </div>

@@ -5,6 +5,7 @@
         v-model:value="searchUserKey"
         style="width:240px;margin-right:6px"
         @pressEnter="searchUser"
+        :placeholder="t('userManage.searchUser')"
       >
         <template #suffix>
           <SearchOutlined />
