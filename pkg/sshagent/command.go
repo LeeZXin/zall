@@ -93,18 +93,17 @@ func execute(sshHost, command string, cmd io.Reader, envs map[string]string) (st
 			return "", err
 		}
 	}
-	stderr := new(bytes.Buffer)
 	output := new(bytes.Buffer)
 	session.Stdin = cmd
 	session.Stdout = output
-	session.Stderr = stderr
+	session.Stderr = output
 	err = session.Run(command)
 	outputContent, err2 := io.ReadAll(io.LimitReader(output, 2*1024*1024))
 	if err2 != nil {
 		return "", err2
 	}
 	if err != nil {
-		return string(outputContent), fmt.Errorf("%w - %s", err, stderr.String())
+		return string(outputContent), err
 	}
 	return string(outputContent), nil
 }
