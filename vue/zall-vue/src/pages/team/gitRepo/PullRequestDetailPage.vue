@@ -1,7 +1,7 @@
 <template>
   <div style="padding:10px">
     <div class="pr-title no-wrap">
-      <span class="pr-id">#{{prStore.id}}</span>
+      <span class="pr-id">#{{prStore.prIndex}}</span>
       <span>{{prStore.prTitle}}</span>
     </div>
     <div class="desc">
@@ -424,7 +424,7 @@ const selectTab = key => {
 };
 // 获取审批列表
 const listReview = () => {
-  listReviewRequest(route.params.prId).then(res => {
+  listReviewRequest(prStore.id).then(res => {
     reviewList.value = res.data.map(item => {
       return {
         ...item,
@@ -463,9 +463,11 @@ const prStore = reactive({
   repoId: 0,
   target: "",
   targetCommitId: "",
-  targetType: ""
+  targetType: "",
+  prIndex: 0
 });
 const repoId = parseInt(route.params.repoId);
+const prIndex = parseInt(route.params.index);
 const timelines = ref([]);
 const commentInput = ref(null);
 const replyItem = reactive({
@@ -517,7 +519,10 @@ const clearGetWorkflowTaskInterval = () => {
   }
 };
 const getPullRequest = () => {
-  getPullRequestRequest(route.params.prId).then(res => {
+  getPullRequestRequest({
+    repoId,
+    index: prIndex
+  }).then(res => {
     prStore.commentCount = res.data.commentCount;
     prStore.createBy = res.data.createBy;
     prStore.created = res.data.created;
@@ -531,6 +536,7 @@ const getPullRequest = () => {
     prStore.target = res.data.target;
     prStore.targetCommitId = res.data.targetCommitId;
     prStore.targetType = res.data.targetType;
+    prStore.prIndex = res.data.prIndex;
     listTimeline();
     if (prStore.prStatus === 1) {
       detectCanMerge();
@@ -589,7 +595,7 @@ const closePr = () => {
     title: `${t("pullRequest.confirmClosePr")}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      closePullRequestRequest(route.params.prId).then(res => {
+      closePullRequestRequest(prStore.id).then(res => {
         if (res.data.statusChange) {
           reload();
           return;
@@ -718,7 +724,7 @@ const agreeReview = () => {
   });
 };
 const getWorkflowTasks = () => {
-  listTaskByPrIdRequest(route.params.prId).then(res => {
+  listTaskByPrIdRequest(prStore.id).then(res => {
     if (workflowTaskList.value.length === 0) {
       workflowTaskList.value = res.data.map(item => {
         return {

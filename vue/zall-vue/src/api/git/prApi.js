@@ -5,7 +5,7 @@ const submitPullRequestRequest = (data) => request.post("/api/pullRequest/submit
 // 合并请求列表
 const listPullRequestRequest = (data) => request.get("/api/pullRequest/list", { params: data });
 // 获取合并请求
-const getPullRequestRequest = (prId) => request.get("/api/pullRequest/get/" + prId);
+const getPullRequestRequest = (data) => request.get("/api/pullRequest/get", { params: data });
 // 关闭合并请求
 const closePullRequestRequest = (prId) => request.put("/api/pullRequest/close/" + prId);
 // 展示时间轴

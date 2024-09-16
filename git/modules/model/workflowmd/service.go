@@ -41,6 +41,7 @@ func InsertTask(ctx context.Context, reqDTO InsertTaskReqDTO) (Task, error) {
 		Branch:       reqDTO.Branch,
 		Operator:     reqDTO.Operator,
 		PrId:         reqDTO.PrId,
+		PrIndex:      reqDTO.PrIndex,
 		BizId:        reqDTO.BizId,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)

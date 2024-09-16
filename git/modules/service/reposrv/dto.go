@@ -616,10 +616,11 @@ type TagCommitDTO struct {
 }
 
 type PullRequestDTO struct {
-	Id       int64                  `json:"id"`
-	PrStatus pullrequestmd.PrStatus `json:"prStatus"`
-	PrTitle  string                 `json:"prTitle"`
-	Created  time.Time              `json:"created"`
+	Id       int64
+	PrStatus pullrequestmd.PrStatus
+	PrTitle  string
+	PrIndex  int
+	Created  time.Time
 }
 
 type DeleteBranchReqDTO struct {

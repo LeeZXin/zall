@@ -240,7 +240,6 @@ func initPsub() {
 								Operator:    req.Operator,
 								TriggerType: workflowmd.HookTriggerType,
 								Branch:      ref,
-								PrId:        0,
 							})
 						}
 					}

@@ -578,9 +578,8 @@ export default {
         name: "注册中心来源",
         operation: "操作",
         refresh: "刷新",
-        deregister: "下线服务",
-        reRegister: "上线服务",
-        deleteDownService: "删除下线服务",
+        markAsDown: "下线服务",
+        markAsUp: "上线服务",
         serviceProtocol: "协议",
         serviceName: "服务名称",
         serviceHost: "主机",
@@ -590,8 +589,8 @@ export default {
         serviceRegion: "地域",
         serviceZone: "地区",
         serviceUp: "是否在线",
-        confirmDeregister: "你确定下线",
-        confirmReRegister: "你确定上线",
+        confirmMarkAsDown: "你确定下线",
+        confirmMarkAsUp: "你确定上线",
         confirmDelete: "你确定删除"
     },
     artifacts: {
@@ -886,9 +885,8 @@ export default {
         },
         appDiscovery: {
             title: "注册中心",
-            reRegister: "上线服务",
-            deregister: "下线服务",
-            deleteDownService: "删除下线服务"
+            markAsUp: "上线服务",
+            markAsDown: "下线服务",
         },
         appArtifact: {
             title: "应用制品",

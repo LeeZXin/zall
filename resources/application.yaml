@@ -90,3 +90,9 @@ feishu:
   accessToken:
     task:
       enabled: true
+
+discovery:
+  etcd:
+    endpoints: 127.0.0.1:2379
+    username: root
+    password: 123456

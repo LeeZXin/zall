@@ -18,6 +18,8 @@ func DefaultRouter() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		p := c.Request.URL.Path
 		if strings.HasPrefix(p, "/api") ||
+			strings.HasPrefix(p, "/actuator") ||
+			strings.HasPrefix(p, "/debug") ||
 			c.Request.Method != http.MethodGet ||
 			strings.HasSuffix(p, "/info/refs") ||
 			strings.HasSuffix(p, "/git-upload-pack") ||

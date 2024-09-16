@@ -37,10 +37,16 @@
             <span class="message-num">{{item.commentCount}}</span>
           </span>
         </div>
-        <div class="pr-desc">
+        <div class="pr-desc flex-center">
           <PrStatusTag :status="item.prStatus" />
-          <span>#{{item.id}}</span>
-          <span>{{item.createBy}} {{t('pullRequest.createdAt')}}</span>
+          <ZAvatar
+            :url="item.createBy?.avatarUrl"
+            :name="item.createBy?.name"
+            :account="item.createBy?.account"
+            :showName="true"
+          />
+          <span>#{{item.prIndex}}</span>
+          <span style="margin-left:4px">{{t('pullRequest.createdAt')}}</span>
           <span>{{readableTimeComparingNow(item.created)}}</span>
         </div>
       </li>
@@ -59,6 +65,7 @@
   </div>
 </template>
 <script setup>
+import ZAvatar from "@/components/user/ZAvatar";
 import {
   SearchOutlined,
   CloseCircleOutlined,
@@ -119,7 +126,7 @@ const toCreatePage = () => {
 // 详情页
 const toDetail = item => {
   router.push(
-    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/${item.id}/detail`
+    `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/pullRequest/${item.prIndex}/detail`
   );
 };
 listPullRequest();
@@ -162,9 +169,6 @@ listPullRequest();
   margin-top: 12px;
   color: gray;
   font-size: 12px;
-}
-.pr-desc > span + span {
-  margin-left: 4px;
 }
 .pr-title-right > .message-num {
   padding-left: 4px;

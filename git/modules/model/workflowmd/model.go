@@ -55,6 +55,7 @@ type Task struct {
 	Branch       string                                    `json:"branch"`
 	Operator     string                                    `json:"operator"`
 	PrId         int64                                     `json:"prId"`
+	PrIndex      int                                       `json:"prIndex"`
 	Duration     int64                                     `json:"duration"`
 	BizId        string                                    `json:"bizId"`
 	StatusLog    *xormutil.Conversion[sshagent.TaskStatus] `json:"statusLog"`

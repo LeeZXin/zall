@@ -361,7 +361,7 @@ func UploadPack(req reqvo.UploadPackReq, repoId int64, pusherAccount, pusherEmai
 		"/api/v1/git/smart/"+req.RepoPath+"/git-upload-pack",
 		req.C,
 		map[string]string{
-			"Repo-PrId":      strconv.FormatInt(repoId, 10),
+			"Repo-RepoId":    strconv.FormatInt(repoId, 10),
 			"Pusher-Account": pusherAccount,
 			"Pusher-Email":   pusherEmail,
 			"App-Url":        appUrl,

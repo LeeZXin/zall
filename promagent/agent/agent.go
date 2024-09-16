@@ -10,7 +10,6 @@ import (
 	"github.com/LeeZXin/zsf-utils/quit"
 	"github.com/LeeZXin/zsf-utils/taskutil"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/prom"
 	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/services/discovery"
 	"github.com/LeeZXin/zsf/services/lb"
@@ -103,7 +102,7 @@ func packFileContent(scrapes []prommd.Scrape) []byte {
 					}
 				} else if len(servers) > 0 {
 					targets := listutil.MapNe(servers, func(t lb.Server) string {
-						return fmt.Sprintf("%s:%d", t.Host, prom.DefaultServerPort)
+						return fmt.Sprintf("%s:%d", t.Host, t.Port)
 					})
 					appTargets = append(appTargets, targets...)
 				}

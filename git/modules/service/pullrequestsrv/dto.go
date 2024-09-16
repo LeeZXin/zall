@@ -115,32 +115,33 @@ func (r *ListPullRequestReqDTO) IsValid() error {
 }
 
 type PullRequestDTO struct {
-	Id             int64                  `json:"id"`
-	RepoId         int64                  `json:"repoId"`
-	Target         string                 `json:"target"`
-	TargetType     git.RefType            `json:"targetType"`
-	TargetCommitId string                 `json:"targetCommitId"`
-	Head           string                 `json:"head"`
-	HeadType       git.RefType            `json:"headType"`
-	HeadCommitId   string                 `json:"headCommitId"`
-	PrStatus       pullrequestmd.PrStatus `json:"prStatus"`
-	CreateBy       string                 `json:"createBy"`
-	CloseBy        string                 `json:"closeBy"`
-	MergeBy        string                 `json:"mergeBy"`
-	PrTitle        string                 `json:"prTitle"`
-	CommentCount   int                    `json:"commentCount"`
-	Created        time.Time              `json:"created"`
-	Closed         *time.Time             `json:"closed"`
-	Merged         *time.Time             `json:"merged"`
+	Id             int64
+	RepoId         int64
+	Target         string
+	TargetType     git.RefType
+	TargetCommitId string
+	Head           string
+	HeadType       git.RefType
+	HeadCommitId   string
+	PrStatus       pullrequestmd.PrStatus
+	CreateBy       util.User
+	PrTitle        string
+	PrIndex        int
+	CommentCount   int
+	Created        time.Time
 }
 
 type GetPullRequestReqDTO struct {
-	PrId     int64               `json:"prId"`
+	RepoId   int64               `json:"repoId"`
+	Index    int                 `json:"index"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *GetPullRequestReqDTO) IsValid() error {
-	if r.PrId <= 0 {
+	if r.RepoId <= 0 {
+		return util.InvalidArgsError()
+	}
+	if r.Index <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {

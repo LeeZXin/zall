@@ -3,7 +3,6 @@ package discoverymd
 import (
 	"context"
 	"github.com/LeeZXin/zsf-utils/listutil"
-	"github.com/LeeZXin/zsf/services/lb"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 )
 
@@ -71,51 +70,6 @@ func BatchGetEtcdNodeByIdList(ctx context.Context, idList []int64, cols []string
 	return ret, err
 }
 
-func InsertDownService(ctx context.Context, reqDTO InsertDownServiceDTO) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Insert(&DownService{
-			AppId:    reqDTO.AppId,
-			SourceId: reqDTO.SourceId,
-			DownService: &xormutil.Conversion[lb.Server]{
-				Data: reqDTO.Service,
-			},
-			InstanceId: reqDTO.InstanceId,
-		})
-	return err
-}
-
-func DeleteDownServiceById(ctx context.Context, id int64) (bool, error) {
-	rows, err := xormutil.MustGetXormSession(ctx).
-		Where("id = ?", id).
-		Delete(new(DownService))
-	return rows == 1, err
-}
-
-func DeleteDownServiceByAppId(ctx context.Context, appId string) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Where("app_id = ?", appId).
-		Delete(new(DownService))
-	return err
-}
-
-func ListDownServiceBySourceIdAndAppId(ctx context.Context, sourceId int64, appId string) ([]DownService, error) {
-	ret := make([]DownService, 0)
-	err := xormutil.MustGetXormSession(ctx).
-		Where("source_id = ?", sourceId).
-		And("app_id = ?", appId).
-		Find(&ret)
-	return ret, err
-}
-
-func GetDownServiceBySourceIdAndInstanceId(ctx context.Context, sourceId int64, instanceId string) (DownService, bool, error) {
-	var ret DownService
-	b, err := xormutil.MustGetXormSession(ctx).
-		Where("source_id = ?", sourceId).
-		And("instance_id = ?", instanceId).
-		Get(&ret)
-	return ret, b, err
-}
-
 func BatchInsertAppEtcdNodeBind(ctx context.Context, reqDTOs []InsertAppEtcdNodeBindReqDTO) error {
 	binds := listutil.MapNe(reqDTOs, func(t InsertAppEtcdNodeBindReqDTO) AppEtcdNodeBind {
 		return AppEtcdNodeBind{
@@ -125,13 +79,6 @@ func BatchInsertAppEtcdNodeBind(ctx context.Context, reqDTOs []InsertAppEtcdNode
 		}
 	})
 	_, err := xormutil.MustGetXormSession(ctx).Insert(binds)
-	return err
-}
-
-func DeleteAppEtcdNodeBindByNodeId(ctx context.Context, nodeId int64) error {
-	_, err := xormutil.MustGetXormSession(ctx).
-		Where("node_id = ?", nodeId).
-		Delete(new(AppEtcdNodeBind))
 	return err
 }
 

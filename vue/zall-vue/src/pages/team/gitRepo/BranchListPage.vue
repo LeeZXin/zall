@@ -4,9 +4,9 @@
       <template #bodyCell="{dataIndex, dataItem}">
         <template v-if="dataIndex === 'pullRequest'">
           <template v-if="dataItem[dataIndex]">
-            <PrIdTag
+            <PrIndexTag
               :repoId="route.params.repoId"
-              :prId="dataItem[dataIndex].id"
+              :prIndex="dataItem[dataIndex].prIndex"
               :teamId="route.params.teamId"
             />
             <PrStatusTag :status="dataItem[dataIndex].prStatus" />
@@ -58,7 +58,7 @@
   </div>
 </template>
 <script setup>
-import PrIdTag from "@/components/git/PrIdTag";
+import PrIndexTag from "@/components/git/PrIndexTag";
 import ZTable from "@/components/common/ZTable";
 import { ref, createVNode, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";

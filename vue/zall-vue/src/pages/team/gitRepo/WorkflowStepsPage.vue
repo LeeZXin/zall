@@ -29,11 +29,11 @@
       <li>
         <div class="info-name">{{t('gitWorkflow.pullRequest')}}</div>
         <div class="info-value">
-          <PrIdTag
-            :prId="taskStore.prId"
+          <PrIndexTag
+            :prIndex="taskStore.prIndex"
             :repoId="route.params.repoId"
             :teamId="route.params.teamId"
-            v-if="taskStore.prId && taskStore.prId > 0"
+            v-if="taskStore.prIndex"
           />
         </div>
       </li>
@@ -141,7 +141,7 @@
 <script setup>
 import ZAvatar from "@/components/user/ZAvatar";
 import RunStatus from "@/components/git/WorkflowRunStatus";
-import PrIdTag from "@/components/git/PrIdTag";
+import PrIndexTag from "@/components/git/PrIndexTag";
 import WorkflowNode from "@/components/vueflow/WorkflowNode";
 import { Codemirror } from "vue-codemirror";
 import { yaml } from "@codemirror/lang-yaml";

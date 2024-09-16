@@ -62,6 +62,7 @@ func initPsub() {
 						Branch:      req.HeadRef,
 						Source:      workflowmd.PullRequestTriggerSource,
 						PrId:        req.PrId,
+						PrIndex:     req.PrIndex,
 					})
 				}
 				// 触发teamhook
@@ -100,7 +101,7 @@ func ListPullRequest(ctx context.Context, reqDTO ListPullRequestReqDTO) ([]PullR
 	if err != nil {
 		return nil, 0, err
 	}
-	requests, totalCount, err := pullrequestmd.ListPullRequest(ctx, pullrequestmd.ListPullRequestReqDTO{
+	prs, totalCount, err := pullrequestmd.ListPullRequest(ctx, pullrequestmd.ListPullRequestReqDTO{
 		RepoId:    reqDTO.RepoId,
 		SearchKey: reqDTO.SearchKey,
 		Status:    reqDTO.Status,
@@ -111,30 +112,33 @@ func ListPullRequest(ctx context.Context, reqDTO ListPullRequestReqDTO) ([]PullR
 		logger.Logger.WithContext(ctx).Error(err)
 		return nil, 0, err
 	}
-	data := listutil.MapNe(requests, pr2Dto)
-	return data, totalCount, nil
-}
-
-func pr2Dto(t pullrequestmd.PullRequest) PullRequestDTO {
-	return PullRequestDTO{
-		Id:             t.Id,
-		RepoId:         t.RepoId,
-		Target:         t.Target,
-		TargetType:     t.TargetType,
-		TargetCommitId: t.TargetCommitId,
-		Head:           t.Head,
-		HeadType:       t.HeadType,
-		HeadCommitId:   t.HeadCommitId,
-		PrStatus:       t.PrStatus,
-		CreateBy:       t.CreateBy,
-		CloseBy:        t.CloseBy,
-		MergeBy:        t.MergeBy,
-		PrTitle:        t.PrTitle,
-		CommentCount:   t.CommentCount,
-		Created:        t.Created,
-		Closed:         t.Closed,
-		Merged:         t.Merged,
+	accounts := listutil.MapNe(prs, func(t pullrequestmd.PullRequest) string {
+		return t.CreateBy
+	})
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, accounts...)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return nil, 0, err
 	}
+	data := listutil.MapNe(prs, func(t pullrequestmd.PullRequest) PullRequestDTO {
+		return PullRequestDTO{
+			Id:             t.Id,
+			RepoId:         t.RepoId,
+			Target:         t.Target,
+			TargetType:     t.TargetType,
+			TargetCommitId: t.TargetCommitId,
+			Head:           t.Head,
+			HeadType:       t.HeadType,
+			HeadCommitId:   t.HeadCommitId,
+			PrStatus:       t.PrStatus,
+			CreateBy:       userMap[t.CreateBy],
+			PrTitle:        t.PrTitle,
+			PrIndex:        t.PrIndex,
+			CommentCount:   t.CommentCount,
+			Created:        t.Created,
+		}
+	})
+	return data, totalCount, nil
 }
 
 // SubmitPullRequest 创建合并请求
@@ -186,13 +190,18 @@ func SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequestReqDTO) erro
 		return util.NewBizErr(apicode.PullRequestCannotMergeCode, i18n.PullRequestCannotMerge)
 	}
 	var (
-		pr   pullrequestmd.PullRequest
-		err2 error
+		pr    pullrequestmd.PullRequest
+		err2  error
+		index int
 	)
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		commentCount := 0
 		if reqDTO.Comment != "" {
 			commentCount = 1
+		}
+		index, err2 = pullrequestmd.GetNextMaxIndex(ctx, reqDTO.RepoId)
+		if err2 != nil {
+			return err2
 		}
 		pr, err2 = pullrequestmd.InsertPullRequest(ctx, pullrequestmd.InsertPullRequestReqDTO{
 			RepoId:       reqDTO.RepoId,
@@ -202,6 +211,7 @@ func SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequestReqDTO) erro
 			HeadType:     reqDTO.HeadType,
 			CreateBy:     reqDTO.Operator.Account,
 			Title:        reqDTO.Title,
+			Index:        index,
 			PrStatus:     pullrequestmd.PrOpenStatus,
 			CommentCount: commentCount,
 		})
@@ -247,11 +257,39 @@ func GetPullRequest(ctx context.Context, reqDTO GetPullRequestReqDTO) (PullReque
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
 	// 校验权限
-	pr, _, _, err := checkAccessRepoPermByPrId(ctx, reqDTO.PrId, reqDTO.Operator)
+	_, _, err := checkAccessRepoPermByRepoId(ctx, reqDTO.RepoId, reqDTO.Operator)
 	if err != nil {
 		return PullRequestDTO{}, err
 	}
-	return pr2Dto(pr), nil
+	t, b, err := pullrequestmd.GetPullRequestByRepoIdAndIndex(ctx, reqDTO.RepoId, reqDTO.Index)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return PullRequestDTO{}, util.InternalError(err)
+	}
+	if !b {
+		return PullRequestDTO{}, util.InvalidArgsError()
+	}
+	userMap, err := usersrv.GetUsersNameAndAvatarMap(ctx, t.CreateBy)
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return PullRequestDTO{}, util.InternalError(err)
+	}
+	return PullRequestDTO{
+		Id:             t.Id,
+		RepoId:         t.RepoId,
+		Target:         t.Target,
+		TargetType:     t.TargetType,
+		TargetCommitId: t.TargetCommitId,
+		Head:           t.Head,
+		HeadType:       t.HeadType,
+		HeadCommitId:   t.HeadCommitId,
+		PrStatus:       t.PrStatus,
+		CreateBy:       userMap[t.CreateBy],
+		PrTitle:        t.PrTitle,
+		PrIndex:        t.PrIndex,
+		CommentCount:   t.CommentCount,
+		Created:        t.Created,
+	}, nil
 }
 
 func ClosePullRequest(ctx context.Context, reqDTO ClosePullRequestReqDTO) (bool, error) {
@@ -497,7 +535,7 @@ func mergeWithTx(ctx context.Context, pr pullrequestmd.PullRequest, repo repomd.
 			PusherAccount: operator.Account,
 			PusherName:    operator.Name,
 			PusherEmail:   operator.Email,
-			Message:       fmt.Sprintf("merge %s from %s with #%d", pr.Head, pr.Target, pr.Id),
+			Message:       fmt.Sprintf("merge %s from %s with #%d", pr.Head, pr.Target, pr.PrIndex),
 		},
 	})
 	if err != nil {
@@ -891,6 +929,7 @@ func notifyEvent(repo repomd.Repo, team teammd.Team, operator apisession.UserInf
 	psub.Publish(event.PullRequestTopic, event.PullRequestEvent{
 		PrId:          pr.Id,
 		PrTitle:       pr.PrTitle,
+		PrIndex:       pr.PrIndex,
 		TargetRef:     pr.Target,
 		TargetRefType: pr.TargetType.String(),
 		HeadRef:       pr.Head,

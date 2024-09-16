@@ -10,6 +10,7 @@ const (
 	PullRequestTableName = "zgit_pull_request"
 	ReviewTableName      = "zgit_pull_request_review"
 	TimelineTableName    = "zgit_pull_request_timeline"
+	IndexTableName       = "zgit_pull_request_index"
 )
 
 type PrStatus int
@@ -92,6 +93,7 @@ type PullRequest struct {
 	CloseBy        string      `json:"closeBy"`
 	MergeBy        string      `json:"mergeBy"`
 	PrTitle        string      `json:"prTitle"`
+	PrIndex        int         `json:"prIndex"`
 	CommentCount   int         `json:"commentCount"`
 	Created        time.Time   `json:"created" xorm:"created"`
 	Closed         *time.Time  `json:"closed"`
@@ -126,4 +128,14 @@ type Timeline struct {
 
 func (*Timeline) TableName() string {
 	return TimelineTableName
+}
+
+type Index struct {
+	Id       int64 `json:"id" xorm:"pk autoincr"`
+	RepoId   int64 `json:"repoId"`
+	MaxIndex int   `json:"maxIndex"`
+}
+
+func (*Index) TableName() string {
+	return IndexTableName
 }

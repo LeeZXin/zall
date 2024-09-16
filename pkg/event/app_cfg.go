@@ -47,9 +47,8 @@ type AppArtifactEventCfg struct {
 }
 
 type AppDiscoveryEventCfg struct {
-	Deregister        bool `json:"deregister"`
-	ReRegister        bool `json:"reRegister"`
-	DeleteDownService bool `json:"deleteDownService"`
+	MarkAsDown bool `json:"markAsDown"`
+	MarkAsUp   bool `json:"markAsUp"`
 }
 
 type AppDeployServiceEventCfg struct {

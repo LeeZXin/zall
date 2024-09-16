@@ -12,6 +12,7 @@ type InsertPullRequestReqDTO struct {
 	HeadType     git.RefType
 	CreateBy     string
 	Title        string
+	Index        int
 	PrStatus     PrStatus
 	CommentCount int
 }

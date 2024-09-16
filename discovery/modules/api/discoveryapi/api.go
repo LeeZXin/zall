@@ -36,11 +36,9 @@ func InitApi() {
 			// 获取服务列表
 			group.GET("/listService/:bindId", listDiscoveryService)
 			// 下线服务
-			group.POST("/deregister", deregisterService)
+			group.POST("/markAsDown", markAsDownService)
 			// 上线服务
-			group.POST("/reRegister", reRegisterService)
-			// 删除下线服务
-			group.DELETE("/deleteDownService", deleteDownService)
+			group.POST("/markAsUp", markAsUpService)
 		}
 	})
 }
@@ -162,7 +160,6 @@ func listDiscoveryService(c *gin.Context) {
 	data := listutil.MapNe(services, func(t discoverysrv.ServiceDTO) ServiceVO {
 		return ServiceVO{
 			Server:     t.Server,
-			Up:         t.Up,
 			InstanceId: t.InstanceId,
 		}
 	})
@@ -172,10 +169,10 @@ func listDiscoveryService(c *gin.Context) {
 	})
 }
 
-func deregisterService(c *gin.Context) {
-	var req DeregisterServiceReqVO
+func markAsDownService(c *gin.Context) {
+	var req MarkAsDownServiceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := discoverysrv.DeregisterService(c, discoverysrv.DeregisterServiceReqDTO{
+		err := discoverysrv.MarkAsDownService(c, discoverysrv.MarkAsDownServiceReqDTO{
 			BindId:     req.BindId,
 			InstanceId: req.InstanceId,
 			Operator:   apisession.MustGetLoginUser(c),
@@ -188,26 +185,10 @@ func deregisterService(c *gin.Context) {
 	}
 }
 
-func reRegisterService(c *gin.Context) {
-	var req ReRegisterServiceReqVO
+func markAsUpService(c *gin.Context) {
+	var req MarkAsUpServiceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := discoverysrv.ReRegisterService(c, discoverysrv.ReRegisterServiceReqDTO{
-			BindId:     req.BindId,
-			InstanceId: req.InstanceId,
-			Operator:   apisession.MustGetLoginUser(c),
-		})
-		if err != nil {
-			util.HandleApiErr(err, c)
-			return
-		}
-		util.DefaultOkResponse(c)
-	}
-}
-
-func deleteDownService(c *gin.Context) {
-	var req DeleteDownServiceReqVO
-	if util.ShouldBindQuery(&req, c) {
-		err := discoverysrv.DeleteDownService(c, discoverysrv.DeleteDownServiceReqDTO{
+		err := discoverysrv.MarkAsUpService(c, discoverysrv.MarkAsUpServiceReqDTO{
 			BindId:     req.BindId,
 			InstanceId: req.InstanceId,
 			Operator:   apisession.MustGetLoginUser(c),

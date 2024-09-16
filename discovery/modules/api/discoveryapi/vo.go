@@ -43,21 +43,15 @@ type SimpleDiscoverySourceVO struct {
 
 type ServiceVO struct {
 	lb.Server
-	Up         bool   `json:"up"`
 	InstanceId string `json:"instanceId"`
 }
 
-type DeregisterServiceReqVO struct {
+type MarkAsDownServiceReqVO struct {
 	BindId     int64  `json:"bindId"`
 	InstanceId string `json:"instanceId"`
 }
 
-type ReRegisterServiceReqVO struct {
-	BindId     int64  `json:"bindId"`
-	InstanceId string `json:"instanceId"`
-}
-
-type DeleteDownServiceReqVO struct {
+type MarkAsUpServiceReqVO struct {
 	BindId     int64  `json:"bindId"`
 	InstanceId string `json:"instanceId"`
 }

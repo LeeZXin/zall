@@ -23,8 +23,8 @@
         </a-popover>
       </div>
     </div>
-    <div class="tag-commit-msg" v-show="showCommitMsg">
-      <pre>{{props.data.tagCommitMsg}}</pre>
+    <div class="tag-commit-msg" v-if="showCommitMsg">
+      <v-md-editor v-model="tagCommitMsg" mode="preview" style="padding:unset" />
     </div>
     <ul class="tag-content">
       <li>
@@ -92,6 +92,14 @@ import { Modal, message } from "ant-design-vue";
 import { deleteTagRequest } from "@/api/git/repoApi";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
+import VMdEditor from "@kangc/v-md-editor";
+import "@kangc/v-md-editor/lib/style/base-editor.css";
+import todoList from "@kangc/v-md-editor/lib/plugins/todo-list/index";
+import "@kangc/v-md-editor/lib/plugins/todo-list/todo-list.css";
+import githubTheme from "@kangc/v-md-editor/lib/theme/github.js";
+import "@kangc/v-md-editor/lib/theme/style/github.css";
+VMdEditor.use(githubTheme);
+VMdEditor.use(todoList());
 const { t } = useI18n();
 const router = useRouter();
 const emit = defineEmits(["delete"]);
@@ -101,6 +109,7 @@ const toggleShowCommitMsg = () => {
   showCommitMsg.value = !showCommitMsg.value;
 };
 const props = defineProps(["data", "repoId", "teamId"]);
+const tagCommitMsg = ref(props.data?.tagCommitMsg);
 // 下载文件
 const download = path => {
   window.open(`/api/gitRepo/archive?repoId=${props.repoId}&fileName=${path}`);
@@ -155,9 +164,6 @@ const deleteTag = tag => {
   line-height: 32px;
   font-size: 16px;
   font-weight: bold;
-}
-.tag-commit-msg > pre {
-  font-size: 14px;
 }
 .toggle-dot {
   padding: 0 4px;

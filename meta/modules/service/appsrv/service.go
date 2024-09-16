@@ -167,11 +167,6 @@ func DeleteApp(ctx context.Context, reqDTO DeleteAppReqDTO) error {
 		if err2 != nil {
 			return err2
 		}
-		// 删除下线服务
-		err2 = discoverymd.DeleteDownServiceByAppId(ctx, reqDTO.AppId)
-		if err2 != nil {
-			return err2
-		}
 		// 删除注册中心来源
 		err2 = discoverymd.DeleteAppEtcdNodeBindByAppId(ctx, reqDTO.AppId)
 		if err2 != nil {

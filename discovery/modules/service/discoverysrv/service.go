@@ -3,7 +3,6 @@ package discoverysrv
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/LeeZXin/zall/discovery/modules/model/discoverymd"
 	"github.com/LeeZXin/zall/meta/modules/model/appmd"
@@ -16,7 +15,6 @@ import (
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/psub"
-	"github.com/LeeZXin/zsf/actuator"
 	"github.com/LeeZXin/zsf/common"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/services/lb"
@@ -65,12 +63,10 @@ func initPsub() {
 					cfg, ok := events.EnvRelated[req.Source.Env]
 					if ok {
 						switch req.Action {
-						case event.AppDiscoveryDeregisterAction:
-							return cfg.AppDiscovery.Deregister
-						case event.AppDiscoveryReRegisterAction:
-							return cfg.AppDiscovery.ReRegister
-						case event.AppDiscoveryDeleteDownServiceAction:
-							return cfg.AppDiscovery.DeleteDownService
+						case event.AppDiscoveryMarkAsDownAction:
+							return cfg.AppDiscovery.MarkAsDown
+						case event.AppDiscoveryMarkAsUpAction:
+							return cfg.AppDiscovery.MarkAsUp
 						default:
 							return false
 						}
@@ -328,31 +324,15 @@ func ListDiscoveryService(ctx context.Context, reqDTO ListDiscoveryServiceReqDTO
 		if err == nil {
 			ret = append(ret, ServiceDTO{
 				Server:     s,
-				Up:         true,
 				InstanceId: strings.TrimPrefix(string(kv.Key), prefix),
 			})
 		}
 	}
-	services, err := discoverymd.ListDownServiceBySourceIdAndAppId(ctx, source.Id, app.AppId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.InternalError(err)
-	}
-	for _, service := range services {
-		if service.DownService == nil {
-			continue
-		}
-		ret = append(ret, ServiceDTO{
-			Server:     service.DownService.Data,
-			Up:         false,
-			InstanceId: service.InstanceId,
-		})
-	}
 	return ret, nil
 }
 
-// DeregisterService 下线服务
-func DeregisterService(ctx context.Context, reqDTO DeregisterServiceReqDTO) error {
+// MarkAsDownService 下线服务
+func MarkAsDownService(ctx context.Context, reqDTO MarkAsDownServiceReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
@@ -361,14 +341,6 @@ func DeregisterService(ctx context.Context, reqDTO DeregisterServiceReqDTO) erro
 	app, team, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
 		return err
-	}
-	_, b, err := discoverymd.GetDownServiceBySourceIdAndInstanceId(ctx, source.Id, reqDTO.InstanceId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if b {
-		return util.AlreadyExistsError()
 	}
 	client, err := newEtcdClient(source)
 	if err != nil {
@@ -390,43 +362,32 @@ func DeregisterService(ctx context.Context, reqDTO DeregisterServiceReqDTO) erro
 	if err != nil {
 		return util.ThereHasBugErr()
 	}
-	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		err2 := discoverymd.InsertDownService(ctx, discoverymd.InsertDownServiceDTO{
-			SourceId:   source.Id,
-			AppId:      app.AppId,
-			Service:    s,
-			InstanceId: reqDTO.InstanceId,
-		})
-		if err2 != nil {
-			return err2
-		}
-		resp, err2 := http.Get(fmt.Sprintf("http://%s:%d/actuator/v1/deregisterServer", s.Host, actuator.DefaultServerPort))
-		if err2 != nil {
-			return err2
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			return nil
-		}
-		return errors.New("failed")
-	})
+	// 已经下线
+	if s.IsDown {
+		return nil
+	}
+	resp, err := http.Get(fmt.Sprintf("%s://%s:%d/actuator/v1/markAsDownServer", s.Protocol, s.Host, s.Port))
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
+		return util.OperationFailedError()
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
 		return util.OperationFailedError()
 	}
 	notifyDiscoveryEvent(
 		reqDTO.Operator,
 		team,
 		app,
-		event.AppDiscoveryDeregisterAction,
+		event.AppDiscoveryMarkAsDownAction,
 		source,
 	)
 	time.Sleep(time.Second)
 	return nil
 }
 
-// ReRegisterService 上线服务
-func ReRegisterService(ctx context.Context, reqDTO ReRegisterServiceReqDTO) error {
+// MarkAsUpService 上线服务
+func MarkAsUpService(ctx context.Context, reqDTO MarkAsUpServiceReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
@@ -436,75 +397,47 @@ func ReRegisterService(ctx context.Context, reqDTO ReRegisterServiceReqDTO) erro
 	if err != nil {
 		return err
 	}
-	service, b, err := discoverymd.GetDownServiceBySourceIdAndInstanceId(ctx, source.Id, reqDTO.InstanceId)
+	client, err := newEtcdClient(source)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return util.InternalError(err)
 	}
-	if !b || service.DownService == nil {
-		return util.InvalidArgsError()
-	}
-	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
-		_, err2 := discoverymd.DeleteDownServiceById(ctx, service.Id)
-		if err2 != nil {
-			return err2
-		}
-		resp, err2 := http.Get(fmt.Sprintf("http://%s:%d/actuator/v1/registerServer", service.DownService.Data.Host, actuator.DefaultServerPort))
-		if err2 != nil {
-			return err2
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			return nil
-		}
-		return errors.New("failed")
-	})
+	defer client.Close()
+	kv := clientv3.NewKV(client)
+	response, err := kv.Get(ctx, common.ServicePrefix+app.AppId+"-http/"+reqDTO.InstanceId)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
+	}
+	if len(response.Kvs) == 0 || len(response.Kvs) > 1 {
+		return util.OperationFailedError()
+	}
+	var s lb.Server
+	err = json.Unmarshal(response.Kvs[0].Value, &s)
+	if err != nil {
+		return util.ThereHasBugErr()
+	}
+	// 已经上线
+	if !s.IsDown {
+		return nil
+	}
+	resp, err := http.Get(fmt.Sprintf("%s://%s:%d/actuator/v1/markAsUpServer", s.Protocol, s.Host, s.Port))
+	if err != nil {
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.OperationFailedError()
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
 		return util.OperationFailedError()
 	}
 	notifyDiscoveryEvent(
 		reqDTO.Operator,
 		team,
 		app,
-		event.AppDiscoveryReRegisterAction,
+		event.AppDiscoveryMarkAsUpAction,
 		source,
 	)
 	time.Sleep(time.Second)
-	return nil
-}
-
-// DeleteDownService 删除下线服务
-func DeleteDownService(ctx context.Context, reqDTO DeleteDownServiceReqDTO) error {
-	if err := reqDTO.IsValid(); err != nil {
-		return err
-	}
-	ctx, closer := xormstore.Context(ctx)
-	defer closer.Close()
-	app, team, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
-	if err != nil {
-		return err
-	}
-	service, b, err := discoverymd.GetDownServiceBySourceIdAndInstanceId(ctx, source.Id, reqDTO.InstanceId)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	if !b || service.DownService == nil {
-		return util.InvalidArgsError()
-	}
-	_, err = discoverymd.DeleteDownServiceById(ctx, service.Id)
-	if err != nil {
-		logger.Logger.WithContext(ctx).Error(err)
-		return util.InternalError(err)
-	}
-	notifyDiscoveryEvent(
-		reqDTO.Operator,
-		team,
-		app,
-		event.AppDiscoveryDeleteDownServiceAction,
-		source,
-	)
 	return nil
 }
 

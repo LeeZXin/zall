@@ -235,6 +235,7 @@ type PullRequestVO struct {
 	Id       int64                  `json:"id"`
 	PrStatus pullrequestmd.PrStatus `json:"prStatus"`
 	PrTitle  string                 `json:"prTitle"`
+	PrIndex  int                    `json:"prIndex"`
 	Created  string                 `json:"created"`
 }
 

@@ -18,7 +18,7 @@ func InitApi() {
 		group := e.Group("/api/pullRequest", apisession.CheckLogin)
 		{
 			// 获取合并请求
-			group.GET("/get/:prId", getPullRequest)
+			group.GET("/get", getPullRequest)
 			// 合并请求列表
 			group.GET("/list", listPullRequest)
 			// 创建合并请求
@@ -178,7 +178,8 @@ func listReview(c *gin.Context) {
 
 func getPullRequest(c *gin.Context) {
 	request, err := pullrequestsrv.GetPullRequest(c, pullrequestsrv.GetPullRequestReqDTO{
-		PrId:     getPrId(c),
+		RepoId:   cast.ToInt64(c.Query("repoId")),
+		Index:    cast.ToInt(c.Query("index")),
 		Operator: apisession.MustGetLoginUser(c),
 	})
 	if err != nil {
@@ -229,17 +230,10 @@ func pr2Vo(t pullrequestsrv.PullRequestDTO) PullRequestVO {
 		HeadCommitId:   t.HeadCommitId,
 		PrStatus:       t.PrStatus,
 		CreateBy:       t.CreateBy,
-		CloseBy:        t.CloseBy,
-		MergeBy:        t.MergeBy,
 		PrTitle:        t.PrTitle,
+		PrIndex:        t.PrIndex,
 		CommentCount:   t.CommentCount,
 		Created:        t.Created.Format(time.DateTime),
-	}
-	if t.Closed != nil {
-		ret.Closed = t.Closed.Format(time.DateTime)
-	}
-	if t.Merged != nil {
-		ret.Merged = t.Merged.Format(time.DateTime)
 	}
 	return ret
 }

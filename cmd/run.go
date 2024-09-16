@@ -41,8 +41,8 @@ import (
 	"github.com/LeeZXin/zall/timer/modules/service/timersrv"
 	"github.com/LeeZXin/zsf/http/httpserver"
 	"github.com/LeeZXin/zsf/logger"
-	"github.com/LeeZXin/zsf/prom"
 	"github.com/LeeZXin/zsf/property/static"
+	"github.com/LeeZXin/zsf/services/registry"
 	"github.com/LeeZXin/zsf/zsf"
 	"github.com/urfave/cli/v2"
 )
@@ -176,7 +176,15 @@ func runZall(*cli.Context) error {
 			tpfeishusrv.InitGetAccessTokenTask()
 		}
 	}
-	lifeCycles = append(lifeCycles, httpserver.NewServer(), prom.NewServer())
+	lifeCycles = append(lifeCycles,
+		httpserver.NewServer(
+			httpserver.WithRegistry(
+				registry.NewDefaultEtcdRegistry(),
+			),
+			httpserver.WithEnableActuator(true),
+			httpserver.WithEnablePromApi(true),
+		),
+	)
 	zsf.Run(
 		zsf.WithLifeCycles(lifeCycles...),
 	)

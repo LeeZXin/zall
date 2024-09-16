@@ -248,3 +248,11 @@ ul {
     display: inline-flex;
     align-items: center;
 }
+
+.tag-commit-msg>.v-md-editor--preview>.v-md-editor__right-area>.v-md-editor__main>.v-md-editor__preview-wrapper>.scrollbar>.scrollbar__wrap>.scrollbar__view>.v-md-editor-preview>.github-markdown-body {
+    padding: 0;
+    font-size: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+    line-height: 1.5;
+    word-wrap: break-word;
+}

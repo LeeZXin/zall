@@ -15,6 +15,7 @@ type InsertTaskReqDTO struct {
 	Operator     string
 	Branch       string
 	PrId         int64
+	PrIndex      int
 	AgentHost    string
 	AgentToken   string
 	BizId        string

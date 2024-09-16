@@ -171,17 +171,16 @@ func (r *ListDiscoveryServiceReqDTO) IsValid() error {
 
 type ServiceDTO struct {
 	lb.Server
-	Up         bool
 	InstanceId string
 }
 
-type DeregisterServiceReqDTO struct {
+type MarkAsDownServiceReqDTO struct {
 	BindId     int64               `json:"bindId"`
 	InstanceId string              `json:"instanceId"`
 	Operator   apisession.UserInfo `json:"operator"`
 }
 
-func (r *DeregisterServiceReqDTO) IsValid() error {
+func (r *MarkAsDownServiceReqDTO) IsValid() error {
 	if r.BindId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -194,32 +193,13 @@ func (r *DeregisterServiceReqDTO) IsValid() error {
 	return nil
 }
 
-type ReRegisterServiceReqDTO struct {
+type MarkAsUpServiceReqDTO struct {
 	BindId     int64               `json:"bindId"`
 	InstanceId string              `json:"instanceId"`
 	Operator   apisession.UserInfo `json:"operator"`
 }
 
-func (r *ReRegisterServiceReqDTO) IsValid() error {
-	if r.BindId <= 0 {
-		return util.InvalidArgsError()
-	}
-	if len(r.InstanceId) == 0 || len(r.InstanceId) > 32 {
-		return util.InvalidArgsError()
-	}
-	if !r.Operator.IsValid() {
-		return util.InvalidArgsError()
-	}
-	return nil
-}
-
-type DeleteDownServiceReqDTO struct {
-	BindId     int64               `json:"bindId"`
-	InstanceId string              `json:"instanceId"`
-	Operator   apisession.UserInfo `json:"operator"`
-}
-
-func (r *DeleteDownServiceReqDTO) IsValid() error {
+func (r *MarkAsUpServiceReqDTO) IsValid() error {
 	if r.BindId <= 0 {
 		return util.InvalidArgsError()
 	}

@@ -1535,6 +1535,7 @@ func ListBranchCommits(ctx context.Context, reqDTO ListRefCommitsReqDTO) ([]Bran
 				PrStatus: pr.PrStatus,
 				PrTitle:  pr.PrTitle,
 				Created:  pr.Created,
+				PrIndex:  pr.PrIndex,
 			}
 		}
 		return ret

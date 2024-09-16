@@ -20,6 +20,7 @@ var (
 		`(\+([0-9A-Za-z\-~]+(\.[0-9A-Za-z\-~]+)*))?` +
 		`([\+\.\-~]g[0-9A-Fa-f]{10}$)?` +
 		`?$`)
+	version *Version
 )
 
 type Version struct {
@@ -220,13 +221,9 @@ func allZero(segs []int64) bool {
 	return true
 }
 
-func GetGitVersion() (*Version, error) {
-	return versionCache.Load(nil)
-}
-
-func getGitVersion(ctx context.Context) (*Version, error) {
+func getGitVersion() (*Version, error) {
 	cmd := NewCommand("version")
-	result, err := cmd.Run(ctx)
+	result, err := cmd.Run(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -246,16 +243,12 @@ func getGitVersion(ctx context.Context) (*Version, error) {
 }
 
 func CheckGitVersionAtLeast(v string) error {
-	gitVersion, err := GetGitVersion()
-	if err != nil {
-		return err
-	}
 	atLeastVersion, err := newVersion(v)
 	if err != nil {
 		return err
 	}
-	if gitVersion.Compare(atLeastVersion) < 0 {
-		return fmt.Errorf("installed git binary version %s is not at least %s", gitVersion.Original(), v)
+	if version.Compare(atLeastVersion) < 0 {
+		return fmt.Errorf("installed git binary version %s is not at least %s", version.Original(), v)
 	}
 	return nil
 }

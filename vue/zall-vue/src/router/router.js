@@ -335,7 +335,7 @@ const router = createRouter({
                 component: () =>
                     import ("../pages/team/gitRepo/PullRequestCreatePage")
             }, {
-                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/pullRequest/:prId(\\d+)/detail",
+                path: "/team/:teamId(\\d+)/gitRepo/:repoId(\\d+)/pullRequest/:index(\\d+)/detail",
                 component: () =>
                     import ("../pages/team/gitRepo/PullRequestDetailPage")
             }, {

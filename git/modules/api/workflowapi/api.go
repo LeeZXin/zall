@@ -345,6 +345,7 @@ func task2WithoutYamlContentVo(t workflowsrv.TaskWithoutYamlContentDTO) TaskWith
 		Created:     t.Created.Format(time.DateTime),
 		Branch:      t.Branch,
 		PrId:        t.PrId,
+		PrIndex:     t.PrIndex,
 		Duration:    t.Duration,
 		WorkflowId:  t.WorkflowId,
 	}

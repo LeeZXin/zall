@@ -50,6 +50,7 @@ func (*GitPushEvent) EventType() string {
 type PullRequestEvent struct {
 	PrId          int64                  `json:"prId"`
 	PrTitle       string                 `json:"prTitle"`
+	PrIndex       int                    `json:"prIndex"`
 	TargetRef     string                 `json:"targetRef"`
 	TargetRefType string                 `json:"targetRefType"`
 	HeadRef       string                 `json:"headRef"`

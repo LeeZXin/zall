@@ -101,9 +101,8 @@ func (a AppDiscoveryEventAction) GetI18nValue() string {
 }
 
 const (
-	AppDiscoveryDeregisterAction        AppDiscoveryEventAction = "deregister"
-	AppDiscoveryReRegisterAction        AppDiscoveryEventAction = "reRegister"
-	AppDiscoveryDeleteDownServiceAction AppDiscoveryEventAction = "deleteDownService"
+	AppDiscoveryMarkAsDownAction AppDiscoveryEventAction = "markAsDown"
+	AppDiscoveryMarkAsUpAction   AppDiscoveryEventAction = "markAsUp"
 )
 
 type AppDeployServiceEventAction string

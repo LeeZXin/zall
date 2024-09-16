@@ -42,29 +42,28 @@
     <div>
       <ZTable :columns="serviceColumns" :dataSource="serviceDataSource" :scroll="{x:1300}">
         <template #bodyCell="{dataIndex, dataItem}">
-          <template v-if="dataIndex === 'up'">
-            <CheckCircleFilled style="color:green" v-if="dataItem[dataIndex]" />
-            <CloseCircleFilled style="color:red" v-else />
+          <template v-if="dataIndex === 'isDown'">
+            <LoadingOutlined v-if="dataItem.loading" />
+            <template v-else>
+              <CloseCircleFilled style="color:red" v-if="dataItem[dataIndex]" />
+              <CheckCircleFilled style="color:green" v-else />
+            </template>
           </template>
           <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
           <div v-else>
             <a-popover placement="bottomRight" trigger="hover">
               <template #content>
                 <ul class="op-list">
-                  <li @click="deregisterService(dataItem)" v-if="dataItem['up']">
-                    <CloseOutlined />
-                    <span style="margin-left:4px">{{t('discoveryService.deregister')}}</span>
-                  </li>
-                  <template v-else>
-                    <li @click="reRegisterService(dataItem)">
+                  <template v-if="dataItem.isDown">
+                    <li @click="markAsUp(dataItem)">
                       <UploadOutlined />
-                      <span style="margin-left:4px">{{t('discoveryService.reRegister')}}</span>
-                    </li>
-                    <li @click="deleteDownService(dataItem)">
-                      <CloseOutlined />
-                      <span style="margin-left:4px">{{t('discoveryService.deleteDownService')}}</span>
+                      <span style="margin-left:4px">{{t('discoveryService.markAsUp')}}</span>
                     </li>
                   </template>
+                  <li @click="markAsDown(dataItem)" v-else>
+                    <CloseOutlined />
+                    <span style="margin-left:4px">{{t('discoveryService.markAsDown')}}</span>
+                  </li>
                 </ul>
               </template>
               <div class="op-icon">
@@ -104,11 +103,12 @@ import {
   ReloadOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
-  CloseOutlined,
   UploadOutlined,
   ExclamationCircleOutlined,
   SettingOutlined,
-  LeftOutlined
+  LeftOutlined,
+  CloseOutlined,
+  LoadingOutlined
 } from "@ant-design/icons-vue";
 import ZTable from "@/components/common/ZTable";
 import { ref, createVNode, h, reactive } from "vue";
@@ -116,9 +116,8 @@ import { useRoute, useRouter } from "vue-router";
 import {
   listBindDiscoverySourceRequest,
   listDiscoveryServiceRequest,
-  deregisterServiceRequest,
-  reRegisterServiceRequest,
-  deleteDownServiceRequest,
+  markAsDownServiceRequest,
+  markAsUpServiceRequest,
   listAllDiscoverySourceRequest,
   bindAppAndDiscoverySourceRequest
 } from "@/api/app/discoveryApi";
@@ -205,8 +204,8 @@ const serviceColumns = [
   },
   {
     i18nTitle: "discoveryService.serviceUp",
-    dataIndex: "up",
-    key: "up"
+    dataIndex: "isDown",
+    key: "isDown"
   },
   {
     i18nTitle: "discoveryService.operation",
@@ -236,6 +235,7 @@ const listService = () => {
     serviceDataSource.value = res.data.map((item, index) => {
       return {
         key: index,
+        loading: false,
         ...item
       };
     });
@@ -259,52 +259,47 @@ const onEnvChange = e => {
   listDiscoverySource();
 };
 // 下线服务
-const deregisterService = item => {
+const markAsDown = item => {
   Modal.confirm({
-    title: `${t("discoveryService.confirmDeregister")} ${item.host}?`,
+    title: `${t("discoveryService.confirmMarkAsDown")} ${item.host}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      deregisterServiceRequest({
+      item.loading = true;
+      markAsDownServiceRequest({
         bindId: selectedSource.bindId,
         instanceId: item.instanceId
-      }).then(() => {
-        message.success(t("operationSuccess"));
-        listService();
-      });
+      })
+        .then(() => {
+          item.loading = false;
+          item.isDown = true;
+          message.success(t("operationSuccess"));
+        })
+        .catch(() => {
+          item.loading = false;
+        });
     },
     onCancel() {}
   });
 };
 // 重新上线服务
-const reRegisterService = item => {
+const markAsUp = item => {
   Modal.confirm({
-    title: `${t("discoveryService.confirmReRegister")} ${item.host}?`,
+    title: `${t("discoveryService.confirmMarkAsUp")} ${item.host}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      reRegisterServiceRequest({
+      item.loading = true;
+      markAsUpServiceRequest({
         bindId: selectedSource.bindId,
         instanceId: item.instanceId
-      }).then(() => {
-        message.success(t("operationSuccess"));
-        listService();
-      });
-    },
-    onCancel() {}
-  });
-};
-// 删除下线服务
-const deleteDownService = item => {
-  Modal.confirm({
-    title: `${t("discoveryService.confirmDelete")} ${item.host}?`,
-    icon: createVNode(ExclamationCircleOutlined),
-    onOk() {
-      deleteDownServiceRequest({
-        bindId: selectedSource.bindId,
-        instanceId: item.instanceId
-      }).then(() => {
-        message.success(t("operationSuccess"));
-        listService();
-      });
+      })
+        .then(() => {
+          message.success(t("operationSuccess"));
+          item.loading = false;
+          item.isDown = false;
+        })
+        .catch(() => {
+          item.loading = false;
+        });
     },
     onCancel() {}
   });

@@ -179,6 +179,7 @@ func FindAndExecute(reqDTO FindAndExecuteWorkflowReqDTO) {
 			TriggerType: reqDTO.TriggerType,
 			Branch:      reqDTO.Branch,
 			PrId:        reqDTO.PrId,
+			PrIndex:     reqDTO.PrIndex,
 		})
 	}
 }
@@ -218,6 +219,7 @@ func Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO) error {
 			Operator:     reqDTO.Operator,
 			Branch:       reqDTO.Branch,
 			PrId:         reqDTO.PrId,
+			PrIndex:      reqDTO.PrIndex,
 			AgentHost:    agent.AgentHost,
 			AgentToken:   agent.AgentToken,
 			BizId:        bizId,
@@ -453,7 +455,6 @@ func TriggerWorkflow(ctx context.Context, reqDTO TriggerWorkflowReqDTO) error {
 		Operator:    reqDTO.Operator.Account,
 		TriggerType: workflowmd.ManualTriggerType,
 		Branch:      reqDTO.Branch,
-		PrId:        0,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "out of capacity") {
@@ -704,6 +705,7 @@ func task2WithoutYamlContentDto(t workflowmd.Task, userMap map[string]util.User)
 		Created:     t.Created,
 		Id:          t.Id,
 		PrId:        t.PrId,
+		PrIndex:     t.PrIndex,
 		Duration:    t.Duration,
 		WorkflowId:  t.WorkflowId,
 	}
@@ -786,8 +788,8 @@ func GetTaskStatus(ctx context.Context, reqDTO GetTaskStatusReqDTO) (sshagent.Ta
 			workflowmd.UpdateTaskStatusAndDurationAndStatusLog(
 				ctx,
 				task.Id,
-				ret.Status,
 				task.TaskStatus,
+				ret.Status,
 				duration,
 				ret,
 			)

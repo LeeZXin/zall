@@ -280,6 +280,7 @@ func listBranchCommits(c *gin.Context) {
 					Id:       t.LastPullRequest.Id,
 					PrStatus: t.LastPullRequest.PrStatus,
 					PrTitle:  t.LastPullRequest.PrTitle,
+					PrIndex:  t.LastPullRequest.PrIndex,
 					Created:  t.LastPullRequest.Created.Format(time.DateTime),
 				}
 			}

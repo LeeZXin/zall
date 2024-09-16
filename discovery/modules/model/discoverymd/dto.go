@@ -1,7 +1,5 @@
 package discoverymd
 
-import "github.com/LeeZXin/zsf/services/lb"
-
 type InsertEtcdNodeReqDTO struct {
 	Name      string
 	Endpoints string
@@ -21,13 +19,6 @@ type UpdateEtcdNodeReqDTO struct {
 type ListEtcdNodeReqDTO struct {
 	Env  string
 	Cols []string
-}
-
-type InsertDownServiceDTO struct {
-	SourceId   int64
-	AppId      string
-	Service    lb.Server
-	InstanceId string
 }
 
 type InsertAppEtcdNodeBindReqDTO struct {

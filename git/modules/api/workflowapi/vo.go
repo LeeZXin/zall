@@ -39,6 +39,7 @@ type TaskWithoutYamlContentVO struct {
 	Created     string                 `json:"created"`
 	Branch      string                 `json:"branch"`
 	PrId        int64                  `json:"prId"`
+	PrIndex     int                    `json:"prIndex"`
 	Duration    int64                  `json:"duration"`
 	WorkflowId  int64                  `json:"workflowId"`
 }

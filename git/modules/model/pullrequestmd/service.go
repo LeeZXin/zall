@@ -2,6 +2,7 @@ package pullrequestmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
@@ -22,6 +23,7 @@ func InsertPullRequest(ctx context.Context, reqDTO InsertPullRequestReqDTO) (Pul
 		PrStatus:     reqDTO.PrStatus,
 		CreateBy:     reqDTO.CreateBy,
 		PrTitle:      reqDTO.Title,
+		PrIndex:      reqDTO.Index,
 		CommentCount: reqDTO.CommentCount,
 	}
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ret)
@@ -73,6 +75,15 @@ func GetPullRequestById(ctx context.Context, id int64) (PullRequest, bool, error
 	var ret PullRequest
 	b, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", id).
+		Get(&ret)
+	return ret, b, err
+}
+
+func GetPullRequestByRepoIdAndIndex(ctx context.Context, repoId int64, index int) (PullRequest, bool, error) {
+	var ret PullRequest
+	b, err := xormutil.MustGetXormSession(ctx).
+		Where("repo_id = ?", repoId).
+		And("pr_index = ?", index).
 		Get(&ret)
 	return ret, b, err
 }
@@ -209,4 +220,23 @@ func DecrCommentCount(ctx context.Context, id int64) (bool, error) {
 		Cols("comment_count").
 		Update(new(PullRequest))
 	return rows == 1, err
+}
+
+func GetNextMaxIndex(ctx context.Context, repoId int64) (int, error) {
+	session := xormutil.MustGetXormSession(ctx)
+	_, err := session.Exec(
+		fmt.Sprintf("INSERT INTO %s (repo_id, max_index) VALUES (%d,1) ON DUPLICATE KEY UPDATE max_index = max_index + 1", IndexTableName, repoId),
+	)
+	if err != nil {
+		return 0, err
+	}
+	var ret Index
+	_, err = session.
+		And("repo_id = ?", repoId).
+		Cols("max_index").
+		Get(&ret)
+	if err != nil {
+		return 0, err
+	}
+	return ret.MaxIndex, nil
 }

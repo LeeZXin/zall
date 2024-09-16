@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/LeeZXin/zsf-utils/localcache"
 	"github.com/LeeZXin/zsf/logger"
 	"github.com/LeeZXin/zsf/property/static"
 	"io"
@@ -62,12 +61,13 @@ const (
 
 const notRegularFileMode = os.ModeSymlink | os.ModeNamedPipe | os.ModeSocket | os.ModeDevice | os.ModeCharDevice | os.ModeIrregular
 
-var (
-	versionCache, _ = localcache.NewLazyLoader[*Version](getGitVersion)
-)
-
 func Init() {
 	initAllSettings()
+	var err error
+	version, err = getGitVersion()
+	if err != nil {
+		logger.Logger.Fatal(err)
+	}
 	if CheckGitVersionAtLeast(RequiredVersion) != nil {
 		logger.Logger.Fatal("install git version is not supported, upgrade it before start github.com/LeeZXin/zall")
 	}

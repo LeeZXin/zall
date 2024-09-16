@@ -165,6 +165,7 @@ type TaskWithoutYamlContentDTO struct {
 	TriggerType workflowmd.TriggerType
 	Branch      string
 	PrId        int64
+	PrIndex     int
 	Operator    util.User
 	Created     time.Time
 	Duration    int64
@@ -386,6 +387,7 @@ type FindAndExecuteWorkflowReqDTO struct {
 	Branch      string
 	Source      workflowmd.SourceType
 	PrId        int64
+	PrIndex     int
 }
 
 type ExecuteWorkflowReqDTO struct {
@@ -394,4 +396,5 @@ type ExecuteWorkflowReqDTO struct {
 	TriggerType workflowmd.TriggerType
 	Branch      string
 	PrId        int64
+	PrIndex     int
 }

@@ -34,14 +34,11 @@ type PullRequestVO struct {
 	HeadType       git.RefType            `json:"headType"`
 	HeadCommitId   string                 `json:"headCommitId"`
 	PrStatus       pullrequestmd.PrStatus `json:"prStatus"`
-	CreateBy       string                 `json:"createBy"`
-	CloseBy        string                 `json:"closeBy"`
-	MergeBy        string                 `json:"mergeBy"`
+	CreateBy       util.User              `json:"createBy"`
 	PrTitle        string                 `json:"prTitle"`
+	PrIndex        int                    `json:"prIndex"`
 	CommentCount   int                    `json:"commentCount"`
 	Created        string                 `json:"created"`
-	Closed         string                 `json:"closed"`
-	Merged         string                 `json:"merged"`
 }
 
 type TimelineVO struct {

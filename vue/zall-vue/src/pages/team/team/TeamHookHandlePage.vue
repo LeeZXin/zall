@@ -167,9 +167,8 @@ const defaultEnvRelated = {
     triggerAction: false
   },
   appDiscovery: {
-    deregister: false,
-    reRegister: false,
-    deleteDownService: false
+    markAsDown: false,
+    markAsUp: false
   },
   appArtifact: {
     delete: false
@@ -315,16 +314,12 @@ const envRelatedEvents = [
     title: "teamHook.appDiscovery.title",
     actions: [
       {
-        key: "deregister",
-        title: "teamHook.appDiscovery.deregister"
+        key: "markAsDown",
+        title: "teamHook.appDiscovery.markAsDown"
       },
       {
-        key: "reRegister",
-        title: "teamHook.appDiscovery.reRegister"
-      },
-      {
-        key: "deleteDownService",
-        title: "teamHook.appDiscovery.deleteDownService"
+        key: "markAsUp",
+        title: "teamHook.appDiscovery.markAsUp"
       }
     ]
   },

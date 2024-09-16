@@ -14,11 +14,11 @@
         </div>
         <span v-else-if="dataIndex === 'created'">{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
         <span v-else-if="dataIndex === 'triggerType'">{{t(triggerTypeMap[dataItem[dataIndex]])}}</span>
-        <template v-else-if="dataIndex === 'prId'">
-          <PrIdTag
+        <template v-else-if="dataIndex === 'prIndex'">
+          <PrIndexTag
             v-if="dataItem[dataIndex]"
             :repoId="route.params.repoId"
-            :prId="dataItem[dataIndex]"
+            :prIndex="dataItem[dataIndex]"
             :teamId="route.params.teamId"
           />
         </template>
@@ -59,7 +59,7 @@
 </template>
 <script setup>
 import ZAvatar from "@/components/user/ZAvatar";
-import PrIdTag from "@/components/git/PrIdTag";
+import PrIndexTag from "@/components/git/PrIndexTag";
 import TaskStatusTag from "@/components/git/WorkflowTaskStatusTag";
 import ZTable from "@/components/common/ZTable";
 import {
@@ -125,8 +125,8 @@ const columns = [
   },
   {
     i18nTitle: "gitWorkflow.pullRequest",
-    dataIndex: "prId",
-    key: "prId"
+    dataIndex: "prIndex",
+    key: "prIndex"
   },
   {
     i18nTitle: "gitWorkflow.operation",

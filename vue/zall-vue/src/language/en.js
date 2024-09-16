@@ -579,9 +579,8 @@ export default {
         name: "Discovery source",
         operation: "Operation",
         refresh: "Refresh",
-        deregister: "Deregister",
-        reRegister: "Re-register",
-        deleteDownService: "Delete down service",
+        markAsDown: "Mark service as down",
+        markAsUp: "Mark service as up",
         serviceProtocol: "Protocol",
         serviceName: "Name",
         serviceHost: "Host",
@@ -591,8 +590,8 @@ export default {
         serviceRegion: "Region",
         serviceZone: "Zone",
         serviceUp: "Is up",
-        confirmDeregister: "Do you confirm to deregister",
-        confirmReRegister: "Do you confirm to re-register",
+        confirmMarkAsDown: "Do you confirm to mark as down",
+        confirmMarkAsUp: "Do you confirm to mark as up",
         confirmDelete: "Do you confirm to delete"
     },
     artifacts: {
@@ -886,9 +885,8 @@ export default {
         },
         appDiscovery: {
             title: "Registry",
-            reRegister: "Re-register",
-            deregister: "Deregister",
-            deleteDownService: "Delete down service"
+            markAsUp: "Mark as up",
+            markAsDown: "Mark as down",
         },
         appArtifact: {
             title: "Artifacts",

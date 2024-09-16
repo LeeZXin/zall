@@ -11,9 +11,9 @@ const deleteDiscoverySourceRequest = (sourceId) => request.delete("/api/discover
 // 服务列表
 const listDiscoveryServiceRequest = (bindId) => request.get("/api/discoveryService/listService/" + bindId);
 // 下线服务
-const deregisterServiceRequest = (data) => request.post("/api/discoveryService/deregister", data);
+const markAsDownServiceRequest = (data) => request.post("/api/discoveryService/markAsDown", data);
 // 上线服务
-const reRegisterServiceRequest = (data) => request.post("/api/discoveryService/reRegister", data);
+const markAsUpServiceRequest = (data) => request.post("/api/discoveryService/markAsUp", data);
 // 删除下线服务
 const deleteDownServiceRequest = (data) => request.delete("/api/discoveryService/deleteDownService", { params: data });
 // 所有注册中心来源
@@ -28,8 +28,8 @@ export {
     updateDiscoverySourceRequest,
     deleteDiscoverySourceRequest,
     listDiscoveryServiceRequest,
-    deregisterServiceRequest,
-    reRegisterServiceRequest,
+    markAsDownServiceRequest,
+    markAsUpServiceRequest,
     deleteDownServiceRequest,
     listAllDiscoverySourceRequest,
     listBindDiscoverySourceRequest,
