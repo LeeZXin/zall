@@ -66,11 +66,6 @@ const columns = [
     key: "name"
   },
   {
-    i18nTitle: "serviceSource.host",
-    dataIndex: "host",
-    key: "host"
-  },
-  {
     i18nTitle: "serviceSource.operation",
     dataIndex: "operation",
     key: "operation",
@@ -114,8 +109,7 @@ const gotoUpdatePage = item => {
   serviceSourceStore.id = item.id;
   serviceSourceStore.name = item.name;
   serviceSourceStore.env = item.env;
-  serviceSourceStore.host = item.host;
-  serviceSourceStore.apiKey = item.apiKey;
+  serviceSourceStore.datasource = item.datasource;
   router.push(`/sa/serviceSource/${item.id}/update`);
 };
 // 环境变化

@@ -22,15 +22,9 @@
         </div>
       </div>
       <div class="section">
-        <div class="section-title">{{t('serviceSource.host')}}</div>
+        <div class="section-title">{{t('serviceSource.datasource')}}</div>
         <div class="section-body">
-          <a-input v-model:value="formState.host" />
-        </div>
-      </div>
-      <div class="section">
-        <div class="section-title">{{t('serviceSource.apiKey')}}</div>
-        <div class="section-body">
-          <a-input-password v-model:value="formState.apiKey" />
+          <a-input v-model:value="formState.datasource" />
         </div>
       </div>
       <div class="save-btn-line">
@@ -43,8 +37,7 @@
 import { reactive, ref } from "vue";
 import {
   serviceSourceNameRegexp,
-  serviceSourceHostRegexp,
-  serviceSourceApiKeyRegexp
+  serviceSourceDatasourceRegexp
 } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import { getEnvCfgRequest } from "@/api/cfg/cfgApi";
@@ -67,8 +60,7 @@ const getMode = () => {
 const mode = getMode();
 const formState = reactive({
   name: "",
-  host: "",
-  apiKey: "",
+  datasource: "",
   selectedEnv: ""
 });
 // 环境列表
@@ -94,20 +86,15 @@ const saveOrUpdateServiceSource = () => {
     message.warn(t("serviceSource.nameFormatErr"));
     return;
   }
-  if (!serviceSourceHostRegexp.test(formState.host)) {
-    message.warn(t("serviceSource.hostFormatErr"));
-    return;
-  }
-  if (!serviceSourceApiKeyRegexp.test(formState.apiKey)) {
-    message.warn(t("serviceSource.apiKeyFormatErr"));
+  if (!serviceSourceDatasourceRegexp.test(formState.datasource)) {
+    message.warn(t("serviceSource.datasourceFormatErr"));
     return;
   }
   if (mode === "create") {
     createServiceSourceRequest({
       env: formState.selectedEnv,
-      apiKey: formState.apiKey,
       name: formState.name,
-      host: formState.host
+      datasource: formState.datasource
     }).then(() => {
       message.success(t("operationSuccess"));
       router.push(`/sa/serviceSource/list/${formState.selectedEnv}`);
@@ -115,9 +102,8 @@ const saveOrUpdateServiceSource = () => {
   } else if (mode === "update") {
     updateServiceSourceRequest({
       sourceId: serviceSourceStore.id,
-      host: formState.host,
       name: formState.name,
-      apiKey: formState.apiKey
+      datasource: formState.datasource
     }).then(() => {
       message.success(t("operationSuccess"));
       router.push(`/sa/serviceSource/list/${formState.selectedEnv}`);
@@ -133,8 +119,7 @@ if (mode === "create") {
   } else {
     formState.name = serviceSourceStore.name;
     formState.selectedEnv = serviceSourceStore.env;
-    formState.host = serviceSourceStore.host;
-    formState.apiKey = serviceSourceStore.apiKey;
+    formState.datasource = serviceSourceStore.datasource;
   }
 }
 </script>

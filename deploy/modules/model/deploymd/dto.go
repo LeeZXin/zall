@@ -62,17 +62,15 @@ type ListPipelineReqDTO struct {
 }
 
 type InsertServiceSourceReqDTO struct {
-	Name   string
-	Env    string
-	Host   string
-	ApiKey string
+	Name       string
+	Env        string
+	Datasource string
 }
 
 type UpdateServiceSourceReqDTO struct {
-	Id     int64
-	Name   string
-	Host   string
-	ApiKey string
+	Id         int64
+	Name       string
+	Datasource string
 }
 
 type ListServiceSourceReqDTO struct {

@@ -210,6 +210,7 @@ type IndexRepoReq struct {
 	RepoPath string      `json:"repoPath"`
 	Ref      string      `json:"ref"`
 	RefType  git.RefType `json:"refType"`
+	Dir      string      `json:"dir"`
 }
 
 type IndexRepoResp struct {

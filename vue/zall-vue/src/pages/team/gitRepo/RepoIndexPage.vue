@@ -183,7 +183,8 @@ const getTreeRepo = (ref, refType) => {
   treeRepoRequest({
     repoId,
     ref,
-    refType
+    refType,
+    dir: "."
   }).then(res => {
     if (res.latestCommit) {
       latestCommit.committer = res.latestCommit.committer.account;

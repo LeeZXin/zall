@@ -370,6 +370,7 @@ func indexRepo(c *gin.Context) {
 			RepoId:   req.RepoId,
 			Ref:      req.Ref,
 			RefType:  req.RefType,
+			Dir:      req.Dir,
 			Operator: apisession.MustGetLoginUser(c),
 		})
 		if err != nil {

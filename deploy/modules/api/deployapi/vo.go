@@ -106,26 +106,23 @@ type ForceRedoStageReqVO struct {
 }
 
 type CreateServiceSourceReqVO struct {
-	Env    string `json:"env"`
-	Name   string `json:"name"`
-	Host   string `json:"host"`
-	ApiKey string `json:"apiKey"`
+	Env        string `json:"env"`
+	Name       string `json:"name"`
+	Datasource string `json:"datasource"`
 }
 
 type UpdateServiceSourceReqVO struct {
-	SourceId int64  `json:"sourceId"`
-	Name     string `json:"name"`
-	Host     string `json:"host"`
-	ApiKey   string `json:"apiKey"`
+	SourceId   int64  `json:"sourceId"`
+	Name       string `json:"name"`
+	Datasource string `json:"datasource"`
 }
 
 type ServiceSourceVO struct {
-	Id      int64  `json:"id"`
-	Name    string `json:"name"`
-	Env     string `json:"env"`
-	Host    string `json:"host"`
-	ApiKey  string `json:"apiKey"`
-	Created string `json:"created"`
+	Id         int64  `json:"id"`
+	Name       string `json:"name"`
+	Env        string `json:"env"`
+	Datasource string `json:"datasource"`
+	Created    string `json:"created"`
 }
 
 type SimpleServiceSourceVO struct {
@@ -167,14 +164,29 @@ type UpdatePipelineVarsReqVO struct {
 	Content string `json:"content"`
 }
 
-type DoServiceStatusActionReqVO struct {
-	BindId    int64  `json:"bindId"`
-	ServiceId string `json:"serviceId"`
-	Action    string `json:"action"`
-}
-
 type BindAppAndServiceSourceReqVO struct {
 	AppId        string  `json:"appId"`
 	SourceIdList []int64 `json:"sourceIdList"`
 	Env          string  `json:"env"`
+}
+
+type ServiceStatusVO struct {
+	Id         string `json:"id"`
+	App        string `json:"app"`
+	Status     string `json:"status"`
+	Host       string `json:"host"`
+	Env        string `json:"env"`
+	CpuPercent int    `json:"cpuPercent"`
+	MemPercent int    `json:"memPercent"`
+	Created    string `json:"created"`
+}
+
+type KillServiceReqVO struct {
+	BindId    int64  `json:"bindId"`
+	ServiceId string `json:"serviceId"`
+}
+
+type RestartServiceReqVO struct {
+	BindId    int64  `json:"bindId"`
+	ServiceId string `json:"serviceId"`
 }

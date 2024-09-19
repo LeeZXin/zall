@@ -41,8 +41,7 @@ const pipelineVarsContentRegexp = /^[\s\S]{1,10240}$/;
 const deployPlanNameRegexp = /^.{1,32}$/;
 // 服务来源
 const serviceSourceNameRegexp = /^.{1,32}$/;
-const serviceSourceHostRegexp = /^https?:\/\/.+$/;
-const serviceSourceApiKeyRegexp = /^.{0,128}$/;
+const serviceSourceDatasourceRegexp = /^.{1,255}$/;
 // 配置来源
 const propertySourceNameRegexp = /^.{1,32}$/;
 // 注册中心来源
@@ -123,8 +122,7 @@ export {
     pipelineVarsContentRegexp,
     deployPlanNameRegexp,
     serviceSourceNameRegexp,
-    serviceSourceHostRegexp,
-    serviceSourceApiKeyRegexp,
+    serviceSourceDatasourceRegexp,
     propertySourceNameRegexp,
     discoverySourceNameRegexp,
     promScrapeEndpointRegexp,

@@ -246,7 +246,7 @@ func Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO) error {
 		url = fmt.Sprintf("http://%s:%d/api/v1/workflow/internal/taskCallBack", common.GetLocalIP(), common.HttpServerPort())
 		logger.Logger.Infof("callback url: %s", url)
 	}
-	envs := make(map[string]string, len(varsList)+9)
+	envs := make(map[string]string, len(varsList)+11)
 	{
 		envs["GIT_BRANCH"] = reqDTO.Branch
 		envs["GIT_PR_ID"] = strconv.FormatInt(reqDTO.PrId, 10)
@@ -256,6 +256,7 @@ func Execute(wf workflowmd.Workflow, reqDTO ExecuteWorkflowReqDTO) error {
 		envs["GIT_TOKEN"] = gitToken
 		envs["GIT_TRIGGER_TYPE"] = strconv.Itoa(int(reqDTO.TriggerType))
 		envs["GIT_BUILD_NUM"] = time.Now().Format("2006010215") + strings.ToUpper(strutil.RandomStr(6))
+		envs["GIT_TASK_ID"] = idutil.RandomUuid()
 		envs[action.EnvCallBackUrl] = url
 		envs[action.EnvCallBackToken] = static.GetString("workflow.callback.token")
 		for _, vars := range varsList {

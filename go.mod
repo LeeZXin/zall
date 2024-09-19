@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/42wim/sshsig v0.0.0-20211121163825-841cf5bbc121
 	github.com/IGLOU-EU/go-wildcard/v2 v2.0.2
-	github.com/LeeZXin/zsf v1.2.2
+	github.com/LeeZXin/zsf v1.2.3
 	github.com/LeeZXin/zsf-utils v1.0.74
 	github.com/PaesslerAG/gval v1.2.2
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548

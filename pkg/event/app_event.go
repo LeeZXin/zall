@@ -145,9 +145,9 @@ type AppDeployServiceEvent struct {
 	BaseTeam
 	BaseApp
 	BaseEvent
-	Source        AppSource                   `json:"source"`
-	Action        AppDeployServiceEventAction `json:"action"`
-	TriggerAction string                      `json:"triggerAction"`
+	Source    AppSource                   `json:"source"`
+	Action    AppDeployServiceEventAction `json:"action"`
+	ServiceId string                      `json:"serviceId"`
 }
 
 func (*AppDeployServiceEvent) EventType() string {

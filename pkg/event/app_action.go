@@ -112,7 +112,8 @@ func (a AppDeployServiceEventAction) GetI18nValue() string {
 }
 
 const (
-	AppDeployServiceTriggerActionAction AppDeployServiceEventAction = "triggerAction"
+	AppDeployServiceKillAction    AppDeployServiceEventAction = "kill"
+	AppDeployServiceRestartAction AppDeployServiceEventAction = "restart"
 )
 
 type AppPromScrapeEventAction string

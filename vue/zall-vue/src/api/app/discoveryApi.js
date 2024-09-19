@@ -14,8 +14,6 @@ const listDiscoveryServiceRequest = (bindId) => request.get("/api/discoveryServi
 const markAsDownServiceRequest = (data) => request.post("/api/discoveryService/markAsDown", data);
 // 上线服务
 const markAsUpServiceRequest = (data) => request.post("/api/discoveryService/markAsUp", data);
-// 删除下线服务
-const deleteDownServiceRequest = (data) => request.delete("/api/discoveryService/deleteDownService", { params: data });
 // 所有注册中心来源
 const listAllDiscoverySourceRequest = (env) => request.get("/api/discoverySource/listAll/" + env);
 // 获取注册中心来源
@@ -30,7 +28,6 @@ export {
     listDiscoveryServiceRequest,
     markAsDownServiceRequest,
     markAsUpServiceRequest,
-    deleteDownServiceRequest,
     listAllDiscoverySourceRequest,
     listBindDiscoverySourceRequest,
     bindAppAndDiscoverySourceRequest

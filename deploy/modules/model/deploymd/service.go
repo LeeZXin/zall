@@ -355,10 +355,9 @@ func ListServiceSource(ctx context.Context, reqDTO ListServiceSourceReqDTO) ([]S
 
 func InsertServiceSource(ctx context.Context, reqDTO InsertServiceSourceReqDTO) error {
 	_, err := xormutil.MustGetXormSession(ctx).Insert(&ServiceSource{
-		Name:   reqDTO.Name,
-		Env:    reqDTO.Env,
-		Host:   reqDTO.Host,
-		ApiKey: reqDTO.ApiKey,
+		Name:       reqDTO.Name,
+		Env:        reqDTO.Env,
+		Datasource: reqDTO.Datasource,
 	})
 	return err
 }
@@ -366,11 +365,10 @@ func InsertServiceSource(ctx context.Context, reqDTO InsertServiceSourceReqDTO) 
 func UpdateServiceSource(ctx context.Context, reqDTO UpdateServiceSourceReqDTO) (bool, error) {
 	rows, err := xormutil.MustGetXormSession(ctx).
 		Where("id = ?", reqDTO.Id).
-		Cols("name", "host", "api_key").
+		Cols("name", "datasource").
 		Update(&ServiceSource{
-			Name:   reqDTO.Name,
-			Host:   reqDTO.Host,
-			ApiKey: reqDTO.ApiKey,
+			Name:       reqDTO.Name,
+			Datasource: reqDTO.Datasource,
 		})
 	return rows == 1, err
 }

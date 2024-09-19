@@ -251,8 +251,7 @@ const getJobAndSteps = jobName => {
       return {
         ...item,
         logs: [],
-        openLog: false,
-        loaded: false
+        openLog: false
       };
     });
     stepsList.value = steps;
@@ -357,12 +356,11 @@ const killTask = () => {
 const showLogs = (item, index) => {
   if (item.openLog) {
     item.openLog = false;
-  } else if (item.loaded) {
+  } else if (item.logs && item.logs.length > 0) {
     item.openLog = true;
   } else {
     getLogContentRequest(taskStore.value.id, selectedJob.value, index).then(
       res => {
-        item.loaded = true;
         item.logs = res.data;
         item.openLog = true;
       }

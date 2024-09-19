@@ -566,7 +566,11 @@ export default {
         status: "状态",
         cpuPercent: "CPU百分比",
         memPercent: "内存百分比",
-        confirm: "你确定要"
+        confirmKillService: "你确定要停止服务",
+        confirmRestartService: "你确定要重启服务",
+        createTime: "创建时间",
+        killService: "停止服务",
+        restartService: "重启服务"
     },
     discoveryService: {
         manageSource: "管理注册中心来源绑定",
@@ -881,7 +885,8 @@ export default {
         },
         appDeployService: {
             title: "部署服务",
-            triggerAction: "触发指令"
+            kill: "停止服务",
+            restart: "重启服务"
         },
         appDiscovery: {
             title: "注册中心",
@@ -1115,15 +1120,13 @@ export default {
         updateSource: "编辑服务状态来源",
         confirmDelete: "你确定是否删除",
         name: "名称",
-        host: "Host",
         operation: "操作",
         selectEnv: "选择环境",
         selectedEnv: "已选环境",
-        apiKey: "Api密钥",
         save: "立即保存",
         nameFormatErr: "名称格式错误",
-        hostFormatErr: "host格式错误",
-        apiKeyFormatErr: "api key格式错误"
+        datasource: "数据源",
+        datasourceFormatErr: "数据源格式错误"
     },
     zallet: {
         createNode: "创建节点",

@@ -113,7 +113,7 @@ func listLatestArtifact(c *gin.Context) {
 			Id:      t.Id,
 			Name:    t.Name,
 			Creator: t.Creator,
-			Created: t.Created.Format("20060102"),
+			Created: t.Created.Format("20060102021504"),
 		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]ArtifactVO]{

@@ -5,7 +5,6 @@ import (
 	"github.com/LeeZXin/zall/alert/modules/service/alertsrv"
 	"github.com/LeeZXin/zall/dbaudit/modules/api/mysqldbapi"
 	"github.com/LeeZXin/zall/deploy/modules/api/deployapi"
-	"github.com/LeeZXin/zall/deploy/modules/api/statusapi"
 	"github.com/LeeZXin/zall/discovery/modules/api/discoveryapi"
 	"github.com/LeeZXin/zall/fileserv/modules/api/fileapi"
 	"github.com/LeeZXin/zall/git/modules/api/branchapi"
@@ -143,10 +142,6 @@ func runZall(*cli.Context) error {
 	// for zallet
 	{
 		zalletapi.InitApi()
-		if static.GetBool("zallet.enabled") {
-			logger.Logger.Info("zallet status server enabled")
-			statusapi.InitApi()
-		}
 	}
 	// for discovery
 	{
@@ -181,7 +176,6 @@ func runZall(*cli.Context) error {
 			httpserver.WithRegistry(
 				registry.NewDefaultEtcdRegistry(),
 			),
-			httpserver.WithEnableActuator(true),
 			httpserver.WithEnablePromApi(true),
 		),
 	)

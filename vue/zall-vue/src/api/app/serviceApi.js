@@ -2,10 +2,10 @@ import request from '@/utils/request.js'
 
 // 服务状态配置列表
 const listServiceStatusRequest = (sourceId) => request.get("/api/service/listStatus/" + sourceId);
-// 服务操作列表
-const listStatusActionsRequest = (sourceId) => request.get("/api/service/listActions/" + sourceId);
-// 操作服务
-const doStatusActionRequest = (data) => request.put(`/api/service/doAction`, data);
+// 杀死服务
+const killServiceRequest = (data) => request.put(`/api/service/kill`, data);
+// 重启服务
+const restartServiceRequest = (data) => request.put(`/api/service/restart`, data);
 // 服务来源配置列表
 const listServiceSourceRequest = (data) => request.get("/api/serviceSource/list", { params: data });
 // 创建服务来源配置
@@ -22,8 +22,8 @@ const listBindServiceSourceRequest = (data) => request.get("/api/serviceSource/l
 const bindAppAndServiceSourceRequest = (data) => request.post("/api/serviceSource/bindApp", data);
 export {
     listServiceStatusRequest,
-    listStatusActionsRequest,
-    doStatusActionRequest,
+    killServiceRequest,
+    restartServiceRequest,
     listServiceSourceRequest,
     createServiceSourceRequest,
     updateServiceSourceRequest,

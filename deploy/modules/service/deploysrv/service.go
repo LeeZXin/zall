@@ -9,25 +9,26 @@ import (
 	"github.com/LeeZXin/zall/meta/modules/model/teammd"
 	"github.com/LeeZXin/zall/meta/modules/model/zalletmd"
 	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
+	"github.com/LeeZXin/zall/pkg/apicode"
 	"github.com/LeeZXin/zall/pkg/apisession"
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/pkg/event"
 	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/sshagent"
-	"github.com/LeeZXin/zall/pkg/status"
 	"github.com/LeeZXin/zall/pkg/teamhook"
 	"github.com/LeeZXin/zall/teamhook/modules/service/teamhooksrv"
 	"github.com/LeeZXin/zall/util"
-	"github.com/LeeZXin/zsf-utils/httputil"
+	"github.com/LeeZXin/zsf-utils/bizerr"
 	"github.com/LeeZXin/zsf-utils/idutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
 	"github.com/LeeZXin/zsf-utils/psub"
 	"github.com/LeeZXin/zsf/logger"
+	"github.com/LeeZXin/zsf/property/static"
 	"github.com/LeeZXin/zsf/xorm/xormstore"
+	"github.com/spf13/cast"
 	"gopkg.in/yaml.v3"
-	"io"
 	"math"
-	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -69,8 +70,10 @@ func initPsub() {
 					cfg, ok := events.EnvRelated[req.Source.Env]
 					if ok {
 						switch req.Action {
-						case event.AppDeployServiceTriggerActionAction:
-							return cfg.AppDeployService.TriggerAction
+						case event.AppDeployServiceKillAction:
+							return cfg.AppDeployService.Kill
+						case event.AppDeployServiceRestartAction:
+							return cfg.AppDeployService.Restart
 						default:
 							return false
 						}
@@ -1062,12 +1065,11 @@ func ListServiceSource(ctx context.Context, reqDTO ListServiceSourceReqDTO) ([]S
 	}
 	data := listutil.MapNe(sources, func(t deploymd.ServiceSource) ServiceSourceDTO {
 		return ServiceSourceDTO{
-			Id:      t.Id,
-			Name:    t.Name,
-			Env:     t.Env,
-			Host:    t.Host,
-			ApiKey:  t.ApiKey,
-			Created: t.Created,
+			Id:         t.Id,
+			Name:       t.Name,
+			Env:        t.Env,
+			Datasource: t.Datasource,
+			Created:    t.Created,
 		}
 	})
 	return data, nil
@@ -1108,10 +1110,9 @@ func CreateServiceSource(ctx context.Context, reqDTO CreateServiceSourceReqDTO) 
 		return util.UnauthorizedError()
 	}
 	err := deploymd.InsertServiceSource(ctx, deploymd.InsertServiceSourceReqDTO{
-		Name:   reqDTO.Name,
-		Env:    reqDTO.Env,
-		Host:   reqDTO.Host,
-		ApiKey: reqDTO.ApiKey,
+		Name:       reqDTO.Name,
+		Env:        reqDTO.Env,
+		Datasource: reqDTO.Datasource,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -1131,10 +1132,9 @@ func UpdateServiceSource(ctx context.Context, reqDTO UpdateServiceSourceReqDTO) 
 		return util.UnauthorizedError()
 	}
 	_, err := deploymd.UpdateServiceSource(ctx, deploymd.UpdateServiceSourceReqDTO{
-		Id:     reqDTO.SourceId,
-		Name:   reqDTO.Name,
-		Host:   reqDTO.Host,
-		ApiKey: reqDTO.ApiKey,
+		Id:         reqDTO.SourceId,
+		Name:       reqDTO.Name,
+		Datasource: reqDTO.Datasource,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
@@ -1313,7 +1313,7 @@ func GetPipelineVarsContent(ctx context.Context, reqDTO GetPipelineVarsContentRe
 }
 
 // ListServiceStatus 展示服务状态列表
-func ListServiceStatus(ctx context.Context, reqDTO ListServiceStatusReqDTO) ([]status.Service, error) {
+func ListServiceStatus(ctx context.Context, reqDTO ListServiceStatusReqDTO) ([]ServiceStatusDTO, error) {
 	if err := reqDTO.IsValid(); err != nil {
 		return nil, err
 	}
@@ -1323,27 +1323,31 @@ func ListServiceStatus(ctx context.Context, reqDTO ListServiceStatusReqDTO) ([]s
 	if err != nil {
 		return nil, err
 	}
-	url := strings.TrimSuffix(source.Host, "/") +
-		fmt.Sprintf("/api/service/v1/status/list?app=%s&env=%s", app.AppId, source.Env)
-	resp := make([]status.Service, 0)
-	err = httputil.Get(
-		ctx,
-		http.DefaultClient,
-		url,
-		map[string]string{
-			"Authorization": source.ApiKey,
-		},
-		&resp,
+	result, err := util.MysqlQuery(source.Datasource,
+		fmt.Sprintf("select * from zallet_service where app = '%s' and env = '%s'", app.AppId, source.Env),
 	)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.OperationFailedError()
+		return nil, util.InternalError(err)
 	}
-	return resp, nil
+	data := listutil.MapNe(result.ToMapStr(), func(t map[string]string) ServiceStatusDTO {
+		addr, _ := netip.ParseAddrPort(t["agent_host"])
+		return ServiceStatusDTO{
+			Id:         t["service_id"],
+			App:        t["app"],
+			Status:     t["service_status"],
+			Host:       addr.Addr().String(),
+			Env:        t["env"],
+			CpuPercent: cast.ToInt(t["cpu_percent"]),
+			MemPercent: cast.ToInt(t["mem_percent"]),
+			Created:    t["created"],
+		}
+	})
+	return data, nil
 }
 
-// DoStatusAction 操作服务
-func DoStatusAction(ctx context.Context, reqDTO DoStatusActionReqDTO) error {
+// KillService 关闭服务
+func KillService(ctx context.Context, reqDTO KillServiceReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
 		return err
 	}
@@ -1353,66 +1357,94 @@ func DoStatusAction(ctx context.Context, reqDTO DoStatusActionReqDTO) error {
 	if err != nil {
 		return err
 	}
-	actions, err := listActions(ctx, source)
+	result, err := util.MysqlQuery(source.Datasource,
+		fmt.Sprintf("select * from zallet_service where service_id = '%s' limit 1", reqDTO.ServiceId),
+	)
 	if err != nil {
-		return util.OperationFailedError()
+		logger.Logger.WithContext(ctx).Error(err)
+		return util.InternalError(err)
 	}
-	for _, action := range actions {
-		if action.Label == reqDTO.Action {
-			url := strings.TrimSuffix(source.Host, "/") +
-				fmt.Sprintf("/%s?serviceId=%s", strings.TrimPrefix(action.Api.Url, "/"), reqDTO.ServiceId)
-			request, err := http.NewRequestWithContext(ctx, action.Api.Method, url, nil)
-			if err != nil {
-				logger.Logger.WithContext(ctx).Error(err)
-				return util.OperationFailedError()
-			}
-			for k, v := range action.Api.Headers {
-				request.Header.Set(k, v)
-			}
-			resp, err := http.DefaultClient.Do(request)
-			if err != nil {
-				logger.Logger.WithContext(ctx).Error(err)
-				return util.OperationFailedError()
-			}
-			all, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
-				logger.Logger.WithContext(ctx).Infof("url: %s message: %s", url, string(all))
-				return util.OperationFailedError()
-			}
-			notifyDeployServiceEvent(
-				reqDTO.Operator,
-				team,
-				app,
-				source,
-				event.AppDeployServiceTriggerActionAction,
-				reqDTO.Action,
-			)
-			return nil
-		}
+	services := result.ToMapStr()
+	if len(services) == 0 {
+		return util.InvalidArgsError()
 	}
+	service := services[0]
+	cmd, sock := getCmdAndSock()
+	if sock == "" {
+		cmd = fmt.Sprintf("%s kill -service %s", cmd, reqDTO.ServiceId)
+	} else {
+		cmd = fmt.Sprintf("%s kill -service %s -sock %s", cmd, reqDTO.ServiceId, sock)
+	}
+	logger.Logger.WithContext(ctx).Infof("serviceId: %s cmd: %s", reqDTO.ServiceId, cmd)
+	_, err = sshagent.NewServiceCommand(service["agent_host"], service["agent_token"], service["app"]).
+		Execute(strings.NewReader(cmd), nil, idutil.RandomUuid())
+	if err != nil {
+		return bizerr.NewBizErr(apicode.OperationFailedErrCode.Int(), err.Error())
+	}
+	notifyDeployServiceEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		source,
+		event.AppDeployServiceKillAction,
+		reqDTO.ServiceId,
+	)
 	return nil
 }
 
-// ListStatusActions 获取服务操作列表
-func ListStatusActions(ctx context.Context, reqDTO ListStatusActionReqDTO) ([]string, error) {
+func getCmdAndSock() (string, string) {
+	cmd := static.GetString("zallet.cmd")
+	if cmd == "" {
+		cmd = "zallet"
+	}
+	sock := static.GetString("zallet.sock")
+	return cmd, sock
+}
+
+// RestartService 重启服务
+func RestartService(ctx context.Context, reqDTO RestartServiceReqDTO) error {
 	if err := reqDTO.IsValid(); err != nil {
-		return nil, err
+		return err
 	}
 	ctx, closer := xormstore.Context(ctx)
 	defer closer.Close()
-	_, _, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
+	app, team, source, err := checkAppDevelopPermByBindId(ctx, reqDTO.Operator, reqDTO.BindId)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	actions, err := listActions(ctx, source)
+	result, err := util.MysqlQuery(source.Datasource,
+		fmt.Sprintf("select * from zallet_service where service_id = '%s' limit 1", reqDTO.ServiceId),
+	)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
-		return nil, util.OperationFailedError()
+		return util.InternalError(err)
 	}
-	return listutil.Map(actions, func(t status.Action) (string, error) {
-		return t.Label, nil
-	})
+	services := result.ToMapStr()
+	if len(services) == 0 {
+		return util.InvalidArgsError()
+	}
+	service := services[0]
+	cmd, sock := getCmdAndSock()
+	if sock == "" {
+		cmd = fmt.Sprintf("%s restart -service %s", cmd, reqDTO.ServiceId)
+	} else {
+		cmd = fmt.Sprintf("%s restart -service %s -sock %s", cmd, reqDTO.ServiceId, sock)
+	}
+	logger.Logger.WithContext(ctx).Infof("serviceId: %s cmd: %s", reqDTO.ServiceId, cmd)
+	_, err = sshagent.NewServiceCommand(service["agent_host"], service["agent_token"], service["app"]).
+		Execute(strings.NewReader(cmd), nil, idutil.RandomUuid())
+	if err != nil {
+		return bizerr.NewBizErr(apicode.OperationFailedErrCode.Int(), err.Error())
+	}
+	notifyDeployServiceEvent(
+		reqDTO.Operator,
+		team,
+		app,
+		source,
+		event.AppDeployServiceRestartAction,
+		reqDTO.ServiceId,
+	)
+	return nil
 }
 
 // ListBindServiceSource 获取绑定服务来源
@@ -1526,25 +1558,7 @@ func BindAppAndServiceSource(ctx context.Context, reqDTO BindAppAndServiceSource
 	return nil
 }
 
-func listActions(ctx context.Context, source deploymd.ServiceSource) ([]status.Action, error) {
-	url := strings.TrimSuffix(source.Host, "/") + "/api/service/v1/status/actions"
-	resp := make([]status.Action, 0)
-	err := httputil.Get(
-		ctx,
-		http.DefaultClient,
-		url,
-		map[string]string{
-			"Authorization": source.ApiKey,
-		},
-		&resp,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
-}
-
-func notifyDeployServiceEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, source deploymd.ServiceSource, action event.AppDeployServiceEventAction, triggerAction string) {
+func notifyDeployServiceEvent(operator apisession.UserInfo, team teammd.Team, app appmd.App, source deploymd.ServiceSource, action event.AppDeployServiceEventAction, serviceId string) {
 	initPsub()
 	psub.Publish(event.AppDeployServiceTopic, event.AppDeployServiceEvent{
 		BaseTeam: event.BaseTeam{
@@ -1562,13 +1576,13 @@ func notifyDeployServiceEvent(operator apisession.UserInfo, team teammd.Team, ap
 			ActionName:   i18n.GetByLangAndValue(i18n.ZH_CN, action.GetI18nValue()),
 			ActionNameEn: i18n.GetByLangAndValue(i18n.EN_US, action.GetI18nValue()),
 		},
-		Action:        action,
-		TriggerAction: triggerAction,
+		Action: action,
 		Source: event.AppSource{
 			Id:   source.Id,
 			Name: source.Name,
 			Env:  source.Env,
 		},
+		ServiceId: serviceId,
 	})
 }
 

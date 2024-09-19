@@ -164,7 +164,8 @@ const defaultEnvRelated = {
     start: false
   },
   appDeployService: {
-    triggerAction: false
+    kill: false,
+    restart: false
   },
   appDiscovery: {
     markAsDown: false,
@@ -304,8 +305,12 @@ const envRelatedEvents = [
     title: "teamHook.appDeployService.title",
     actions: [
       {
-        key: "triggerAction",
-        title: "teamHook.appDeployService.triggerAction"
+        key: "kill",
+        title: "teamHook.appDeployService.kill"
+      },
+      {
+        key: "restart",
+        title: "teamHook.appDeployService.restart"
       }
     ]
   },

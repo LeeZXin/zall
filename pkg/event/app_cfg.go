@@ -52,7 +52,8 @@ type AppDiscoveryEventCfg struct {
 }
 
 type AppDeployServiceEventCfg struct {
-	TriggerAction bool `json:"triggerAction"`
+	Kill    bool `json:"kill"`
+	Restart bool `json:"restart"`
 }
 
 type AppPromScrapeEventCfg struct {

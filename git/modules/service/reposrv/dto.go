@@ -87,10 +87,14 @@ type IndexRepoReqDTO struct {
 	RepoId   int64               `json:"repoId"`
 	Ref      string              `json:"ref"`
 	RefType  git.RefType         `json:"refType"`
+	Dir      string              `json:"dir"`
 	Operator apisession.UserInfo `json:"operator"`
 }
 
 func (r *IndexRepoReqDTO) IsValid() error {
+	if r.Dir == "" {
+		return util.InvalidArgsError()
+	}
 	if !r.RefType.IsValid() {
 		return util.InvalidArgsError()
 	}

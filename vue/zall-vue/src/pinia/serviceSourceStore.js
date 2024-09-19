@@ -5,7 +5,6 @@ export const useServiceSourceStore = defineStore('serviceSource', {
         id: 0,
         name: "",
         env: "",
-        host: "",
-        apiKey: ""
+        datasource: ""
     })
 })

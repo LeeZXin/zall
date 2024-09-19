@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"database/sql"
 	"github.com/LeeZXin/zall/pkg/mysqltool/parser"
 	"time"
@@ -24,6 +25,21 @@ func (r *MysqlQueryResult) ToMap() []map[string]any {
 			continue
 		}
 		item := make(map[string]any, len(r.Columns))
+		for i := range r.Columns {
+			item[r.Columns[i]] = datum[i]
+		}
+		ret = append(ret, item)
+	}
+	return ret
+}
+
+func (r *MysqlQueryResult) ToMapStr() []map[string]string {
+	ret := make([]map[string]string, 0, len(r.Data))
+	for _, datum := range r.Data {
+		if len(datum) != len(r.Columns) {
+			continue
+		}
+		item := make(map[string]string, len(r.Columns))
 		for i := range r.Columns {
 			item[r.Columns[i]] = datum[i]
 		}
@@ -60,7 +76,9 @@ func MysqlQueries(datasourceName string, cmds ...string) ([]MysqlQueryResultWith
 
 func query(db *sql.DB, cmd string) (MysqlQueryResult, error) {
 	beginTime := time.Now()
-	rows, err := db.Query(cmd)
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
+	rows, err := db.QueryContext(timeout, cmd)
 	if err != nil {
 		return MysqlQueryResult{}, err
 	}

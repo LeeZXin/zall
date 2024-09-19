@@ -1,5 +1,7 @@
 application:
   name: zall
+  region: WestEast
+  zone: shenzhen
 
 ssh:
   agent:
@@ -79,7 +81,7 @@ alert:
 zallet:
   enabled: true
   cmd: /Users/lizexin/go/src/zallet/zallet
-  sock: /Users/lizexin/go/src/zallet/duck/zallet.sock
+  sock: /Users/lizexin/go/src/zallet/data/zallet.sock
 
 wework:
   accessToken:
@@ -96,3 +98,10 @@ discovery:
     endpoints: 127.0.0.1:2379
     username: root
     password: 123456
+
+property:
+  dynamic:
+    etcd:
+      endpoints: 127.0.0.1:2379
+      username: root
+      password: 123456

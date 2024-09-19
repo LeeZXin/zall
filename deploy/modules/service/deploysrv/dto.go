@@ -8,8 +8,6 @@ import (
 	"github.com/LeeZXin/zall/pkg/deploy"
 	"github.com/LeeZXin/zall/util"
 	"gopkg.in/yaml.v3"
-	"net/url"
-	"strings"
 	"time"
 )
 
@@ -438,12 +436,11 @@ func (r *ListAllServiceSourceReqDTO) IsValid() error {
 }
 
 type ServiceSourceDTO struct {
-	Id      int64
-	Name    string
-	Env     string
-	Host    string
-	ApiKey  string
-	Created time.Time
+	Id         int64
+	Name       string
+	Env        string
+	Datasource string
+	Created    time.Time
 }
 
 type SimpleServiceSourceDTO struct {
@@ -459,11 +456,10 @@ type SimpleBindServiceSourceDTO struct {
 }
 
 type CreateServiceSourceReqDTO struct {
-	Env      string              `json:"env"`
-	Name     string              `json:"name"`
-	Host     string              `json:"host"`
-	ApiKey   string              `json:"apiKey"`
-	Operator apisession.UserInfo `json:"operator"`
+	Env        string              `json:"env"`
+	Name       string              `json:"name"`
+	Datasource string              `json:"datasource"`
+	Operator   apisession.UserInfo `json:"operator"`
 }
 
 func (r *CreateServiceSourceReqDTO) IsValid() error {
@@ -476,19 +472,17 @@ func (r *CreateServiceSourceReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	parsed, err := url.Parse(r.Host)
-	if err != nil || !strings.HasPrefix(parsed.Scheme, "http") {
+	if r.Datasource == "" {
 		return util.InvalidArgsError()
 	}
 	return nil
 }
 
 type UpdateServiceSourceReqDTO struct {
-	SourceId int64               `json:"sourceId"`
-	Name     string              `json:"name"`
-	Host     string              `json:"host"`
-	ApiKey   string              `json:"apiKey"`
-	Operator apisession.UserInfo `json:"operator"`
+	SourceId   int64               `json:"sourceId"`
+	Name       string              `json:"name"`
+	Datasource string              `json:"datasource"`
+	Operator   apisession.UserInfo `json:"operator"`
 }
 
 func (r *UpdateServiceSourceReqDTO) IsValid() error {
@@ -501,8 +495,7 @@ func (r *UpdateServiceSourceReqDTO) IsValid() error {
 	if !r.Operator.IsValid() {
 		return util.InvalidArgsError()
 	}
-	parsed, err := url.Parse(r.Host)
-	if err != nil || !strings.HasPrefix(parsed.Scheme, "http") {
+	if r.Datasource == "" {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -642,14 +635,13 @@ func (r *ListServiceStatusReqDTO) IsValid() error {
 	return nil
 }
 
-type DoStatusActionReqDTO struct {
+type KillServiceReqDTO struct {
 	BindId    int64               `json:"bindId"`
 	ServiceId string              `json:"serviceId"`
-	Action    string              `json:"action"`
 	Operator  apisession.UserInfo `json:"operator"`
 }
 
-func (r *DoStatusActionReqDTO) IsValid() error {
+func (r *KillServiceReqDTO) IsValid() error {
 	if r.BindId <= 0 {
 		return util.InvalidArgsError()
 	}
@@ -662,16 +654,20 @@ func (r *DoStatusActionReqDTO) IsValid() error {
 	return nil
 }
 
-type ListStatusActionReqDTO struct {
-	BindId   int64               `json:"bindId"`
-	Operator apisession.UserInfo `json:"operator"`
+type RestartServiceReqDTO struct {
+	BindId    int64               `json:"bindId"`
+	ServiceId string              `json:"serviceId"`
+	Operator  apisession.UserInfo `json:"operator"`
 }
 
-func (r *ListStatusActionReqDTO) IsValid() error {
+func (r *RestartServiceReqDTO) IsValid() error {
 	if r.BindId <= 0 {
 		return util.InvalidArgsError()
 	}
 	if !r.Operator.IsValid() {
+		return util.InvalidArgsError()
+	}
+	if r.ServiceId == "" {
 		return util.InvalidArgsError()
 	}
 	return nil
@@ -719,4 +715,15 @@ func (r *BindAppAndServiceSourceReqDTO) IsValid() error {
 		return util.InvalidArgsError()
 	}
 	return nil
+}
+
+type ServiceStatusDTO struct {
+	Id         string
+	App        string
+	Status     string
+	Host       string
+	Env        string
+	CpuPercent int
+	MemPercent int
+	Created    string
 }

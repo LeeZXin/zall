@@ -383,6 +383,7 @@ func IndexRepo(ctx context.Context, reqDTO IndexRepoReqDTO) (IndexRepoRespDTO, e
 		RepoPath: repo.Path,
 		Ref:      reqDTO.Ref,
 		RefType:  reqDTO.RefType,
+		Dir:      reqDTO.Dir,
 	})
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

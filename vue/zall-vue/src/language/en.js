@@ -567,7 +567,11 @@ export default {
         status: "Status",
         cpuPercent: "CPU percent",
         memPercent: "Memory percent",
-        confirm: "Do you confirm to"
+        confirmKillService: "Do you confirm to kill service",
+        confirmRestartService: "Do you confirm to restart service",
+        createTime: "Create time",
+        killService: "Kill",
+        restartService: "Restart"
     },
     discoveryService: {
         manageSource: "Manage discovery source",
@@ -881,7 +885,8 @@ export default {
         },
         appDeployService: {
             title: "Deploy service",
-            triggerAction: "Trigger action"
+            kill: "Kill service",
+            restart: "Restart Service"
         },
         appDiscovery: {
             title: "Registry",
@@ -1115,15 +1120,13 @@ export default {
         updateSource: "Update source",
         confirmDelete: "Do you confirm to delete",
         name: "Name",
-        host: "Host",
         operation: "Operation",
         selectEnv: "Select environment",
         selectedEnv: "Selected environment",
-        apiKey: "Api key",
         save: "Save now",
         nameFormatErr: "Name format is wrong",
-        hostFormatErr: "Host format is wrong",
-        apiKeyFormatErr: "Api key format is wrong"
+        datasource: "Datasource",
+        datasourceFormatErr: "Datasource format is wrong"
     },
     zallet: {
         createNode: "Create node",

@@ -3,7 +3,6 @@ package deployapi
 import (
 	"github.com/LeeZXin/zall/deploy/modules/service/deploysrv"
 	"github.com/LeeZXin/zall/pkg/apisession"
-	"github.com/LeeZXin/zall/pkg/status"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf-utils/ginutil"
 	"github.com/LeeZXin/zsf-utils/listutil"
@@ -89,22 +88,20 @@ func InitApi() {
 		{
 			// 展示服务状态
 			group.GET("/listStatus/:bindId", listServiceStatus)
-			// 获取操作列表
-			group.GET("/listActions/:bindId", listServiceStatusActions)
-			// 操作服务
-			group.PUT("/doAction", doServiceStatusAction)
-
+			// 杀死服务
+			group.PUT("/kill", killService)
+			// 重启服务
+			group.PUT("/restart", restartService)
 		}
 	})
 }
 
-func doServiceStatusAction(c *gin.Context) {
-	var req DoServiceStatusActionReqVO
+func killService(c *gin.Context) {
+	var req KillServiceReqVO
 	if util.ShouldBindJSON(&req, c) {
-		err := deploysrv.DoStatusAction(c, deploysrv.DoStatusActionReqDTO{
+		err := deploysrv.KillService(c, deploysrv.KillServiceReqDTO{
 			BindId:    req.BindId,
 			ServiceId: req.ServiceId,
-			Action:    req.Action,
 			Operator:  apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
@@ -113,7 +110,22 @@ func doServiceStatusAction(c *gin.Context) {
 		}
 		util.DefaultOkResponse(c)
 	}
+}
 
+func restartService(c *gin.Context) {
+	var req RestartServiceReqVO
+	if util.ShouldBindJSON(&req, c) {
+		err := deploysrv.RestartService(c, deploysrv.RestartServiceReqDTO{
+			BindId:    req.BindId,
+			ServiceId: req.ServiceId,
+			Operator:  apisession.MustGetLoginUser(c),
+		})
+		if err != nil {
+			util.HandleApiErr(err, c)
+			return
+		}
+		util.DefaultOkResponse(c)
+	}
 }
 
 func listServiceStatus(c *gin.Context) {
@@ -125,24 +137,21 @@ func listServiceStatus(c *gin.Context) {
 		util.HandleApiErr(err, c)
 		return
 	}
-	c.JSON(http.StatusOK, ginutil.DataResp[[]status.Service]{
-		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     services,
+	data := listutil.MapNe(services, func(t deploysrv.ServiceStatusDTO) ServiceStatusVO {
+		return ServiceStatusVO{
+			Id:         t.Id,
+			App:        t.App,
+			Status:     t.Status,
+			Host:       t.Host,
+			Env:        t.Env,
+			CpuPercent: t.CpuPercent,
+			MemPercent: t.MemPercent,
+			Created:    t.Created,
+		}
 	})
-}
-
-func listServiceStatusActions(c *gin.Context) {
-	actions, err := deploysrv.ListStatusActions(c, deploysrv.ListStatusActionReqDTO{
-		BindId:   cast.ToInt64(c.Param("bindId")),
-		Operator: apisession.MustGetLoginUser(c),
-	})
-	if err != nil {
-		util.HandleApiErr(err, c)
-		return
-	}
-	c.JSON(http.StatusOK, ginutil.DataResp[[]string]{
+	c.JSON(http.StatusOK, ginutil.DataResp[[]ServiceStatusVO]{
 		BaseResp: ginutil.DefaultSuccessResp,
-		Data:     actions,
+		Data:     data,
 	})
 }
 
@@ -248,12 +257,11 @@ func listServiceSource(c *gin.Context) {
 	}
 	data := listutil.MapNe(sources, func(t deploysrv.ServiceSourceDTO) ServiceSourceVO {
 		return ServiceSourceVO{
-			Id:      t.Id,
-			Name:    t.Name,
-			Env:     t.Env,
-			Host:    t.Host,
-			ApiKey:  t.ApiKey,
-			Created: t.Created.Format(time.DateTime),
+			Id:         t.Id,
+			Name:       t.Name,
+			Env:        t.Env,
+			Datasource: t.Datasource,
+			Created:    t.Created.Format(time.DateTime),
 		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]ServiceSourceVO]{
@@ -287,11 +295,10 @@ func createServiceSource(c *gin.Context) {
 	var req CreateServiceSourceReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.CreateServiceSource(c, deploysrv.CreateServiceSourceReqDTO{
-			Env:      req.Env,
-			Name:     req.Name,
-			Host:     req.Host,
-			ApiKey:   req.ApiKey,
-			Operator: apisession.MustGetLoginUser(c),
+			Env:        req.Env,
+			Name:       req.Name,
+			Datasource: req.Datasource,
+			Operator:   apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)
@@ -305,11 +312,10 @@ func updateServiceSource(c *gin.Context) {
 	var req UpdateServiceSourceReqVO
 	if util.ShouldBindJSON(&req, c) {
 		err := deploysrv.UpdateServiceSource(c, deploysrv.UpdateServiceSourceReqDTO{
-			SourceId: req.SourceId,
-			Name:     req.Name,
-			Host:     req.Host,
-			ApiKey:   req.ApiKey,
-			Operator: apisession.MustGetLoginUser(c),
+			SourceId:   req.SourceId,
+			Name:       req.Name,
+			Datasource: req.Datasource,
+			Operator:   apisession.MustGetLoginUser(c),
 		})
 		if err != nil {
 			util.HandleApiErr(err, c)

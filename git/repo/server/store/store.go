@@ -443,7 +443,7 @@ func CatFile(ctx context.Context, req reqvo.CatFileReq) (reqvo.CatFileResp, erro
 func IndexRepo(ctx context.Context, req reqvo.IndexRepoReq) (reqvo.IndexRepoResp, error) {
 	ref := req.RefType.PackRef(req.Ref)
 	repoPath := filepath.Join(git.RepoDir(), req.RepoPath)
-	dir := "."
+	dir := req.Dir
 	latestCommit, err := git.GetFileLatestCommit(ctx, repoPath, ref, dir)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)

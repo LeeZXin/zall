@@ -122,13 +122,12 @@ func (*Pipeline) TableName() string {
 }
 
 type ServiceSource struct {
-	Id      int64     `json:"id" xorm:"pk autoincr"`
-	Name    string    `json:"name"`
-	Env     string    `json:"env"`
-	Host    string    `json:"host"`
-	ApiKey  string    `json:"apiKey"`
-	Created time.Time `json:"created" xorm:"created"`
-	Updated time.Time `json:"updated" xorm:"updated"`
+	Id         int64     `json:"id" xorm:"pk autoincr"`
+	Name       string    `json:"name"`
+	Env        string    `json:"env"`
+	Datasource string    `json:"datasource"`
+	Created    time.Time `json:"created" xorm:"created"`
+	Updated    time.Time `json:"updated" xorm:"updated"`
 }
 
 func (*ServiceSource) TableName() string {

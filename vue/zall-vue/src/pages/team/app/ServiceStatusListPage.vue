@@ -35,14 +35,27 @@
     </div>
     <ZTable :columns="statusColumns" :dataSource="statusDataSource" :scroll="{x:1300}">
       <template #bodyCell="{dataIndex, dataItem}">
-        <span v-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
-        <ul class="action-ul" v-else>
-          <li
-            v-for="item in actionList"
-            v-bind:key="item"
-            @click="doAction(dataItem, item)"
-          >{{item}}</li>
-        </ul>
+        <span v-if="dataIndex === 'created'">{{readableTimeComparingNow(dataItem[dataIndex])}}</span>
+        <span v-else-if="dataIndex !== 'operation'">{{dataItem[dataIndex]}}</span>
+        <div v-else>
+          <a-popover placement="bottomRight" trigger="hover">
+            <template #content>
+              <ul class="op-list">
+                <li @click="killService(dataItem)">
+                  <CloseOutlined />
+                  <span style="margin-left:4px">{{t('serviceStatus.killService')}}</span>
+                </li>
+                <li @click="restartService(dataItem)">
+                  <ReloadOutlined />
+                  <span style="margin-left:4px">{{t('serviceStatus.restartService')}}</span>
+                </li>
+              </ul>
+            </template>
+            <div class="op-icon">
+              <EllipsisOutlined />
+            </div>
+          </a-popover>
+        </div>
       </template>
     </ZTable>
   </div>
@@ -72,7 +85,10 @@
 import {
   ExclamationCircleOutlined,
   SettingOutlined,
-  LeftOutlined
+  LeftOutlined,
+  EllipsisOutlined,
+  CloseOutlined,
+  ReloadOutlined
 } from "@ant-design/icons-vue";
 import EnvSelector from "@/components/app/EnvSelector";
 import ZTable from "@/components/common/ZTable";
@@ -81,14 +97,15 @@ import { useRoute, useRouter } from "vue-router";
 import {
   listBindServiceSourceRequest,
   listServiceStatusRequest,
-  listStatusActionsRequest,
-  doStatusActionRequest,
   listAllServiceSourceRequest,
-  bindAppAndServiceSourceRequest
+  bindAppAndServiceSourceRequest,
+  killServiceRequest,
+  restartServiceRequest
 } from "@/api/app/serviceApi";
 import { message, Modal } from "ant-design-vue";
 import { useAppStore } from "@/pinia/appStore";
 import { useI18n } from "vue-i18n";
+import { readableTimeComparingNow } from "@/utils/time";
 const { t } = useI18n();
 const appStore = useAppStore();
 const route = useRoute();
@@ -145,6 +162,11 @@ const statusColumns = [
     key: "memPercent"
   },
   {
+    i18nTitle: "serviceStatus.createTime",
+    dataIndex: "created",
+    key: "created"
+  },
+  {
     i18nTitle: "serviceStatus.operation",
     dataIndex: "operation",
     key: "operation",
@@ -172,8 +194,6 @@ const listServiceSource = () => {
     });
   });
 };
-// 操作列表
-const actionList = ref([]);
 // 清除interval
 const clearStatusInterval = () => {
   if (statusInterval.value) {
@@ -196,11 +216,6 @@ const backToSource = () => {
 // 获取状态数据并切换界面
 const listAndShowStatusList = data => {
   selectedSource.value = data;
-  if (actionList.value.length === 0) {
-    listStatusActionsRequest(data.bindId).then(res => {
-      actionList.value = res.data;
-    });
-  }
   listServiceStatusRequest(data.bindId).then(res => {
     showStatusList.value = true;
     statusDataSource.value = res.data.map(item => {
@@ -232,19 +247,33 @@ const refreshStatus = () => {
   clearStatusInterval();
   statusInterval.value = setInterval(listStatus, 5000);
 };
-// 执行自定义操作
-const doAction = (item, action) => {
+// 杀死服务
+const killService = item => {
   Modal.confirm({
-    title: `${t('serviceStatus.confirm')} ${action} ${item.id}?`,
+    title: `${t("serviceStatus.confirmKillService")} ${item.id}?`,
     icon: createVNode(ExclamationCircleOutlined),
     onOk() {
-      doStatusActionRequest({
-        serviceId: item.id,
+      killServiceRequest({
         bindId: selectedSource.value.bindId,
-        action: action
+        serviceId: item.id
       }).then(() => {
         message.success(t("operationSuccess"));
-        listStatus();
+      });
+    },
+    onCancel() {}
+  });
+};
+// 重启服务
+const restartService = item => {
+  Modal.confirm({
+    title: `${t("serviceStatus.confirmRestartService")} ${item.id}?`,
+    icon: createVNode(ExclamationCircleOutlined),
+    onOk() {
+      restartServiceRequest({
+        bindId: selectedSource.value.bindId,
+        serviceId: item.id
+      }).then(() => {
+        message.success(t("operationSuccess"));
       });
     },
     onCancel() {}
@@ -294,15 +323,5 @@ onUnmounted(() => clearStatusInterval());
 .check-btn:hover {
   color: #1677ff;
   cursor: pointer;
-}
-.action-ul > li {
-  display: inline;
-}
-.action-ul > li:hover {
-  color: #1677ff;
-  cursor: pointer;
-}
-.action-ul > li + li {
-  margin-left: 6px;
 }
 </style>

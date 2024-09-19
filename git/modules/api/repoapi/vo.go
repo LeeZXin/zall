@@ -20,6 +20,7 @@ type IndexRepoReqVO struct {
 	RepoId  int64       `json:"repoId"`
 	Ref     string      `json:"ref"`
 	RefType git.RefType `json:"refType"`
+	Dir     string      `json:"dir"`
 }
 
 type EntriesRepoReqVO struct {
