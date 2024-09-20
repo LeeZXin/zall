@@ -1,5 +1,10 @@
 package i18n
 
+type KeyItem struct {
+	Id         string
+	DefaultRet string
+}
+
 var (
 	SystemInternalError = KeyItem{
 		Id:         "system.internalErr",
@@ -90,10 +95,6 @@ var (
 		Id:         "sshKey.alreadyExists",
 		DefaultRet: "ssh公钥已存在",
 	}
-	SshKeyVerifyGuide = KeyItem{
-		Id:         "sshKey.verifyGuide",
-		DefaultRet: "请在十分钟内执行以下命令，输出签名并提交",
-	}
 )
 
 var (
@@ -164,25 +165,6 @@ var (
 )
 
 var (
-	RepoOpenStatus = KeyItem{
-		Id:         "repo.openStatus",
-		DefaultRet: "打开状态",
-	}
-	RepoClosedStatus = KeyItem{
-		Id:         "repo.closedStatus",
-		DefaultRet: "归档状态",
-	}
-	RepoDeletedStatus = KeyItem{
-		Id:         "repo.deletedStatus",
-		DefaultRet: "删除状态",
-	}
-	RepoUnknownStatus = KeyItem{
-		Id:         "repo.unknownStatus",
-		DefaultRet: "未知状态",
-	}
-)
-
-var (
 	PullRequestCannotMerge = KeyItem{
 		Id:         "pullRequest.cannotMerge",
 		DefaultRet: "无法合并",
@@ -226,21 +208,6 @@ var (
 )
 
 var (
-	SshKeyVerifyTokenExpired = KeyItem{
-		Id:         "sshKey.verifyTokenExpired",
-		DefaultRet: "token已失效",
-	}
-	SshKeyVerifyFailed = KeyItem{
-		Id:         "sshKey.verifyFailed",
-		DefaultRet: "校验失败",
-	}
-)
-
-var (
-	ProtectedBranchInvalidReviewCountWhenCreatePr = KeyItem{
-		Id:         "protectedBranch.invalidReviewCountWhenCreatePr",
-		DefaultRet: "保护分支代码评审者数量不合法",
-	}
 	ProtectedBranchNotAllowForcePush = KeyItem{
 		Id:         "protectedBranch.notAllowForcePush",
 		DefaultRet: "保护分支禁止强制push",
@@ -259,13 +226,6 @@ var (
 	SshCmdNotSupported = KeyItem{
 		Id:         "ssh.notSupportedCmd",
 		DefaultRet: "不支持该命令",
-	}
-)
-
-var (
-	ReviewAlreadyExists = KeyItem{
-		Id:         "review.alreadyExists",
-		DefaultRet: "已经评审过",
 	}
 )
 
@@ -291,61 +251,6 @@ var (
 )
 
 var (
-	FlowPendingStatus = KeyItem{
-		Id:         "flowStatus.pending",
-		DefaultRet: "执行中",
-	}
-	FlowAgreeStatus = KeyItem{
-		Id:         "flowStatus.agree",
-		DefaultRet: "同意",
-	}
-	FlowDisagreeStatus = KeyItem{
-		Id:         "flowStatus.disagree",
-		DefaultRet: "不同意",
-	}
-	FlowErrStatus = KeyItem{
-		Id:         "flowStatus.err",
-		DefaultRet: "出现错误",
-	}
-	FlowCanceledStatus = KeyItem{
-		Id:         "flowStatus.canceled",
-		DefaultRet: "已取消",
-	}
-	FlowUnknownStatus = KeyItem{
-		Id:         "flowStatus.unknown",
-		DefaultRet: "未知",
-	}
-	FlowPendingOp = KeyItem{
-		Id:         "flowOp.pending",
-		DefaultRet: "等待执行",
-	}
-	FlowAgreeOp = KeyItem{
-		Id:         "flowOp.agree",
-		DefaultRet: "同意",
-	}
-	FlowDisagreeOp = KeyItem{
-		Id:         "flowOp.disagree",
-		DefaultRet: "不同意",
-	}
-	FlowCancelOp = KeyItem{
-		Id:         "flowOp.cancel",
-		DefaultRet: "取消",
-	}
-	FlowAutoAgreeOp = KeyItem{
-		Id:         "flowOp.autoAgree",
-		DefaultRet: "自动同意",
-	}
-	FlowAutoDisagreeOp = KeyItem{
-		Id:         "flowOp.autoDisagree",
-		DefaultRet: "自动不同意",
-	}
-	FlowUnknownOp = KeyItem{
-		Id:         "flowOp.unknown",
-		DefaultRet: "未知",
-	}
-)
-
-var (
 	WorkflowHookTriggerType = KeyItem{
 		Id:         "action.hookTriggerType",
 		DefaultRet: "webhook触发",
@@ -361,30 +266,6 @@ var (
 )
 
 var (
-	ServiceAbnormalStatus = KeyItem{
-		Id:         "service.abnormalStatus",
-		DefaultRet: "异常",
-	}
-	ServiceStartingStatus = KeyItem{
-		Id:         "service.startingStatus",
-		DefaultRet: "启动中",
-	}
-	ServiceStartedStatus = KeyItem{
-		Id:         "service.startedStatus",
-		DefaultRet: "正常",
-	}
-	ServiceStoppingStatus = KeyItem{
-		Id:         "service.stoppingStatus",
-		DefaultRet: "下线中",
-	}
-	ServiceStoppedStatus = KeyItem{
-		Id:         "service.stoppedStatus",
-		DefaultRet: "已下线",
-	}
-	ServiceUnknownStatus = KeyItem{
-		Id:         "service.unknownStatus",
-		DefaultRet: "未知状态",
-	}
 	ServiceRestartOp = KeyItem{
 		Id:         "service.restartOp",
 		DefaultRet: "重启服务",
@@ -396,128 +277,6 @@ var (
 	ServiceUnknownOp = KeyItem{
 		Id:         "service.unknownOp",
 		DefaultRet: "未知类型",
-	}
-	ServiceAddServiceAfterPlanCreatingType = KeyItem{
-		Id:         "service.addServiceAfterPlanCreatingType",
-		DefaultRet: "常规发布",
-	}
-	ServiceAddServiceBeforePlanCreatingType = KeyItem{
-		Id:         "service.addServiceBeforePlanCreatingType",
-		DefaultRet: "临时发布",
-	}
-	ServiceUnknownPlanType = KeyItem{
-		Id:         "service.unknownPlanType",
-		DefaultRet: "未知类型",
-	}
-	ServiceRunningPlanStatus = KeyItem{
-		Id:         "service.runningPlanStatus",
-		DefaultRet: "发布中",
-	}
-	ServiceClosedPlanStatus = KeyItem{
-		Id:         "service.closedPlanStatus",
-		DefaultRet: "已关闭",
-	}
-	ServiceUnknownPlanStatus = KeyItem{
-		Id:         "service.unknownPlanStatus",
-		DefaultRet: "已关闭",
-	}
-	ServiceWaitPlanItemStatus = KeyItem{
-		Id:         "service.waitPlanItemStatus",
-		DefaultRet: "等待部署",
-	}
-	ServiceDeployedPlanItemStatus = KeyItem{
-		Id:         "service.deployedPlanItemStatus",
-		DefaultRet: "已部署",
-	}
-	ServiceRollbackPlanItemStatus = KeyItem{
-		Id:         "service.rollbackPlanItemStatus",
-		DefaultRet: "已回滚",
-	}
-	ServiceClosedPlanItemStatus = KeyItem{
-		Id:         "service.closedPlanItemStatus",
-		DefaultRet: "未知状态",
-	}
-	ServiceUnknownPlanItemStatus = KeyItem{
-		Id:         "service.unknownPlanItemStatus",
-		DefaultRet: "未知状态",
-	}
-)
-
-var (
-	PromScrapeDiscoveryTargetType = KeyItem{
-		Id:         "promScrape.discoveryTargetType",
-		DefaultRet: "服务发现类型",
-	}
-	PromScrapeHostTargetType = KeyItem{
-		Id:         "promScrape.hostTargetType",
-		DefaultRet: "主机服务类型",
-	}
-	PromScrapeUnknownTargetType = KeyItem{
-		Id:         "promScrape.unknownTargetType",
-		DefaultRet: "未知类型",
-	}
-)
-
-var (
-	DbReadPermType = KeyItem{
-		Id:         "db.readPermType",
-		DefaultRet: "读权限",
-	}
-	DbWritePermType = KeyItem{
-		Id:         "db.writePermType",
-		DefaultRet: "写权限",
-	}
-	DbReadWritePermType = KeyItem{
-		Id:         "db.readPermType",
-		DefaultRet: "读写权限",
-	}
-	DbUnknownPermType = KeyItem{
-		Id:         "db.unknownPermType",
-		DefaultRet: "未知类型",
-	}
-	DbPendingPermOrderStatus = KeyItem{
-		Id:         "db.pendingPermOrderStatus",
-		DefaultRet: "审批中",
-	}
-	DbAgreePermOrderStatus = KeyItem{
-		Id:         "db.agreePermOrderStatus",
-		DefaultRet: "同意",
-	}
-	DbCanceledPermOrderStatus = KeyItem{
-		Id:         "db.canceledPermOrderStatus",
-		DefaultRet: "已取消",
-	}
-	DbDisagreePermOrderStatus = KeyItem{
-		Id:         "db.disagreePermOrderStatus",
-		DefaultRet: "不同意",
-	}
-	DbUnknownPermOrderStatus = KeyItem{
-		Id:         "db.unknownPermOrderStatus",
-		DefaultRet: "未知状态",
-	}
-	DbPendingUpdateOrderStatus = KeyItem{
-		Id:         "db.pendingUpdateOrderStatus",
-		DefaultRet: "审批中",
-	}
-	DbAgreeUpdateOrderStatus = KeyItem{
-		Id:         "db.agreeUpdateOrderStatus",
-		DefaultRet: "同意",
-	}
-	DbCanceledUpdateOrderStatus = KeyItem{
-		Id:         "db.canceledUpdateOrderStatus",
-		DefaultRet: "已取消",
-	}
-	DbDisagreeUpdateOrderStatus = KeyItem{
-		Id:         "db.disagreeUpdateOrderStatus",
-		DefaultRet: "不同意",
-	}
-	DbExecutedUpdateOrderStatus = KeyItem{
-		Id:         "db.executedUpdateOrderStatus",
-		DefaultRet: "执行完成",
-	}
-	DbUnknownUpdateOrderStatus = KeyItem{
-		Id:         "db.unknownUpdateOrderStatus",
-		DefaultRet: "未知状态",
 	}
 )
 

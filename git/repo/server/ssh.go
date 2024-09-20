@@ -10,7 +10,6 @@ import (
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
 	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
-	"github.com/LeeZXin/zall/meta/modules/service/opsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/teamsrv"
 	"github.com/LeeZXin/zall/pkg/git"
 	"github.com/LeeZXin/zall/pkg/git/gitenv"
@@ -185,21 +184,6 @@ func handleGitCommand(user usermd.UserInfo, session ssh.Session) error {
 			return fmt.Errorf("failed to encode LFS json response: %v", err)
 		}
 		return nil
-	}
-	if accessMode == accessRepo {
-		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    user.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.AccessRepo),
-			ReqContent: repo,
-			Err:        err,
-		})
-	} else {
-		opsrv.InsertOpLog(ctx, opsrv.InsertOpLogReqDTO{
-			Account:    user.Account,
-			OpDesc:     i18n.GetByKey(i18n.RepoSrvKeysVO.PushRepo),
-			ReqContent: repo,
-			Err:        err,
-		})
 	}
 	var gitCmd *exec.Cmd
 	gitBinPath := filepath.Dir(git.ExecutablePath()) // e.g. /usr/bin

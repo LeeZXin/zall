@@ -69,7 +69,7 @@
     </div>
     <div
       style="margin-top:10px;"
-      v-if="taskInfo.status === 'running' || taskInfo.status === 'queue'"
+      v-if="(taskInfo.status === 'running' || taskInfo.status === 'queue') && repoStore.perm?.canTriggerWorkflow"
     >
       <a-button
         type="primary"
@@ -171,6 +171,8 @@ import {
 import { readableDuration, readableTimeComparingNow } from "@/utils/time";
 import { useI18n } from "vue-i18n";
 import { message, Modal } from "ant-design-vue";
+import { useRepoStore } from "@/pinia/repoStore";
+const repoStore = useRepoStore();
 const extensions = [yaml(), oneDark];
 const codemirrorStyle = { height: "380px", width: "100%" };
 const { findNode } = useVueFlow();

@@ -18,7 +18,7 @@
       <div class="right">
         <div class="file-path">
           <template v-for="(item, index) in files" v-bind:key="item">
-            <div class="file-path-item">{{item}}</div>
+            <div class="file-path-item" @click="clickFileItem(index)">{{item}}</div>
             <div class="file-path-split" v-if="index < files.length - 1">/</div>
           </template>
         </div>
@@ -322,6 +322,12 @@ const catFile = filePath => {
     filePath
   });
 };
+// 文件路径导航点击单个文件夹
+const clickFileItem = index => {
+  if (index < files.value.length - 1) {
+    treeRepo(files.value.slice(0, index + 1).join("/") + "/");
+  }
+};
 getAndCatFile(files.value.join("/"), true);
 </script>
 <style scoped>
@@ -536,5 +542,9 @@ getAndCatFile(files.value.join("/"), true);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.file-path-item:hover {
+  cursor: pointer;
+  color: #1677ff;
 }
 </style>

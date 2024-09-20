@@ -32,7 +32,10 @@
                   <EyeOutlined />
                   <span style="margin-left:4px">{{t('gitWorkflow.viewDetail')}}</span>
                 </li>
-                <li v-if="dataItem.taskStatus === 'running'" @click="killTask(dataItem.id)">
+                <li
+                  v-if="(dataItem.taskStatus === 'running' || dataItem.taskStatus === 'queue') && repoStore.perm?.canTriggerWorkflow"
+                  @click="killTask(dataItem.id)"
+                >
                   <CloseOutlined />
                   <span style="margin-left:4px">{{t('gitWorkflow.killWorkflow')}}</span>
                 </li>
@@ -79,6 +82,8 @@ import { Modal, message } from "ant-design-vue";
 import { useWorkflowStore } from "@/pinia/workflowStore";
 import { useWorkflowTaskStore } from "@/pinia/workflowTaskStore";
 import { useI18n } from "vue-i18n";
+import { useRepoStore } from "@/pinia/repoStore";
+const repoStore = useRepoStore();
 const { t } = useI18n();
 const workflowStore = useWorkflowStore();
 const taskStore = useWorkflowTaskStore();
