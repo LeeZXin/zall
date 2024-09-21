@@ -1,7 +1,6 @@
 package deploymd
 
 import (
-	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
 )
@@ -50,24 +49,6 @@ type Plan struct {
 
 func (*Plan) TableName() string {
 	return PlanTableName
-}
-
-type Op int
-
-const (
-	RestartServiceOp Op = iota + 1
-	StopServiceOp
-)
-
-func (o Op) Readable() string {
-	switch o {
-	case RestartServiceOp:
-		return i18n.GetByKey(i18n.ServiceRestartOp)
-	case StopServiceOp:
-		return i18n.GetByKey(i18n.ServiceStopOp)
-	default:
-		return i18n.GetByKey(i18n.ServiceUnknownOp)
-	}
 }
 
 type StageStatus int

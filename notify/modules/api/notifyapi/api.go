@@ -27,7 +27,7 @@ func InitApi() {
 			// 更换通知模版api key
 			group.PUT("/changeApiKey/:tplId", changeNotifyTplApiKey)
 			// 所有模板
-			group.GET("/listAll/:teamId", listAllTplByTeamId)
+			group.GET("/listAll/:teamId", listAllTpl)
 		}
 		group = e.Group("/api/notify")
 		{
@@ -94,7 +94,7 @@ func changeNotifyTplApiKey(c *gin.Context) {
 	util.DefaultOkResponse(c)
 }
 
-func listAllTplByTeamId(c *gin.Context) {
+func listAllTpl(c *gin.Context) {
 	tpls, err := notifysrv.ListAllTpl(c, notifysrv.ListAllTplReqDTO{
 		TeamId:   cast.ToInt64(c.Param("teamId")),
 		Operator: apisession.MustGetLoginUser(c),

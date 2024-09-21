@@ -2,7 +2,6 @@ package pullrequestmd
 
 import (
 	"github.com/LeeZXin/zall/pkg/git"
-	"github.com/LeeZXin/zall/pkg/i18n"
 	"time"
 )
 
@@ -35,48 +34,14 @@ func (s PrStatus) IsValid() bool {
 	}
 }
 
-func (s PrStatus) Readable() string {
-	switch s {
-	case PrOpenStatus:
-		return i18n.GetByKey(i18n.PullRequestOpenStatus)
-	case PrClosedStatus:
-		return i18n.GetByKey(i18n.PullRequestClosedStatus)
-	case PrMergedStatus:
-		return i18n.GetByKey(i18n.PullRequestMergedStatus)
-	default:
-		return i18n.GetByKey(i18n.PullRequestUnknownStatus)
-	}
-}
-
 type ReviewStatus int
 
 const (
 	AgreeReviewStatus ReviewStatus = iota + 1
-	CanceledReviewStatus
 )
 
 func (s ReviewStatus) Int() int {
 	return int(s)
-}
-
-func (s ReviewStatus) Readable() string {
-	switch s {
-	case AgreeReviewStatus:
-		return i18n.GetByKey(i18n.PullRequestAgreeReviewStatus)
-	case CanceledReviewStatus:
-		return i18n.GetByKey(i18n.PullRequestCanceledReviewStatus)
-	default:
-		return i18n.GetByKey(i18n.PullRequestUnknownReviewStatus)
-	}
-}
-
-func (s ReviewStatus) IsValid() bool {
-	switch s {
-	case AgreeReviewStatus, CanceledReviewStatus:
-		return true
-	default:
-		return false
-	}
 }
 
 type PullRequest struct {

@@ -52,12 +52,11 @@ type TimelineVO struct {
 }
 
 type ReviewVO struct {
-	Id           int64  `json:"id"`
-	Reviewer     string `json:"reviewer"`
-	ReviewStatus string `json:"reviewStatus"`
-	Updated      string `json:"updated"`
-	AvatarUrl    string `json:"avatarUrl"`
-	Name         string `json:"name"`
+	Id        int64  `json:"id"`
+	Reviewer  string `json:"reviewer"`
+	Updated   string `json:"updated"`
+	AvatarUrl string `json:"avatarUrl"`
+	Name      string `json:"name"`
 }
 
 type AddCommentReqVO struct {

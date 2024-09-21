@@ -162,12 +162,11 @@ func listReview(c *gin.Context) {
 	}
 	data := listutil.MapNe(reviews, func(t pullrequestsrv.ReviewDTO) ReviewVO {
 		return ReviewVO{
-			Id:           t.Id,
-			Reviewer:     t.Reviewer,
-			ReviewStatus: t.ReviewStatus.Readable(),
-			Updated:      t.Updated.Format(time.DateTime),
-			AvatarUrl:    t.AvatarUrl,
-			Name:         t.Name,
+			Id:        t.Id,
+			Reviewer:  t.Reviewer,
+			Updated:   t.Updated.Format(time.DateTime),
+			AvatarUrl: t.AvatarUrl,
+			Name:      t.Name,
 		}
 	})
 	c.JSON(http.StatusOK, ginutil.DataResp[[]ReviewVO]{

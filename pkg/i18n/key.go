@@ -138,33 +138,6 @@ var (
 )
 
 var (
-	TimeBeforeSecondUnit = KeyItem{
-		Id:         "time.beforeSecondUnit",
-		DefaultRet: "秒前",
-	}
-	TimeBeforeMinuteUnit = KeyItem{
-		Id:         "time.beforeMinuteUnit",
-		DefaultRet: "分钟前",
-	}
-	TimeBeforeHourUnit = KeyItem{
-		Id:         "time.beforeHourUnit",
-		DefaultRet: "小时前",
-	}
-	TimeBeforeDayUnit = KeyItem{
-		Id:         "time.beforeDdayUnit",
-		DefaultRet: "天前",
-	}
-	TimeBeforeMonthUnit = KeyItem{
-		Id:         "time.beforeMonthUnit",
-		DefaultRet: "月前",
-	}
-	TimeBeforeYearUnit = KeyItem{
-		Id:         "time.beforeYearUnit",
-		DefaultRet: "年前",
-	}
-)
-
-var (
 	PullRequestCannotMerge = KeyItem{
 		Id:         "pullRequest.cannotMerge",
 		DefaultRet: "无法合并",
@@ -172,34 +145,6 @@ var (
 	PullRequestAlreadyExists = KeyItem{
 		Id:         "pullRequest.alreadyExists",
 		DefaultRet: "合并请求已存在",
-	}
-	PullRequestOpenStatus = KeyItem{
-		Id:         "pullRequest.openStatus",
-		DefaultRet: "已打开",
-	}
-	PullRequestClosedStatus = KeyItem{
-		Id:         "pullRequest.closedStatus",
-		DefaultRet: "已关闭",
-	}
-	PullRequestMergedStatus = KeyItem{
-		Id:         "pullRequest.mergedStatus",
-		DefaultRet: "已合并",
-	}
-	PullRequestUnknownStatus = KeyItem{
-		Id:         "pullRequest.unknownStatus",
-		DefaultRet: "未知",
-	}
-	PullRequestAgreeReviewStatus = KeyItem{
-		Id:         "pullRequest.agreeMerge",
-		DefaultRet: "同意合并",
-	}
-	PullRequestCanceledReviewStatus = KeyItem{
-		Id:         "pullRequest.canceledMerge",
-		DefaultRet: "被撤销",
-	}
-	PullRequestUnknownReviewStatus = KeyItem{
-		Id:         "pullRequest.unknownReviewStatus",
-		DefaultRet: "未知状态",
 	}
 	PullRequestReviewerCountLowerThanCfg = KeyItem{
 		Id:         "pullRequest.reviewerCountLowerThanCfg",
@@ -251,36 +196,6 @@ var (
 )
 
 var (
-	WorkflowHookTriggerType = KeyItem{
-		Id:         "action.hookTriggerType",
-		DefaultRet: "webhook触发",
-	}
-	WorkflowManualTriggerType = KeyItem{
-		Id:         "action.manualTriggerType",
-		DefaultRet: "手动触发",
-	}
-	WorkflowUnknownTriggerType = KeyItem{
-		Id:         "action.unknownTriggerType",
-		DefaultRet: "未知类型触发",
-	}
-)
-
-var (
-	ServiceRestartOp = KeyItem{
-		Id:         "service.restartOp",
-		DefaultRet: "重启服务",
-	}
-	ServiceStopOp = KeyItem{
-		Id:         "service.stopOp",
-		DefaultRet: "下线服务",
-	}
-	ServiceUnknownOp = KeyItem{
-		Id:         "service.unknownOp",
-		DefaultRet: "未知类型",
-	}
-)
-
-var (
 	SqlWrongSyntaxMsg = KeyItem{
 		Id:         "sql.wrongSyntaxMsg",
 		DefaultRet: "sql语法错误",
@@ -296,16 +211,5 @@ var (
 	SqlNotAllowNoWhereMsg = KeyItem{
 		Id:         "sql.notAllowNoWhere",
 		DefaultRet: "sql没有带where关键词",
-	}
-)
-
-var (
-	TimerAutoTriggerType = KeyItem{
-		Id:         "timerTask.autoTriggerType",
-		DefaultRet: "自动触发",
-	}
-	TimerManualTriggerType = KeyItem{
-		Id:         "timerTask.manualTriggerType",
-		DefaultRet: "手动触发",
 	}
 )

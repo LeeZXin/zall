@@ -1,7 +1,6 @@
 package workflowmd
 
 import (
-	"github.com/LeeZXin/zall/pkg/i18n"
 	"github.com/LeeZXin/zall/pkg/sshagent"
 	"github.com/LeeZXin/zsf/xorm/xormutil"
 	"time"
@@ -13,17 +12,6 @@ const (
 	HookTriggerType TriggerType = iota + 1
 	ManualTriggerType
 )
-
-func (t TriggerType) Readable() string {
-	switch t {
-	case HookTriggerType:
-		return i18n.GetByKey(i18n.WorkflowHookTriggerType)
-	case ManualTriggerType:
-		return i18n.GetByKey(i18n.WorkflowManualTriggerType)
-	default:
-		return i18n.GetByKey(i18n.WorkflowUnknownTriggerType)
-	}
-}
 
 func (t TriggerType) IsValid() bool {
 	switch t {

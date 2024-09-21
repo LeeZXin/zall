@@ -2,7 +2,6 @@ package timer
 
 import (
 	"github.com/LeeZXin/zall/pkg/http"
-	"github.com/LeeZXin/zall/pkg/i18n"
 )
 
 const (
@@ -43,9 +42,9 @@ func (t TriggerType) IsValid() bool {
 func (t TriggerType) String() string {
 	switch t {
 	case AutoTriggerType:
-		return i18n.GetByKey(i18n.TimerAutoTriggerType)
+		return "auto"
 	case ManualTriggerType:
-		return i18n.GetByKey(i18n.TimerManualTriggerType)
+		return "manuallyTrigger"
 	default:
 		return ""
 	}
