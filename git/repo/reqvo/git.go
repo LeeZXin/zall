@@ -232,6 +232,7 @@ type CatFileResp struct {
 	ModeName string   `json:"modeName"`
 	Content  string   `json:"content"`
 	Size     int64    `json:"size"`
+	IsText   bool     `json:"isText"`
 	Commit   CommitVO `json:"commit"`
 }
 

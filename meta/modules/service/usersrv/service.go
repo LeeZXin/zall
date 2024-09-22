@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	LoginSessionExpiry = 2 * time.Hour
+	LoginSessionExpiry = 24 * time.Hour
 )
 
 func GetUsersNameAndAvatar(ctx context.Context, accounts ...string) ([]util.User, error) {

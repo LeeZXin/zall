@@ -88,11 +88,20 @@
               <div style="max-height:calc(100vh - 240px);overflow:scroll;width:100%">
                 <div class="code-code">
                   <Codemirror
+                    v-if="fileIsText"
                     v-model="fileContent"
                     style="width:100%;"
                     :extensions="extensions"
                     :disabled="true"
                   />
+                  <div
+                    style="padding: 40px;width:100%; text-align:center;background-color:#282c34;color:#abb2bf"
+                    class="no-wrap"
+                    v-else
+                  >
+                    <FileOutlined />
+                    <span style="margin-left:4px">{{t('binary')}}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -133,6 +142,7 @@ const route = useRoute();
 const props = defineProps(["style"]);
 const fileContent = ref("");
 const fileSize = ref("");
+const fileIsText = ref(true);
 const extensions = [oneDark];
 const files = ref(route.params.files ? route.params.files : []);
 const treeData = ref([]);
@@ -269,6 +279,7 @@ const getAndCatFile = (filePath, init) => {
       catFile(filePath).then(res => {
         fileContent.value = res.data.content;
         fileSize.value = res.data.size;
+        fileIsText.value = res.data.isText;
         let commit = res.data.commit;
         if (commit) {
           latestCommit.committer = commit.committer.account;
@@ -442,7 +453,7 @@ getAndCatFile(files.value.join("/"), true);
 .code-code {
   display: flex;
   border-top: 1px solid #d9d9d9;
-  min-height: calc(100vh - 236px);
+  min-height: calc(100vh - 240px);
 }
 .commit-text {
   display: inline-block;

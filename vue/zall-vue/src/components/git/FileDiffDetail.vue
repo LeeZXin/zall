@@ -15,7 +15,10 @@
       </span>
       <span>{{props.stat.rawPath}}</span>
     </div>
-    <div class="is-binary-text" v-show="showCode && loadData && isBinary">{{t('binary')}}</div>
+    <div class="is-binary-text" v-show="showCode && loadData && isBinary">
+      <FileOutlined />
+      <span style="margin-left:4px">{{t('binary')}}</span>
+    </div>
     <table v-show="showCode && loadData && !isBinary">
       <colgroup>
         <col width="44" />
@@ -94,7 +97,8 @@
 import {
   ColumnHeightOutlined,
   RightOutlined,
-  DownOutlined
+  DownOutlined,
+  FileOutlined
 } from "@ant-design/icons-vue";
 import { ref, defineProps } from "vue";
 import { diffFileRequest } from "@/api/git/repoApi";

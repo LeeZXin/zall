@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useUserStore } from "@/pinia/userStore";
 import { getUserInfoRequest } from "@/api/user/loginApi";
+import { setLoginUser } from "@/utils/login";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -581,8 +582,11 @@ router.beforeEach((to, from, next) => {
             user.isAdmin = res.session.userInfo.isAdmin;
             user.name = res.session.userInfo.name;
             user.isDba = res.session.userInfo.isDba;
-            user.sessionId = res.session.sessionId;
-            user.sessionExpireAt = res.session.expireAt;
+            setLoginUser({
+                ...res.session.userInfo,
+                sessionExpireAt: res.session.expireAt,
+                sessionId: res.session.sessionId
+            });
         });
     }
     next();

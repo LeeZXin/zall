@@ -2,31 +2,27 @@
   <div style="padding:10px">
     <div class="container">
       <div class="header">
-        <span v-if="mode === 'create'">添加保护分支</span>
-        <span v-else-if="mode === 'update'">更新保护分支</span>
+        <span v-if="mode === 'create'">{{t('protectedBranch.createBranch')}}</span>
+        <span v-else-if="mode === 'update'">{{t('protectedBranch.updateBranch')}}</span>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>保护分支名称模式</span>
-        </div>
+        <div class="section-title">{{t('protectedBranch.pattern')}}</div>
         <div class="section-body">
           <a-input style="width:100%" v-model:value="formState.pattern" />
-          <div class="input-desc">保护分支默认不允许删除,不允许强行推送, 可以是glob模版, 模式例如: dev_*</div>
+          <div class="input-desc">{{t('protectedBranch.patternDesc')}}</div>
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>推送</span>
-        </div>
+        <div class="section-title">{{t('protectedBranch.push')}}</div>
         <div class="section-body">
           <div>
             <a-radio-group v-model:value="formState.pushOption">
-              <a-radio :style="radioStyle" :value="0">允许推送</a-radio>
-              <div class="radio-option-desc">任何拥有写访问权限的人将被允许推送到此分支(但不能强行推送)。</div>
-              <a-radio :style="radioStyle" :value="1">禁止推送</a-radio>
-              <div class="radio-option-desc">此分支不允许推送。</div>
-              <a-radio :style="radioStyle" :value="2">白名单推送</a-radio>
-              <div class="radio-option-desc">只有列入白名单的用户或团队才能被允许推送到此分支(但不能强行推送)。</div>
+              <a-radio :style="radioStyle" :value="0">{{t('protectedBranch.allowPush')}}</a-radio>
+              <div class="radio-option-desc">{{t('protectedBranch.allowPushDesc')}}</div>
+              <a-radio :style="radioStyle" :value="1">{{t('protectedBranch.disallowPush')}}</a-radio>
+              <div class="radio-option-desc">{{t('protectedBranch.disallowPushDesc')}}</div>
+              <a-radio :style="radioStyle" :value="2">{{t('protectedBranch.whiteListPush')}}</a-radio>
+              <div class="radio-option-desc">{{t('protectedBranch.whiteListPushDesc')}}</div>
             </a-radio-group>
           </div>
           <div style="margin-top:6px" v-if="formState.pushOption === 2">
@@ -42,12 +38,10 @@
         </div>
       </div>
       <div class="section">
-        <div class="section-title">
-          <span>合并请求</span>
-        </div>
+        <div class="section-title">{{t('protectedBranch.pullRequest')}}</div>
         <div class="section-body">
           <div class="input-item">
-            <div class="input-title">足够的人审核才能合并请求</div>
+            <div class="input-title">{{t('protectedBranch.mergePullRequestDesc')}}</div>
             <a-input-number
               style="width: 100%"
               :min="0"
@@ -55,7 +49,7 @@
             />
           </div>
           <div class="input-item">
-            <div class="input-title">审批人白名单</div>
+            <div class="input-title">{{t('protectedBranch.reviewPullRequestWhiteList')}}</div>
             <a-select
               v-model:value="formState.reviewerList"
               style="width:100%"
@@ -64,12 +58,15 @@
               mode="multiple"
               :filter-option="filterUserListOption"
             />
-            <div class="input-desc">只有白名单用户或团队的审核才能计数。 没有批准的白名单，来自任何有写访问权限的人的审核都将计数。</div>
+            <div class="input-desc">{{t('protectedBranch.reviewPullRequestWhiteListDesc')}}</div>
           </div>
         </div>
       </div>
       <div class="save-btn-line">
-        <a-button type="primary" @click="createOrUpdateProtectedBranch">立即保存</a-button>
+        <a-button
+          type="primary"
+          @click="createOrUpdateProtectedBranch"
+        >{{t('protectedBranch.save')}}</a-button>
       </div>
     </div>
   </div>
@@ -86,6 +83,8 @@ import { protectedBranchPatternRegexp } from "@/utils/regexp";
 import { message } from "ant-design-vue";
 import { useProtectedBranchStore } from "@/pinia/protectedBranchStore";
 import { useRepoStore } from "@/pinia/repoStore";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 const route = useRoute();
 const repoStore = useRepoStore();
 const getMode = () => {
@@ -127,14 +126,14 @@ const listUser = () => {
 // 新增或编辑保护分支
 const createOrUpdateProtectedBranch = () => {
   if (!protectedBranchPatternRegexp.test(formState.pattern)) {
-    message.warn("分支模式错误");
+    message.warn(t("protectedBranch.patternFormatErr"));
     return;
   }
   if (
     formState.reviewerList.length > 0 &&
     formState.reviewCountWhenCreatePr > formState.reviewerList.length
   ) {
-    message.warn("当限制了白名单, 审批人数量不得大于白名单数量");
+    message.warn(t("protectedBranch.assignedReviewerCountErr"));
     return;
   }
   if (mode === "create") {
@@ -148,7 +147,7 @@ const createOrUpdateProtectedBranch = () => {
         reviewerList: formState.reviewerList
       }
     }).then(() => {
-      message.success("添加成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`
       );
@@ -165,7 +164,7 @@ const createOrUpdateProtectedBranch = () => {
         reviewerList: formState.reviewerList
       }
     }).then(() => {
-      message.success("更新成功");
+      message.success(t("operationSuccess"));
       router.push(
         `/team/${route.params.teamId}/gitRepo/${route.params.repoId}/protectedBranch/list`
       );

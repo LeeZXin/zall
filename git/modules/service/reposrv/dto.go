@@ -182,11 +182,12 @@ func (r *BlameReqDTO) IsValid() error {
 }
 
 type CatFileRespDTO struct {
-	FileMode string    `json:"fileMode"`
-	ModeName string    `json:"modeName"`
-	Content  string    `json:"content"`
-	Size     int64     `json:"size"`
-	Commit   CommitDTO `json:"commit"`
+	FileMode string
+	ModeName string
+	Content  string
+	Size     int64
+	IsText   bool
+	Commit   CommitDTO
 }
 
 type EntriesRepoReqDTO struct {

@@ -1,5 +1,0 @@
-app: leads-runner
-run: |
-  echo run
-stop: |
-  echo stop

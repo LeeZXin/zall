@@ -126,6 +126,7 @@ type CatFileVO struct {
 	FileMode string   `json:"fileMode"`
 	Content  string   `json:"content"`
 	Size     string   `json:"size"`
+	IsText   bool     `json:"isText"`
 	Commit   CommitVO `json:"commit"`
 }
 

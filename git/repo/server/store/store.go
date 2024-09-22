@@ -425,7 +425,7 @@ func CatFile(ctx context.Context, req reqvo.CatFileReq) (reqvo.CatFileResp, erro
 	if err != nil {
 		return reqvo.CatFileResp{}, err
 	}
-	fileMode, content, size, _, err := git.GetFileTextContentByRef(ctx, repoPath, ref, req.FilePath)
+	fileMode, content, size, isText, _, err := git.GetFileTextContentByRef(ctx, repoPath, ref, req.FilePath)
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.CatFileResp{}, util.InternalError(err)
@@ -435,6 +435,7 @@ func CatFile(ctx context.Context, req reqvo.CatFileReq) (reqvo.CatFileResp, erro
 		ModeName: fileMode.Readable(),
 		Content:  content,
 		Size:     size,
+		IsText:   isText,
 		Commit:   commit2Vo(commit),
 	}, nil
 }
@@ -454,12 +455,12 @@ func IndexRepo(ctx context.Context, req reqvo.IndexRepoReq) (reqvo.IndexRepoResp
 		logger.Logger.WithContext(ctx).Error(err)
 		return reqvo.IndexRepoResp{}, util.InternalError(err)
 	}
-	_, readme, _, hasReadme, err := git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(dir, "README.md"))
+	_, readme, _, _, hasReadme, err := git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(dir, "README.md"))
 	if err != nil {
 		logger.Logger.WithContext(ctx).Error(err)
 	}
 	if err == nil && !hasReadme {
-		_, readme, _, hasReadme, err = git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(dir, "readme.md"))
+		_, readme, _, _, hasReadme, err = git.GetFileTextContentByRef(ctx, repoPath, ref, filepath.Join(dir, "readme.md"))
 		if err != nil {
 			logger.Logger.WithContext(ctx).Error(err)
 		}

@@ -9,7 +9,5 @@ export const useUserStore = defineStore('userStore', {
         avatarUrl: "",
         isAdmin: false,
         isDba: false,
-        sessionExpireAt: 0,
-        sessionId: ""
     })
 })

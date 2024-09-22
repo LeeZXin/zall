@@ -17,5 +17,11 @@ module.exports = defineConfig({
                 changeOrigin: true
             },
         },
+    },
+    pwa: {
+        iconPaths: {
+            favicon32: "logo.png",
+            favicon16: "logo.png"
+        }
     }
 })

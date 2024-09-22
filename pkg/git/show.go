@@ -174,36 +174,39 @@ func GetFileContentByBlob(ctx context.Context, repoPath, blob string) ([]byte, e
 	return result.ReadAsBytes(), nil
 }
 
-func GetFileTextContentByRef(ctx context.Context, repoPath, ref, filePath string) (FileMode, string, int64, bool, error) {
+func GetFileTextContentByRef(ctx context.Context, repoPath, ref, filePath string) (FileMode, string, int64, bool, bool, error) {
 	result, err := NewCommand("ls-tree", "--full-tree", "-l").
 		AddDynamicArgs(ref).
 		AddArgs("--").
 		AddDynamicArgs(filePath).
 		Run(ctx, WithDir(repoPath))
 	if err != nil {
-		return "", "", 0, false, err
+		return "", "", 0, false, false, err
 	}
 	ret := result.ReadAsString()
 	if ret == "" {
-		return "", "", 0, false, nil
+		return "", "", 0, false, false, nil
 	}
 	fields := strings.Fields(strings.TrimSpace(ret))
 	if len(fields) < 4 {
-		return "", "", 0, false, errors.New("unknown format")
+		return "", "", 0, false, false, errors.New("unknown format")
 	}
 	blob := fields[2]
 	mode := fields[0]
 	size, err := strconv.ParseInt(fields[3], 10, 64)
-	var content string
+	var (
+		content string
+		isText  bool
+	)
 	if err == nil && size < FileBlobSizeLimit {
 		bc, err := GetFileContentByBlob(ctx, repoPath, blob)
 		if err != nil {
-			return "", "", 0, false, err
+			return "", "", 0, false, false, err
 		}
-		sniffedType := typesniffer.DetectContentType(bc)
-		if sniffedType.IsText() {
+		isText = typesniffer.DetectContentType(bc).IsText()
+		if isText {
 			content = string(bc)
 		}
 	}
-	return FileMode(mode), content, size, true, nil
+	return FileMode(mode), content, size, isText, true, nil
 }

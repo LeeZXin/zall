@@ -1,32 +1,17 @@
 application:
   name: zall
-  region: WestEast
-  zone: shenzhen
-
-ssh:
-  agent:
-    enabled: true
-    token: nihao
-  proxy:
-    port: 2222
 
 workflow:
   callback:
     url: http://127.0.0.1:80/api/v1/workflow/internal/taskCallBack
     token: 123
-  agent:
-    enabled: true
-    port: 6666
-    token: nihao
 
-deploy:
-  agent:
-    enabled: true
+http:
+  port: 80
 
 app:
   url: http://127.0.0.1
   lang: en-US
-  corpId: zexin5
 
 xorm:
   dataSourceName: root:root@tcp(127.0.0.1:3306)/hhhh?charset=utf8
@@ -34,31 +19,15 @@ xorm:
 git:
   proxy:
     server:
+      enabled: true
       port: 5555
   repo:
     server:
+      port: 4444
       enabled: true
-
-timer:
-  enabled: true
-  env: sit
-
-idserver:
-  enabled: true
 
 httptask:
   token: 123
-
-files:
-  enabled: true
-
-action:
-  agent:
-    enabled: true
-
-probe:
-  enabled: true
-  env: sit
 
 prom:
   agent:
@@ -66,17 +35,6 @@ prom:
     env: sit
     filePath: /Users/lizexin/Desktop/prometheus/prometheus-2.51.1.darwin-amd64/target.json
     endpoint: prom-001
-
-logger:
-  loki:
-    enabled: false
-    orgId: local
-    pushUrl: http://127.0.0.1:3100/loki/api/v1/push
-
-alert:
-  enabled: true
-  env: sit
-
 
 zallet:
   enabled: true
@@ -92,16 +50,3 @@ feishu:
   accessToken:
     task:
       enabled: true
-
-discovery:
-  etcd:
-    endpoints: 127.0.0.1:2379
-    username: root
-    password: 123456
-
-property:
-  dynamic:
-    etcd:
-      endpoints: 127.0.0.1:2379
-      username: root
-      password: 123456

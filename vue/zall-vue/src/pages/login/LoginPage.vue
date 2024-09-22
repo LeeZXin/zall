@@ -52,6 +52,7 @@ import { message } from "ant-design-vue";
 import { useUserStore } from "@/pinia/userStore";
 import { accountRegexp, passwordRegexp } from "@/utils/regexp";
 import * as ww from "@wecom/jssdk";
+import { setLoginUser } from "@/utils/login";
 const ACCOUNT_PASSWORD_TYPE = "accountPassword";
 const WEWORK_TYPE = "wework";
 const FEISHU_TYPE = "feishu";
@@ -93,8 +94,11 @@ const login = () => {
     user.isAdmin = res.session.userInfo.isAdmin;
     user.name = res.session.userInfo.name;
     user.isDba = res.session.userInfo.isDba;
-    user.sessionId = res.session.sessionId;
-    user.sessionExpireAt = res.session.expireAt;
+    setLoginUser({
+      ...res.session.userInfo,
+      sessionExpireAt: res.session.expireAt,
+      sessionId: res.session.sessionId
+    });
     if (route.query && route.query.redirect_uri) {
       window.location.href = decodeURI(route.query.redirect_uri);
     } else {
@@ -181,6 +185,11 @@ const createWeworkLoginPanel = (appId, agentId, redirectUrl, state, lang) => {
         user.isDba = res.session.userInfo.isDba;
         user.sessionId = res.session.sessionId;
         user.sessionExpireAt = res.session.expireAt;
+        setLoginUser({
+          ...res.session.userInfo,
+          sessionExpireAt: res.session.expireAt,
+          sessionId: res.session.sessionId
+        });
         if (route.query && route.query.redirect_uri) {
           window.location.href = decodeURI(route.query.redirect_uri);
         } else {

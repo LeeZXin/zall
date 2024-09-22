@@ -3,40 +3,45 @@
     <ul class="cron-input-ul">
       <li>
         <div class="cron-input">
-          <a-input :style="istyle" :value="minute.value" @focus="inputFocus('minute')" />
+          <a-input
+            :style="istyle"
+            :value="minute.value"
+            @focus="inputFocus('minute')"
+            ref="minuteInput"
+          />
         </div>
-        <div class="cron-item">分</div>
+        <div class="cron-item">{{t('cron.minute')}}</div>
       </li>
       <li>
         <div class="cron-input">
           <a-input :style="istyle" :value="hour.value" @focus="inputFocus('hour')" />
         </div>
-        <div class="cron-item">时</div>
+        <div class="cron-item">{{t('cron.hour')}}</div>
       </li>
       <li>
         <div class="cron-input">
           <a-input :style="istyle" :value="dayOfMonth.value" @focus="inputFocus('dayOfMonth')" />
         </div>
-        <div class="cron-item">日</div>
+        <div class="cron-item">{{t('cron.dayOfMonth')}}</div>
       </li>
       <li>
         <div class="cron-input">
           <a-input :style="istyle" :value="month.value" @focus="inputFocus('month')" />
         </div>
-        <div class="cron-item">月</div>
+        <div class="cron-item">{{t('cron.month')}}</div>
       </li>
       <li>
         <div class="cron-input">
           <a-input :style="istyle" :value="dayOfWeek.value" @focus="inputFocus('dayOfWeek')" />
         </div>
-        <div class="cron-item">周</div>
+        <div class="cron-item">{{t('cron.dayOfWeek')}}</div>
       </li>
     </ul>
     <div style="font-size:14px;padding:6px" v-show="tab === 'minute'">
       <a-radio-group v-model:value="minute.opt" @change="minuteRadioChange">
-        <a-radio :value="1" :style="radioStyle">每分钟</a-radio>
+        <a-radio :value="1" :style="radioStyle">{{t('cron.everyMinute')}}</a-radio>
         <a-radio :value="2" :style="radioStyle">
-          <span>从</span>
+          <span>{{t('cron.from')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -58,10 +63,10 @@
             v-model:value="minute.periodEnd"
             @change="minutePeriodChange"
           />
-          <span>每分钟执行一次</span>
+          <span>{{t('cron.executePerMinute')}}</span>
         </a-radio>
         <a-radio :value="3" :style="radioStyle">
-          <span>从</span>
+          <span>{{t('cron.from')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -72,7 +77,7 @@
             v-model:value="minute.loopStart"
             @change="minuteLoopChange"
           />
-          <span>开始, 每</span>
+          <span>{{t('cron.begin')}}, {{t('cron.every')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -83,10 +88,10 @@
             v-model:value="minute.loopEnd"
             @change="minuteLoopChange"
           />
-          <span>分钟执行一次</span>
+          <span>{{t('cron.minuteExecuteOnce')}}</span>
         </a-radio>
         <a-radio :value="4" :style="radioStyle">
-          <span>指定在</span>
+          <span>{{t('cron.at')}}</span>
           <a-select
             style="width: 240px;margin:0 4px"
             size="small"
@@ -98,15 +103,15 @@
             :max-tag-count="3"
             @change="minuteFixChange"
           />
-          <span>分钟执行</span>
+          <span>{{t('cron.minuteExecuteOnce')}}</span>
         </a-radio>
       </a-radio-group>
     </div>
     <div style="font-size:14px;padding:6px" v-show="tab === 'hour'">
       <a-radio-group v-model:value="hour.opt" @change="hourRadioChange">
-        <a-radio :value="1" :style="radioStyle">每小时</a-radio>
+        <a-radio :value="1" :style="radioStyle">{{t('cron.everyHour')}}</a-radio>
         <a-radio :value="2" :style="radioStyle">
-          <span>从</span>
+          <span>{{t('cron.from')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -128,10 +133,10 @@
             v-model:value="hour.periodEnd"
             @change="hourPeriodChange"
           />
-          <span>每小时执行一次</span>
+          <span>{{t('cron.executePerHour')}}</span>
         </a-radio>
         <a-radio :value="3" :style="radioStyle">
-          <span>从</span>
+          <span>{{t('cron.from')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -142,7 +147,7 @@
             v-model:value="hour.loopStart"
             @change="hourLoopChange"
           />
-          <span>开始, 每</span>
+          <span>{{t('cron.begin')}}, {{t('cron.every')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -153,10 +158,10 @@
             v-model:value="hour.loopEnd"
             @change="hourLoopChange"
           />
-          <span>小时执行一次</span>
+          <span>{{t('cron.hourExecuteOnce')}}</span>
         </a-radio>
         <a-radio :value="4" :style="radioStyle">
-          <span>指定在</span>
+          <span>{{t('cron.at')}}</span>
           <a-select
             style="width: 240px;margin:0 4px"
             size="small"
@@ -168,15 +173,15 @@
             :max-tag-count="3"
             @change="hourFixChange"
           />
-          <span>小时执行</span>
+          <span>{{t('cron.hourExecuteOnce')}}</span>
         </a-radio>
       </a-radio-group>
     </div>
     <div style="font-size:14px;padding:6px" v-show="tab === 'dayOfMonth'">
       <a-radio-group v-model:value="dayOfMonth.opt" @change="dayOfMonthRadioChange">
-        <a-radio :value="1" :style="radioStyle">每日</a-radio>
+        <a-radio :value="1" :style="radioStyle">{{t('cron.everyDayOfMonth')}}</a-radio>
         <a-radio :value="2" :style="radioStyle">
-          <span>从</span>
+          <span>{{t('cron.from')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -198,10 +203,10 @@
             v-model:value="dayOfMonth.periodEnd"
             @change="dayOfMonthPeriodChange"
           />
-          <span>每日执行一次</span>
+          <span>{{t('cron.executePerDayOfMonth')}}</span>
         </a-radio>
         <a-radio :value="3" :style="radioStyle">
-          <span>从</span>
+          <span>{{t('cron.from')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -212,7 +217,7 @@
             v-model:value="dayOfMonth.loopStart"
             @change="dayOfMonthLoopChange"
           />
-          <span>开始, 每</span>
+          <span>{{t('cron.begin')}}, {{t('cron.every')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -223,10 +228,10 @@
             v-model:value="dayOfMonth.loopEnd"
             @change="dayOfMonthLoopChange"
           />
-          <span>日执行一次</span>
+          <span>{{t('cron.dayOfMonthExecuteOnce')}}</span>
         </a-radio>
         <a-radio :value="4" :style="radioStyle">
-          <span>指定在</span>
+          <span>{{t('cron.on')}}</span>
           <a-select
             style="width: 240px;margin:0 4px"
             size="small"
@@ -238,18 +243,18 @@
             :max-tag-count="3"
             @change="dayOfMonthFixChange"
           />
-          <span>日执行</span>
+          <span>{{t('cron.dayOfMonthExecuteOnce')}}</span>
         </a-radio>
         <a-radio :value="5" :style="radioStyle">
-          <span>不指定</span>
+          <span>{{t('cron.notSpecified')}}</span>
         </a-radio>
       </a-radio-group>
     </div>
     <div style="font-size:14px;padding:6px" v-show="tab === 'month'">
       <a-radio-group v-model:value="month.opt" @change="monthRadioChange">
-        <a-radio :value="1" :style="radioStyle">每月</a-radio>
+        <a-radio :value="1" :style="radioStyle">{{t('cron.everyMonth')}}</a-radio>
         <a-radio :value="2" :style="radioStyle">
-          <span>从</span>
+          <span>{{t('cron.from')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -271,10 +276,10 @@
             v-model:value="month.periodEnd"
             @change="monthPeriodChange"
           />
-          <span>每月执行一次</span>
+          <span>{{t('cron.executePerMonth')}}</span>
         </a-radio>
         <a-radio :value="3" :style="radioStyle">
-          <span>从</span>
+          <span>{{t('cron.from')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -285,7 +290,7 @@
             v-model:value="month.loopStart"
             @change="monthLoopChange"
           />
-          <span>开始, 每</span>
+          <span>{{t('cron.begin')}}, {{t('cron.every')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -296,10 +301,10 @@
             v-model:value="month.loopEnd"
             @change="monthLoopChange"
           />
-          <span>月执行一次</span>
+          <span>{{t('cron.monthExecuteOnce')}}</span>
         </a-radio>
         <a-radio :value="4" :style="radioStyle">
-          <span>指定在</span>
+          <span>{{t('cron.in')}}</span>
           <a-select
             style="width: 240px;margin:0 4px"
             size="small"
@@ -311,15 +316,15 @@
             :max-tag-count="3"
             @change="monthFixChange"
           />
-          <span>月执行</span>
+          <span>{{t('cron.monthExecuteOnce')}}</span>
         </a-radio>
       </a-radio-group>
     </div>
     <div style="font-size:14px;padding:6px" v-show="tab === 'dayOfWeek'">
       <a-radio-group v-model:value="dayOfWeek.opt" @change="dayOfWeekRadioChange">
-        <a-radio :value="5" :style="radioStyle">不指定</a-radio>
+        <a-radio :value="5" :style="radioStyle">{{t('cron.notSpecified')}}</a-radio>
         <a-radio :value="2" :style="radioStyle">
-          <span>从周</span>
+          <span>{{t('cron.from')}} {{t('cron.dayOfWeek2')}}</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -330,7 +335,7 @@
             v-model:value="dayOfWeek.periodStart"
             @change="dayOfWeekPeriodChange"
           />
-          <span>-周</span>
+          <span>-</span>
           <a-input-number
             style="width: 40px;margin:0 4px"
             :controls="false"
@@ -341,10 +346,10 @@
             v-model:value="dayOfWeek.periodEnd"
             @change="dayOfWeekPeriodChange"
           />
-          <span>每天执行一次</span>
+          <span>{{t('cron.executePerDayOfWeek')}}</span>
         </a-radio>
         <a-radio :value="4" :style="radioStyle">
-          <span>指定在周</span>
+          <span>{{t('cron.inDayOfWeek')}}</span>
           <a-select
             style="width: 240px;margin:0 4px"
             size="small"
@@ -356,7 +361,7 @@
             :max-tag-count="3"
             @change="dayOfWeekFixChange"
           />
-          <span>执行</span>
+          <span>{{t('cron.dayOfWeekExecuteOnce')}}</span>
         </a-radio>
       </a-radio-group>
     </div>
@@ -364,11 +369,14 @@
 </template>
 <script setup>
 import { ref, reactive, defineEmits, defineProps } from "vue";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 /*
   Cron表达式获取
 */
 const props = defineProps(["style", "modelValue"]);
 const emit = defineEmits(["update:modelValue"]);
+const minuteInput = ref();
 // input style
 const istyle = {
   width: "80%"

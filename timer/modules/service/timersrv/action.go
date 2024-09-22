@@ -33,7 +33,6 @@ func InitTask() {
 	if queueSize <= 0 {
 		queueSize = 1024
 	}
-	logger.Logger.Infof("start timer task service with poolSize: %v queueSize: %v", poolSize, queueSize)
 	taskExecutor, _ = executor.NewExecutor(poolSize, queueSize, time.Minute, executor.AbortStrategy)
 	leaser, _ := lease.NewDbLease(
 		"timer-lock",

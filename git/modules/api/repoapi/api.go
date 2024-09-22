@@ -602,6 +602,7 @@ func catFile(c *gin.Context) {
 				FileMode: resp.ModeName,
 				Content:  resp.Content,
 				Size:     util.VolumeReadable(resp.Size),
+				IsText:   resp.IsText,
 				Commit:   commitDto2Vo(resp.Commit),
 			},
 		})

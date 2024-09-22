@@ -25,9 +25,9 @@ func InitApi() {
 			// 飞书登录
 			group.GET("/feishuLogin", feishuLogin)
 			// 获取登录信息
-			group.Any("/userInfo", apisession.CheckLogin, getUserInfo)
+			group.GET("/userInfo", apisession.CheckLogin, getUserInfo)
 			// 刷新token
-			group.Any("/refresh", apisession.CheckLogin, refresh)
+			group.GET("/refresh", apisession.CheckLogin, refresh)
 			// 退出登录
 			group.Any("/logout", apisession.CheckLogin, logout)
 		}

@@ -13,7 +13,7 @@
 import { ref, defineProps } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
-const props = defineProps(["style"])
+const props = defineProps(["style"]);
 const route = useRoute();
 const { locale } = useI18n();
 const localeMap = {
@@ -25,8 +25,16 @@ const selectLang = event => {
   localeText.value = localeMap[event.key];
   locale.value = event.key;
 };
+// 检测系统语言是否是中文
+const detectLanguageIsZhCn = () => {
+  return navigator?.language?.toLowerCase() === "zh-cn";
+};
 if (route.query.locale) {
   locale.value = route.query.locale;
+} else if (detectLanguageIsZhCn()) {
+  locale.value = "zh";
+} else {
+  locale.value = "en";
 }
 const localeText = ref(localeMap[locale.value]);
 </script>

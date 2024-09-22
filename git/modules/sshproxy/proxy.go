@@ -38,7 +38,7 @@ func InitProxy() zsf.LifeCycle {
 		},
 	})
 	if err != nil {
-		logger.Logger.Fatalf("new ssh server: %v", err)
+		logger.Logger.Fatalf("start ssh server: %v", err)
 	}
 	proxyDialer, err = zssh.NewDialer(&zssh.DialerOpts{
 		UserName: "git",

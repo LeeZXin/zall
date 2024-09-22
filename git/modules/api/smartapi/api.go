@@ -1,23 +1,17 @@
 package smartapi
 
 import (
-	"fmt"
 	"github.com/LeeZXin/zall/git/modules/model/repomd"
 	"github.com/LeeZXin/zall/git/modules/service/reposrv"
 	"github.com/LeeZXin/zall/git/modules/service/smartsrv"
 	"github.com/LeeZXin/zall/git/modules/service/workflowsrv"
 	"github.com/LeeZXin/zall/meta/modules/model/usermd"
-	"github.com/LeeZXin/zall/meta/modules/service/cfgsrv"
 	"github.com/LeeZXin/zall/meta/modules/service/usersrv"
 	"github.com/LeeZXin/zall/util"
 	"github.com/LeeZXin/zsf/http/httpserver"
-	"github.com/LeeZXin/zsf/logger"
 	"github.com/gin-gonic/gin"
-	"html"
 	"net/http"
-	"net/url"
 	"path/filepath"
-	"strings"
 )
 
 const (
@@ -27,7 +21,7 @@ const (
 func InitApi() {
 	// smart http协议 不实现dumb协议
 	httpserver.AppendRegisterRouterFunc(func(e *gin.Engine) {
-		group := e.Group("/:corpId/:repoName", handleGoGet, packRepoPath, auth)
+		group := e.Group("/zgit/:repoName", packRepoPath, auth)
 		{
 			group.POST("/git-upload-pack", uploadPack)
 			group.POST("/git-receive-pack", receivePack)
@@ -36,39 +30,39 @@ func InitApi() {
 	})
 }
 
-func handleGoGet(c *gin.Context) {
-	if c.Query("go-get") == "1" {
-		split := strings.Split(strings.TrimPrefix(c.Request.URL.Path, "/"), "/")
-		if len(split) != 2 {
-			c.Next()
-			return
-		}
-		cfg, err := cfgsrv.GetGitCfgFromDB(c)
-		if err != nil {
-			logger.Logger.WithContext(c).Error(err)
-			c.String(http.StatusInternalServerError, "")
-			return
-		}
-		h, _ := url.Parse(cfg.HttpUrl)
-		t := "/" + url.PathEscape(split[0]) + "/" + url.PathEscape(split[1])
-		ret := fmt.Sprintf(
-			`<meta name="go-import" content="%s">`,
-			html.EscapeString(fmt.Sprintf(
-				"%s git %s",
-				h.Host+t,
-				cfg.HttpUrl+t,
-			),
-			))
-		c.String(http.StatusOK, ret)
-		c.Abort()
-	} else {
-		c.Next()
-	}
-}
+//func handleGoGet(c *gin.Context) {
+//	if c.Query("go-get") == "1" {
+//		split := strings.Split(strings.TrimPrefix(c.Request.URL.Path, "/"), "/")
+//		if len(split) != 2 {
+//			c.Next()
+//			return
+//		}
+//		cfg, err := cfgsrv.GetGitCfgFromDB(c)
+//		if err != nil {
+//			logger.Logger.WithContext(c).Error(err)
+//			c.String(http.StatusInternalServerError, "")
+//			return
+//		}
+//		h, _ := url.Parse(cfg.HttpUrl)
+//		t := "/" + url.PathEscape(split[0]) + "/" + url.PathEscape(split[1])
+//		ret := fmt.Sprintf(
+//			`<meta name="go-import" content="%s">`,
+//			html.EscapeString(fmt.Sprintf(
+//				"%s git %s",
+//				h.Host+t,
+//				cfg.HttpUrl+t,
+//			),
+//			))
+//		c.String(http.StatusOK, ret)
+//		c.Abort()
+//	} else {
+//		c.Next()
+//	}
+//}
+
 func packRepoPath(c *gin.Context) {
-	corpId := c.Param("corpId")
 	repoName := c.Param("repoName")
-	repoPath := filepath.Join(corpId, repoName)
+	repoPath := filepath.Join("zgit", repoName)
 	repo, b := reposrv.GetByRepoPath(c, repoPath)
 	if !b {
 		c.String(http.StatusNotFound, "not found")

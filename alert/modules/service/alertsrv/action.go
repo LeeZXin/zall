@@ -29,7 +29,6 @@ var (
 )
 
 func InitTask() {
-	logger.Logger.Info("start alert task service")
 	poolSize := static.GetInt("alert.poolSize")
 	if poolSize <= 0 {
 		poolSize = 20

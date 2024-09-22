@@ -1,9 +1,0 @@
-jobs:
-  job1:
-    steps:
-      - name: ps -ef
-        script: |
-          ps -ef|grep goland
-      - name: ls
-        script: |
-          ls

@@ -356,6 +356,7 @@ func CatFile(ctx context.Context, reqDTO CatFileReqDTO) (CatFileRespDTO, error) 
 		ModeName: resp.ModeName,
 		Content:  resp.Content,
 		Size:     resp.Size,
+		IsText:   resp.IsText,
 		Commit:   commit,
 	}, nil
 }

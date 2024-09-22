@@ -59,10 +59,6 @@ func runZall(*cli.Context) error {
 	{
 		apisession.Init()
 	}
-	// for envs
-	{
-		cfgsrv.InitEnvCfg()
-	}
 	lifeCycles := make([]zsf.LifeCycle, 0)
 	// for meta
 	{
@@ -73,13 +69,13 @@ func runZall(*cli.Context) error {
 	}
 	// for cfg
 	{
+		cfgsrv.InitEnvCfg()
 		// 初始化全局配置
 		cfgsrv.InitSysCfg()
 		cfgsrv.InitLoginCfg()
 	}
 	// for git
 	{
-		git.Init()
 		lfsapi.InitApi()
 		branchapi.InitApi()
 		pullrequestapi.InitApi()
@@ -88,40 +84,32 @@ func runZall(*cli.Context) error {
 		sshkeyapi.InitApi()
 		gpgkeyapi.InitApi()
 		webhookapi.InitApi()
-		lifeCycles = append(lifeCycles, sshproxy.InitProxy())
+		workflowapi.InitApi()
+		if static.GetBool("git.proxy.server.enabled") {
+			lifeCycles = append(lifeCycles, sshproxy.InitProxy())
+		}
 		if static.GetBool("git.repo.server.enabled") {
-			logger.Logger.Info("git repo server enabled")
+			git.Init()
 			reposerver.InitHttpApi()
 			lifeCycles = append(lifeCycles, reposerver.InitSshServer())
 		}
-	}
-	// for workflow
-	{
-		workflowapi.InitApi()
 	}
 	// for timer
 	{
 		timerapi.InitApi()
 		timersrv.InitTask()
 	}
-	// for property
+	// for application
 	{
 		propertyapi.InitApi()
-	}
-	// for files server
-	{
-		if static.GetBool("files.enabled") {
-			logger.Logger.Info("file server enabled")
-			fileapi.InitApi()
-		}
-	}
-	// for deploy
-	{
+		fileapi.InitApi()
 		deployapi.InitApi()
+		promapi.InitApi()
+		alertapi.InitApi()
+		discoveryapi.InitApi()
 	}
 	// prom
 	{
-		promapi.InitApi()
 		if static.GetBool("prom.agent.enabled") {
 			logger.Logger.Info("prom agent enabled")
 			agent.StartAgent()
@@ -133,7 +121,6 @@ func runZall(*cli.Context) error {
 	}
 	// for alert
 	{
-		alertapi.InitApi()
 		if static.GetBool("alert.enabled") {
 			alertsrv.InitTask()
 		}
@@ -141,10 +128,6 @@ func runZall(*cli.Context) error {
 	// for zallet
 	{
 		zalletapi.InitApi()
-	}
-	// for discovery
-	{
-		discoveryapi.InitApi()
 	}
 	// for notify
 	{
@@ -157,18 +140,12 @@ func runZall(*cli.Context) error {
 	// for wework access token
 	{
 		tpweworkapi.InitApi()
-		if static.GetBool("wework.accessToken.task.enabled") {
-			logger.Logger.Info("wework access token task enabled")
-			tpweworksrv.InitGetAccessTokenTask()
-		}
+		tpweworksrv.InitGetAccessTokenTask()
 	}
 	// for feishu access token
 	{
 		tpfeishuapi.InitApi()
-		if static.GetBool("feishu.accessToken.task.enabled") {
-			logger.Logger.Info("feishu access token task enabled")
-			tpfeishusrv.InitGetAccessTokenTask()
-		}
+		tpfeishusrv.InitGetAccessTokenTask()
 	}
 	lifeCycles = append(lifeCycles,
 		httpserver.NewServer(
