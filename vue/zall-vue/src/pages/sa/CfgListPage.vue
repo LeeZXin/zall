@@ -94,16 +94,6 @@
                   />
                 </div>
               </li>
-              <li>
-                <div class="login-input-title">lang</div>
-                <div>
-                  <a-input
-                    style="width:100%"
-                    v-model:value="loginCfgState.weworkLang"
-                    :disabled="!loginCfgState.allowWework"
-                  />
-                </div>
-              </li>
             </ul>
           </div>
           <div style="margin-top:10px;">
@@ -244,7 +234,6 @@ const loginCfgState = reactive({
   weworkSecret: "",
   weworkState: "",
   weworkRedirectUrl: "",
-  weworkLang: "zh",
   feishuClientId: "",
   feishuSecret: "",
   feishuState: "",
@@ -352,7 +341,6 @@ const getLoginCfg = () => {
     loginCfgState.weworkState = res.data.wework.state;
     loginCfgState.weworkSecret = res.data.wework.secret;
     loginCfgState.weworkRedirectUrl = res.data.wework.redirectUrl;
-    loginCfgState.weworkLang = res.data.wework.lang;
     // feishu
     loginCfgState.feishuClientId = res.data.feishu.clientId;
     loginCfgState.feishuSecret = res.data.feishu.secret;
@@ -379,8 +367,7 @@ const updateLoginCfg = () => {
     agentId: loginCfgState.weworkAgentId,
     state: loginCfgState.weworkState,
     secret: loginCfgState.weworkSecret,
-    redirectUrl: loginCfgState.weworkRedirectUrl,
-    lang: loginCfgState.weworkLang
+    redirectUrl: loginCfgState.weworkRedirectUrl
   };
   req.feishu = {
     clientId: loginCfgState.feishuClientId,
