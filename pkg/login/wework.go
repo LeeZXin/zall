@@ -7,7 +7,6 @@ type Wework struct {
 	AgentId     string `json:"agentId"`
 	Secret      string `json:"secret,omitempty"`
 	RedirectUrl string `json:"redirectUrl"`
-	Lang        string `json:"lang"`
 }
 
 func (w *Wework) IsValid() bool {

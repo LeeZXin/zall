@@ -27,13 +27,13 @@
     <div id="wework-login" v-show="loginType === WEWORK_TYPE"></div>
     <ul class="btn-ul">
       <li v-if="hasAccountPasswordType && loginType !== ACCOUNT_PASSWORD_TYPE">
-        <a-button style="width:100%" @click="useAccountPassword">使用账号密码登录</a-button>
+        <a-button style="width:100%" @click="useAccountPassword">{{t("login.loginWithAccountPassword")}}</a-button>
       </li>
       <li v-if="hasWeworkType && loginType !== WEWORK_TYPE">
-        <a-button style="width:100%" @click="useWework">使用企业微信登录</a-button>
+        <a-button style="width:100%" @click="useWework">{{t("login.loginWithWework")}}</a-button>
       </li>
       <li v-if="hasFeishuType">
-        <a-button style="width:100%" @click="useFeishu">使用飞书登录</a-button>
+        <a-button style="width:100%" @click="useFeishu">{{t("login.loginWithFeishu")}}</a-button>
       </li>
     </ul>
     <div class="sub-section" v-if="allowUserRegister">
@@ -53,6 +53,7 @@ import { useUserStore } from "@/pinia/userStore";
 import { accountRegexp, passwordRegexp } from "@/utils/regexp";
 import * as ww from "@wecom/jssdk";
 import { setLoginUser } from "@/utils/login";
+const { locale } = useI18n();
 const ACCOUNT_PASSWORD_TYPE = "accountPassword";
 const WEWORK_TYPE = "wework";
 const FEISHU_TYPE = "feishu";
@@ -145,7 +146,7 @@ const useWework = () => {
       cfg?.agentId,
       cfg?.redirectUrl,
       cfg?.state,
-      cfg?.lang
+      locale.value
     );
   });
 };

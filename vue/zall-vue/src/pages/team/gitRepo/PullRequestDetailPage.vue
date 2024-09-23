@@ -194,12 +194,17 @@
                         <close-circle-filled />
                       </span>
                     </div>
-                    <a-textarea
-                      :auto-size="{ minRows: 5, maxRows: 10 }"
-                      v-model:value="replyItem.replyComment"
-                      ref="commentInput"
-                    />
-                    <div style="text-align:right;margin-top:10px">
+                    <div class="flex-center">
+                      <a-textarea
+                        :auto-size="{ minRows: 5, maxRows: 10 }"
+                        v-model:value="replyItem.replyComment"
+                        style="width:100%"
+                        show-count
+                        :maxlength="1024"
+                        ref="commentInput"
+                      />
+                    </div>
+                    <div style="margin-top:10px;" class="flex-right">
                       <a-button
                         type="primary"
                         style="margin-left:10px"

@@ -89,7 +89,10 @@ export default {
         loginBtnText: "立即登录",
         registerText: "注册用户",
         pleaseConfirmAccount: "账号长度在4-32之间",
-        pleaseConfirmPassword: "密码长度必须大于5"
+        pleaseConfirmPassword: "密码长度必须大于5",
+        loginWithAccountPassword: "使用账号密码登录",
+        loginWithFeishu: "使用飞书登录",
+        loginWithWework: "使用企微登录"
     },
     register: {
         title: "注册",

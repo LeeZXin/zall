@@ -49,7 +49,12 @@
       <div class="form-item">
         <div class="left">{{t('pullRequest.comment')}}</div>
         <div class="right">
-          <a-textarea :auto-size="{ minRows: 5, maxRows: 10 }" v-model:value="submitInput.comment" />
+          <a-textarea
+            :auto-size="{ minRows: 5, maxRows: 10 }"
+            v-model:value="submitInput.comment"
+            show-count
+            :maxlength="1024"
+          />
         </div>
       </div>
       <div style="margin-top:10px;text-align:right">

@@ -89,7 +89,10 @@ export default {
         loginBtnText: "Login Now",
         registerText: "Register account",
         pleaseConfirmAccount: "account length should should between 4 and 32",
-        pleaseConfirmPassword: "password length should greater than 5"
+        pleaseConfirmPassword: "password length should greater than 5",
+        loginWithAccountPassword: "Login with account and password",
+        loginWithFeishu: "Login with 飞书",
+        loginWithWework: "Login with 企微"
     },
     register: {
         title: "Register",
