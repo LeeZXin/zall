@@ -222,21 +222,40 @@ func DecrCommentCount(ctx context.Context, id int64) (bool, error) {
 	return rows == 1, err
 }
 
-func GetNextMaxIndex(ctx context.Context, repoId int64) (int, error) {
+func GetNextMaxIndexForUpdate(ctx context.Context, repoId int64) (int, error) {
+	var index Index
 	session := xormutil.MustGetXormSession(ctx)
-	_, err := session.Exec(
-		fmt.Sprintf("INSERT INTO %s (repo_id, max_index) VALUES (%d,1) ON DUPLICATE KEY UPDATE max_index = max_index + 1", IndexTableName, repoId),
-	)
+	b, err := session.
+		Where("repo_id = ?", repoId).
+		ForUpdate().
+		Get(&index)
 	if err != nil {
 		return 0, err
 	}
-	var ret Index
-	_, err = session.
-		And("repo_id = ?", repoId).
-		Cols("max_index").
-		Get(&ret)
+	if !b {
+		return 0, fmt.Errorf("%v not found", repoId)
+	}
+	rows, err := session.Where("repo_id = ?", repoId).Incr("max_index").Update(new(Index))
 	if err != nil {
 		return 0, err
 	}
-	return ret.MaxIndex, nil
+	if rows != 1 {
+		return 0, fmt.Errorf("%v incr max_index failed", repoId)
+	}
+	return index.MaxIndex + 1, nil
+}
+
+func InsertIndex(ctx context.Context, repoId int64) error {
+	_, err := xormutil.MustGetXormSession(ctx).Insert(&Index{
+		RepoId:   repoId,
+		MaxIndex: 0,
+	})
+	return err
+}
+
+func DeleteIndexByRepoId(ctx context.Context, repoId int64) (bool, error) {
+	rows, err := xormutil.MustGetXormSession(ctx).
+		Where("repo_id = ?", repoId).
+		Delete(new(Index))
+	return rows == 1, err
 }

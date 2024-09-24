@@ -199,7 +199,7 @@ func SubmitPullRequest(ctx context.Context, reqDTO SubmitPullRequestReqDTO) erro
 		if reqDTO.Comment != "" {
 			commentCount = 1
 		}
-		index, err2 = pullrequestmd.GetNextMaxIndex(ctx, reqDTO.RepoId)
+		index, err2 = pullrequestmd.GetNextMaxIndexForUpdate(ctx, reqDTO.RepoId)
 		if err2 != nil {
 			return err2
 		}

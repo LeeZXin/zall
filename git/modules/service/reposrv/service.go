@@ -523,7 +523,7 @@ func CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) error {
 	// 添加数据
 	err = xormstore.WithTx(ctx, func(ctx context.Context) error {
 		var err2 error
-		// 插入数据库
+		// 插入repo表
 		repo, err2 = repomd.InsertRepo(ctx, repomd.InsertRepoReqDTO{
 			Name:          reqDTO.Name,
 			Path:          relativePath,
@@ -532,6 +532,11 @@ func CreateRepo(ctx context.Context, reqDTO CreateRepoReqDTO) error {
 			DefaultBranch: reqDTO.DefaultBranch,
 			LastOperated:  time.Now(),
 		})
+		if err2 != nil {
+			return err2
+		}
+		// pr index表
+		err2 = pullrequestmd.InsertIndex(ctx, repo.Id)
 		if err2 != nil {
 			return err2
 		}
@@ -648,6 +653,11 @@ func DeleteRepoPermanently(ctx context.Context, reqDTO DeleteRepoReqDTO) error {
 		}
 		// 删除合并请求
 		err2 = pullrequestmd.DeletePullRequestByRepoId(ctx, reqDTO.RepoId)
+		if err2 != nil {
+			return err2
+		}
+		// 删除合并请求最大index
+		_, err2 = pullrequestmd.DeleteIndexByRepoId(ctx, reqDTO.RepoId)
 		if err2 != nil {
 			return err2
 		}

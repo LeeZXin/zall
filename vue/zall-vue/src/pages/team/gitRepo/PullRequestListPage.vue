@@ -47,7 +47,7 @@
           />
           <span>#{{item.prIndex}}</span>
           <span style="margin-left:4px">{{t('pullRequest.createdAt')}}</span>
-          <span>{{readableTimeComparingNow(item.created)}}</span>
+          <span style="margin-left:4px">{{readableTimeComparingNow(item.created)}}</span>
         </div>
       </li>
     </ul>
